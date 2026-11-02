@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>LES Engine Tests</title>
+<style>
+  body { font: 13px/1.45 Consolas, monospace; background: #10151b; color: #dfe6ee; margin: 16px; }
+  h1 { font-size: 16px; }
+  .pass { color: #57d38c; } .fail { color: #ff6b6b; } .info { color: #9fb3c8; }
+  pre { white-space: pre-wrap; }
+  button { font: inherit; padding: 4px 10px; margin-right: 6px; }
+</style>
+</head>
+<body>
+<h1>Life Evolution Simulator - headless engine tests</h1>
+<p>
+  <button onclick="LES_TESTS.runAll()">Run all tests</button>
+  <button onclick="LES_TESTS.balance(4, 120)">Balance report (4 seeds x 120y)</button>
+</p>
+<pre id="out"></pre>
+<script src="js/core/rng.js"></script>
+<script src="js/core/util.js"></script>
+<script src="js/data/content.js"></script>
+<script src="js/data/params.js"></script>
+<script src="js/data/town.js"></script>
+<script src="js/sim/ledger.js"></script>
+<script src="js/sim/person.js"></script>
+<script src="js/sim/actions.js"></script>
+<script src="js/sim/labour.js"></script>
+<script src="js/sim/finance.js"></script>
+<script src="js/sim/family.js"></script>
+<script src="js/sim/world.js"></script>
+<script src="js/tests/tests.js"></script>
+</body>
+</html>

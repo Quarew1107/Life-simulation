@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Life Evolution Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <div class="brand">
+      <div class="logo">LES</div>
+      <div>
+        <div class="title">Life Evolution Simulator</div>
+        <div class="sub">Bandar Rezeki · demo</div>
+      </div>
+    </div>
+    <div class="clock">
+      <div id="date-text">1 Jan Y1</div>
+      <div id="time-text" class="muted">06:00</div>
+    </div>
+    <div id="regime" class="badge">Normal economy</div>
+    <div id="speed" class="speed" role="group" aria-label="Simulation speed"></div>
+    <button id="btn-step" class="ghost" title="Advance one day (S)">+1 day</button>
+    <div id="kpis" class="kpis"></div>
+    <div id="goal" class="goal"></div>
+    <button id="btn-new" class="primary" title="Create a new world">New world</button>
+  </header>
+  <main>
+    <section id="map-wrap">
+      <canvas id="map" aria-label="Town map. Click a person to inspect them."></canvas>
+      <div id="map-tools">
+        <button data-z="in" title="Zoom in">+</button>
+        <button data-z="out" title="Zoom out">−</button>
+        <button data-z="fit" title="Fit town">⤢</button>
+      </div>
+      <div id="toasts" aria-live="polite"></div>
+      <div id="tooltip" class="hidden"></div>
+      <div id="map-hint">Click a person to follow their life · drag to pan · scroll to zoom · Space to pause</div>
+    </section>
+    <aside id="side">
+      <nav id="tabs">
+        <button data-tab="person" class="active">Person</button>
+        <button data-tab="leaders">Leaderboard</button>
+        <button data-tab="feed">Events</button>
+        <button data-tab="stats">Stats</button>
+      </nav>
+      <div id="tab-person" class="tab active"></div>
+      <div id="tab-leaders" class="tab">
+        <div class="tab-tools">
+          <input id="search" type="search" placeholder="Search people by name…" autocomplete="off">
+          <div class="seg" id="lb-mode"><button data-mode="alive" class="on">Alive</button><button data-mode="all">All-time peak</button></div>
+        </div>
+        <div id="lb-list"></div>
+      </div>
+      <div id="tab-feed" class="tab">
+        <div class="tab-tools"><div class="seg wrap" id="feed-filter"></div></div>
+        <div id="feed-list"></div>
+      </div>
+      <div id="tab-stats" class="tab"></div>
+    </aside>
+  </main>
+</div>
+<div id="modal" class="modal hidden"><div class="modal-card" id="modal-card"></div></div>
+<div id="error-banner" class="hidden"></div>
+
+<script src="js/core/rng.js"></script>
+<script src="js/core/util.js"></script>
+<script src="js/data/content.js"></script>
+<script src="js/data/params.js"></script>
+<script src="js/data/town.js"></script>
+<script src="js/sim/ledger.js"></script>
+<script src="js/sim/person.js"></script>
+<script src="js/sim/actions.js"></script>
+<script src="js/sim/labour.js"></script>
+<script src="js/sim/finance.js"></script>
+<script src="js/sim/family.js"></script>
+<script src="js/sim/world.js"></script>
+<script src="js/render/sprites.js"></script>
+<script src="js/render/renderer.js"></script>
+<script src="js/ui/charts.js"></script>
+<script src="js/ui/panels.js"></script>
+<script src="js/ui/setup.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
