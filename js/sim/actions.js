@@ -85,7 +85,7 @@
     p.health = Math.max(1, p.health - hpLoss);
     p.att[best] = Math.max(0, p.att[best] - attLoss);
     p.injuredUntil = w.day + R.int(7, 60);
-    const bill = Math.min(p.cash, U.RM(R.range(500, 5000)));
+    const bill = Math.min(p.cash, w.px(R.range(500, 5000)));
     w.ledger.spend(p, 'cash', 'HEALTH', bill);
     p.stress = Math.min(100, p.stress + 20);
     w.stats.catastrophes++;
@@ -94,7 +94,7 @@
 
   // Day-level context (computed once per person per day).
   A.context = function (w, p) {
-    const mc = Math.max(U.RM(500), p.mcost);
+    const mc = Math.max(w.px(500), p.mcost);
     const pr = p.pers;
     return {
       mc, daily: mc / 30, age: P.age(w, p),
@@ -125,7 +125,7 @@
   }
 
   A.bestCourse = function (w, p) {
-    const cur = p.job ? p.job.salary : U.RM(2000);
+    const cur = p.job ? p.job.salary : w.px(2000);
     const patience = p.pers.pat / 100;
     let best = null, bestV = 0.05;
     for (const c of C.COURSES) {
@@ -134,8 +134,8 @@
       if (c.id !== 'MASTER' && C.BACHELORS.includes(c.id) && p.quals.some(P.isBachelor)) continue; // one bachelor is enough
       const acc = U.sigmoid((p.att[C.INT] - c.minInt) * 1.5);
       if (acc < 0.1) continue;
-      const unlock = c.id === 'MASTER' ? cur * 1.3 : U.RM(w.qualValue[c.id] * 0.85);
-      const value = Math.log(unlock / Math.max(cur, U.RM(1500))) * acc - 0.15 * (c.months / 12) * (1 - patience);
+      const unlock = c.id === 'MASTER' ? cur * 1.3 : w.px(w.qualValue[c.id] * 0.85);
+      const value = Math.log(unlock / Math.max(cur, w.px(1500))) * acc - 0.15 * (c.months / 12) * (1 - patience);
       if (value > bestV) { bestV = value; best = { course: c, value }; }
     }
     return best;
@@ -172,9 +172,9 @@
         if (e > bestE) { bestE = e; best = g; }
       }
       if (best) {
-        const u = -0.3 + 1.6 * ctx.urg + (p.job || p.manages >= 0 ? -0.6 : 0.7) + 0.5 * Math.log(1 + U.RM(bestE) / ctx.daily)
+        const u = -0.3 + 1.6 * ctx.urg + (p.job || p.manages >= 0 ? -0.6 : 0.7) + 0.5 * Math.log(1 + w.px(bestE) / ctx.daily)
           + BIAS.GIG[s] - 1.4 * n.tired - 0.4 * n.stressed - (p.retired ? 1 : 0);
-        add('GIG', u, town.byKind[best.place], best, `Gig: ${best.name}`);
+        add('GIG', u, LES.townNear(town, best.place, p.homeId), best, `Gig: ${best.name}`);
       }
     }
 
@@ -183,7 +183,7 @@
       const monthsIn = (w.day - p.enrol.startDay) / 30.4;
       const behind = U.clamp((monthsIn * 12 - p.enrol.progress) / 24, -1, 1);
       const u = 1.0 + 0.6 * ctx.dis + 0.5 * ctx.pat + 0.8 * behind + BIAS.STUDY[s] - 1.2 * n.tired - 0.6 * n.stressed;
-      add('STUDY', u, town.byKind[course.place], course, `Class: ${course.name}`);
+      add('STUDY', u, LES.townNear(town, course.place, p.homeId), course, `Class: ${course.name}`);
     }
 
     if (reflect && !p.enrol && ctx.age < 45 && !p.retired && w.day - p.lastEnrollTry > 60 && p.bankruptUntil < w.day) {
@@ -191,13 +191,13 @@
       if (pick) {
         const u = -1.6 + BIAS.ENROLL[s] + 0.7 * ctx.pat + 0.4 * ctx.dis - 0.06 * Math.max(0, ctx.age - 25)
           + 1.2 * pick.value - 0.6 * n.tired - (p.manages >= 0 ? 1 : 0);
-        add('ENROLL', u, town.byKind[pick.course.place], pick.course, `Apply: ${pick.course.name}`);
+        add('ENROLL', u, LES.townNear(town, pick.course.place, p.homeId), pick.course, `Apply: ${pick.course.name}`);
       }
     }
 
     if (!p.retired && ctx.age < 64 && canExert && w.vacancies.length) {
       const cur = p.job ? p.job.salary : 0;
-      const base = Math.max(cur, U.RM(1500));
+      const base = Math.max(cur, w.px(1500));
       let best = null, bestV = -Infinity;
       for (const v of w.vacancies) {
         if (v.salary < cur * 1.15 || !P.hasCred(p, v.job.req) || v.applicants.includes(p.id)) continue;
@@ -215,25 +215,25 @@
       const rel = relevance(w, p);
       let best = null, bestR = -1;
       for (const t of C.TRAININGS) {
-        if (p.cash < U.RM(t.cost) + ctx.mc * 0.3) continue;
+        if (p.cash < w.px(t.cost) + ctx.mc * 0.3) continue;
         let r = 0;
         for (const a of t.attrs) r += rel[a] * (1 - p.att[a] / 10) * (p.att[a] < p.pot[a] ? 1 : 0.4);
         if (r > bestR) { bestR = r; best = t; }
       }
       if (best) {
         const u = -0.5 + BIAS.TRAIN[s] + 0.5 * ctx.dis + 0.3 * ctx.pat + 1.2 * bestR - 1.3 * n.tired - 1.2 * ctx.urg - 0.3 * n.stressed;
-        add('TRAIN', u, town.byKind[best.place], best, best.name);
+        add('TRAIN', u, LES.townNear(town, best.place, p.homeId), best, best.name);
       }
     }
 
-    if (p.energy >= 10 && p.cash >= U.RM(15)) {
+    if (p.energy >= 10 && p.cash >= w.px(15)) {
       const single = !p.partnerId && ctx.age >= 20 && ctx.age <= 50;
       const u = -0.1 + 1.0 * n.stressed + (single ? 0.4 + 0.6 * p.famDesire / 100 : 0) + 0.04 * (p.att[C.CHA] - 5)
         + BIAS.SOCIAL[s] - 0.6 * ctx.urg - 0.3 * ctx.dis - 0.4 * n.tired + (ctx.age > 65 ? 0.4 : 0);
-      add('SOCIAL', u, town.byKind[slot === 0 ? 'park' : 'mamak']);
+      add('SOCIAL', u, LES.townNear(town, slot === 0 ? 'park' : 'mamak', p.homeId));
     }
 
-    if (n.sick > 0.15 && p.cash >= U.RM(60)) add('HEALTH', -1.5 + 4 * n.sick + BIAS.HEALTH[s], town.byKind.hospital);
+    if (n.sick > 0.15 && p.cash >= w.px(60)) add('HEALTH', -1.5 + 4 * n.sick + BIAS.HEALTH[s], LES.townNear(town, 'hospital', p.homeId));
 
     if (p.careOf.length) {
       let deficit = 0;
@@ -246,8 +246,10 @@
     }
 
     const surplus = p.cash - ctx.mc * (4 - 2 * ctx.risk);
-    if (surplus >= U.RM(1000) && w.day - p.lastInvestDay > 20) {
-      const u = -0.8 + BIAS.INVEST[s] + 0.7 * ctx.pat + 0.4 * Math.log(1 + surplus / ctx.mc) - 0.5 * ctx.urg;
+    if (surplus >= w.px(1000) && w.day - p.lastInvestDay > 20) {
+      // Rising markets tempt risk-takers (FOMO); this feeds the town's influence on prices.
+      const fomo = 2 * Math.max(0, LES.Market.retOver(w, 63) - 0.1) * (ctx.risk + 1) / 2;
+      const u = -0.8 + BIAS.INVEST[s] + 0.7 * ctx.pat + 0.4 * Math.log(1 + surplus / ctx.mc) - 0.5 * ctx.urg + fomo;
       add('INVEST', u, town.byKind.bursa, surplus);
     }
 
@@ -256,8 +258,8 @@
       if (pick) {
         let u = -2.5 + BIAS.START_BIZ[s] + 1.3 * ctx.risk - 0.3 * ctx.pat + 0.25 * (pick.skill - 5)
           - 0.5 * p.bizFailures * (1 - (ctx.res + 1) / 2) + (p.ideaUntil > w.day ? 1.0 : 0);
-        if (p.job) u -= 0.3 * Math.max(0, Math.log(p.job.salary / U.RM(3000)));
-        add('START_BIZ', u, town.byKind.bank, pick, `Start a ${pick.type.name}`);
+        if (p.job) u -= 0.3 * Math.max(0, Math.log(p.job.salary / w.px(3000)));
+        add('START_BIZ', u, LES.townNear(town, 'bank', p.homeId), pick, `Start a ${pick.type.name}`);
       }
     }
 
@@ -307,7 +309,7 @@
       case 'GIG': {
         const g = c.data;
         const r = A.taskRoll(w, p, g.w, g.diff, p.xp[g.cat], g.risk);
-        const pay = U.RM(g.pay * (r.ok ? 1 : 0.25) * w.macro().gigMult);
+        const pay = w.px(g.pay * (r.ok ? 1 : 0.25) * w.macro().gigMult);
         L.pay('GIGS', p, 'cash', pay);
         p.earned.gigs += pay; p.monthIncome += pay;
         c.ok = r.ok;
@@ -322,21 +324,22 @@
       case 'APPLY': c.data.applicants.push(p.id); p.energy -= 8; break;
       case 'TRAIN': {
         const t = c.data;
-        if (!L.spend(p, 'cash', 'TRAINING', U.RM(t.cost))) break;
+        if (!L.spend(p, 'cash', 'TRAINING', w.px(t.cost))) break;
         const r = A.taskRoll(w, p, t.w, t.diff, 0, t.risk);
         c.ok = r.ok;
         for (const a of t.attrs) A.improve(w, p, a, r.ok ? 1 : 0.35);
+        if (t.attrs.some(x => C.BODY_ATTRS.includes(x))) p.yr.phys++; else p.yr.mental++;
         p.energy -= 25; p.stress += 1;
         if (r.cat) A.catastrophe(w, p, t.w, 'injured while training');
         break;
       }
       case 'SOCIAL':
-        L.spend(p, 'cash', 'MERCHANT', U.RM(12));
+        L.spend(p, 'cash', 'MERCHANT', w.px(12));
         p.stress -= 12; p.energy -= 6;
-        w.socialPools[slot].push(p.id);
+        (w.socialPools[`${slot}|${c.loc}`] = w.socialPools[`${slot}|${c.loc}`] || []).push(p.id);
         break;
       case 'HEALTH':
-        if (L.spend(p, 'cash', 'HEALTH', U.RM(60))) { p.health += 12; p.stress -= 2; }
+        if (L.spend(p, 'cash', 'HEALTH', w.px(60))) { p.health += 12; p.stress -= 2; }
         p.energy -= 4;
         break;
       case 'CHILDCARE':

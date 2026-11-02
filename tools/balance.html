@@ -1,0 +1,41 @@
+<!doctype html><html><head><meta charset="utf-8"><title>balance</title></head><body><pre id="out">running</pre>
+<script src="../js/core/rng.js"></script>
+<script src="../js/core/util.js"></script>
+<script src="../js/data/content.js"></script>
+<script src="../js/data/params.js"></script>
+<script src="../js/data/town.js"></script>
+<script src="../js/sim/ledger.js"></script>
+<script src="../js/sim/person.js"></script>
+<script src="../js/sim/market.js"></script>
+<script src="../js/sim/actions.js"></script>
+<script src="../js/sim/labour.js"></script>
+<script src="../js/sim/finance.js"></script>
+<script src="../js/sim/family.js"></script>
+<script src="../js/sim/migration.js"></script>
+<script src="../js/sim/world.js"></script>
+<script>
+// Headless balance runner: balance.html?seeds=a,b&years=120&cfg={"migration":"low"}
+(function () {
+  const q = new URLSearchParams(location.search), U = LES.U, P = LES.P;
+  const seeds = (q.get('seeds') || 'w-1').split(','), years = Number(q.get('years') || 120), extra = JSON.parse(q.get('cfg') || '{}');
+  const out = [];
+  for (const seed of seeds) {
+    const t0 = performance.now();
+    try {
+      const w = new LES.World(Object.assign({ seed }, extra));
+      const errs = [], rows = [];
+      while (!w.ended && w.day < years * 365) {
+        w.step();
+        if (w.date.lastOfYear) {
+          const y = U.dayToDate(w.lastDay).year;
+          if (y % 5 === 0) errs.push(...w.checkInvariants());
+          if (y % 30 === 0) { const h = w.history.at(-1); rows.push('Y' + y + ' pop' + h.pop + ' med ' + U.fmtMoney(h.median) + ' top ' + U.fmtMoney(h.top) + ' mill ' + h.millionaires + ' idx' + h.idx.toFixed(0) + ' px' + h.price.toFixed(1) + ' away' + h.away + ' grow' + (w.townGrowth || 0)); }
+        }
+      }
+      const s = w.stats;
+      out.push(seed + '[' + w.mapSize + '] winner ' + (w.winner ? 'Y' + U.dayToDate(w.winner.day).year + ' age ' + w.winner.age : 'none') + ' peakRealTop ' + U.fmtMoney(Math.max(...w.history.map(h => h.top))) + ' errs ' + errs.length + ' ' + (errs[0] || '') + '\n  ' + rows.join('\n  ') + '\n  stats births ' + s.births + ' deaths ' + s.deaths + ' bizStarted ' + s.bizStarted + ' failed ' + s.bizFailed + ' booms ' + s.booms + ' em ' + s.emigrants + ' im ' + s.immigrants + ' ret ' + s.returns + ' panic ' + s.panicSells + ' secs ' + ((performance.now() - t0) / 1000).toFixed(1));
+    } catch (e) { out.push(seed + ' CRASH ' + (e.stack || e)); }
+  }
+  document.getElementById('out').textContent = out.join('\n');
+})();
+</script></body></html>

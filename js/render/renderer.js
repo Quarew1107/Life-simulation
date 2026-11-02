@@ -5,19 +5,17 @@
   'use strict';
   const C = LES.C, P = LES.P, U = LES.U;
 
-  // Visual day timeline: [t, clock hour]. People: home -> slot A -> slot B -> home.
-  const KEYS = [[0, 6], [0.06, 7], [0.14, 8], [0.48, 15.2], [0.54, 15.67], [0.84, 22.4], [0.92, 23], [1, 30]];
+  // Visual day timeline is real clock time: t = 0 is 06:00, t = 1 is 06:00 next day.
+  // Fixed schedule (minutes after 06:00): slot A 08:00-15:12, slot B 15:12-22:24.
+  LES.SLOT_A = 120; LES.SLOT_B = 552; LES.SLOT_END = 984;
   LES.clockAt = function (t) {
-    for (let i = 1; i < KEYS.length; i++) {
-      if (t <= KEYS[i][0]) {
-        const [t0, h0] = KEYS[i - 1], [t1, h1] = KEYS[i];
-        const h = (h0 + (h1 - h0) * (t - t0) / (t1 - t0)) % 24;
-        const hh = Math.floor(h), mm = Math.floor((h - hh) * 60);
-        return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
-      }
-    }
-    return '06:00';
+    const mins = Math.floor(((t * 1440) + 360) % 1440);
+    return `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
   };
+  // Night = after 23:00 or before 06:00 (used for fast-forward and darkness).
+  LES.isNight = t => t * 1440 >= 1020;
+  // Travel speed in map pixels per simulated minute, by transport tier.
+  LES.TRAVEL_SPEED = [64, 220, 290, 300];
 
   const hash = n => { n = Math.imul(n ^ (n >>> 16), 0x45d9f3b); n = Math.imul(n ^ (n >>> 16), 0x45d9f3b); return (n ^ (n >>> 16)) >>> 0; };
   const FONT = '"Silkscreen", "Press Start 2P", monospace';
@@ -130,7 +128,7 @@
         box(g, X + 2, Y + 2, W - 4, 30, '#f7f2e4', '#2f7d4f', 10);
         for (let i = 0; i < W - 4; i += 8) { rect(g, X + 2 + i, Y + 30, 4, 7, '#2f9e5b'); rect(g, X + 6 + i, Y + 30, 4, 7, '#ffffff'); }
         for (let k = 0; k < 5; k++) { const tx = X + 8 + k * 14, ty = Y + 44 + (k % 2) * 8; rect(g, tx, ty, 8, 5, '#d7dde2'); rect(g, tx - 3, ty + 1, 2, 3, '#e63946'); rect(g, tx + 9, ty + 1, 2, 3, '#e63946'); }
-        sign(g, 'MAMAK 24J', X + W / 2, Y + 12, '#1f6b40');
+        sign(g, (b.label || 'Mamak').toUpperCase(), X + W / 2, Y + 12, '#1f6b40');
         break;
       }
       case 'hawker': {
@@ -201,15 +199,14 @@
         break;
       }
       case 'shoplot': {
+        // Two-storey shophouse: tiled roof, sign band over the upper floor, five-foot way below.
         const col = SHOP_COLOURS[b.id % SHOP_COLOURS.length];
         rect(g, X + 3, Y + 3, W - 1, H - 1, 'rgba(30,40,20,0.25)');
-        rect(g, X, Y, W - 1, 6, '#a0522d');
-        rect(g, X, Y + 6, W - 1, 20, col);
-        rect(g, X + 4, Y + 10, 8, 10, '#ffffff'); rect(g, X + 18, Y + 10, 8, 10, '#ffffff');
-        rect(g, X + 5, Y + 11, 6, 8, '#8cc6de'); rect(g, X + 19, Y + 11, 6, 8, '#8cc6de');
-        rect(g, X, Y + 26, W - 1, H - 26, '#5b4a3f');
-        rect(g, X + 2, Y + 30, W - 5, H - 32, '#3a2f28');
-        rect(g, X, Y + 26, 2, H - 26, '#d9cfc0');
+        rect(g, X, Y, W - 1, 6, '#a0522d'); rect(g, X, Y + 5, W - 1, 1, '#7a3c20');
+        rect(g, X, Y + 6, W - 1, 22, col);
+        rect(g, X, Y + 28, W - 1, H - 28, '#5b4a3f');
+        rect(g, X + 3, Y + 31, W - 7, H - 33, '#3a2f28');
+        for (const px of [X, X + 21, X + 42, X + W - 3]) rect(g, px, Y + 28, 2, H - 28, '#d9cfc0');
         break;
       }
       case 'hospital': {
@@ -280,6 +277,37 @@
         sign(g, 'SAWAH PADI', X + W / 2, Y + H / 2 - 5, '#4a6a1f');
         break;
       }
+      case 'depot': {
+        box(g, X + 2, Y + 4, W - 4, H - 6, '#d6d0c4', '#5b6b78', 10);
+        for (let i = 0; i < 3; i++) rect(g, X + 8 + i * 28, Y + 24, 22, 32, '#6c757d');
+        sign(g, 'DEPOT BAS', X + W / 2, Y + 12, '#3d5a80');
+        break;
+      }
+      case 'memorial': {
+        rect(g, X, Y, W, H, '#7fb069');
+        g.strokeStyle = '#e2cf9f'; g.lineWidth = 3; g.strokeRect(X + 8.5, Y + 8.5, W - 17, H - 17);
+        rect(g, X + W / 2 - 8, Y + H / 2 - 10, 16, 20, '#cfc6b0'); rect(g, X + W / 2 - 5, Y + H / 2 - 16, 10, 6, '#b8ad95');
+        for (const [tx, ty] of [[4, 4], [W - 14, 6], [6, H - 22], [W - 16, H - 20]]) tree(g, X + tx, Y + ty, false);
+        sign(g, 'TAMAN KENANGAN', X + W / 2, Y + H - 14, '#4a5a3a');
+        break;
+      }
+      case 'lot': {
+        if (b.built) break;
+        rect(g, X + 6, Y + 6, W - 12, H - 12, '#9cc06f');
+        g.strokeStyle = '#8b6b43'; g.lineWidth = 1; g.setLineDash([3, 3]); g.strokeRect(X + 6.5, Y + 6.5, W - 13, H - 13); g.setLineDash([]);
+        rect(g, X + W / 2 - 1, Y + H / 2 - 4, 2, 14, '#6b4423');
+        sign(g, 'TANAH DIJUAL', X + W / 2, Y + H / 2 - 12, '#7a5a1d');
+        break;
+      }
+      case 'builtlot': rect(g, X + 2, Y + 2, W - 4, H - 4, '#a9b98a'); break;
+      case 'hq': {
+        rect(g, X - 8, Y + H - 20, W + 16, 20, '#d9cfc0');
+        box(g, X + 2, Y, W - 4, H - 22, '#c9a227', '#7a5c12', 10);
+        windows(g, X + 6, Y + 14, W - 12, H - 44, 4, 12, '#fff3c4');
+        rect(g, X + W / 2 - 1, Y - 14, 2, 14, '#ccc'); rect(g, X + W / 2 - 3, Y - 16, 6, 3, '#e63946');
+        sign(g, (b.label || 'MENARA').toUpperCase(), X + W / 2, Y + H - 16, '#3d2b05', '#ffe9a8');
+        break;
+      }
       default: box(g, X, Y, W, H, '#ccc', '#999', 8);
     }
   }
@@ -298,6 +326,7 @@
     setWorld(w) {
       this.w = w; this.town = w.town;
       this.anim.clear();
+      this.selectedBuilding = -1;
       this.buildStatic();
       this.resize();
       this.fit();
@@ -349,17 +378,11 @@
       const g = cv.getContext('2d');
       g.imageSmoothingEnabled = false;
       rect(g, 0, 0, W, H, '#86b85f');
-      for (let i = 0; i < 2600; i++) rect(g, R.int(0, W), R.int(0, H), 2, 1, R.next() < 0.5 ? '#79a955' : '#93c46b');
+      for (let i = 0; i < W * H / 400; i++) rect(g, R.int(0, W), R.int(0, H), 2, 1, R.next() < 0.5 ? '#79a955' : '#93c46b');
 
       // Roads with sidewalks and lane markings
-      for (const ry of town.roadsY) {
-        rect(g, 0, ry * T - 4, W, 2 * T + 8, '#cfc6b0');
-        rect(g, 0, ry * T, W, 2 * T, '#4b4f58');
-      }
-      for (const rx of town.roadsX) {
-        rect(g, rx * T - 4, 0, 2 * T + 8, H, '#cfc6b0');
-        rect(g, rx * T, 0, 2 * T, H, '#4b4f58');
-      }
+      for (const ry of town.roadsY) { rect(g, 0, ry * T - 4, W, 2 * T + 8, '#cfc6b0'); rect(g, 0, ry * T, W, 2 * T, '#4b4f58'); }
+      for (const rx of town.roadsX) { rect(g, rx * T - 4, 0, 2 * T + 8, H, '#cfc6b0'); rect(g, rx * T, 0, 2 * T, H, '#4b4f58'); }
       for (const ry of town.roadsY) for (let x = 0; x < W; x += 14) rect(g, x, ry * T + T - 1, 7, 2, '#e9d16b');
       for (const rx of town.roadsX) for (let y = 0; y < H; y += 14) rect(g, rx * T + T - 1, y, 2, 7, '#e9d16b');
       for (const ry of town.roadsY) for (const rx of town.roadsX) {
@@ -377,14 +400,28 @@
       const mark = (x, y) => { if (x >= 0 && y >= 0 && x < town.W && y < town.H) busy[y * town.W + x] = 1; };
       for (const ry of town.roadsY) for (let x = 0; x < town.W; x++) for (let y = ry - 1; y <= ry + 2; y++) mark(x, y);
       for (const rx of town.roadsX) for (let y = 0; y < town.H; y++) for (let x = rx - 1; x <= rx + 2; x++) mark(x, y);
-      for (const b of town.buildings) for (let x = b.x - 1; x <= b.x + b.w; x++) for (let y = b.y - 1; y <= b.y + b.h + 1; y++) mark(x, y);
-
+      for (const b of town.buildings) {
+        if (b.kind === 'lot' && !b.built) continue; // trees may grow on empty lots
+        for (let x = b.x - 1; x <= b.x + b.w; x++) for (let y = b.y - 1; y <= b.y + b.h + 1; y++) mark(x, y);
+      }
       for (const b of town.buildings) drawBuilding(g, b, R);
       for (let y = 0; y < town.H; y++) for (let x = 0; x < town.W; x++) {
-        if (busy[y * town.W + x] || R.next() > 0.35) continue;
+        if (busy[y * town.W + x] || R.next() > 0.3) continue;
         tree(g, x * T + R.int(0, 6), y * T + R.int(0, 4), x < 15 || R.next() < 0.3);
       }
+      // Bus stops (shelter on the sidewalk) and the town gateway arch
+      for (const line of town.busLines) for (const st of line.stops) {
+        const sx = st.pt.x + 18, sy = st.pt.y - 26;
+        rect(g, sx, sy, 12, 3, '#3d5a80'); rect(g, sx + 1, sy + 3, 1, 7, '#666'); rect(g, sx + 10, sy + 3, 1, 7, '#666');
+        rect(g, sx - 3, sy - 4, 3, 14, line.colour);
+      }
+      const gw = town.gateway;
+      rect(g, gw.x + 2, gw.y - 22, 4, 40, '#8b5a2b'); rect(g, gw.x + 2, gw.y - 26, 70, 9, '#b23a48');
+      g.font = `7px ${FONT}`; g.fillStyle = '#ffe9a8'; g.textBaseline = 'top';
+      g.fillText('SELAMAT DATANG', gw.x + 5, gw.y - 25);
       this.bg = cv;
+      this.lights = LES.Ambience.buildLights(town);
+      this.bgVersion = this.w ? this.w.townVersion : 0;
     }
 
     // Stable spot in front of a building for a given person.
@@ -398,59 +435,123 @@
       return { x, y };
     }
 
-    route(p, fromB, toB) {
-      const a = this.spot(fromB, p.id), b = this.spot(toB, p.id);
-      if (fromB === toB) return { pts: [a, b], total: 0 };
+    // Road route between two points; walkers keep to the sidewalk, vehicles to a lane.
+    route(p, a, b, fromB, toB, lane) {
       const tb = this.town.buildings;
       const mid = LES.townPath(this.town, tb[fromB] || tb[0], tb[toB] || tb[0]);
-      const lane = ((p.id % 5) - 2) * 2;
       const pts = [a, ...mid.slice(1, -1).map(q => ({ x: q.x + lane, y: q.y + lane })), b];
-      let total = 0;
-      const lens = [];
-      for (let i = 1; i < pts.length; i++) { const l = Math.abs(pts[i].x - pts[i - 1].x) + Math.abs(pts[i].y - pts[i - 1].y); lens.push(l); total += l; }
-      return { pts, lens, total };
+      return LES.polyline(pts);
     }
     along(r, f) {
-      if (!r.total) return r.pts[r.pts.length - 1];
+      if (!r.total) { const e = r.pts[r.pts.length - 1]; return { x: e.x, y: e.y, dx: 1, dy: 0 }; }
       let d = U.clamp(f, 0, 1) * r.total;
       for (let i = 0; i < r.lens.length; i++) {
         if (d <= r.lens[i]) {
           const a = r.pts[i], b = r.pts[i + 1], k = r.lens[i] ? d / r.lens[i] : 1;
-          return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k };
+          return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k, dx: Math.sign(b.x - a.x), dy: Math.sign(b.y - a.y) };
         }
         d -= r.lens[i];
       }
-      return r.pts[r.pts.length - 1];
+      const e = r.pts[r.pts.length - 1];
+      return { x: e.x, y: e.y, dx: 1, dy: 0 };
     }
 
-    // Position of a person at visual time t (0..1 of the simulated day).
+    // Minute (since 06:00) when the next bus of a line reaches position pos at or after m.
+    nextBus(line, pos, m) {
+      const S = LES.BUS.speed, P = line.len / S;
+      let best = Infinity, bus = 0;
+      for (let k = 0; k < line.buses; k++) {
+        let o = ((pos - k * line.len / line.buses) / S) % P;
+        if (o < 0) o += P;
+        const tt = o + Math.ceil((m - o) / P) * P;
+        if (tt < best) { best = tt; bus = k; }
+      }
+      return { at: best, bus };
+    }
+
+    // Plan one trip (leaves at `depart`, or arrives by `arriveBy`). Returns timed segments.
+    planTrip(p, fromB, toB, depart, arriveBy) {
+      const a = this.spot(fromB, p.id), b = this.spot(toB, p.id);
+      if (fromB === toB) return { segs: [], start: depart !== null ? depart : arriveBy, end: depart !== null ? depart : arriveBy };
+      const tier = p.adult ? p.tiers.transport : 0;
+      const segs = [];
+      if (tier > 0 || !p.adult) {
+        const r = this.route(p, a, b, fromB, toB, tier > 0 ? 7 : -19);
+        const d = U.clamp(r.total / LES.TRAVEL_SPEED[tier], 2, 120);
+        const t0 = depart !== null ? depart : arriveBy - d;
+        segs.push({ kind: tier > 0 ? 'drive' : 'walk', r, t0, t1: t0 + d, mode: tier });
+        return { segs, start: t0, end: t0 + d };
+      }
+      // Bus or walk: pick the best bus line, compare with walking all the way.
+      const walkR = this.route(p, a, b, fromB, toB, -19);
+      const walkT = walkR.total / LES.BUS.walkSpeed;
+      let best = null;
+      for (const line of this.town.busLines) {
+        const near = pt => line.stops.reduce((bst, s) => { const d = Math.abs(s.pt.x - pt.x) + Math.abs(s.pt.y - pt.y); return d < bst.d ? { s, d } : bst; }, { s: null, d: Infinity });
+        const s1 = near(a), s2 = near(b);
+        if (!s1.s || !s2.s || s1.s === s2.s) continue;
+        const ride = ((s2.s.pos - s1.s.pos) % line.len + line.len) % line.len;
+        const est = (s1.d + s2.d) / LES.BUS.walkSpeed + ride / LES.BUS.speed + LES.BUS.headway / 2;
+        if (!best || est < best.est) best = { line, s1: s1.s, s2: s2.s, ride, est, w1: s1.d, w2: s2.d };
+      }
+      if (!best || best.est > walkT - 3 || walkR.total < 300) {
+        const d = U.clamp(walkT, 2, 120);
+        const t0 = depart !== null ? depart : arriveBy - d;
+        segs.push({ kind: 'walk', r: walkR, t0, t1: t0 + d, mode: 0 });
+        return { segs, start: t0, end: t0 + d };
+      }
+      const L1 = LES.polyline([a, { x: a.x, y: best.s1.pt.y - 19 }, { x: best.s1.pt.x + 14, y: best.s1.pt.y - 19 }]);
+      const L2 = LES.polyline([{ x: best.s2.pt.x + 14, y: best.s2.pt.y - 19 }, { x: b.x, y: best.s2.pt.y - 19 }, b]);
+      const w1 = U.clamp(L1.total / LES.BUS.walkSpeed, 1, 60), w2 = U.clamp(L2.total / LES.BUS.walkSpeed, 1, 60);
+      const rideT = best.ride / LES.BUS.speed;
+      let t0 = depart !== null ? depart : arriveBy - (w1 + rideT + w2 + LES.BUS.headway);
+      const atStop = t0 + w1;
+      const nb = this.nextBus(best.line, best.s1.pos, atStop);
+      segs.push({ kind: 'walk', r: L1, t0, t1: atStop, mode: 0 });
+      segs.push({ kind: 'wait', t0: atStop, t1: nb.at, pt: { x: best.s1.pt.x + 14 + (p.id % 5) * 3, y: best.s1.pt.y - 19 } });
+      segs.push({ kind: 'ride', t0: nb.at, t1: nb.at + rideT, line: best.line, bus: nb.bus });
+      segs.push({ kind: 'walk', r: L2, t0: nb.at + rideT, t1: nb.at + rideT + w2, mode: 0 });
+      return { segs, start: t0, end: nb.at + rideT + w2 };
+    }
+
+    // Position of a person at visual time t (0..1 of the simulated day, 06:00 start).
     posOf(p, t, fast) {
       const home = p.homeId >= 0 ? p.homeId : this.town.byKind.welfare;
       const plan = p.plan;
-      if (!plan || !plan.length) return { ...this.spot(home, p.id), hidden: t < 0.06 || t > 0.92, moving: false };
+      const tm = t * 1440;
+      const night = tm >= 1020 || tm < 30;
+      if (!plan || !plan.length) return { ...this.spot(home, p.id), hidden: night, moving: false };
       const A = plan[0].loc >= 0 ? plan[0].loc : home;
       const B = plan[1] && plan[1].loc >= 0 ? plan[1].loc : A;
-      if (fast) return { ...this.spot(t < 0.5 ? A : B, p.id), moving: false };
+      if (fast) return { ...this.spot(tm < LES.SLOT_B ? A : B, p.id), moving: false };
       let an = this.anim.get(p.id);
       if (!an || an.day !== this.w.lastDay || an.A !== A || an.B !== B || an.H !== home) {
-        an = { day: this.w.lastDay, A, B, H: home, r1: this.route(p, home, A), r2: this.route(p, A, B), r3: this.route(p, B, home) };
+        const t1 = this.planTrip(p, home, A, null, LES.SLOT_A);
+        const t2 = this.planTrip(p, A, B, LES.SLOT_B, null);
+        const t3 = this.planTrip(p, B, home, LES.SLOT_END, null);
+        an = { day: this.w.lastDay, A, B, H: home, segs: [...t1.segs, ...t2.segs, ...t3.segs], t1, t2, t3 };
         this.anim.set(p.id, an);
       }
-      if (t < 0.06) return { ...this.spot(home, p.id), hidden: true };
-      if (t < 0.14) return { ...this.along(an.r1, (t - 0.06) / 0.08), moving: an.r1.total > 0 };
-      if (t < 0.48) return { ...this.spot(A, p.id), moving: false };
-      if (t < 0.54) return { ...this.along(an.r2, (t - 0.48) / 0.06), moving: an.r2.total > 0 };
-      if (t < 0.84) return { ...this.spot(B, p.id), moving: false };
-      if (t < 0.92) return { ...this.along(an.r3, (t - 0.84) / 0.08), moving: an.r3.total > 0 };
-      return { ...this.spot(home, p.id), hidden: true };
+      for (const s of an.segs) {
+        if (tm < s.t0 || tm >= s.t1) continue;
+        if (s.kind === 'wait') return { x: s.pt.x, y: s.pt.y, moving: false, waiting: true };
+        if (s.kind === 'ride') return { hidden: true, riding: s, x: 0, y: 0 };
+        const q = this.along(s.r, (tm - s.t0) / Math.max(0.001, s.t1 - s.t0));
+        return { x: q.x, y: q.y, dx: q.dx, dy: q.dy, moving: true, mode: s.kind === 'drive' ? s.mode : 0 };
+      }
+      if (tm < an.t1.start) return { ...this.spot(home, p.id), hidden: tm < 30, moving: false };
+      if (tm < LES.SLOT_B) return { ...this.spot(A, p.id), moving: false };
+      if (tm < LES.SLOT_END) return { ...this.spot(B, p.id), moving: false };
+      return { ...this.spot(home, p.id), hidden: night, moving: false };
     }
 
     frame(t, fast, now) {
       const g = this.ctx, w = this.w;
       if (!w || !this.bg) return;
+      if (this.bgVersion !== w.townVersion) { this.buildStatic(); this.anim.clear(); }
       if (this.follow && this.selectedId >= 0) {
         const p = w.people[this.selectedId];
-        if (p && p.alive) { const pos = this.posOf(p, t, fast); this.centerOn(pos.x, pos.y, 0.15); }
+        if (p && p.alive && !p.away) { const pos = this.posOf(p, t, fast); if (!pos.riding) this.centerOn(pos.x, pos.y, 0.15); }
       }
       g.setTransform(1, 0, 0, 1, 0, 0);
       g.fillStyle = '#5f8a45';
@@ -460,39 +561,76 @@
       g.imageSmoothingEnabled = false;
       g.drawImage(this.bg, 0, 0);
       this.drawShops(g);
+      LES.Ambience.drawWorld(this, g, w, t, now, fast);
+      if (this.selectedBuilding >= 0) {
+        const b = this.town.buildings[this.selectedBuilding], T = this.town.T;
+        g.strokeStyle = '#3ec7b5'; g.lineWidth = 2; g.setLineDash([4, 3]);
+        g.strokeRect(b.x * T - 2, b.y * T - 2, b.w * T + 4, b.h * T + 4); g.setLineDash([]);
+      }
 
-      // People, sorted by y for depth
+      // People and their vehicles, sorted by y for depth
       const list = [];
       const walkFrame = Math.floor((now || 0) / 180) % 2;
+      const busLoad = new Map();
       for (const p of w.living) {
         if (!p.alive) continue;
         const pos = this.posOf(p, t, fast);
-        if (pos.hidden && p.id !== this.selectedId) continue;
-        list.push({ p, x: pos.x, y: pos.y, moving: pos.moving });
+        if (pos.riding) { const k = `${pos.riding.line.id}|${pos.riding.bus}`; busLoad.set(k, (busLoad.get(k) || 0) + 1); }
+        if (pos.hidden && (p.id !== this.selectedId || pos.riding)) continue;
+        list.push({ p, ...pos });
+      }
+      const tm = t * 1440;
+      if (!fast && tm > 20 && tm < 1050) {
+        for (const line of this.town.busLines) for (let k = 0; k < line.buses; k++) {
+          const pos = LES.busPointAt(line, tm * LES.BUS.speed + k * line.len / line.buses);
+          list.push({ bus: true, line, k, x: pos.x, y: pos.y, load: busLoad.get(`${line.id}|${k}`) || 0, horiz: pos.dir !== 0 });
+        }
       }
       list.sort((a, b) => a.y - b.y);
       this.screenPos = [];
       const millionaire = U.RM(1e6);
       for (const it of list) {
+        if (it.bus) { drawBus(g, it); continue; }
         const p = it.p, age = P.age(w, p);
         const group = age < 3 ? 'baby' : !p.adult ? 'child' : age >= 65 ? 'elder' : 'adult';
-        const spr = LES.Sprites.person(p.look, group, it.moving ? walkFrame : 0);
+        if (it.moving && it.mode > 0) {
+          drawVehicle(g, it.x, it.y, it.dx, it.dy, it.mode, p);
+          this.screenPos.push({ id: p.id, x: (it.x - this.cx) * this.z, y: (it.y - 4 - this.cy) * this.z });
+          continue;
+        }
+        if (this.overlay && this.overlay !== 'none') {
+          const oc = LES.Extras.overlayColour(w, p, this.overlay, this.selectedId >= 0 ? w.people[this.selectedId] : null);
+          if (oc) { g.fillStyle = oc; g.beginPath(); g.ellipse(it.x, it.y, 6, 2.5, 0, 0, Math.PI * 2); g.fill(); }
+          else if (this.overlay === 'family') g.globalAlpha = 0.35;
+        }
+        const slotAct = !it.moving && p.plan ? p.plan[tm < LES.SLOT_B ? 0 : 1] : null;
+        const atPlace = slotAct && !it.waiting && tm >= LES.SLOT_A && tm < LES.SLOT_END;
+        const spr = LES.Sprites.person(p.look, group, it.moving ? walkFrame : 0, atPlace ? LES.Ambience.outfitFor(p, slotAct) : null);
         const x = Math.round(it.x - spr.width / 2), y = Math.round(it.y - spr.height);
         g.drawImage(spr, x, y);
-        if (p.nw >= millionaire) { rect(g, x + spr.width / 2 - 1, y - 3, 3, 2, '#f2c14e'); }
+        g.globalAlpha = 1;
+        if (atPlace && this.z >= 2.2 && !fast) LES.Ambience.bubble(g, it.x, y - 1, LES.Actions.ICONS[slotAct.act] || '•');
+        if (P.goalWorth(w, p) >= millionaire) rect(g, x + spr.width / 2 - 1, y - 3, 3, 2, '#f2c14e');
         this.screenPos.push({ id: p.id, x: (it.x - this.cx) * this.z, y: (it.y - spr.height / 2 - this.cy) * this.z });
       }
+      this.drawNight(g, t, fast);
+      LES.Ambience.drawScreen(this, g, w, t, now, fast, this.nightLevel || 0);
+      this.drawLabels(g, w);
+    }
 
-      // Night tint
-      if (!fast) {
-        const night = t > 0.86 ? Math.min(1, (t - 0.86) / 0.06) : t < 0.06 ? 1 - t / 0.06 : 0;
-        if (night > 0) {
-          g.setTransform(1, 0, 0, 1, 0, 0);
-          g.fillStyle = `rgba(12,20,52,${0.38 * night})`;
-          g.fillRect(0, 0, this.cv.width, this.cv.height);
-        }
-      }
+    drawNight(g, t, fast) {
+      if (fast) { this.nightLevel = 0; return; }
+      const hr = (t * 24 + 6) % 24; // dusk 19:00-20:30, dawn 06:00-07:00
+      let night = hr >= 20.5 || hr < 6 ? 1 : hr >= 19 ? (hr - 19) / 1.5 : hr < 7 ? 1 - (hr - 6) : 0;
+      this.nightLevel = night;
+      if (night <= 0) return;
+      if (LES.Ambience.weather(this.w.lastDay < 0 ? 0 : this.w.lastDay).id === 'rain') night = Math.min(1, night + 0.1);
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.fillStyle = `rgba(12,20,52,${0.38 * night})`;
+      g.fillRect(0, 0, this.cv.width, this.cv.height);
+    }
 
+    drawLabels(g, w) {
       // Selection + rich labels in screen space (crisp text)
       g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
       const label = (id, colour, text) => {
@@ -525,25 +663,30 @@
 
     drawShops(g) {
       const w = this.w, T = this.town.T;
-      g.font = `8px ${FONT}`;
       g.textBaseline = 'top';
       for (const id of this.town.shoplots) {
         const b = this.town.buildings[id], X = b.x * T, Y = b.y * T;
         const bizId = w.shoplotOwner[id];
-        if (bizId === undefined) { rect(g, X + 4, Y + 32, 22, 8, '#e8e4da'); g.fillStyle = '#7a2e1e'; g.fillText('SEWA', X + 6, Y + 32); continue; }
+        if (bizId === undefined) {
+          rect(g, X + 14, Y + 12, 36, 10, '#e8e4da');
+          g.font = `8px ${FONT}`; g.fillStyle = '#7a2e1e'; g.fillText('SEWA', X + 20, Y + 13);
+          continue;
+        }
         const biz = w.biz[bizId];
-        const word = biz.name.split(' ').slice(-1)[0].toUpperCase().slice(0, 5);
-        rect(g, X + 1, Y + 26, 29, 9, biz.type === 'restaurant' ? '#b23a48' : biz.type === 'workshop' ? '#3d5a80' : '#2a9d8f');
-        g.fillStyle = '#ffffff';
-        g.fillText(word, X + 3, Y + 27);
-        if (biz.scale > U.RM(biz.typeDef.scale0) * 3) rect(g, X + 26, Y + 1, 4, 4, '#f2c14e');
+        const col = biz.type === 'restaurant' ? '#b23a48' : biz.type === 'workshop' ? '#3d5a80' : biz.type === 'retail' ? '#2a9d8f' : '#6a4c93';
+        rect(g, X + 2, Y + 7, 60, 20, col);
+        rect(g, X + 2, Y + 7, 60, 1, 'rgba(255,255,255,0.4)');
+        g.font = `6px ${FONT}`; g.fillStyle = '#ffffff';
+        const lines = wrapText(g, biz.name.toUpperCase(), 57, 3);
+        lines.forEach((ln, i) => g.fillText(ln, X + 4, Y + 8 + i * 6.3));
+        if (biz.scale > U.RM(biz.typeDef.scale0) * 3) rect(g, X + 58, Y + 2, 4, 4, '#f2c14e');
       }
       const counts = {};
-      for (const b of w.biz) if (b.open && !w.town.buildings[b.place].unit && w.town.buildings[b.place].kind !== 'shoplot') counts[b.place] = (counts[b.place] || 0) + 1;
+      for (const b of w.biz) if (b.open && w.town.buildings[b.place].kind !== 'shoplot') counts[b.place] = (counts[b.place] || 0) + 1;
+      g.font = `8px ${FONT}`;
       for (const k of Object.keys(counts)) {
         const b = this.town.buildings[k];
-        const kind = b.kind === 'hawker' ? 'stalls' : 'firms';
-        const text = `${counts[k]} ${kind}`;
+        const text = `${counts[k]} ${b.kind === 'hawker' ? 'stalls' : 'firms'}`;
         const tw = g.measureText(text).width;
         const x = b.x * T + b.w * T / 2 - tw / 2 - 3, y = b.kind === 'hawker' ? b.y * T + b.h * T - 12 : b.y * T + 12;
         rect(g, x, y, tw + 6, 10, '#f2c14e');
@@ -560,7 +703,82 @@
       }
       return best;
     }
+
+    // Building under a screen point (topmost), or -1.
+    pickBuilding(sx, sy) {
+      const T = this.town.T, wx = this.cx + sx / this.z, wy = this.cy + sy / this.z;
+      for (let i = this.town.buildings.length - 1; i >= 0; i--) {
+        const b = this.town.buildings[i];
+        if (b.kind === 'builtlot') continue;
+        if (wx >= b.x * T && wx < (b.x + b.w) * T && wy >= b.y * T && wy < (b.y + b.h) * T) return b.id;
+      }
+      return -1;
+    }
   }
+
+  function wrapText(g, text, maxW, maxLines) {
+    const words = text.split(' '), lines = [];
+    let cur = '';
+    for (const wd of words) {
+      const next = cur ? `${cur} ${wd}` : wd;
+      if (g.measureText(next).width <= maxW) cur = next;
+      else { if (cur) lines.push(cur); cur = wd; }
+    }
+    if (cur) lines.push(cur);
+    if (lines.length > maxLines) { lines.length = maxLines; lines[maxLines - 1] = lines[maxLines - 1].slice(0, -1) + '…'; }
+    return lines;
+  }
+
+  const CAR_COLOURS = ['#e63946', '#457b9d', '#f1faee', '#2a9d8f', '#e9c46a', '#8d99ae', '#264653', '#f4a261'];
+  function drawVehicle(g, x, y, dx, dy, mode, p) {
+    x = Math.round(x); y = Math.round(y);
+    const horiz = dx !== 0 || dy === 0;
+    const skin = p.look.skin;
+    if (mode === 1) { // motorbike with rider
+      if (horiz) {
+        rect(g, x - 5, y - 3, 10, 3, '#2b2d42'); rect(g, x - 6, y, 3, 3, '#111'); rect(g, x + 3, y, 3, 3, '#111');
+        rect(g, x - 2, y - 8, 4, 5, p.look.shirt); rect(g, x - 2, y - 11, 4, 3, '#e63946');
+      } else {
+        rect(g, x - 2, y - 6, 4, 10, '#2b2d42'); rect(g, x - 2, y - 8, 4, 2, '#111'); rect(g, x - 2, y + 4, 4, 2, '#111');
+        rect(g, x - 3, y - 4, 6, 4, p.look.shirt); rect(g, x - 2, y - 7, 4, 3, '#e63946');
+      }
+      return;
+    }
+    const lux = mode === 3;
+    const body = lux ? '#14141a' : CAR_COLOURS[p.id % CAR_COLOURS.length];
+    if (horiz) {
+      rect(g, x - 9, y - 6, 18, 8, 'rgba(0,0,0,0.25)');
+      rect(g, x - 9, y - 7, 18, 7, body); rect(g, x - 5, y - 10, 10, 4, body);
+      rect(g, x - 4, y - 9, 8, 3, '#9fd3e0'); rect(g, (dx >= 0 ? x + 1 : x - 3), y - 9, 2, 2, skin);
+      rect(g, x - 7, y, 4, 2, '#111'); rect(g, x + 3, y, 4, 2, '#111');
+      if (lux) rect(g, x - 9, y - 4, 18, 1, '#f2c14e');
+    } else {
+      rect(g, x - 5, y - 9, 10, 16, 'rgba(0,0,0,0.25)');
+      rect(g, x - 5, y - 10, 10, 16, body); rect(g, x - 4, y - 6, 8, 5, '#9fd3e0'); rect(g, x - 1, y - 5, 2, 2, skin);
+      if (lux) rect(g, x - 1, y - 10, 2, 16, '#f2c14e');
+    }
+  }
+
+  function drawBus(g, it) {
+    const x = Math.round(it.x), y = Math.round(it.y), c = it.line.colour;
+    if (it.horiz) {
+      rect(g, x - 15, y - 8, 30, 12, 'rgba(0,0,0,0.25)');
+      rect(g, x - 15, y - 11, 30, 12, c); rect(g, x - 15, y - 11, 30, 2, '#ffffff');
+      for (let i = 0; i < 6; i++) { rect(g, x - 13 + i * 5, y - 8, 4, 4, '#cfeaf2'); if (i < it.load) rect(g, x - 12 + i * 5, y - 7, 2, 2, '#c68642'); }
+      rect(g, x - 11, y + 1, 4, 3, '#111'); rect(g, x + 7, y + 1, 4, 3, '#111');
+    } else {
+      rect(g, x - 6, y - 14, 12, 30, 'rgba(0,0,0,0.25)');
+      rect(g, x - 6, y - 16, 12, 30, c); rect(g, x - 6, y - 16, 12, 2, '#ffffff');
+      for (let i = 0; i < 5; i++) { rect(g, x - 4, y - 12 + i * 5, 8, 3, '#cfeaf2'); if (i < it.load) rect(g, x - 1, y - 12 + i * 5, 2, 2, '#c68642'); }
+    }
+  }
+
+  LES.polyline = function (pts) {
+    let total = 0;
+    const lens = [];
+    for (let i = 1; i < pts.length; i++) { const l = Math.abs(pts[i].x - pts[i - 1].x) + Math.abs(pts[i].y - pts[i - 1].y); lens.push(l); total += l; }
+    return { pts, lens, total };
+  };
 
   LES.Renderer = Renderer;
 })(globalThis.LES = globalThis.LES || {});

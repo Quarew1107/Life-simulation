@@ -19,7 +19,7 @@
   // People who socialised at the same place and time can meet and become a couple.
   Fa.matchSocial = function (w) {
     const R = w.rng.family;
-    for (const pool of w.socialPools) {
+    for (const pool of Object.values(w.socialPools)) {
       const singles = pool.map(id => w.people[id]).filter(p => p.alive && p.partnerId === null && P.age(w, p) >= 18 && P.age(w, p) <= 55);
       for (let i = 0; i < singles.length; i++) {
         const a = singles[i];
@@ -38,7 +38,7 @@
         }
       }
     }
-    w.socialPools = [[], []];
+    w.socialPools = {};
   };
 
   Fa.formCouple = function (w, a, b) {
@@ -91,7 +91,7 @@
       if (p.pregnancy || w.day - p.lastBirthDay < w.cfg.birthSpacingDays || P.age(w, q) > 65) continue;
       const fert = fertility(P.age(w, p));
       if (fert <= 0) continue;
-      if (R.next() < Fa.desire(w, p) && R.next() < Fa.desire(w, q) && R.next() < 0.13 * fert * w.derived.fertMult) {
+      if (R.next() < Fa.desire(w, p) && R.next() < Fa.desire(w, q) && R.next() < 0.11 * fert * w.derived.fertMult) {
         p.pregnancy = { father: q.id, due: w.day + w.cfg.gestationDays, twins: R.next() < w.cfg.twinProb };
         P.log(w, p, 'Is expecting a baby', 'family', 0);
       }
@@ -128,25 +128,7 @@
     mother.lastBirthDay = w.day;
     const n = preg.twins ? 2 : 1;
     for (let k = 0; k < n; k++) {
-      const c = w.addPerson();
-      c.sex = R.next() < 0.5 ? 'M' : 'F';
-      c.eth = R.next() < 0.5 ? father.eth : mother.eth;
-      const pool = C.NAMES[c.eth];
-      c.first = R.pick(pool[c.sex]);
-      c.last = father.last;
-      c.birthDay = w.day;
-      c.gen = Math.max(father.gen, mother.gen) + 1;
-      c.parents = [father.id, mother.id];
-      c.look = P.makeLook(R, c.eth, c.sex);
-      c.pot = Fa.inheritAttrs(w, mother, father);
-      c.att = c.pot.map(v => v * 0.3);
-      for (const key of C.PERS) {
-        c.pers[key] = Math.round(U.clamp(0.5 * (father.pers[key] + mother.pers[key]) / 2 + 0.5 * R.normal(50, 18), 0, 100));
-      }
-      c.famDesire = Math.round(U.clamp(0.4 * (father.famDesire + mother.famDesire) / 2 + 0.6 * R.normal(55, 20), 0, 100));
-      c.health = 90; c.energy = 100; c.stress = 0;
-      c.tiers = { food: 1, housing: 0, transport: 0, leisure: 0 };
-      father.children.push(c.id); mother.children.push(c.id);
+      const c = w.makeChild(R, father, mother, 0);
       w.stats.births++;
       if (n === 2 && k === 0) w.stats.twins++;
 
@@ -187,7 +169,7 @@
       for (const sib of par.children) candidates.push(w.people[sib]);
     }
     for (const g of candidates) {
-      if (!g || g.id === c.id || tried.has(g.id) || !P.isAdult(w, g)) continue;
+      if (!g || g.id === c.id || tried.has(g.id) || !P.isAdult(w, g) || g.away) continue;
       tried.add(g.id);
       if (Fa.acceptCare(w, g)) {
         Fa.addCare(w, g, c);
@@ -219,7 +201,7 @@
     const age = P.age(w, c);
     if (c.guardian === 'WELFARE') {
       c.upbringing = c.upbringing * 0.97 + 0.03 * 0.45;
-      w.ledger.move(w.ledger.sec.WELFARE, 'bal', w.ledger.sec.MERCHANT, 'bal', U.RM(C.CHILD_COST));
+      w.ledger.move(w.ledger.sec.WELFARE, 'bal', w.ledger.sec.MERCHANT, 'bal', w.px(C.CHILD_COST));
       c.careSessions = 0; c.unpaidCare = 0;
       return;
     }
@@ -238,6 +220,7 @@
   Fa.comeOfAge = function (w, c) {
     const R = w.rng.family;
     for (let i = 0; i < 6; i++) c.att[i] = U.clamp(c.pot[i] * (0.72 + 0.3 * c.upbringing) + R.normal(0, 0.3), 0, 10);
+    c.peak = c.att.slice();
     c.pers.dis = Math.round(U.clamp(c.pers.dis + (c.upbringing - 0.5) * 20, 0, 100));
     c.pers.resp = Math.round(U.clamp(c.pers.resp + (c.upbringing - 0.5) * 16, 0, 100));
     for (const gid of c.caregivers) {
@@ -254,7 +237,7 @@
     if (c.trust > 0) w.ledger.move(c, 'trust', c, 'cash', c.trust);
     for (const pid of c.parents) {
       const par = w.people[pid];
-      if (!par.alive || par.nw < U.RM(50000)) continue;
+      if (!par.alive || par.away || par.nw < w.px(50000)) continue;
       const gift = Math.round(par.cash * U.clamp(0.02 + 0.08 * par.pers.resp / 100, 0, 0.1));
       if (gift > 0 && w.ledger.move(par, 'cash', c, 'cash', gift)) {
         c.earned.gifts += gift;
@@ -272,8 +255,13 @@
   // biological children (minors' shares go to trust), remainder sen by child ID.
   Fa.settleEstate = function (w, p) {
     const L = w.ledger;
-    F.raiseCash(w, p, P.invValue(w, p) + 1);
-    p.inv.idx = 0; p.inv.spd = 0; p.inv.cost = 0;
+    if (p.away) {
+      // Died abroad: the wealth they took with them comes back as their estate.
+      L.pay('ABROAD', p, 'cash', Math.round(p.away.wealth));
+      p.away = null;
+    }
+    F.raiseCash(w, p, P.invValue(w, p) + 1, 'estate');
+    p.inv = { idx: 0, st: {}, cost: 0 };
     if (p.epf > 0) L.move(p, 'epf', p, 'cash', p.epf);
     if (p.trust > 0) L.move(p, 'trust', p, 'cash', p.trust);
     const pay = Math.min(p.cash, p.debt.study);
@@ -290,24 +278,30 @@
       for (const h of heirs) {
         const amt = share + (rem > 0 ? 1 : 0);
         if (rem > 0) rem--;
-        L.move(p, 'cash', h, P.isAdult(w, h) ? 'cash' : 'trust', amt);
+        if (h.away) {
+          L.spend(p, 'cash', 'ABROAD', amt); // heir lives abroad: the share follows them
+          h.away.wealth += amt;
+        } else {
+          L.move(p, 'cash', h, P.isAdult(w, h) ? 'cash' : 'trust', amt);
+        }
         h.earned.inherit += amt;
         record.amounts.push(amt);
-        if (amt >= U.RM(1000)) P.log(w, h, `Inherited ${U.fmtMoney(amt)} from ${P.name(p)}`, 'family', amt >= U.RM(1e6) ? 2 : 1);
+        if (amt >= w.px(1000)) P.log(w, h, `Inherited ${U.fmtMoney(amt)} from ${P.name(p)}`, 'family', amt >= w.px(1e6) ? 2 : 1);
       }
     } else if (total > 0) {
       L.spend(p, 'cash', 'ESTATE', total);
     }
     w.estates.push(record);
 
-    // Business shares pass to the same heirs.
+    // Business shares pass to the heirs living in town.
+    const localHeirs = heirs.filter(h => !h.away);
     for (const k of Object.keys(p.shares)) {
       const b = w.biz[Number(k)], frac = p.shares[k];
       delete p.shares[k];
       delete b.shares[p.id];
-      if (heirs.length) {
-        for (const h of heirs) {
-          h.shares[b.id] = (h.shares[b.id] || 0) + frac / heirs.length;
+      if (localHeirs.length) {
+        for (const h of localHeirs) {
+          h.shares[b.id] = (h.shares[b.id] || 0) + frac / localHeirs.length;
           b.shares[h.id] = h.shares[b.id];
         }
       } else {

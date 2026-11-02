@@ -83,7 +83,7 @@
     for (const k of kids) { k.parents = [dad.id, w13.people[4].id]; k.birthDay = dad.birthDay + 365 * 20; }
     dad.children = kids.map(k => k.id);
     const emptyOut = x => {
-      x.job = null; x.inv = { idx: 0, spd: 0, cost: 0 }; x.debt.study = 0;
+      x.job = null; x.inv = { idx: 0, st: {}, cost: 0 }; x.debt.study = 0;
       w13.ledger.spend(x, 'epf', 'MERCHANT', x.epf);
       w13.ledger.spend(x, 'cash', 'MERCHANT', x.cash);
     };

@@ -24,10 +24,12 @@
       <div id="time-text" class="muted">06:00</div>
     </div>
     <div id="regime" class="badge">Normal economy</div>
+    <div id="mood" class="infl"></div>
     <div id="speed" class="speed" role="group" aria-label="Simulation speed"></div>
     <button id="btn-step" class="ghost" title="Advance one day (S)">+1 day</button>
     <div id="kpis" class="kpis"></div>
     <div id="goal" class="goal"></div>
+    <button id="btn-report" class="ghost" title="Open the simulation report in a new tab">📊 Report</button>
     <button id="btn-new" class="primary" title="Create a new world">New world</button>
   </header>
   <main>
@@ -37,16 +39,21 @@
         <button data-z="in" title="Zoom in">+</button>
         <button data-z="out" title="Zoom out">−</button>
         <button data-z="fit" title="Fit town">⤢</button>
+        <button data-z="sound" id="btn-sound" title="Music &amp; sound effects (off by default)">🔇</button>
+        <select id="overlay" title="Map overlay" aria-label="Map overlay"></select>
+        <button data-z="director" id="btn-director" title="Director mode: the camera jumps to the most interesting moments">🎬</button>
       </div>
       <div id="toasts" aria-live="polite"></div>
       <div id="tooltip" class="hidden"></div>
-      <div id="map-hint">Click a person to follow their life · drag to pan · scroll to zoom · Space to pause</div>
+      <div id="caption" class="hidden"></div>
+      <div id="map-hint">Click a person or building · drag to pan · scroll to zoom · Space to pause</div>
     </section>
     <aside id="side">
       <nav id="tabs">
         <button data-tab="person" class="active">Person</button>
         <button data-tab="leaders">Leaderboard</button>
         <button data-tab="feed">Events</button>
+        <button data-tab="place">Place</button>
         <button data-tab="stats">Stats</button>
       </nav>
       <div id="tab-person" class="tab active"></div>
@@ -61,6 +68,7 @@
         <div class="tab-tools"><div class="seg wrap" id="feed-filter"></div></div>
         <div id="feed-list"></div>
       </div>
+      <div id="tab-place" class="tab"></div>
       <div id="tab-stats" class="tab"></div>
     </aside>
   </main>
@@ -75,15 +83,21 @@
 <script src="js/data/town.js"></script>
 <script src="js/sim/ledger.js"></script>
 <script src="js/sim/person.js"></script>
+<script src="js/sim/market.js"></script>
 <script src="js/sim/actions.js"></script>
 <script src="js/sim/labour.js"></script>
 <script src="js/sim/finance.js"></script>
 <script src="js/sim/family.js"></script>
+<script src="js/sim/migration.js"></script>
 <script src="js/sim/world.js"></script>
 <script src="js/render/sprites.js"></script>
+<script src="js/render/ambience.js"></script>
 <script src="js/render/renderer.js"></script>
 <script src="js/ui/charts.js"></script>
 <script src="js/ui/panels.js"></script>
+<script src="js/ui/places.js"></script>
+<script src="js/ui/report.js"></script>
+<script src="js/ui/extras.js"></script>
 <script src="js/ui/setup.js"></script>
 <script src="js/main.js"></script>
 </body>
