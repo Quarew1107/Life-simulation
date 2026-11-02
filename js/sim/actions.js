@@ -134,7 +134,8 @@
       if (c.id !== 'MASTER' && C.BACHELORS.includes(c.id) && p.quals.some(P.isBachelor)) continue; // one bachelor is enough
       const acc = U.sigmoid((p.att[C.INT] - c.minInt) * 1.5);
       if (acc < 0.1) continue;
-      const unlock = c.id === 'MASTER' ? cur * 1.3 : w.px(w.qualValue[c.id] * 0.85);
+      // A Master's only adds a modest hiring bonus, so few people find it worth 18 months.
+      const unlock = c.id === 'MASTER' ? cur * 1.15 : w.px(w.qualValue[c.id] * 0.85);
       const value = Math.log(unlock / Math.max(cur, w.px(1500))) * acc - 0.15 * (c.months / 12) * (1 - patience);
       if (value > bestV) { bestV = value; best = { course: c, value }; }
     }

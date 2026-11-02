@@ -262,12 +262,12 @@ ${a.strat ? `<section><h2>Strategies</h2><table><tr><th>Starting strategy</th><t
 
   // CSV export of every person (for Excel / research).
   R.csv = function (w) {
-    const cols = ['id', 'name', 'sex', 'alive', 'away', 'migrant', 'generation', 'age', 'strategy_start', 'strategy_now', 'quals', ...C.ATTR, ...C.PERS, 'net_worth_now', 'peak_net_worth_nominal', 'wages', 'business', 'inherited', 'children', 'businesses_founded', 'business_failures'];
+    const cols = ['id', 'name', 'sex', 'alive', 'away', 'migrant', 'generation', 'age', 'strategy_start', 'strategy_now', 'quals', ...C.ATTR, ...C.ATTR.map(a => `${a}_potential`), ...C.PERS, 'net_worth_now', 'peak_net_worth_nominal', 'wages', 'business', 'inherited', 'children', 'businesses_founded', 'business_failures'];
     const q = v => `"${String(v).replace(/"/g, '""')}"`;
     const lines = [cols.join(',')];
     for (const p of w.people) {
       lines.push([p.id, q(P.name(p)), p.sex, p.alive, !!p.away, p.migrant, p.gen, Math.floor(P.age(w, p)), p.stratHist.length ? p.stratHist[0].strategy : p.strategy, p.strategy, q(p.quals.join(' ')),
-        ...p.pot.map(x => x.toFixed(2)), ...C.PERS.map(k => p.pers[k]), (p.nw / 100).toFixed(0), (p.peakNw / 100).toFixed(0),
+        ...p.att.map(x => x.toFixed(2)), ...p.pot.map(x => x.toFixed(2)), ...C.PERS.map(k => p.pers[k]), (p.nw / 100).toFixed(0), (p.peakNw / 100).toFixed(0),
         (p.earned.wages / 100).toFixed(0), (p.earned.business / 100).toFixed(0), ((p.earned.inherit + p.earned.gifts) / 100).toFixed(0), p.children.length,
         w.biz.filter(b => b.founderId === p.id).length, p.bizFailures].join(','));
     }

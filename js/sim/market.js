@@ -28,11 +28,13 @@
 
   M.stock = (w, tk) => w.mkt.byTk[tk];
 
-  // The Bursa index (and index fund) is equal-weighted and rebalanced daily, like a
-  // diversified fund: one runaway stock cannot dominate it.
+  // The Bursa index (and index fund) is market-cap weighted, like real exchange indices:
+  // it behaves like buy-and-hold, so it earns the stocks' returns without an artificial
+  // daily-rebalancing bonus. Mean-reverting fundamentals stop any one stock running away.
   M.weights = function (w) {
-    const n = w.mkt.stocks.length;
-    return w.mkt.stocks.map(() => 1 / n);
+    const caps = w.mkt.stocks.map(s => s.price * s.shares);
+    const tot = U.sum(caps);
+    return caps.map(c => c / tot);
   };
 
   // Record a resident trade (sen). side: +1 buy, -1 sell.
@@ -68,13 +70,19 @@
     const a = mk.alpha;
     const zm = U.clamp(R.normal(0, 1), -4, 4);
     const infl = w.infl;
+    const wPrev = M.weights(w); // yesterday's cap weights chain-link the index
     for (const s of mk.stocks) {
       const d = s.def;
       const sigTot = Math.sqrt(d.beta * d.beta * m.idxSig * m.idxSig + d.idio * d.idio);
       const sd = sigTot * Math.sqrt(dt);
-      const mu = infl + d.drift + d.beta * m.idxMu;
+      // Trend grows at inflation + real trend; the fundamental is pulled back toward it.
+      const g = infl + C.MARKET_TREND_REAL + d.drift;
+      if (!s.trend) s.trend = Math.log(s.fund);
+      s.trend += g * dt;
+      const pull = C.MARKET_REVERSION * (s.trend - Math.log(s.fund));
+      const mu = g + d.beta * (m.idxMu - C.MARKET_MU_NORMAL) + pull;
       const zi = U.clamp(R.normal(0, 1), -4, 4);
-      let rOut = (mu - 0.5 * sigTot * sigTot) * dt + d.beta * m.idxSig * Math.sqrt(dt) * zm + d.idio * Math.sqrt(dt) * zi;
+      let rOut = mu * dt + d.beta * m.idxSig * Math.sqrt(dt) * zm + d.idio * Math.sqrt(dt) * zi;
       if (R.next() < 0.0008) rOut += R.normal(0, 0.12); // rare company news
       s.volEma = 0.95 * s.volEma + 0.05 * Math.max(s.grossToday, w.px(2000));
       const q = s.flowToday - s.netEma; // only the surprise part of resident flow moves prices
@@ -89,8 +97,8 @@
       s.hist.push(s.price);
       s.flowToday = 0; s.grossToday = 0;
     }
-    // Geometric average of daily returns: no artificial "rebalancing bonus" from volatility.
-    mk.idx = mk.idx * Math.exp(U.sum(mk.stocks.map(s => Math.log(1 + s.lastRet))) / mk.stocks.length);
+    // Chain-linked cap-weighted return (a delisting/IPO never makes the index jump).
+    mk.idx = mk.idx * (1 + U.sum(mk.stocks.map((s, i) => wPrev[i] * s.lastRet)));
     for (const s of mk.stocks) if (s.price < Math.round(10 * w.price)) M.delist(w, s);
     mk.idxHist.push(mk.idx);
     mk.dayHist.push(w.day);
@@ -118,7 +126,7 @@
     s.tk = pool.length ? def.tk : `${def.tk}${mk.retired.length}`;
     s.def = def;
     s.price = Math.round(U.RM(def.price0) * w.price);
-    s.fund = s.price; s.dev = 0; s.netEma = 0; s.hist = [];
+    s.fund = s.price; s.trend = Math.log(s.price); s.dev = 0; s.netEma = 0; s.hist = [];
     mk.byTk[s.tk] = s;
     w.pushFeed({ day: w.day, pid: -1, text: `New listing: ${def.name} (${s.tk}) IPO on Bursa Rezeki at ${U.fmtPrice(s.price)} per share`, cat: 'economy', imp: 1 });
   };

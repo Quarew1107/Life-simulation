@@ -46,9 +46,9 @@
       this.winner = null; this.ended = false; this.endReason = null; this.pauseRequested = null;
       this.qualValue = {};
       for (const q of Object.keys(C.QUALS)) {
-        let best = 0;
-        for (const j of C.JOBS) if (j.req && P.hasCred({ quals: [q] }, j.req)) best = Math.max(best, j.salary);
-        this.qualValue[q] = best || 3000;
+        // Expected pay a qualification unlocks = average of the jobs that require it.
+        const sal = C.JOBS.filter(j => j.req && P.hasCred({ quals: [q] }, j.req)).map(j => j.salary);
+        this.qualValue[q] = sal.length ? U.sum(sal) / sal.length : 3000;
       }
       this.goal = this.derived.goal;
       this.milestoneList = [...new Set([U.RM(1e5), U.RM(1e6), U.RM(1e7), this.goal])].filter(x => x <= this.goal).sort((a, b) => a - b);

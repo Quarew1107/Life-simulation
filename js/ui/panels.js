@@ -93,15 +93,16 @@
     const adults = w.counts.adults;
     const employed = w.living.filter(p => p.alive && p.job).length;
     const millionaires = w.living.filter(p => p.alive && p.adult && P.goalWorth(w, p) >= U.RM(1e6)).length;
+    // Short labels keep the top bar on one row at 1080p; details live in the tooltips.
     $('kpis').innerHTML = [
-      [w.counts.living, `people (${w.counts.children} kids)`],
-      [adults ? U.fmtPct(employed / adults) : '–', 'adults employed'],
-      [w.biz.filter(b => b.open).length, 'businesses'],
-      [millionaires, 'millionaires'],
-      [h ? h.gini.toFixed(2) : '–', 'wealth Gini'],
-      [`${(w.infl * 100).toFixed(1)}%`, `inflation · prices ×${w.price.toFixed(2)}`],
-      [`${(w.mkt.idx).toFixed(0)}`, `Bursa index · town sway ${(w.mkt.alpha * 100).toFixed(0)}%`],
-    ].map(([v, l]) => `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+      [w.counts.living, 'people', `${w.counts.living} people in town (${w.counts.children} children)`],
+      [adults ? U.fmtPct(employed / adults) : '–', 'employed', 'Share of adults with a job'],
+      [w.biz.filter(b => b.open).length, 'firms', 'Open businesses'],
+      [millionaires, 'millionaires', `Adults worth RM1M+${w.cfg.goalMode === 'real' ? ' in Year-1 money' : ''}`],
+      [h ? h.gini.toFixed(2) : '–', 'Gini', 'Wealth inequality: 0 = everyone equal, 1 = one person owns everything'],
+      [`${(w.infl * 100).toFixed(1)}%`, 'inflation', `This year's inflation; prices are ×${w.price.toFixed(2)} Year-1 levels`],
+      [`${(w.mkt.idx).toFixed(0)}`, 'Bursa', `Bursa Rezeki index (started at 100); residents drive ${(w.mkt.alpha * 100).toFixed(0)}% of price moves`],
+    ].map(([v, l, t]) => `<div class="kpi" title="${U.esc(t)}"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
     const rich = app.richest();
     const goalEl = $('goal');
     if (w.winner) {
