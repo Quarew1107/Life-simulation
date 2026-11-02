@@ -25,10 +25,10 @@
   C.BACHELORS = ['BACH_GEN', 'BACH_BUS', 'BACH_ENG', 'MED'];
   C.COURSES = [
     { id: 'VOC', name: 'Vocational Certificate', months: 18, fee: 6000, minInt: 2, place: 'kolej', diff: 3.5, w: w(.4, .1, .3, 0, .1, .1) },
-    { id: 'BACH_GEN', name: 'Bachelor of Arts', months: 36, fee: 24000, minInt: 4, place: 'university', diff: 4.5, w: w(.7, 0, .2, .1, 0, 0) },
-    { id: 'BACH_BUS', name: 'Bachelor of Business', months: 36, fee: 30000, minInt: 4.5, place: 'university', diff: 5, w: w(.6, 0, .2, .2, 0, 0) },
-    { id: 'BACH_ENG', name: 'Bachelor of Engineering', months: 48, fee: 45000, minInt: 5.5, place: 'university', diff: 6, w: w(.8, 0, .2, 0, 0, 0) },
-    { id: 'MED', name: 'Medicine (MBBS)', months: 60, fee: 120000, minInt: 7, place: 'university', diff: 7, w: w(.7, 0, .2, 0, 0, .1) },
+    { id: 'BACH_GEN', name: 'Bachelor of Arts', months: 36, fee: 24000, minInt: 5, place: 'university', diff: 4.5, w: w(.7, 0, .2, .1, 0, 0) },
+    { id: 'BACH_BUS', name: 'Bachelor of Business', months: 36, fee: 30000, minInt: 5.5, place: 'university', diff: 5, w: w(.6, 0, .2, .2, 0, 0) },
+    { id: 'BACH_ENG', name: 'Bachelor of Engineering', months: 48, fee: 45000, minInt: 6.3, place: 'university', diff: 6, w: w(.8, 0, .2, 0, 0, 0) },
+    { id: 'MED', name: 'Medicine (MBBS)', months: 60, fee: 120000, minInt: 7.5, place: 'university', diff: 7, w: w(.7, 0, .2, 0, 0, .1) },
     { id: 'MASTER', name: "Master's Degree", months: 18, fee: 30000, minInt: 5, place: 'university', diff: 6.5, w: w(.8, 0, .2, 0, 0, 0), prereq: 'BACH' },
   ];
   C.COURSE_BY_ID = {};
@@ -124,9 +124,9 @@
     { id: 'workshop', name: 'Repair Workshop', capital: 40000, scale0: 18000, cap: 250000, costRatio: 0.88, fixed: 1500, sigma: 0.12, boom: 0.0004, boomMin: 1.5, boomMax: 3, bust: 0.003, capEff: 0.1, skillSpread: 0.18, cyclical: 0.8, multiple: 2.5, w: w(.3, .2, .3, .1, .1, 0), place: 'shoplot', req: 'VOC', names: ['Motor Works', 'Auto Service', 'Repair Centre', 'Engineering Works'] },
     { id: 'retail', name: 'Retail Shop', capital: 60000, scale0: 30000, cap: 600000, costRatio: 0.9, fixed: 2500, sigma: 0.15, boom: 0.0004, boomMin: 1.5, boomMax: 3, bust: 0.004, capEff: 0.1, skillSpread: 0.18, cyclical: 1, multiple: 3, w: w(.3, 0, .3, .4, 0, 0), place: 'shoplot', names: ['Mart', 'Fashion', 'Electronics', 'Kedai Runcit', 'Bookstore', 'Pharmacy'] },
     { id: 'restaurant', name: 'Restaurant', capital: 150000, scale0: 70000, cap: 3000000, costRatio: 0.9, fixed: 6000, sigma: 0.18, boom: 0.0006, boomMin: 2, boomMax: 4, bust: 0.004, capEff: 0.09, skillSpread: 0.2, cyclical: 1, multiple: 4, w: w(.2, 0, .4, .4, 0, 0), place: 'shoplot', names: ['Restaurant', 'Seafood', 'Curry House', 'Bistro', 'Dim Sum'] },
-    { id: 'trading', name: 'Trading Company', capital: 250000, scale0: 150000, cap: 15000000, costRatio: 0.93, fixed: 10000, sigma: 0.22, boom: 0.0008, boomMin: 2, boomMax: 4, bust: 0.005, capEff: 0.08, skillSpread: 0.22, cyclical: 1.3, multiple: 5, w: w(.4, 0, .2, .4, 0, 0), place: 'office', names: ['Trading Sdn Bhd', 'Import Export', 'Holdings', 'Logistics'] },
-    { id: 'tech', name: 'Tech Startup', capital: 120000, scale0: 15000, cap: 30000000, costRatio: 0.92, fixed: 6000, sigma: 0.35, boom: 0.002, boomMin: 3, boomMax: 8, bust: 0.012, capEff: 0.12, skillSpread: 0.35, cyclical: 1.2, multiple: 8, w: w(.7, 0, .2, .1, 0, 0), place: 'techhub', names: ['Tech', 'Labs', 'Digital', 'AI', 'Apps', 'Robotics'] },
-    { id: 'property', name: 'Property Developer', capital: 1000000, scale0: 300000, cap: 20000000, costRatio: 0.88, fixed: 30000, sigma: 0.3, boom: 0.0008, boomMin: 2, boomMax: 3.5, bust: 0.005, capEff: 0.07, skillSpread: 0.22, cyclical: 2.5, multiple: 5, w: w(.3, 0, .2, .5, 0, 0), place: 'office', names: ['Properties', 'Development', 'Land Sdn Bhd', 'Realty'] },
+    { id: 'trading', name: 'Trading Company', capital: 250000, scale0: 150000, cap: 15000000, costRatio: 0.93, fixed: 10000, sigma: 0.22, boom: 0.0011, boomMin: 2, boomMax: 4, bust: 0.005, capEff: 0.08, skillSpread: 0.22, cyclical: 1.3, multiple: 5, w: w(.4, 0, .2, .4, 0, 0), place: 'office', names: ['Trading Sdn Bhd', 'Import Export', 'Holdings', 'Logistics'] },
+    { id: 'tech', name: 'Tech Startup', capital: 120000, scale0: 15000, cap: 30000000, costRatio: 0.92, fixed: 6000, sigma: 0.35, boom: 0.0026, boomMin: 3, boomMax: 8, bust: 0.012, capEff: 0.12, skillSpread: 0.35, cyclical: 1.2, multiple: 8, w: w(.7, 0, .2, .1, 0, 0), place: 'techhub', names: ['Tech', 'Labs', 'Digital', 'AI', 'Apps', 'Robotics'] },
+    { id: 'property', name: 'Property Developer', capital: 1000000, scale0: 300000, cap: 20000000, costRatio: 0.88, fixed: 30000, sigma: 0.3, boom: 0.0011, boomMin: 2, boomMax: 3.5, bust: 0.005, capEff: 0.07, skillSpread: 0.22, cyclical: 2.5, multiple: 5, w: w(.3, 0, .2, .5, 0, 0), place: 'office', names: ['Properties', 'Development', 'Land Sdn Bhd', 'Realty'] },
   ];
   C.BIZ_BY_ID = {};
   for (const b of C.BIZ) C.BIZ_BY_ID[b.id] = b;
@@ -200,6 +200,12 @@
   C.MARKET_IMPACT_Y = 0.8;      // square-root impact prefactor (Toth et al. 2011: order one)
   C.TRADING_DAYS = 252;
   C.TOWN_REVERSION = 0.015;    // daily pull of town-driven mispricing back to fundamentals (~45-day half-life)
+  // Long-run valuation mean reversion (cf. Poterba & Summers 1988): a stock's fundamental
+  // value wanders with the economy but is pulled back toward a trend growing at
+  // inflation + MARKET_TREND_REAL (+ the stock's own drift). Half-life ~6 years.
+  C.MARKET_TREND_REAL = 0.025;  // cap-weighted index fund: ~3.5% real/yr median, ~2.5-4.5% across seeds
+  C.MARKET_REVERSION = 0.12;   // per year
+  C.MARKET_MU_NORMAL = 0.04;   // average regime drift, removed so regimes swing prices around the trend
 
   // ---- Migration: multipliers on base monthly rates ----
   C.MIGRATION_LEVELS = { off: 0, low: 1, normal: 3, high: 8 };

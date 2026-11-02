@@ -80,9 +80,11 @@
         }
       }
     }
-    for (const a of adults) {
+    // Everyone leaving (children too: they may have inherited shares) cashes out.
+    for (const a of [...adults, ...kids]) {
       if (a.job) LES.Labour.endJob(w, a, 'moved away', true);
       if (a.enrol) a.enrol = null;
+      const wallet = a.adult ? 'cash' : 'trust';
       for (const k of Object.keys(a.shares)) {
         const b = w.biz[Number(k)];
         if (!b.open) continue;
@@ -90,7 +92,7 @@
         else {
           // Minority stake bought out by an outside investor; other owners keep the business.
           const pay = Math.round(b.equity * a.shares[k] * 0.7);
-          L.pay('MARKET', a, 'cash', pay);
+          L.pay('MARKET', a, wallet, pay);
           a.earned.business += pay;
           delete b.shares[a.id];
           delete a.shares[k];
@@ -100,8 +102,9 @@
         }
       }
       a.manages = -1;
-      F.raiseCash(w, a, P.invValue(w, a) + 1, 'moving away');
+      if (P.invValue(w, a) > 0) F.raiseCash(w, a, P.invValue(w, a) + 1, 'moving away');
       a.inv = { idx: 0, st: {}, cost: 0 };
+      if (!a.adult) continue;
       const payDebt = Math.min(a.cash, a.debt.study);
       L.spend(a, 'cash', 'BANK', payDebt);
       a.debt.study -= payDebt;

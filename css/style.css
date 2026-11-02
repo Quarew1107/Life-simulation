@@ -48,11 +48,14 @@ button.ghost { background: var(--panel-2); border: 1px solid var(--line); border
 button.ghost:hover { border-color: var(--muted); }
 button.primary { background: var(--gold); color: #241900; border: 0; border-radius: 8px; padding: 8px 14px; font-weight: 700; box-shadow: 0 2px 0 #9b7a24; }
 button.primary:hover { filter: brightness(1.08); }
-.kpis { display: flex; gap: 14px; margin-left: auto; }
+.kpis { display: flex; gap: 12px; margin-left: auto; }
+.kpi { cursor: help; }
 .kpi { text-align: right; }
 .kpi .v { font-weight: 700; font-size: 14px; font-variant-numeric: tabular-nums; }
 .kpi .l { color: var(--muted); font-size: 11px; }
-.goal { min-width: 230px; max-width: 300px; }
+.goal { min-width: 200px; max-width: 280px; }
+@media (max-width: 2100px) { .title { font-size: 11px; } #topbar { gap: 10px; } }
+@media (max-width: 1700px) { .kpi:nth-child(5), .kpi:nth-child(7) { display: none; } }
 .goal .row { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; }
 .goal .bar { height: 8px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; overflow: hidden; margin-top: 3px; }
 .goal .bar i { display: block; height: 100%; background: linear-gradient(90deg, #b8892a, var(--gold)); }
