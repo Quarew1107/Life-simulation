@@ -1,0 +1,14 @@
+# Local tooling
+.claude/
+__pycache__/
+*.log
+
+# OS / editor clutter
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
+
+# Office lock files
+~$*

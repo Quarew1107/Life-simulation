@@ -1,0 +1,422 @@
+// Side panels (Person inspector, Leaderboard, Events, Stats), top bar, toasts.
+// Reads world state only; user actions go back to main.js through app methods.
+(function (LES) {
+  'use strict';
+  const U = LES.U, C = LES.C, P = LES.P, A = LES.Actions;
+  const $ = id => document.getElementById(id);
+  const esc = U.esc;
+  const UI = LES.UI = { tab: 'person', lbMode: 'alive', feedFilter: 'all', last: {}, feedSeqShown: 0 };
+
+  const FEED_FILTERS = [['all', 'All'], ['wealth', 'Wealth'], ['biz', 'Business'], ['career', 'Career'], ['edu', 'Education'], ['family', 'Family'], ['luck', 'Luck'], ['death', 'Deaths'], ['economy', 'Economy']];
+  const CAT_ICON = { wealth: '💰', biz: '🏪', career: '💼', edu: '🎓', family: '👪', luck: '🎲', death: '🕯️', economy: '📊', money: '💵', life: '🧭' };
+  const SLOT_NAMES = ['Day shift · 08:00–15:12', 'Evening · 15:40–22:24'];
+
+  UI.init = function (app) {
+    UI.app = app;
+    document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => UI.setTab(b.dataset.tab)));
+    $('search').addEventListener('input', () => UI.renderLeaders(true));
+    $('lb-mode').addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b) return;
+      UI.lbMode = b.dataset.mode;
+      $('lb-mode').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+      UI.renderLeaders(true);
+    });
+    $('feed-filter').innerHTML = FEED_FILTERS.map(([k, l]) => `<button data-f="${k}" class="${k === 'all' ? 'on' : ''}">${l}</button>`).join('');
+    $('feed-filter').addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b) return;
+      UI.feedFilter = b.dataset.f;
+      $('feed-filter').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+      UI.renderFeed(true);
+    });
+    // Delegated clicks for person links and panel buttons
+    $('side').addEventListener('click', e => {
+      const act = e.target.closest('[data-act]');
+      if (act) { app.action(act.dataset.act, act.dataset); return; }
+      const link = e.target.closest('[data-pid]');
+      if (link) { app.select(Number(link.dataset.pid), true); }
+    });
+    $('toasts').addEventListener('click', e => {
+      const t = e.target.closest('[data-pid]');
+      if (t && Number(t.dataset.pid) >= 0) app.select(Number(t.dataset.pid), true);
+    });
+  };
+
+  UI.setTab = function (tab) {
+    UI.tab = tab;
+    document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === `tab-${tab}`));
+    UI.update(true);
+  };
+
+  UI.plink = function (w, id) {
+    const p = w.people[id];
+    if (!p) return '?';
+    return `<a class="plink ${p.alive ? '' : 'dead'}" data-pid="${id}">${esc(P.name(p))}</a>`;
+  };
+
+  UI.mainSource = function (p) {
+    const e = p.earned;
+    const src = [['Salary', e.wages + e.gigs], ['Business', e.business], ['Investing', e.invest + e.interest], ['Inheritance', e.inherit + e.gifts], ['Luck', e.luck]];
+    src.sort((a, b) => b[1] - a[1]);
+    return src[0][1] > 0 ? src[0][0] : '—';
+  };
+
+  // Called from the main loop; throttles each panel independently.
+  UI.update = function (force) {
+    const app = UI.app, now = performance.now();
+    if (!app || !app.world) return;
+    const due = (k, ms) => { if (force || !UI.last[k] || now - UI.last[k] > ms) { UI.last[k] = now; return true; } return false; };
+    if (due('top', 200)) UI.renderTop();
+    const fastRun = !app.paused;
+    if (UI.tab === 'person' && due('person', fastRun ? 400 : 150)) UI.renderPerson();
+    if (UI.tab === 'leaders' && due('leaders', 600)) UI.renderLeaders();
+    if (UI.tab === 'feed' && due('feed', 500)) UI.renderFeed();
+    if (UI.tab === 'stats' && due('stats', 1200)) UI.renderStats();
+    if (due('toasts', 300)) UI.checkToasts();
+  };
+
+  // ---------------- Top bar ----------------
+  UI.renderTop = function () {
+    const app = UI.app, w = app.world;
+    const day = Math.max(0, w.lastDay);
+    $('date-text').textContent = U.fmtDate(day);
+    $('time-text').textContent = w.lastDay < 0 ? 'Not started' : app.fast ? `${app.speedLabel()} · fast-forward` : LES.clockAt(app.dayFrac);
+    const r = C.REGIMES[w.regime];
+    const badge = $('regime');
+    badge.textContent = `${r.name} economy`;
+    badge.style.color = r.color;
+    const h = w.history[w.history.length - 1];
+    const adults = w.counts.adults;
+    const employed = w.living.filter(p => p.alive && p.job).length;
+    const millionaires = w.living.filter(p => p.alive && p.adult && p.nw >= U.RM(1e6)).length;
+    $('kpis').innerHTML = [
+      [w.counts.living, `people (${w.counts.children} kids)`],
+      [adults ? U.fmtPct(employed / adults) : '–', 'adults employed'],
+      [w.biz.filter(b => b.open).length, 'businesses'],
+      [millionaires, 'millionaires'],
+      [h ? h.gini.toFixed(2) : '–', 'wealth Gini'],
+    ].map(([v, l]) => `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+    const rich = app.richest();
+    const goalEl = $('goal');
+    if (w.winner) {
+      const win = w.people[w.winner.pid];
+      goalEl.className = 'goal won';
+      goalEl.innerHTML = `<div class="row"><span>🏆 <a class="plink" data-pid="${win.id}">${esc(P.name(win))}</a> won</span><span class="muted">Y${U.dayToDate(w.winner.day).year}, age ${w.winner.age}</span></div><div class="bar"><i style="width:100%"></i></div>`;
+    } else {
+      const pr = rich ? U.clamp((Math.log10(Math.max(1, rich.nw / 100)) - 4) / (Math.log10(w.goal / 100) - 4), 0, 1) : 0;
+      goalEl.className = 'goal';
+      goalEl.innerHTML = `<div class="row"><span>Goal ${U.fmtMoney(w.goal)}</span><span class="muted">${rich ? `${esc(rich.first)} ${U.fmtMoney(rich.nw)}` : ''}</span></div><div class="bar" title="Richest person's progress (log scale from RM10k)"><i style="width:${(pr * 100).toFixed(1)}%"></i></div>`;
+    }
+    goalEl.onclick = e => { const l = e.target.closest('[data-pid]'); if (l) app.select(Number(l.dataset.pid), true); else if (rich) app.select(rich.id, true); };
+  };
+
+  // ---------------- Person ----------------
+  function bar(label, value, max, color, pot, num) {
+    const pct = U.clamp(value / max, 0, 1) * 100;
+    const potMark = pot !== undefined ? `<i class="pot" style="left:${U.clamp(pot / max, 0, 1) * 100}%" title="Inherited potential ${pot.toFixed(1)}"></i>` : '';
+    return `<div class="row"><span>${label}</span><div class="track"><i class="fill" style="width:${pct.toFixed(1)}%;background:${color}"></i>${potMark}</div><span class="num">${num !== undefined ? num : Math.round(value)}</span></div>`;
+  }
+  function pips(n, total) { let s = '<span class="pips">'; for (let i = 0; i < total; i++) s += `<i class="${i <= n ? 'on' : ''}"></i>`; return s + '</span>'; }
+
+  UI.renderPerson = function () {
+    const app = UI.app, w = app.world, el = $('tab-person');
+    const p = app.selected >= 0 ? w.people[app.selected] : null;
+    if (!p) { el.innerHTML = UI.welcomeHtml(); return; }
+    const age = Math.floor(P.age(w, p));
+    const stratCol = C.STRATEGY_COLORS[p.strategy];
+    let status;
+    if (!p.alive) status = `🕯️ Died aged ${age} (${esc(p.causeOfDeath)}) on ${U.fmtDate(p.deathDay)}`;
+    else if (p.plan && p.plan.length) {
+      const s = p.plan[app.dayFrac < 0.5 ? 0 : 1] || p.plan[0];
+      status = `${A.ICONS[s.act] || '•'} ${esc(s.label)}`;
+    } else status = '🏠 At home';
+    const job = p.job ? `${LES.Labour.title(p.job)} · ${U.fmtMoney(p.job.salary)}/mo` : p.retired ? 'Retired' : p.adult ? 'No job' : 'Child';
+    const chips = [`<span class="chip strat" style="--c:${stratCol}">${C.STRATEGY_NAMES[p.strategy]}</span>`];
+    if (!p.alive) chips.push('<span class="chip dead">Deceased</span>');
+    if (p.gen === 0) chips.push('<span class="chip">Founder</span>');
+    if (p.custom) chips.push('<span class="chip">Custom</span>');
+    if (p.guardian === 'WELFARE') chips.push('<span class="chip">Welfare home</span>');
+    if (p.bankruptUntil >= w.day) chips.push('<span class="chip dead">Bankrupt</span>');
+    if (p.pregnancy) chips.push('<span class="chip">Expecting 👶</span>');
+    for (const th of p.milestones) chips.push(`<span class="chip gold">★ ${U.fmtMoney(th)}</span>`);
+
+    const nw = p.nw, goal = w.goal;
+    const prog = U.clamp((Math.log10(Math.max(1, nw / 100)) - 3) / (Math.log10(goal / 100) - 3), 0, 1);
+    const invIdx = Math.round(p.inv.idx * w.market.idx), invSpd = Math.round(p.inv.spd);
+    const e = p.earned;
+
+    let html = `
+      <div class="p-head">
+        <canvas class="portrait" id="portrait" width="64" height="88"></canvas>
+        <div>
+          <h2>${esc(P.name(p))}</h2>
+          <div class="meta">${p.sex === 'M' ? '♂' : '♀'} ${age} yrs · Gen ${p.gen} · ${esc(job)}</div>
+          <div class="status">${status}</div>
+          <div class="chips">${chips.join('')}</div>
+        </div>
+        <div class="p-actions">
+          ${p.alive ? `<button class="ghost ${app.renderer.follow ? 'on' : ''}" data-act="follow">${app.renderer.follow ? 'Following' : 'Follow'}</button>` : ''}
+          <button class="ghost" data-act="deselect">Close</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Net worth <small class="muted">peak ${U.fmtMoney(p.peakNw)}</small></h3>
+        <div class="networth"><span class="big ${nw < 0 ? 'neg' : ''}">${U.fmtMoney(nw)}</span><span class="muted">${(prog * 100).toFixed(0)}% to goal (log)</span></div>
+        <div class="progress"><i style="width:${(prog * 100).toFixed(1)}%"></i></div>
+        <div class="grid2">
+          <div><span class="muted">Cash</span><span>${U.fmtMoney(p.cash)}</span></div>
+          <div><span class="muted">EPF</span><span>${U.fmtMoney(p.epf)}</span></div>
+          <div><span class="muted">Index fund</span><span>${U.fmtMoney(invIdx)}</span></div>
+          <div><span class="muted">Speculative</span><span>${U.fmtMoney(invSpd)}</span></div>
+          <div><span class="muted">Business equity</span><span>${U.fmtMoney(P.bizValue(w, p))}</span></div>
+          <div><span class="muted">Trust (minor)</span><span>${U.fmtMoney(p.trust)}</span></div>
+          <div><span class="muted">Study debt</span><span class="${p.debt.study ? 'neg' : ''}">${U.fmtMoney(-p.debt.study)}</span></div>
+          <div><span class="muted">Living costs</span><span>${U.fmtMoney(p.mcost)}/mo</span></div>
+        </div>
+        <canvas class="chart" id="chart-nw"></canvas>
+        <div class="grid2" title="Lifetime earnings by source">
+          <div><span class="muted">Wages + EPF</span><span>${U.fmtMoney(e.wages)}</span></div>
+          <div><span class="muted">Gigs</span><span>${U.fmtMoney(e.gigs)}</span></div>
+          <div><span class="muted">Business payouts</span><span>${U.fmtMoney(e.business)}</span></div>
+          <div><span class="muted">Investment gains</span><span class="${e.invest < 0 ? 'neg' : ''}">${U.fmtMoney(e.invest + e.interest)}</span></div>
+          <div><span class="muted">Inherited / gifts</span><span>${U.fmtMoney(e.inherit + e.gifts)}</span></div>
+          <div><span class="muted">Luck / welfare</span><span>${U.fmtMoney(e.luck + e.welfare)}</span></div>
+        </div>
+      </div>`;
+
+    if (p.alive && p.why && p.why.length) {
+      html += `<div class="card"><h3>Why did they do that? <small class="muted">${U.fmtDate(w.lastDay)}</small></h3>`;
+      p.why.forEach((s, i) => {
+        const ok = s.ok === undefined ? '' : s.ok ? ' <span class="pos">✓ success</span>' : ' <span class="neg">✗ failed</span>';
+        html += `<div class="why-slot"><div class="hd"><span class="muted">${SLOT_NAMES[i]}</span><span>${A.ICONS[s.act] || ''} ${esc(s.chosen)}${ok}${s.forced ? ' <span class="neg">(health override)</span>' : ''}</span></div>`;
+        for (const o of s.options) {
+          html += `<div class="why-opt ${o.label === s.chosen ? 'chosen' : ''}" title="Utility ${o.u.toFixed(2)}"><span>${A.ICONS[o.act] || ''} ${esc(o.label)}</span><div class="track"><i style="width:${(o.p * 100).toFixed(1)}%"></i></div><span class="pct">${(o.p * 100).toFixed(o.p < 0.1 ? 1 : 0)}%</span></div>`;
+        }
+        html += '</div>';
+      });
+      html += `<div class="note">Each option's probability comes from its utility (personality + strategy + needs + money) through a softmax. A separate dice roll decides success.</div></div>`;
+    } else if (p.alive && !p.adult) {
+      html += `<div class="card"><h3>Childhood</h3><div class="grid2">
+        <div><span class="muted">Upbringing</span><span>${Math.round(p.upbringing * 100)}%</span></div>
+        <div><span class="muted">Caregivers</span><span>${p.guardian === 'WELFARE' ? 'Welfare home' : p.caregivers.length}</span></div></div>
+        <div class="note">Children cannot act. Upbringing (care time, food, housing, paid costs) decides how much of their inherited potential they reach at 18.</div></div>`;
+    }
+
+    if (p.alive) {
+      html += `<div class="card bars"><h3>Condition</h3>
+        ${bar('Health', p.health, 100, '#57d38c')}${bar('Energy', p.energy, 100, '#5aa9e6')}${bar('Stress', p.stress, 100, '#ff6b6b')}${bar('Hunger', p.hunger, 100, '#f4a261')}</div>`;
+    }
+    html += `<div class="card bars"><h3>Attributes <small class="muted">bar = current · line = inherited potential</small></h3>
+      ${C.ATTR_NAMES.map((n, i) => bar(n, p.att[i], 10, '#f2c14e', p.pot[i], p.att[i].toFixed(1))).join('')}
+      ${p.attHist.length > 1 ? '<canvas class="chart" id="chart-att"></canvas>' : ''}</div>`;
+    html += `<div class="card bars"><h3>Personality</h3>
+      ${C.PERS.map(k => bar(C.PERS_NAMES[k], p.pers[k], 100, '#b892ff')).join('')}
+      ${bar('Family desire', p.famDesire, 100, '#f28482')}</div>`;
+
+    if (p.adult) {
+      html += `<div class="card tiers"><h3>Lifestyle <small class="muted">${U.fmtMoney(p.mcost)}/month incl. children</small></h3>
+        ${C.TIER_CATS.map(cat => {
+          const t = C.TIERS[cat][p.tiers[cat]];
+          const paysHousing = cat !== 'housing' || p.isHead;
+          return `<div class="row"><span class="muted">${C.TIER_CAT_NAMES[cat]}</span><span>${pips(p.tiers[cat], C.TIERS[cat].length)}${esc(t.name)}<div class="fx">${esc(t.fx || '')}</div></span><span>${paysHousing ? U.fmtMoney(U.RM(t.cost)) : 'partner pays'}</span></div>`;
+        }).join('')}</div>`;
+    }
+
+    // Career & education
+    const quals = p.quals.length ? p.quals.map(q => C.QUALS[q]).join(', ') : 'None';
+    let career = `<div class="grid2"><div><span class="muted">Qualifications</span><span>${esc(quals)}</span></div></div>`;
+    if (p.enrol) {
+      const c = C.COURSE_BY_ID[p.enrol.course];
+      const pct = p.enrol.progress / (c.months * 12);
+      career += `<div class="bars">${bar(esc(c.name.replace('Bachelor of ', 'B. ')), pct, 1, '#b892ff', undefined, U.fmtPct(pct))}</div>
+        <div class="note">${p.enrol.scholarship ? 'Full scholarship' : `Fees ${U.fmtMoney(p.enrol.feeMonthly)}/mo`} · started ${U.fmtDate(p.enrol.startDay)}</div>`;
+    }
+    if (p.job) {
+      career += `<div class="grid2" style="margin-top:6px">
+        <div><span class="muted">Job</span><span>${esc(LES.Labour.title(p.job))}</span></div>
+        <div><span class="muted">Salary</span><span>${U.fmtMoney(p.job.salary)}/mo</span></div>
+        <div><span class="muted">Shifts this month</span><span>${p.job.shiftsMonth}/${w.cfg.shiftsPerMonth}</span></div>
+        <div><span class="muted">Since</span><span>${p.job.startDay < 0 ? 'before Y1' : U.fmtMonthYear(p.job.startDay)}</span></div></div>`;
+    }
+    const xps = C.XP_CATS.filter(k => p.xp[k] >= 0.05);
+    if (xps.length) career += `<div class="bars" style="margin-top:6px">${xps.map(k => bar(`${k[0].toUpperCase()}${k.slice(1)} exp.`, p.xp[k], 5, '#3ec7b5', undefined, p.xp[k].toFixed(1))).join('')}</div>`;
+    if (p.adult) html += `<div class="card"><h3>Career & education</h3>${career}</div>`;
+
+    const owned = Object.keys(p.shares).map(k => w.biz[Number(k)]);
+    const founded = w.biz.filter(b => b.founderId === p.id && !b.open);
+    if (owned.length || founded.length) {
+      html += `<div class="card"><h3>Businesses</h3><ul class="list-plain">`;
+      for (const b of owned) {
+        html += `<li><span><b>${esc(b.name)}</b> <span class="muted">${esc(b.typeDef.name)} · ${Math.round(p.shares[b.id] * 100)}%${b.managerId === p.id ? ' · manager' : ''}${b.booms ? ` · ${b.booms} boom${b.booms > 1 ? 's' : ''}` : ''}</span><br><span class="muted">Revenue ${U.fmtMoney(b.lastRevenue)}/mo · profit <span class="${b.lastProfit < 0 ? 'neg' : 'pos'}">${U.fmtMoney(b.lastProfit)}</span></span></span><span>${U.fmtMoney(b.equity)}</span></li>`;
+      }
+      for (const b of founded.slice(-4)) html += `<li><span class="muted">${esc(b.name)} — ${esc(b.closeReason || 'closed')} ${b.closedDay !== null ? U.fmtMonthYear(b.closedDay) : ''}</span><span class="muted">peak ${U.fmtMoney(b.peakEquity)}</span></li>`;
+      html += '</ul></div>';
+    }
+
+    // Family
+    const fam = [];
+    if (p.partnerId !== null) fam.push(['Partner', UI.plink(w, p.partnerId)]);
+    if (p.exPartners.length) fam.push(['Former partners', p.exPartners.map(id => UI.plink(w, id)).join(', ')]);
+    if (p.parents.length) fam.push(['Parents', p.parents.map(id => UI.plink(w, id)).join(' & ')]);
+    if (p.children.length) fam.push(['Children', p.children.map(id => `${UI.plink(w, id)} <span class="muted">(${Math.floor(P.age(w, w.people[id]))})</span>`).join(', ')]);
+    if (!p.adult && p.caregivers.length) fam.push(['Raised by', p.caregivers.map(id => UI.plink(w, id)).join(', ')]);
+    if (p.stratHist.length > 1) fam.push(['Strategy history', p.stratHist.map(s => `${C.STRATEGY_NAMES[s.strategy]} <span class="muted">(${U.fmtMonthYear(s.day < 0 ? 0 : s.day)}${s.reason !== 'founder' ? ', ' + esc(s.reason) : ''})</span>`).join(' → ')]);
+    if (fam.length) html += `<div class="card"><h3>Family</h3><ul class="list-plain">${fam.map(([k, v]) => `<li><span class="muted">${k}</span><span style="text-align:right">${v}</span></li>`).join('')}</ul></div>`;
+
+    // Life story
+    const entries = p.log.slice().reverse().slice(0, 150);
+    html += `<div class="card"><h3>Life story <small class="muted">${p.log.length} events</small></h3><ul class="list-plain story">
+      ${entries.map(x => `<li class="imp${x.imp}"><span class="when">${U.fmtMonthYear(x.day)}<br>age ${Math.floor((x.day - p.birthDay) / 365)}</span><span class="what">${esc(x.text)}</span></li>`).join('')}</ul></div>`;
+
+    const scroll = el.scrollTop;
+    el.innerHTML = html;
+    el.scrollTop = scroll;
+
+    // Canvases
+    const portrait = $('portrait');
+    if (portrait) {
+      const g = portrait.getContext('2d');
+      g.imageSmoothingEnabled = false;
+      const group = age < 3 ? 'baby' : !p.adult ? 'child' : age >= 65 ? 'elder' : 'adult';
+      const spr = LES.Sprites.person(p.look, group, 0);
+      const k = Math.floor(Math.min(60 / spr.width, 80 / spr.height));
+      g.drawImage(spr, Math.round((64 - spr.width * k) / 2), Math.round((88 - spr.height * k) / 2), spr.width * k, spr.height * k);
+    }
+    const cn = $('chart-nw');
+    if (cn) {
+      const data = p.nwHist.map(([d, v]) => [d / 365, Math.max(0, v)]);
+      if (p.alive) data.push([w.day / 365, Math.max(0, p.nw)]);
+      LES.Charts.line(cn, { series: [{ label: 'Net worth (log)', color: '#f2c14e', data }], logY: true, yFmt: LES.Charts.fmtAxisMoney, xFmt: x => `Y${Math.floor(x) + 1}`, bands: UI.regimeBands(w) });
+    }
+    const ca = $('chart-att');
+    if (ca) {
+      const cols = ['#f2c14e', '#ff6b6b', '#3ec7b5', '#b892ff', '#5aa9e6', '#57d38c'];
+      LES.Charts.line(ca, { series: C.ATTR.map((n, i) => ({ label: n, color: cols[i], width: 1.5, data: p.attHist.map(([d, a]) => [d / 365, a[i]]) })), yFmt: v => v.toFixed(0), xFmt: x => `Y${Math.floor(x) + 1}`, yMin: 0 });
+    }
+  };
+
+  UI.welcomeHtml = function () {
+    const app = UI.app, w = app.world;
+    const rich = w.living.filter(p => p.alive && p.adult).sort((a, b) => b.nw - a.nw).slice(0, 3);
+    const young = w.living.filter(p => p.alive && p.adult && P.age(w, p) < 21).slice(0, 3);
+    const ent = w.living.filter(p => p.alive && p.strategy === 'ENT').slice(0, 2);
+    const pick = arr => arr.map(p => `<li><span>${UI.plink(w, p.id)} <span class="muted">${Math.floor(P.age(w, p))} · ${C.STRATEGY_NAMES[p.strategy]}</span></span><span>${U.fmtMoney(p.nw)}</span></li>`).join('');
+    return `<div class="card"><h3>Welcome to ${C.TOWN_NAME}</h3>
+      <p style="margin:0 0 6px">${w.cfg.founders} strangers each try to reach <b class="gold">${U.fmtMoney(w.goal)}</b>. Nobody is controlled — every choice is a weighted dice roll from their personality, strategy, needs and money.</p>
+      <p class="muted" style="margin:0">Click anyone on the map, or pick someone below. Press <b>Space</b> to play/pause, <b>1–6</b> for speed.</p></div>
+      <div class="card"><h3>Richest right now</h3><ul class="list-plain">${pick(rich)}</ul></div>
+      ${young.length ? `<div class="card"><h3>Youngest adults</h3><ul class="list-plain">${pick(young)}</ul></div>` : ''}
+      ${ent.length ? `<div class="card"><h3>Would-be entrepreneurs</h3><ul class="list-plain">${pick(ent)}</ul></div>` : ''}`;
+  };
+
+  UI.regimeBands = function (w) {
+    const bands = [];
+    const hist = w.regimeHist;
+    for (let i = 0; i < hist.length; i++) {
+      const r = hist[i].regime;
+      if (r === 'normal') continue;
+      const x0 = hist[i].day / 365, x1 = (i + 1 < hist.length ? hist[i + 1].day : w.day) / 365;
+      bands.push({ x0, x1, color: r === 'recession' ? 'rgba(231,111,81,0.13)' : 'rgba(62,199,181,0.08)' });
+    }
+    return bands;
+  };
+
+  // ---------------- Leaderboard ----------------
+  UI.renderLeaders = function () {
+    const app = UI.app, w = app.world;
+    const q = $('search').value.trim().toLowerCase();
+    let list;
+    if (q) list = w.people.filter(p => P.name(p).toLowerCase().includes(q)).sort((a, b) => (b.alive - a.alive) || (b.nw - a.nw)).slice(0, 60);
+    else if (UI.lbMode === 'alive') list = w.living.filter(p => p.alive && p.adult).sort((a, b) => b.nw - a.nw).slice(0, 50);
+    else list = w.people.filter(p => p.adult || !p.alive).sort((a, b) => b.peakNw - a.peakNw).slice(0, 50);
+    const val = p => UI.lbMode === 'all' && !q ? p.peakNw : p.nw;
+    $('lb-list').innerHTML = list.map((p, i) => `
+      <div class="lb-row ${p.id === app.selected ? 'sel' : ''}" data-pid="${p.id}">
+        <span class="rank ${i < 3 && !q ? 'top' : ''}">${q ? '' : i + 1}</span>
+        <span class="dot" style="background:${C.STRATEGY_COLORS[p.strategy]}" title="${C.STRATEGY_NAMES[p.strategy]}"></span>
+        <span><div class="nm">${esc(P.name(p))}${p.alive ? '' : ' <span class="muted">†</span>'}</div>
+          <div class="sub">${Math.floor(P.age(w, p))} yrs · ${C.STRATEGY_NAMES[p.strategy]} · via ${UI.mainSource(p)}${p.gen ? ` · gen ${p.gen}` : ''}</div></span>
+        <span class="val">${U.fmtMoney(val(p))}</span>
+      </div>`).join('') || '<p class="muted">Nobody matches.</p>';
+  };
+
+  // ---------------- Events feed ----------------
+  UI.renderFeed = function () {
+    const w = UI.app.world;
+    const f = UI.feedFilter;
+    const rows = [];
+    for (let i = w.feed.length - 1; i >= 0 && rows.length < 250; i--) {
+      const e = w.feed[i];
+      if (f !== 'all' && !(e.cat === f || (f === 'wealth' && e.cat === 'money'))) continue;
+      const name = e.pid >= 0 ? `<span class="nm">${esc(P.name(w.people[e.pid]))}</span> — ` : '';
+      rows.push(`<div class="feed-row imp${e.imp}" data-pid="${e.pid}"><span class="when">${U.fmtMonthYear(e.day)}</span><span>${CAT_ICON[e.cat] || '•'}</span><span class="txt">${name}${esc(e.text)}</span></div>`);
+    }
+    $('feed-list').innerHTML = rows.join('') || '<p class="muted">Nothing yet — press play.</p>';
+  };
+
+  // ---------------- Stats ----------------
+  UI.renderStats = function () {
+    const w = UI.app.world, el = $('tab-stats');
+    const h = w.history;
+    const last = h[h.length - 1];
+    const st = w.stats;
+    const xs = x => `Y${Math.floor(x) + 1}`;
+    const series = (k, label, color) => ({ label, color, data: h.map(r => [r.day / 365, r[k]]) });
+    const race = w.living.filter(p => p.alive && p.adult).sort((a, b) => b.nw - a.nw).slice(0, 5);
+    el.innerHTML = `
+      <div class="stat-grid">
+        <div class="stat"><div class="v">${last.pop}</div><div class="l">alive (${last.children} kids)</div></div>
+        <div class="stat"><div class="v">${U.fmtMoney(last.median)}</div><div class="l">median net worth</div></div>
+        <div class="stat"><div class="v">${last.millionaires}</div><div class="l">millionaires</div></div>
+        <div class="stat"><div class="v">${st.births}/${st.deaths}</div><div class="l">births / deaths</div></div>
+        <div class="stat"><div class="v">${st.bizStarted}/${st.bizFailed}</div><div class="l">businesses started / failed</div></div>
+        <div class="stat"><div class="v">${st.graduations}</div><div class="l">graduations</div></div>
+      </div>
+      <div class="card"><h3>Race to ${U.fmtMoney(w.goal)}</h3><ul class="list-plain">
+        ${race.map(p => `<li><span>${UI.plink(w, p.id)} <span class="muted">${Math.floor(P.age(w, p))} · ${C.STRATEGY_NAMES[p.strategy]}</span></span><span>${U.fmtMoney(p.nw)}</span></li>`).join('')}</ul>
+        ${w.winner ? `<div class="note">🏆 First to the goal: ${UI.plink(w, w.winner.pid)} in Y${U.dayToDate(w.winner.day).year} at age ${w.winner.age}.</div>` : ''}</div>
+      <div class="card"><h3>Wealth <small class="muted">adults, log scale · shading = boom / recession</small></h3><canvas class="chart tall" id="st-wealth"></canvas></div>
+      <div class="card"><h3>Median net worth by strategy <small class="muted">adults 30+, today</small></h3><canvas class="chart" id="st-strat"></canvas>
+        <div class="note">Exploratory only: one world, people also differ in age, ability and luck. Research Mode (later) will compare thousands of seeds.</div></div>
+      <div class="card"><h3>Population</h3><canvas class="chart" id="st-pop"></canvas></div>
+      <div class="card"><h3>Work</h3><canvas class="chart" id="st-work"></canvas></div>
+      <div class="card"><h3>Life events so far</h3><div class="grid2">
+        <div><span class="muted">Couples formed</span><span>${st.couples}</span></div><div><span class="muted">Break-ups</span><span>${st.breakups}</span></div>
+        <div><span class="muted">Twins</span><span>${st.twins}</span></div><div><span class="muted">Welfare children</span><span>${st.welfareKids}</span></div>
+        <div><span class="muted">Hires</span><span>${st.hires}</span></div><div><span class="muted">Promotions</span><span>${st.promotions}</span></div>
+        <div><span class="muted">Laid off / fired</span><span>${st.laidOff}/${st.fired}</span></div><div><span class="muted">Dropouts</span><span>${st.dropouts}</span></div>
+        <div><span class="muted">Scholarships</span><span>${st.scholarships}</span></div><div><span class="muted">Business booms</span><span>${st.booms}</span></div>
+        <div><span class="muted">Bankruptcies</span><span>${st.bankruptcies}</span></div><div><span class="muted">Serious accidents</span><span>${st.catastrophes}</span></div>
+        <div><span class="muted">Illnesses</span><span>${st.illnesses}</span></div><div><span class="muted">Windfalls / scams</span><span>${st.windfalls}/${st.scams}</span></div>
+      </div></div>
+      <p class="note">Results describe outcomes of this simulation under its specified assumptions and random seed (“${esc(w.cfg.seed)}”); they do not establish universal real-world causes of success.</p>`;
+    LES.Charts.line($('st-wealth'), {
+      series: [series('top', 'Richest', '#f2c14e'), series('p90', 'Top 10%', '#3ec7b5'), series('median', 'Median', '#5aa9e6')].map(s => ({ ...s, data: s.data.map(([x, y]) => [x, Math.max(0, y)]) })),
+      logY: true, yFmt: LES.Charts.fmtAxisMoney, xFmt: xs, bands: UI.regimeBands(w),
+    });
+    LES.Charts.bars($('st-strat'), C.STRATEGIES.map(s => ({ label: C.STRATEGY_NAMES[s], value: last.stratMedian[s], color: C.STRATEGY_COLORS[s] })), v => U.fmtMoney(v));
+    LES.Charts.line($('st-pop'), { series: [series('pop', 'Total', '#e8edf2'), series('adults', 'Adults', '#5aa9e6'), series('children', 'Children', '#f28482')], xFmt: xs, yMin: 0 });
+    LES.Charts.line($('st-work'), { series: [series('employed', 'Employed', '#57d38c'), series('unemployed', 'Unemployed', '#ff6b6b'), series('owners', 'Business owners', '#ff8c42'), series('students', 'Students', '#b892ff')], xFmt: xs, yMin: 0 });
+  };
+
+  // ---------------- Toasts ----------------
+  UI.checkToasts = function () {
+    const w = UI.app.world;
+    const fresh = w.feed.filter(e => e.seq > UI.feedSeqShown && e.imp >= 2);
+    if (w.feed.length) UI.feedSeqShown = Math.max(UI.feedSeqShown, w.feed[w.feed.length - 1].seq || 0);
+    for (const e of fresh.slice(-3)) {
+      const name = e.pid >= 0 ? `<b>${esc(P.name(w.people[e.pid]))}</b> — ` : '';
+      UI.toast(`${CAT_ICON[e.cat] || ''} ${name}${esc(e.text)}`, U.fmtDate(e.day), e.pid, e.imp >= 3);
+    }
+  };
+  UI.toast = function (html, when, pid, big) {
+    const box = $('toasts');
+    const t = document.createElement('div');
+    t.className = `toast${big ? ' big' : ''}`;
+    t.dataset.pid = pid === undefined ? -1 : pid;
+    t.innerHTML = `<div class="t">${esc(when || '')}</div>${html}`;
+    box.appendChild(t);
+    while (box.children.length > 4) box.removeChild(box.firstChild);
+    setTimeout(() => t.remove(), big ? 12000 : 6000);
+  };
+})(globalThis.LES = globalThis.LES || {});
