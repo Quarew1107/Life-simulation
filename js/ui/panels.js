@@ -72,6 +72,8 @@
     if (UI.tab === 'leaders' && due('leaders', 600)) UI.renderLeaders();
     if (UI.tab === 'feed' && due('feed', 500)) UI.renderFeed();
     if (UI.tab === 'stats' && due('stats', 1200)) UI.renderStats();
+    if (UI.tab === 'place' && due('place', 700)) UI.renderPlace();
+    if (UI.bursaOpen && due('bursa', 1500)) UI.renderBursa();
     if (due('toasts', 300)) UI.checkToasts();
   };
 
@@ -85,16 +87,20 @@
     const badge = $('regime');
     badge.textContent = `${r.name} economy`;
     badge.style.color = r.color;
+    const day0 = Math.max(0, w.lastDay), fest = LES.Ambience.festival(day0), wx = LES.Ambience.weather(day0);
+    $('mood').innerHTML = `${{ rain: '🌧️', haze: '🌫️', clear: '☀️' }[wx.id]} ${wx.name}${fest ? ` · 🎉 <b>${fest.name}</b>` : ''}`;
     const h = w.history[w.history.length - 1];
     const adults = w.counts.adults;
     const employed = w.living.filter(p => p.alive && p.job).length;
-    const millionaires = w.living.filter(p => p.alive && p.adult && p.nw >= U.RM(1e6)).length;
+    const millionaires = w.living.filter(p => p.alive && p.adult && P.goalWorth(w, p) >= U.RM(1e6)).length;
     $('kpis').innerHTML = [
       [w.counts.living, `people (${w.counts.children} kids)`],
       [adults ? U.fmtPct(employed / adults) : '–', 'adults employed'],
       [w.biz.filter(b => b.open).length, 'businesses'],
       [millionaires, 'millionaires'],
       [h ? h.gini.toFixed(2) : '–', 'wealth Gini'],
+      [`${(w.infl * 100).toFixed(1)}%`, `inflation · prices ×${w.price.toFixed(2)}`],
+      [`${(w.mkt.idx).toFixed(0)}`, `Bursa index · town sway ${(w.mkt.alpha * 100).toFixed(0)}%`],
     ].map(([v, l]) => `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
     const rich = app.richest();
     const goalEl = $('goal');
@@ -103,9 +109,10 @@
       goalEl.className = 'goal won';
       goalEl.innerHTML = `<div class="row"><span>🏆 <a class="plink" data-pid="${win.id}">${esc(P.name(win))}</a> won</span><span class="muted">Y${U.dayToDate(w.winner.day).year}, age ${w.winner.age}</span></div><div class="bar"><i style="width:100%"></i></div>`;
     } else {
-      const pr = rich ? U.clamp((Math.log10(Math.max(1, rich.nw / 100)) - 4) / (Math.log10(w.goal / 100) - 4), 0, 1) : 0;
+      const gw = rich ? P.goalWorth(w, rich) : 0;
+      const pr = rich ? U.clamp((Math.log10(Math.max(1, gw / 100)) - 4) / (Math.log10(w.goal / 100) - 4), 0, 1) : 0;
       goalEl.className = 'goal';
-      goalEl.innerHTML = `<div class="row"><span>Goal ${U.fmtMoney(w.goal)}</span><span class="muted">${rich ? `${esc(rich.first)} ${U.fmtMoney(rich.nw)}` : ''}</span></div><div class="bar" title="Richest person's progress (log scale from RM10k)"><i style="width:${(pr * 100).toFixed(1)}%"></i></div>`;
+      goalEl.innerHTML = `<div class="row"><span>Goal ${U.fmtMoney(w.goal)}${w.cfg.goalMode === 'real' ? ' (Y1 money)' : ''}</span><span class="muted">${rich ? `${esc(rich.first)} ${U.fmtMoney(gw)}` : ''}</span></div><div class="bar" title="Richest person's progress (log scale from RM10k)"><i style="width:${(pr * 100).toFixed(1)}%"></i></div>`;
     }
     goalEl.onclick = e => { const l = e.target.closest('[data-pid]'); if (l) app.select(Number(l.dataset.pid), true); else if (rich) app.select(rich.id, true); };
   };
@@ -126,14 +133,17 @@
     const stratCol = C.STRATEGY_COLORS[p.strategy];
     let status;
     if (!p.alive) status = `🕯️ Died aged ${age} (${esc(p.causeOfDeath)}) on ${U.fmtDate(p.deathDay)}`;
+    else if (p.away) status = `✈️ Living outside ${C.TOWN_NAME} (left for ${esc(p.away.reason)})`;
     else if (p.plan && p.plan.length) {
-      const s = p.plan[app.dayFrac < 0.5 ? 0 : 1] || p.plan[0];
+      const s = p.plan[app.dayFrac * 1440 < LES.SLOT_B ? 0 : 1] || p.plan[0];
       status = `${A.ICONS[s.act] || '•'} ${esc(s.label)}`;
     } else status = '🏠 At home';
     const job = p.job ? `${LES.Labour.title(p.job)} · ${U.fmtMoney(p.job.salary)}/mo` : p.retired ? 'Retired' : p.adult ? 'No job' : 'Child';
     const chips = [`<span class="chip strat" style="--c:${stratCol}">${C.STRATEGY_NAMES[p.strategy]}</span>`];
     if (!p.alive) chips.push('<span class="chip dead">Deceased</span>');
-    if (p.gen === 0) chips.push('<span class="chip">Founder</span>');
+    if (p.gen === 0 && !p.migrant) chips.push('<span class="chip">Founder</span>');
+    if (p.migrant) chips.push(`<span class="chip">Migrant${p.arrivedDay ? ' · ' + U.fmtMonthYear(p.arrivedDay) : ''}</span>`);
+    if (p.away) chips.push(`<span class="chip dead">Moved away · ${U.fmtMonthYear(p.away.since)}</span>`);
     if (p.custom) chips.push('<span class="chip">Custom</span>');
     if (p.guardian === 'WELFARE') chips.push('<span class="chip">Welfare home</span>');
     if (p.bankruptUntil >= w.day) chips.push('<span class="chip dead">Bankrupt</span>');
@@ -141,8 +151,10 @@
     for (const th of p.milestones) chips.push(`<span class="chip gold">★ ${U.fmtMoney(th)}</span>`);
 
     const nw = p.nw, goal = w.goal;
-    const prog = U.clamp((Math.log10(Math.max(1, nw / 100)) - 3) / (Math.log10(goal / 100) - 3), 0, 1);
-    const invIdx = Math.round(p.inv.idx * w.market.idx), invSpd = Math.round(p.inv.spd);
+    const realNw = P.realWorth(w, p);
+    const prog = U.clamp((Math.log10(Math.max(1, P.goalWorth(w, p) / 100)) - 3) / (Math.log10(goal / 100) - 3), 0, 1);
+    const invIdx = Math.round(p.inv.idx * w.mkt.idx), invStk = P.stockValue(w, p);
+    const holdings = Object.keys(p.inv.st).map(tk => `${tk} ${U.fmtMoney(p.inv.st[tk] * w.mkt.byTk[tk].price)}`).join(', ');
     const e = p.earned;
 
     let html = `
@@ -156,18 +168,20 @@
         </div>
         <div class="p-actions">
           ${p.alive ? `<button class="ghost ${app.renderer.follow ? 'on' : ''}" data-act="follow">${app.renderer.follow ? 'Following' : 'Follow'}</button>` : ''}
+          <button class="ghost ${app.pinned === p.id ? 'on' : ''}" data-act="${app.pinned === p.id ? 'unpin' : 'pin'}" title="Pin this person, then select someone else to compare">${app.pinned === p.id ? 'Pinned' : 'Compare'}</button>
           <button class="ghost" data-act="deselect">Close</button>
         </div>
       </div>
       <div class="card">
         <h3>Net worth <small class="muted">peak ${U.fmtMoney(p.peakNw)}</small></h3>
         <div class="networth"><span class="big ${nw < 0 ? 'neg' : ''}">${U.fmtMoney(nw)}</span><span class="muted">${(prog * 100).toFixed(0)}% to goal (log)</span></div>
+        ${w.price > 1.01 ? `<div class="note">In Year-1 money: <b>${U.fmtMoney(realNw)}</b> (prices are ×${w.price.toFixed(2)} since Year 1)</div>` : ''}
         <div class="progress"><i style="width:${(prog * 100).toFixed(1)}%"></i></div>
         <div class="grid2">
           <div><span class="muted">Cash</span><span>${U.fmtMoney(p.cash)}</span></div>
           <div><span class="muted">EPF</span><span>${U.fmtMoney(p.epf)}</span></div>
           <div><span class="muted">Index fund</span><span>${U.fmtMoney(invIdx)}</span></div>
-          <div><span class="muted">Speculative</span><span>${U.fmtMoney(invSpd)}</span></div>
+          <div title="${esc(holdings)}"><span class="muted">Shares</span><span>${U.fmtMoney(invStk)}</span></div>
           <div><span class="muted">Business equity</span><span>${U.fmtMoney(P.bizValue(w, p))}</span></div>
           <div><span class="muted">Trust (minor)</span><span>${U.fmtMoney(p.trust)}</span></div>
           <div><span class="muted">Study debt</span><span class="${p.debt.study ? 'neg' : ''}">${U.fmtMoney(-p.debt.study)}</span></div>
@@ -182,11 +196,14 @@
           <div><span class="muted">Inherited / gifts</span><span>${U.fmtMoney(e.inherit + e.gifts)}</span></div>
           <div><span class="muted">Luck / welfare</span><span>${U.fmtMoney(e.luck + e.welfare)}</span></div>
         </div>
+        ${holdings ? `<div class="note">Shares held: ${esc(holdings)}</div>` : ''}
       </div>`;
 
-    if (p.alive && p.why && p.why.length) {
+    if (p.alive && !p.away && p.why && p.why.length) {
       html += `<div class="card"><h3>Why did they do that? <small class="muted">${U.fmtDate(w.lastDay)}</small></h3>`;
+      const revealB = app.fast || app.paused || app.dayFrac * 1440 >= LES.SLOT_B;
       p.why.forEach((s, i) => {
+        if (i === 1 && !revealB) { html += `<div class="why-slot"><div class="hd"><span class="muted">${SLOT_NAMES[1]}</span><span class="muted">decides at 15:12…</span></div></div>`; return; }
         const ok = s.ok === undefined ? '' : s.ok ? ' <span class="pos">✓ success</span>' : ' <span class="neg">✗ failed</span>';
         html += `<div class="why-slot"><div class="hd"><span class="muted">${SLOT_NAMES[i]}</span><span>${A.ICONS[s.act] || ''} ${esc(s.chosen)}${ok}${s.forced ? ' <span class="neg">(health override)</span>' : ''}</span></div>`;
         for (const o of s.options) {
@@ -208,6 +225,7 @@
     }
     html += `<div class="card bars"><h3>Attributes <small class="muted">bar = current · line = inherited potential</small></h3>
       ${C.ATTR_NAMES.map((n, i) => bar(n, p.att[i], 10, '#f2c14e', p.pot[i], p.att[i].toFixed(1))).join('')}
+      ${p.ageing ? `<div class="note" title="Ageing genes are inherited (about half from parents' average). Gym, healthy food and training slow decline; chronic stress speeds it up.">🧬 Body ages from <b>${p.ageing.bOnset.toFixed(0)}</b> (−${(p.ageing.bRate * 100).toFixed(1)}%/yr, floor ${(p.ageing.bFloor * 100).toFixed(0)}% of peak) · Mind ages from <b>${p.ageing.mOnset.toFixed(0)}</b> (−${(p.ageing.mRate * 100).toFixed(1)}%/yr, floor ${(p.ageing.mFloor * 100).toFixed(0)}%)</div>` : ''}
       ${p.attHist.length > 1 ? '<canvas class="chart" id="chart-att"></canvas>' : ''}</div>`;
     html += `<div class="card bars"><h3>Personality</h3>
       ${C.PERS.map(k => bar(C.PERS_NAMES[k], p.pers[k], 100, '#b892ff')).join('')}
@@ -218,7 +236,7 @@
         ${C.TIER_CATS.map(cat => {
           const t = C.TIERS[cat][p.tiers[cat]];
           const paysHousing = cat !== 'housing' || p.isHead;
-          return `<div class="row"><span class="muted">${C.TIER_CAT_NAMES[cat]}</span><span>${pips(p.tiers[cat], C.TIERS[cat].length)}${esc(t.name)}<div class="fx">${esc(t.fx || '')}</div></span><span>${paysHousing ? U.fmtMoney(U.RM(t.cost)) : 'partner pays'}</span></div>`;
+          return `<div class="row"><span class="muted">${C.TIER_CAT_NAMES[cat]}</span><span>${pips(p.tiers[cat], C.TIERS[cat].length)}${esc(t.name)}<div class="fx">${esc(t.fx || '')}</div></span><span>${paysHousing ? U.fmtMoney(LES.Finance.tierCost(w, cat, p.tiers[cat])) : 'partner pays'}</span></div>`;
         }).join('')}</div>`;
     }
 
@@ -261,13 +279,19 @@
     if (p.children.length) fam.push(['Children', p.children.map(id => `${UI.plink(w, id)} <span class="muted">(${Math.floor(P.age(w, w.people[id]))})</span>`).join(', ')]);
     if (!p.adult && p.caregivers.length) fam.push(['Raised by', p.caregivers.map(id => UI.plink(w, id)).join(', ')]);
     if (p.stratHist.length > 1) fam.push(['Strategy history', p.stratHist.map(s => `${C.STRATEGY_NAMES[s.strategy]} <span class="muted">(${U.fmtMonthYear(s.day < 0 ? 0 : s.day)}${s.reason !== 'founder' ? ', ' + esc(s.reason) : ''})</span>`).join(' → ')]);
-    if (fam.length) html += `<div class="card"><h3>Family</h3><ul class="list-plain">${fam.map(([k, v]) => `<li><span class="muted">${k}</span><span style="text-align:right">${v}</span></li>`).join('')}</ul></div>`;
+    const dyn = LES.Extras.dynasty(w, p);
+    if (dyn.total) fam.push(['Dynasty', `${dyn.total} descendants (${dyn.living} alive) · ${U.fmtMoney(dyn.wealth)} combined`]);
+    if (fam.length) html += `<div class="card"><h3>Family</h3>${p.parents.length || p.children.length || p.partnerId !== null || p.exPartners.length ? LES.Extras.familyTreeSvg(w, p) : ''}<ul class="list-plain">${fam.map(([k, v]) => `<li><span class="muted">${k}</span><span style="text-align:right">${v}</span></li>`).join('')}</ul></div>`;
 
     // Life story
     const entries = p.log.slice().reverse().slice(0, 150);
     html += `<div class="card"><h3>Life story <small class="muted">${p.log.length} events</small></h3><ul class="list-plain story">
       ${entries.map(x => `<li class="imp${x.imp}"><span class="when">${U.fmtMonthYear(x.day)}<br>age ${Math.floor((x.day - p.birthDay) / 365)}</span><span class="what">${esc(x.text)}</span></li>`).join('')}</ul></div>`;
 
+    if (app.pinned >= 0 && app.pinned !== p.id && w.people[app.pinned]) {
+      const cut = html.indexOf('<div class="card">');
+      html = html.slice(0, cut) + LES.Extras.compareHtml(w, w.people[app.pinned], p) + html.slice(cut);
+    }
     const scroll = el.scrollTop;
     el.innerHTML = html;
     el.scrollTop = scroll;
@@ -375,11 +399,16 @@
       <div class="card"><h3>Race to ${U.fmtMoney(w.goal)}</h3><ul class="list-plain">
         ${race.map(p => `<li><span>${UI.plink(w, p.id)} <span class="muted">${Math.floor(P.age(w, p))} · ${C.STRATEGY_NAMES[p.strategy]}</span></span><span>${U.fmtMoney(p.nw)}</span></li>`).join('')}</ul>
         ${w.winner ? `<div class="note">🏆 First to the goal: ${UI.plink(w, w.winner.pid)} in Y${U.dayToDate(w.winner.day).year} at age ${w.winner.age}.</div>` : ''}</div>
-      <div class="card"><h3>Wealth <small class="muted">adults, log scale · shading = boom / recession</small></h3><canvas class="chart tall" id="st-wealth"></canvas></div>
+      <div class="card"><h3>Wealth <small class="muted">adults, Year-1 money, log · shading = boom / recession</small></h3><canvas class="chart tall" id="st-wealth"></canvas></div>
       <div class="card"><h3>Median net worth by strategy <small class="muted">adults 30+, today</small></h3><canvas class="chart" id="st-strat"></canvas>
         <div class="note">Exploratory only: one world, people also differ in age, ability and luck. Research Mode (later) will compare thousands of seeds.</div></div>
       <div class="card"><h3>Population</h3><canvas class="chart" id="st-pop"></canvas></div>
       <div class="card"><h3>Work</h3><canvas class="chart" id="st-work"></canvas></div>
+      <div class="card"><h3>Bursa Rezeki <small class="muted">index (log) · town influence now ${(w.mkt.alpha * 100).toFixed(1)}%</small></h3><canvas class="chart" id="st-mkt"></canvas>
+        <div class="note">${st.panicSells} panic sell-offs so far. Town influence = residents' holdings ÷ (holdings + RM${(w.cfg.marketOutsideRM / 1e6).toFixed(0)}M outside market), capped at ${w.cfg.marketInfluenceCap}%.</div></div>
+      <div class="card"><h3>Prices & inflation <small class="muted">prices ×${w.price.toFixed(2)} since Year 1</small></h3><canvas class="chart" id="st-infl"></canvas></div>
+      <div class="card"><h3>Migration <small class="muted">pressure ${w.townMood.pressure.toFixed(2)} · opportunity ${w.townMood.opportunity.toFixed(2)} · homes ${(w.crowding * 100).toFixed(0)}% full</small></h3><canvas class="chart" id="st-mig"></canvas>
+        <div class="grid2"><div><span class="muted">Moved in</span><span>${st.immigrants}</span></div><div><span class="muted">Moved out</span><span>${st.emigrants}</span></div><div><span class="muted">Came back</span><span>${st.returns}</span></div><div><span class="muted">Living away now</span><span>${w.counts.away || 0}</span></div></div></div>
       <div class="card"><h3>Life events so far</h3><div class="grid2">
         <div><span class="muted">Couples formed</span><span>${st.couples}</span></div><div><span class="muted">Break-ups</span><span>${st.breakups}</span></div>
         <div><span class="muted">Twins</span><span>${st.twins}</span></div><div><span class="muted">Welfare children</span><span>${st.welfareKids}</span></div>
@@ -389,6 +418,7 @@
         <div><span class="muted">Bankruptcies</span><span>${st.bankruptcies}</span></div><div><span class="muted">Serious accidents</span><span>${st.catastrophes}</span></div>
         <div><span class="muted">Illnesses</span><span>${st.illnesses}</span></div><div><span class="muted">Windfalls / scams</span><span>${st.windfalls}/${st.scams}</span></div>
       </div></div>
+      <p><button class="ghost" data-act="csv">Export everyone as CSV</button> <button class="ghost" data-act="report">Open full report</button></p>
       <p class="note">Results describe outcomes of this simulation under its specified assumptions and random seed (“${esc(w.cfg.seed)}”); they do not establish universal real-world causes of success.</p>`;
     LES.Charts.line($('st-wealth'), {
       series: [series('top', 'Richest', '#f2c14e'), series('p90', 'Top 10%', '#3ec7b5'), series('median', 'Median', '#5aa9e6')].map(s => ({ ...s, data: s.data.map(([x, y]) => [x, Math.max(0, y)]) })),
@@ -396,14 +426,48 @@
     });
     LES.Charts.bars($('st-strat'), C.STRATEGIES.map(s => ({ label: C.STRATEGY_NAMES[s], value: last.stratMedian[s], color: C.STRATEGY_COLORS[s] })), v => U.fmtMoney(v));
     LES.Charts.line($('st-pop'), { series: [series('pop', 'Total', '#e8edf2'), series('adults', 'Adults', '#5aa9e6'), series('children', 'Children', '#f28482')], xFmt: xs, yMin: 0 });
+    const mk = w.mkt, step = Math.max(1, Math.floor(mk.idxHist.length / 600));
+    const idxData = [];
+    for (let i = 0; i < mk.idxHist.length; i += step) idxData.push([mk.dayHist[i] / 365, mk.idxHist[i]]);
+    LES.Charts.line($('st-mkt'), { series: [{ label: 'Bursa index', color: '#57d38c', data: idxData }], logY: true, yFmt: v => v.toFixed(0), xFmt: xs, bands: UI.regimeBands(w) });
+    LES.Charts.line($('st-infl'), { series: [{ label: 'Inflation %/yr', color: '#f4a261', data: h.map(r => [r.day / 365, (r.infl || 0) * 100]) }, { label: 'Price level ×', color: '#e8edf2', data: h.map(r => [r.day / 365, r.price || 1]) }], xFmt: xs, yFmt: v => v.toFixed(1) });
+    LES.Charts.line($('st-mig'), { series: [series('migrants', 'Migrant adults in town', '#5aa9e6'), series('away', 'Living away', '#ff8c42')], xFmt: xs, yMin: 0 });
     LES.Charts.line($('st-work'), { series: [series('employed', 'Employed', '#57d38c'), series('unemployed', 'Unemployed', '#ff6b6b'), series('owners', 'Business owners', '#ff8c42'), series('students', 'Students', '#b892ff')], xFmt: xs, yMin: 0 });
   };
 
   // ---------------- Toasts ----------------
+  // ---------------- Director mode ----------------
+  // Picks the most interesting recent events (only things that really happened),
+  // flies the camera to the person and shows a caption with context from their life.
+  UI.director = { on: false, queue: [], until: 0 };
+  UI.directorTick = function (now) {
+    const d = UI.director, app = UI.app, w = app.world;
+    if (!d.on || now < d.until || !d.queue.length) { if (d.on && now >= d.until) $('caption').classList.add('hidden'); return; }
+    d.queue.sort((a, b) => b.imp - a.imp || b.seq - a.seq);
+    const e = d.queue.shift();
+    d.queue = d.queue.filter(x => w.day - x.day < 120).slice(0, 12);
+    const p = w.people[e.pid];
+    if (!p || !p.alive || p.away) return;
+    app.select(p.id, true);
+    app.renderer.follow = true;
+    const age = Math.floor(P.age(w, p));
+    const past = p.log.filter(x => x.day < e.day - 300 && x.imp >= 1).slice(-1)[0];
+    const ctx = past ? `${Math.max(1, Math.round((e.day - past.day) / 365))} years earlier: ${past.text.charAt(0).toLowerCase()}${past.text.slice(1)}.` : `${C.STRATEGY_NAMES[p.strategy]} · net worth ${U.fmtMoney(p.nw)}`;
+    $('caption').innerHTML = `<div class="cap-when">${U.fmtDate(e.day)} · ${esc(P.name(p))}, ${age}</div><div class="cap-text">${esc(e.text)}</div><div class="cap-ctx">${esc(ctx)}</div>`;
+    $('caption').classList.remove('hidden');
+    d.until = now + 9000;
+  };
+
   UI.checkToasts = function () {
     const w = UI.app.world;
+    for (const e of w.feed) if (e.seq > UI.feedSeqShown && e.imp >= 2 && e.pid >= 0) UI.director.queue.push(e);
     const fresh = w.feed.filter(e => e.seq > UI.feedSeqShown && e.imp >= 2);
     if (w.feed.length) UI.feedSeqShown = Math.max(UI.feedSeqShown, w.feed[w.feed.length - 1].seq || 0);
+    for (const e of fresh) {
+      if (/REACHED THE GOAL/.test(e.text)) LES.Extras.sfx('goal');
+      else if (e.cat === 'wealth') LES.Extras.sfx('milestone');
+      else if (/bankrupt|collapsed|went bust/i.test(e.text)) LES.Extras.sfx('bad');
+    }
     for (const e of fresh.slice(-3)) {
       const name = e.pid >= 0 ? `<b>${esc(P.name(w.people[e.pid]))}</b> — ` : '';
       UI.toast(`${CAT_ICON[e.cat] || ''} ${name}${esc(e.text)}`, U.fmtDate(e.day), e.pid, e.imp >= 3);

@@ -5,6 +5,7 @@
   const U = LES.U, C = LES.C, P = LES.P, A = LES.Actions, F = LES.Finance, Fa = LES.Family, Lb = LES.Labour;
 
   const mortalityYear = age => age < 1 ? 0.004 : age < 18 ? 0.0003 : 0.0004 + 0.000015 * Math.exp(0.1 * age);
+  LES.mortalityYear = mortalityYear;
 
   class World {
     constructor(cfgIn) {
@@ -13,26 +14,35 @@
       if (v.blockers.length) throw new Error('Invalid settings: ' + v.blockers.join(' '));
       this.derived = LES.derive(this.cfg);
       this.rng = {};
-      for (const k of ['init', 'decide', 'outcome', 'jobs', 'market', 'biz', 'family', 'luck', 'mortality']) {
+      for (const k of ['init', 'decide', 'outcome', 'jobs', 'market', 'biz', 'family', 'luck', 'mortality', 'migration']) {
         this.rng[k] = new LES.RNG(`${this.cfg.seed}|${k}`);
       }
-      this.town = LES.buildTown();
+      this.mapSize = this.cfg.mapSize === 'auto' ? LES.suggestMapSize(this.cfg.founders) : this.cfg.mapSize;
+      this.town = LES.buildTown(this.mapSize);
+      this.townVersion = 0;
       this.day = 0;
       this.lastDay = -1;
       this.date = U.dayToDate(0);
       this.people = []; this.living = []; this.biz = []; this.vacancies = []; this.nextVacId = 0;
       this.ledger = new LES.Ledger();
-      this.market = { idx: 100, spd: 100 };
+      this.price = 1;            // price level vs Year 1
+      this.infl = (this.cfg.inflMin + this.cfg.inflMax) / 200;
+      this.inflHist = [{ year: 1, rate: this.infl }];
+      this.rentMult = [1, 1, 1, 1, 1];
+      this.crowding = 0;
+      this.townMood = { pressure: 0, opportunity: 0, attract: 0.5, unemp: 0, crowding: 0, rent: 1 };
+      this.mkt = LES.Market.create();
       this.regime = 'normal';
       this.regimeHist = [{ day: 0, regime: 'normal' }];
-      this.feed = []; this.feedSeq = 0; this.estates = []; this.history = []; this.socialPools = [[], []];
+      this.feed = []; this.feedSeq = 0; this.estates = []; this.history = []; this.socialPools = {};
       this.occupancy = {}; this.shoplotOwner = {};
       this.stats = {
         births: 0, deaths: 0, twins: 0, hires: 0, fired: 0, laidOff: 0, promotions: 0, graduations: 0, dropouts: 0,
         scholarships: 0, bizStarted: 0, bizClosed: 0, bizFailed: 0, booms: 0, bankruptcies: 0, couples: 0, breakups: 0,
         catastrophes: 0, illnesses: 0, scams: 0, windfalls: 0, welfareKids: 0, vacOpened: 0, vacUnfilled: 0,
+        panicSells: 0, emigrants: 0, immigrants: 0, returns: 0,
       };
-      this.counts = { adults: 0, children: 0, living: 0 };
+      this.counts = { adults: 0, children: 0, living: 0, away: 0 };
       this.winner = null; this.ended = false; this.endReason = null; this.pauseRequested = null;
       this.qualValue = {};
       for (const q of Object.keys(C.QUALS)) {
@@ -43,18 +53,22 @@
       this.goal = this.derived.goal;
       this.milestoneList = [...new Set([U.RM(1e5), U.RM(1e6), U.RM(1e7), this.goal])].filter(x => x <= this.goal).sort((a, b) => a - b);
       this.initFounders();
+      F.updateRent(this);
       this.refreshLiving();
+      LES.Market.monthly(this);
       this.snapshotMonth();
     }
 
     macro() { return C.REGIMES[this.regime]; }
+    // Year-1 RM -> today's sen (inflation-adjusted price).
+    px(rm) { return Math.round(rm * 100 * this.price); }
     addPerson() { const p = P.blank(this.people.length); this.people.push(p); return p; }
 
     refreshLiving() {
-      this.living = this.people.filter(p => p.alive);
+      this.living = this.people.filter(p => p.alive && !p.away);
       let adults = 0;
       for (const p of this.living) if (p.adult) adults++;
-      this.counts = { adults, children: this.living.length - adults, living: this.living.length };
+      this.counts = { adults, children: this.living.length - adults, living: this.living.length, away: this.counts.away || 0 };
     }
 
     initFounders() {
@@ -62,72 +76,102 @@
       const sexes = [];
       for (let i = 0; i < n; i++) sexes.push(i < n / 2 ? 'M' : 'F');
       for (let i = n - 1; i > 0; i--) { const j = Math.floor(R.next() * (i + 1)); [sexes[i], sexes[j]] = [sexes[j], sexes[i]]; }
-      const lognormal = (median, sd) => Math.exp(R.normal(Math.log(median), sd));
-
-      for (let i = 0; i < n; i++) {
-        const p = this.addPerson();
-        p.sex = sexes[i];
-        p.eth = C.ETHNICITIES[R.weighted(C.ETHNIC_WEIGHTS)];
-        p.first = R.pick(C.NAMES[p.eth][p.sex]);
-        p.last = R.pick(C.NAMES[p.eth].last);
-        const age = R.int(cfg.startAgeMin, cfg.startAgeMax);
-        p.birthDay = -age * 365 - R.int(0, 364);
-        p.adult = true;
-        p.look = P.makeLook(R, p.eth, p.sex);
-        p.pot = [0, 1, 2, 3, 4, 5].map(() => U.clamp(R.normal(5, 1.8), 0.5, 10));
-        p.att = p.pot.map(v => U.clamp(v + R.normal(0, 0.4) - 0.3, 0, 10));
-        for (const k of C.PERS) p.pers[k] = Math.round(U.clamp(R.normal(50, 18), 0, 100));
-        p.famDesire = Math.round(U.clamp(R.normal(55, 20), 0, 100));
-        p._ageHint = age;
-        p.strategy = P.chooseStrategy(R, p);
-        p.stratHist.push({ day: 0, strategy: p.strategy, reason: 'founder' });
-        p.health = U.clamp(R.normal(85, 8), 50, 100);
-
-        // Background qualifications
-        const intel = p.att[C.INT];
-        const pDeg = U.clamp(0.1 + 0.08 * (intel - 5) + (age >= 22 ? 0.1 : 0), 0.02, 0.7);
-        const r = R.next();
-        if (age >= 22 && r < pDeg) {
-          let q;
-          if (intel >= 7 && R.next() < 0.15) q = 'MED';
-          else q = ['BACH_GEN', 'BACH_BUS', 'BACH_ENG'][R.weighted([0.35, 0.35, intel >= 5.5 ? 0.3 : 0.08])];
-          p.quals.push(q);
-          if (age >= 25 && R.next() < 0.15) p.quals.push('MASTER');
-        } else if (r < pDeg + 0.3) {
-          p.quals.push('VOC');
-        }
-
-        // Starting wealth
-        let rm;
-        if (cfg.wealthDist === 'equal') rm = 10000;
-        else if (cfg.wealthDist === 'moderate') rm = lognormal(8000, 1.0);
-        else rm = R.next() < 0.1 ? lognormal(300000, 1.2) : lognormal(3000, 1.0);
-        this.ledger.pay('GENESIS', p, 'cash', U.RM(U.clamp(Math.round(rm), 0, 20000000)));
-
-        // Founders may already have a job
-        if (R.next() < 0.65) {
-          const eligible = C.JOBS.filter(j => P.hasCred(p, j.req));
-          const j = eligible[R.weighted(eligible.map(x => x.freq * (x.req ? 3 : 1)))];
-          const salary = U.RM(Math.round(j.salary * U.clamp(R.normal(1, 0.1), 0.75, 1.3) / 10) * 10);
-          const level = 1 + Math.min(2, Math.floor(Math.max(0, age - 20) / 6 * R.next() * 1.5));
-          p.job = {
-            jobId: j.id, title: j.title, salary: Math.round(salary * Math.pow(1.12, level - 1)), level, startDay: -R.int(30, 1500),
-            shiftsMonth: 0, lastShiftDay: -1, warnings: 0, place: this.town.byKind[j.place], perfOk: 0, perfN: 0, cat: j.cat,
-          };
-          p.xp[j.cat] = Math.min(5, Math.max(0, age - 18) * 0.25 * R.range(0.3, 1));
-          this.ledger.pay('GENESIS', p, 'epf', Math.round(salary * 0.24 * 12 * Math.max(0, age - 20) * 0.5));
-          p.incomeEMA = Math.round(p.job.salary * 0.89);
-        } else {
-          p.incomeEMA = U.RM(800);
-        }
-        p.nw = P.netWorth(this, p);
-        p.peakNw = p.nw;
-        P.log(this, p, `Arrived in ${C.TOWN_NAME} aged ${age}${p.job ? ` working as ${p.job.title}` : ''} with ${U.fmtMoney(p.cash)}`, 'life', 0);
-      }
+      for (let i = 0; i < n; i++) this.makeAdult(R, { age: R.int(cfg.startAgeMin, cfg.startAgeMax), sex: sexes[i], jobChance: 0.65 });
       for (const p of this.people) {
         F.reviewTiers(this, p);
         p.mcost = F.monthlyCost(this, p);
       }
+    }
+
+    // A random adult drawn from the founder distributions (founders and newcomers).
+    makeAdult(R, o) {
+      const cfg = this.cfg, age = o.age;
+      const lognormal = (median, sd) => Math.exp(R.normal(Math.log(median), sd));
+      const p = this.addPerson();
+      p.sex = o.sex || (R.next() < 0.5 ? 'M' : 'F');
+      p.eth = o.eth || C.ETHNICITIES[R.weighted(C.ETHNIC_WEIGHTS)];
+      p.first = R.pick(C.NAMES[p.eth][p.sex]);
+      p.last = R.pick(C.NAMES[p.eth].last);
+      p.birthDay = this.day - age * 365 - R.int(0, 364);
+      p.adult = true;
+      p.migrant = !!o.migrant;
+      if (p.migrant) p.arrivedDay = this.day;
+      p.look = P.makeLook(R, p.eth, p.sex);
+      p.pot = [0, 1, 2, 3, 4, 5].map(() => U.clamp(R.normal(5, 1.8), 0.5, 10));
+      p.att = p.pot.map(v => U.clamp(v + R.normal(0, 0.4) - 0.3, 0, 10));
+      p.peak = p.att.slice();
+      p.ageing = P.makeAgeing(R);
+      for (const k of C.PERS) p.pers[k] = Math.round(U.clamp(R.normal(50, 18), 0, 100));
+      p.famDesire = Math.round(U.clamp(R.normal(55, 20), 0, 100));
+      p._ageHint = age;
+      p.strategy = P.chooseStrategy(R, p);
+      p.stratHist.push({ day: this.day, strategy: p.strategy, reason: p.migrant ? 'newcomer' : 'founder' });
+      p.health = U.clamp(R.normal(85, 8), 50, 100);
+
+      const intel = p.att[C.INT];
+      const pDeg = U.clamp(0.1 + 0.08 * (intel - 5) + (age >= 22 ? 0.1 : 0), 0.02, 0.7);
+      const r = R.next();
+      if (age >= 22 && r < pDeg) {
+        const q = intel >= 7 && R.next() < 0.15 ? 'MED' : ['BACH_GEN', 'BACH_BUS', 'BACH_ENG'][R.weighted([0.35, 0.35, intel >= 5.5 ? 0.3 : 0.08])];
+        p.quals.push(q);
+        if (age >= 25 && R.next() < 0.15) p.quals.push('MASTER');
+      } else if (r < pDeg + 0.3) {
+        p.quals.push('VOC');
+      }
+
+      let rm;
+      if (cfg.wealthDist === 'equal') rm = 10000;
+      else if (cfg.wealthDist === 'moderate') rm = lognormal(8000, 1.0);
+      else rm = R.next() < 0.1 ? lognormal(300000, 1.2) : lognormal(3000, 1.0);
+      const source = p.migrant ? 'ABROAD' : 'GENESIS';
+      this.ledger.pay(source, p, 'cash', this.px(U.clamp(Math.round(rm), 0, 20000000)));
+
+      if (R.next() < (o.jobChance || 0)) {
+        const eligible = C.JOBS.filter(j => P.hasCred(p, j.req));
+        const j = eligible[R.weighted(eligible.map(x => x.freq * (x.req ? 3 : 1)))];
+        const salary = Math.round(this.px(j.salary * U.clamp(R.normal(1, 0.1), 0.75, 1.3)) / 1000) * 1000;
+        const level = 1 + Math.min(2, Math.floor(Math.max(0, age - 20) / 6 * R.next() * 1.5));
+        p.job = {
+          jobId: j.id, title: j.title, salary: Math.round(salary * Math.pow(1.12, level - 1)), level, startDay: this.day - R.int(30, 1500),
+          shiftsMonth: 0, lastShiftDay: -1, warnings: 0, place: R.pick(this.town.kinds[j.place]), perfOk: 0, perfN: 0, cat: j.cat,
+        };
+        p.xp[j.cat] = Math.min(5, Math.max(0, age - 18) * 0.25 * R.range(0.3, 1));
+        this.ledger.pay(source, p, 'epf', Math.round(salary * 0.24 * 12 * Math.max(0, age - 20) * 0.5));
+        p.incomeEMA = Math.round(p.job.salary * 0.89);
+      } else {
+        p.incomeEMA = this.px(800);
+      }
+      p.nw = P.netWorth(this, p);
+      p.peakNw = p.nw;
+      if (!p.migrant) P.log(this, p, `Arrived in ${C.TOWN_NAME} aged ${age}${p.job ? ` working as ${p.job.title}` : ''} with ${U.fmtMoney(p.cash)}`, 'life', 0);
+      return p;
+    }
+
+    // A child of two people, born now (ageYears = 0) or arriving already aged with migrant parents.
+    makeChild(R, father, mother, ageYears) {
+      const c = this.addPerson();
+      c.sex = R.next() < 0.5 ? 'M' : 'F';
+      c.eth = R.next() < 0.5 ? father.eth : mother.eth;
+      c.first = R.pick(C.NAMES[c.eth][c.sex]);
+      c.last = father.last;
+      c.birthDay = this.day - ageYears * 365 - (ageYears > 0 ? R.int(0, 364) : 0);
+      c.gen = Math.max(father.gen, mother.gen) + 1;
+      c.parents = [father.id, mother.id];
+      c.migrant = father.migrant && mother.migrant && father.arrivedDay === this.day;
+      if (c.migrant) c.arrivedDay = this.day;
+      c.look = P.makeLook(R, c.eth, c.sex);
+      c.pot = Fa.inheritAttrs(this, mother, father);
+      c.att = c.pot.map(v => U.clamp(v * (0.3 + 0.55 * Math.min(ageYears, 18) / 18), 0, 10));
+      c.ageing = P.inheritAgeing(R, father.ageing || P.makeAgeing(R), mother.ageing || P.makeAgeing(R));
+      for (const key of C.PERS) {
+        c.pers[key] = Math.round(U.clamp(0.5 * (father.pers[key] + mother.pers[key]) / 2 + 0.5 * R.normal(50, 18), 0, 100));
+      }
+      c.famDesire = Math.round(U.clamp(0.4 * (father.famDesire + mother.famDesire) / 2 + 0.6 * R.normal(55, 20), 0, 100));
+      c.health = 90; c.energy = 100; c.stress = 0;
+      c.tiers = { food: 1, housing: 0, transport: 0, leisure: 0 };
+      father.children.push(c.id); mother.children.push(c.id);
+      if (c.migrant) { Fa.addCare(this, father, c); Fa.addCare(this, mother, c); }
+      return c;
     }
 
     // ---------------- Daily tick (fixed stage order, FSD 4.1) ----------------
@@ -138,10 +182,13 @@
       this.startOfDay();
       for (const p of this.living) if (p.alive && p.adult) F.dailyFood(this, p);
       Lb.dailyMarket(this);
+      LES.Market.daily(this);
       for (const p of this.living) {
         if (!p.alive) continue;
-        if (p.adult) A.liveDay(this, p);
-        else this.childDay(p);
+        if (p.adult) {
+          A.liveDay(this, p);
+          if (this.date.dom === (p.id % 28) + 1) F.marketBehaviour(this, p);
+        } else this.childDay(p);
       }
       Fa.daily(this);
       this.endOfDay();
@@ -185,7 +232,7 @@
 
     childDay(c) {
       const age = P.age(this, c);
-      const school = this.town.byKind.school;
+      const school = LES.townNear(this.town, 'school', c.homeId);
       c.plan = age >= 7
         ? [{ act: 'SCHOOL', label: 'At school', loc: school }, { act: 'HOME', label: 'Playing at home', loc: c.homeId }]
         : [{ act: 'HOME', label: 'At home', loc: c.homeId }, { act: 'HOME', label: 'At home', loc: c.homeId }];
@@ -204,6 +251,9 @@
           p.stress += -2 + (tf.stress || 0) + (th.stress || 0) + (tt.stress || 0) + (tl.stress || 0);
           p.health += (tf.health || 0) + (p.health < 80 ? 0.03 : 0) - (p.stress > 75 ? 0.08 : 0)
             - (p.hunger > 50 ? 0.6 : 0) - 0.00015 * Math.pow(Math.max(0, age - 45), 1.5);
+          const home = this.town.buildings[p.homeId];
+          if (home && home.cap && (this.occupancy[p.homeId] || 0) > home.cap) p.stress += 0.4; // overcrowded home
+          p.yr.stress += p.stress; p.yr.days++;
         } else {
           p.health += p.health < 90 ? 0.05 : 0;
         }
@@ -217,25 +267,27 @@
 
     checkMilestones(p) {
       for (const th of this.milestoneList) {
-        if (p.nw < th || p.milestones.includes(th)) continue;
+        if (P.goalWorth(this, p) < th || p.milestones.includes(th)) continue;
         p.milestones.push(th);
         const age = Math.floor(P.age(this, p));
         if (th === this.goal) {
           if (!this.winner) {
-            this.winner = { pid: p.id, day: this.day, age, nw: p.nw };
-            P.log(this, p, `REACHED THE GOAL: ${U.fmtMoney(th)} net worth at age ${age}! First in ${C.TOWN_NAME}.`, 'wealth', 3);
+            this.winner = { pid: p.id, day: this.day, age, nw: p.nw, real: P.realWorth(this, p) };
+            P.log(this, p, `REACHED THE GOAL: ${U.fmtMoney(th)}${this.cfg.goalMode === 'real' ? ' (Year-1 money)' : ''} net worth at age ${age}! First in ${C.TOWN_NAME}.`, 'wealth', 3);
             if (this.cfg.stopOnWinner === 'yes') this.pauseRequested = 'goal';
           } else {
             P.log(this, p, `Also reached the ${U.fmtMoney(th)} goal at age ${age}`, 'wealth', 2);
           }
         } else {
-          P.log(this, p, `Net worth passed ${U.fmtMoney(th)} at age ${age}`, 'wealth', th >= U.RM(1e7) ? 2 : 1);
+          P.log(this, p, `Net worth passed ${U.fmtMoney(th)}${this.cfg.goalMode === 'real' ? ' in Year-1 money' : ''} at age ${age}`, 'wealth', th >= U.RM(1e7) ? 2 : 1);
         }
       }
     }
 
     monthClose() {
-      F.marketMonth(this);
+      this.price *= Math.pow(1 + this.infl, 1 / 12);
+      F.updateRent(this);
+      this.growTown();
       for (const b of this.biz) if (b.open) F.bizMonth(this, b);
       Lb.monthClose(this);
       for (const p of this.living) {
@@ -245,10 +297,13 @@
         this.strategyReview(p);
       }
       Fa.monthCouples(this);
+      LES.Migration.monthly(this);
+      this.refreshLiving();
       for (const p of this.living) if (p.alive && !p.adult) Fa.childMonth(this, p);
-      for (const p of this.living) {
+      LES.Market.monthly(this);
+      for (const p of this.people) {
         if (!p.alive) continue;
-        p.nw = P.netWorth(this, p);
+        if (!p.away) p.nw = P.netWorth(this, p);
         p.nwHist.push([this.day, p.nw]);
       }
       this.snapshotMonth();
@@ -282,11 +337,77 @@
           for (let i = 0; i < 6; i++) p.att[i] = U.clamp(p.pot[i] * (0.3 + 0.55 * Math.min(age, 18) / 18), 0, 10);
           continue;
         }
-        const fit = C.TIERS.leisure[p.tiers.leisure].fitness ? 0.4 : 1;
-        if (age > 40) for (const a of [C.STR, C.AGI, C.END]) p.att[a] = Math.max(0, p.att[a] - 0.03 * fit * (age > 60 ? 2 : 1));
-        if (age > 60) for (const a of [C.INT, C.PER]) p.att[a] = Math.max(0, p.att[a] - 0.02);
+        this.ageAttributes(p, age);
         p.attHist.push([this.day, p.att.map(x => Math.round(x * 100) / 100)]);
       }
+    }
+
+    // Crowded town: an empty lot becomes a new estate (or shop row) for the most crowded need.
+    growTown() {
+      const t = this.town;
+      if (!t.lots.some(id => !t.buildings[id].built)) return;
+      const fill = tier => { let c = 0, o = 0; for (const id of t.homesByTier[tier]) { c += t.buildings[id].cap; o += this.occupancy[id] || 0; } return c ? o / c : 1; };
+      const shopsFull = t.shoplots.every(id => this.shoplotOwner[id] !== undefined);
+      const fills = [0, 1, 2, 3, 4].map(fill);
+      let code = null;
+      if (shopsFull && this.biz.filter(b => b.open && b.place === t.byKind.mall).length >= 2) code = 'S';
+      else if (this.crowding > 0.85 || Math.max(...fills) > 1) {
+        const worst = fills.indexOf(Math.max(...fills));
+        code = ['K', 'F', 'T', 'C', 'B'][worst];
+      }
+      // A tycoon's company (real equity >= RM20M) builds its own headquarters tower.
+      const tycoon = this.biz.find(b => b.open && !b.hq && b.equity / this.price >= U.RM(2e7));
+      if (tycoon) {
+        const owner = this.people[tycoon.founderId];
+        const name = `Menara ${owner.last}`;
+        const block = LES.growTown(t, 'X', name);
+        if (block) {
+          tycoon.hq = t.kinds.hq[t.kinds.hq.length - 1];
+          t.buildings[tycoon.hq].bizId = tycoon.id;
+          if (this.shoplotOwner[tycoon.place] === tycoon.id) delete this.shoplotOwner[tycoon.place];
+          tycoon.place = tycoon.hq;
+          this.townVersion++;
+          this.pushFeed({ day: this.day, pid: tycoon.managerId >= 0 ? tycoon.managerId : -1, text: `${tycoon.name} opened its own headquarters: ${name}`, cat: 'biz', imp: 2 });
+        }
+        return;
+      }
+      if (!code) return;
+      const block = LES.growTown(t, code);
+      if (!block) return;
+      this.townVersion++;
+      this.townGrowth = (this.townGrowth || 0) + 1;
+      const names = { K: 'kampung houses', F: 'PPR flats', T: 'a terrace estate', C: 'condominium towers', B: 'hillside bungalows', S: 'a new row of shoplots' };
+      this.pushFeed({ day: this.day, pid: -1, text: `${C.TOWN_NAME} is growing: ${names[code]} built on empty land`, cat: 'economy', imp: 2 });
+    }
+
+    // Heritable ageing: after an onset age each attribute group loses a % of its
+    // peak per year down to a personal floor. Lifestyle speeds or slows it.
+    ageAttributes(p, age) {
+      const g = p.ageing, yr = p.yr;
+      if (!g) return;
+      for (let i = 0; i < 6; i++) p.peak[i] = Math.max(p.peak[i], p.att[i]);
+      const stressAvg = yr.days ? yr.stress / yr.days : 30;
+      if (age > g.bOnset) {
+        let f = 1;
+        if (C.TIERS.leisure[p.tiers.leisure].fitness) f *= 0.6;
+        if (p.tiers.food >= 2) f *= 0.85;
+        if (stressAvg > 70) f *= 1.3;
+        if (yr.phys >= 40) f *= 0.75;
+        for (const a of C.BODY_ATTRS) {
+          const floor = g.bFloor * p.peak[a];
+          if (p.att[a] > floor) p.att[a] = Math.max(floor, p.att[a] - g.bRate * p.peak[a] * f);
+        }
+      }
+      if (age > g.mOnset) {
+        let f = 1;
+        if (yr.mental >= 40) f *= 0.7;
+        if (stressAvg > 70) f *= 1.2;
+        for (const a of C.MIND_ATTRS) {
+          const floor = g.mFloor * p.peak[a];
+          if (p.att[a] > floor) p.att[a] = Math.max(floor, p.att[a] - g.mRate * p.peak[a] * f);
+        }
+      }
+      p.yr = { phys: 0, mental: 0, stress: 0, days: 0 };
     }
 
     die(p, cause) {
@@ -322,13 +443,14 @@
       for (const cid of kids) {
         const c = this.people[cid];
         c.caregivers = c.caregivers.filter(id => id !== p.id);
-        if (c.alive && !c.caregivers.length && c.guardian !== 'WELFARE') Fa.findGuardian(this, c, 'orphan');
+        if (c.alive && !c.away && !c.caregivers.length && c.guardian !== 'WELFARE') Fa.findGuardian(this, c, 'orphan');
       }
     }
 
     snapshotMonth() {
       const adults = this.living.filter(p => p.alive && p.adult);
-      const nws = adults.map(p => p.nw).sort((a, b) => a - b);
+      // Wealth statistics are stored in Year-1 money so charts compare across inflation.
+      const nws = adults.map(p => p.nw / this.price).sort((a, b) => a - b);
       let employed = 0, students = 0, retired = 0, owners = 0, unemployed = 0;
       for (const p of adults) {
         if (p.job) employed++;
@@ -339,7 +461,7 @@
       }
       const stratMedian = {};
       for (const s of C.STRATEGIES) {
-        const v = adults.filter(p => p.strategy === s && P.age(this, p) >= 30).map(p => p.nw);
+        const v = adults.filter(p => p.strategy === s && P.age(this, p) >= 30).map(p => p.nw / this.price);
         stratMedian[s] = v.length ? U.median(v) : null;
       }
       this.history.push({
@@ -349,7 +471,9 @@
         businesses: this.biz.filter(b => b.open).length,
         median: U.quantile(nws, 0.5), p90: U.quantile(nws, 0.9), top: nws.length ? nws[nws.length - 1] : 0,
         millionaires: nws.filter(x => x >= U.RM(1e6)).length, gini: U.gini(nws),
-        regime: this.regime, idx: this.market.idx, stratMedian,
+        regime: this.regime, idx: this.mkt.idx, alpha: this.mkt.alpha, price: this.price, infl: this.infl,
+        crowding: this.crowding, pressure: this.townMood.pressure, opportunity: this.townMood.opportunity,
+        away: this.counts.away || 0, migrants: adults.filter(p => p.migrant).length, stratMedian,
       });
     }
 
@@ -360,8 +484,9 @@
       for (const p of this.people) {
         total += p.cash + p.trust + p.epf;
         for (const k of ['cash', 'trust', 'epf']) if (!Number.isInteger(p[k]) || p[k] < 0) errs.push(`P${p.id} ${k}=${p[k]}`);
-        if (!p.alive && (p.cash || p.trust || p.epf || p.inv.idx || p.inv.spd)) errs.push(`dead P${p.id} still holds money`);
+        if (!p.alive && (p.cash || p.trust || p.epf || p.inv.idx || Object.keys(p.inv.st).length)) errs.push(`dead P${p.id} still holds money`);
         if (!p.alive && (p.job || p.enrol || p.manages >= 0 || p.careOf.length || p.partnerId !== null)) errs.push(`dead P${p.id} still active`);
+        if (p.away && (p.cash || p.trust || p.epf || p.job || p.manages >= 0 || Object.keys(p.shares).length || p.homeId >= 0)) errs.push(`away P${p.id} still holds town assets`);
         for (const k of ['health', 'energy', 'stress', 'hunger']) if (!(p[k] >= 0 && p[k] <= 100)) errs.push(`P${p.id} ${k}=${p[k]}`);
         for (let i = 0; i < 6; i++) if (!(p.att[i] >= 0 && p.att[i] <= 10)) errs.push(`P${p.id} att${i}=${p.att[i]}`);
         if (p.parents.length !== 0 && p.parents.length !== 2) errs.push(`P${p.id} has ${p.parents.length} parents`);
@@ -374,7 +499,7 @@
         if (!Number.isFinite(p.nw)) errs.push(`P${p.id} net worth not finite`);
         if (p.partnerId !== null) {
           const q = this.people[p.partnerId];
-          if (q.partnerId !== p.id || !q.alive || !p.alive) errs.push(`P${p.id} broken partner link`);
+          if (q.partnerId !== p.id || !q.alive || !p.alive || !!q.away !== !!p.away) errs.push(`P${p.id} broken partner link`);
         }
         for (const k of Object.keys(p.shares)) {
           const b = this.biz[Number(k)];
@@ -396,14 +521,14 @@
         const dist = U.sum(e.amounts);
         if (e.heirs.length && dist !== e.total) errs.push(`Estate of P${e.decedent}: ${dist} != ${e.total}`);
       }
-      if (!Number.isFinite(this.market.idx) || !Number.isFinite(this.market.spd)) errs.push('market not finite');
+      if (!Number.isFinite(this.mkt.idx) || this.mkt.stocks.some(st => !Number.isFinite(st.price)) || !Number.isFinite(this.price)) errs.push('market/prices not finite');
       return errs;
     }
 
     hash() {
-      const parts = [this.day, this.regime, this.market.idx.toFixed(6), this.market.spd.toFixed(6)];
+      const parts = [this.day, this.regime, this.mkt.idx.toFixed(6), this.price.toFixed(9), ...this.mkt.stocks.map(st => Math.round(st.price))];
       for (const p of this.people) {
-        parts.push(p.id, p.alive ? 1 : 0, p.cash, p.epf, p.trust, Math.round(p.inv.idx * 1e4), Math.round(p.inv.spd * 1e4),
+        parts.push(p.id, p.alive ? 1 : 0, p.cash, p.epf, p.trust, Math.round(p.inv.idx * 1e4), JSON.stringify(p.inv.st), p.away ? 1 : 0,
           p.att.map(a => Math.round(a * 1e4)).join(','), p.job ? p.job.jobId + p.job.salary : '-', p.partnerId, p.strategy);
       }
       for (const b of this.biz) parts.push(b.cash, Math.round(b.scale), b.open ? 1 : 0);

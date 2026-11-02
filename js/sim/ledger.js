@@ -5,7 +5,7 @@
   'use strict';
 
   LES.SECTORS = ['GENESIS', 'EMPLOYER', 'GIGS', 'MERCHANT', 'EDUCATION', 'TRAINING', 'HEALTH', 'BANK',
-    'MARKET', 'CUSTOMER', 'SUPPLIER', 'WELFARE', 'ESTATE', 'LUCK', 'TAX'];
+    'MARKET', 'CUSTOMER', 'SUPPLIER', 'WELFARE', 'ESTATE', 'LUCK', 'TAX', 'ABROAD'];
 
   class Ledger {
     constructor() {

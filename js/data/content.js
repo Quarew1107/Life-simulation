@@ -133,8 +133,8 @@
 
   // ---- Economy regimes (yearly Markov chain) ----
   C.REGIMES = {
-    growth: { name: 'Boom', color: '#3ec7b5', vacMult: 1.35, wageMult: 1.05, layoff: 0.001, promoMult: 1.3, bizDemand: 1.08, idxMu: 0.12, idxSig: 0.14, spdMu: 0.2, spdSig: 0.3, depositRate: 0.03, gigMult: 1.1 },
-    normal: { name: 'Normal', color: '#9aa5b1', vacMult: 1, wageMult: 1, layoff: 0.0025, promoMult: 1, bizDemand: 1, idxMu: 0.05, idxSig: 0.15, spdMu: 0.05, spdSig: 0.35, depositRate: 0.025, gigMult: 1 },
+    growth: { name: 'Boom', color: '#3ec7b5', vacMult: 1.35, wageMult: 1.05, layoff: 0.001, promoMult: 1.3, bizDemand: 1.08, idxMu: 0.10, idxSig: 0.14, spdMu: 0.2, spdSig: 0.3, depositRate: 0.03, gigMult: 1.1 },
+    normal: { name: 'Normal', color: '#9aa5b1', vacMult: 1, wageMult: 1, layoff: 0.0025, promoMult: 1, bizDemand: 1, idxMu: 0.035, idxSig: 0.15, spdMu: 0.05, spdSig: 0.35, depositRate: 0.025, gigMult: 1 },
     recession: { name: 'Recession', color: '#e76f51', vacMult: 0.5, wageMult: 0.93, layoff: 0.012, promoMult: 0.5, bizDemand: 0.85, idxMu: -0.15, idxSig: 0.28, spdMu: -0.3, spdSig: 0.45, depositRate: 0.015, gigMult: 0.85 },
   };
   C.REGIME_TRANSITIONS = {
@@ -173,5 +173,45 @@
   C.PANTS = ['#1d3557', '#3d405b', '#5c4033', '#2b2d42', '#6b705c'];
   C.SCARVES = ['#c9184a', '#7b2cbf', '#0096c7', '#2d6a4f', '#f77f00', '#e5989b'];
   C.TOWN_NAME = 'Bandar Rezeki';
-  C.SPEC_IDIO_SIGMA = 0.35; // personal (stock-picking) volatility of speculative holdings
+
+  // ---- Bursa Rezeki: fictional listed companies (price in RM, shares in millions) ----
+  // drift = extra real yearly drift, beta = sensitivity to the market, idio = own yearly volatility.
+  C.STOCKS = [
+    { tk: 'RZBANK', name: 'Rezeki Bank', sector: 'Finance', price0: 8.5, sharesM: 400, beta: 1.0, idio: 0.14, drift: 0.005, colour: '#5aa9e6' },
+    { tk: 'TANI', name: 'Tani Plantations', sector: 'Plantation', price0: 5.2, sharesM: 300, beta: 0.7, idio: 0.18, drift: 0, colour: '#57d38c' },
+    { tk: 'SAMBUNG', name: 'Sambung Telco', sector: 'Telco', price0: 4.1, sharesM: 500, beta: 0.8, idio: 0.13, drift: 0, colour: '#b892ff' },
+    { tk: 'KILAT', name: 'Kilat Tech', sector: 'Technology', price0: 2.3, sharesM: 600, beta: 1.5, idio: 0.38, drift: 0.02, colour: '#3ec7b5' },
+    { tk: 'RUMAH', name: 'Rumah Properties', sector: 'Property', price0: 1.8, sharesM: 700, beta: 1.4, idio: 0.22, drift: -0.005, colour: '#f4a261' },
+    { tk: 'KEDAI', name: 'KedaiMart Retail', sector: 'Consumer', price0: 6.0, sharesM: 250, beta: 0.9, idio: 0.15, drift: 0, colour: '#f28482' },
+    { tk: 'PETRA', name: 'Petrolia Energy', sector: 'Energy', price0: 7.4, sharesM: 350, beta: 1.1, idio: 0.25, drift: 0, colour: '#e9c46a' },
+    { tk: 'SARUNG', name: 'Sarung Gloves', sector: 'Healthcare', price0: 3.3, sharesM: 300, beta: 0.6, idio: 0.32, drift: 0, colour: '#ff8c42' },
+  ];
+  // New companies that can list (IPO) when a listed company goes bust.
+  C.IPO_POOL = [
+    { tk: 'NAGA', name: 'Naga Logistics', sector: 'Logistics', sharesM: 300, beta: 1.0, idio: 0.22, drift: 0, colour: '#90be6d' },
+    { tk: 'BINTANG', name: 'Bintang Solar', sector: 'Energy', sharesM: 400, beta: 1.3, idio: 0.35, drift: 0.01, colour: '#ffd166' },
+    { tk: 'SIHAT', name: 'Sihat Pharma', sector: 'Healthcare', sharesM: 250, beta: 0.7, idio: 0.25, drift: 0, colour: '#ef476f' },
+    { tk: 'AWAN', name: 'Awan Cloud', sector: 'Technology', sharesM: 500, beta: 1.5, idio: 0.4, drift: 0.02, colour: '#118ab2' },
+    { tk: 'JALAN', name: 'Jalan Builders', sector: 'Construction', sharesM: 350, beta: 1.3, idio: 0.25, drift: -0.005, colour: '#b5838d' },
+    { tk: 'MAKAN', name: 'Makan Foods', sector: 'Consumer', sharesM: 300, beta: 0.8, idio: 0.16, drift: 0, colour: '#f28482' },
+    { tk: 'SAWIT', name: 'Sawit Agro', sector: 'Plantation', sharesM: 400, beta: 0.7, idio: 0.2, drift: 0, colour: '#57cc99' },
+    { tk: 'INSAN', name: 'Insan Insurance', sector: 'Finance', sharesM: 300, beta: 0.9, idio: 0.14, drift: 0, colour: '#4361ee' },
+  ];
+  C.MARKET_IMPACT_Y = 0.8;      // square-root impact prefactor (Toth et al. 2011: order one)
+  C.TRADING_DAYS = 252;
+  C.TOWN_REVERSION = 0.015;    // daily pull of town-driven mispricing back to fundamentals (~45-day half-life)
+
+  // ---- Migration: multipliers on base monthly rates ----
+  C.MIGRATION_LEVELS = { off: 0, low: 1, normal: 3, high: 8 };
+  C.MIG_BASE_OUT = 0.0006;   // per household per month at neutral pressure (~0.7%/yr)
+  C.MIG_BASE_IN = 0.00045;   // arrivals per adult per month at neutral attractiveness
+  C.MIG_BASE_RETURN = 0.002; // per emigrant per month when the town is attractive
+
+  // ---- Ageing genes: body = STR/AGI/END, mind = INT/PER (rates are % of peak per year) ----
+  C.AGEING = {
+    bOnset: [40, 4, 32, 52], bRate: [0.012, 0.004, 0.004, 0.025], bFloor: [0.4, 0.75],
+    mOnset: [60, 5, 48, 75], mRate: [0.008, 0.003, 0.002, 0.018], mFloor: [0.6, 0.9],
+  };
+  C.BODY_ATTRS = [1, 4, 5];
+  C.MIND_ATTRS = [0, 2];
 })(globalThis.LES = globalThis.LES || {});

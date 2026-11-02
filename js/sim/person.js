@@ -14,7 +14,9 @@
       pers: { dis: 50, pat: 50, risk: 50, resp: 50, res: 50 }, famDesire: 50,
       strategy: 'BAL', stratHist: [], pendingReview: null,
       health: 85, energy: 90, stress: 20, hunger: 0,
-      cash: 0, trust: 0, epf: 0, inv: { idx: 0, spd: 0, cost: 0 }, debt: { study: 0, studyOrig: 0 },
+      cash: 0, trust: 0, epf: 0, inv: { idx: 0, st: {}, cost: 0 }, debt: { study: 0, studyOrig: 0 },
+      ageing: null, peak: [0, 0, 0, 0, 0, 0], yr: { phys: 0, mental: 0, stress: 0, days: 0 },
+      migrant: false, arrivedDay: null, away: null, timesMoved: 0,
       arrears: 0, bankruptUntil: -1,
       shares: {}, manages: -1, bizFailures: 0,
       quals: [], enrol: null, job: null, retired: false,
@@ -49,7 +51,31 @@
     return s;
   };
 
-  P.invValue = (w, p) => Math.round(p.inv.idx * w.market.idx + p.inv.spd);
+  P.stockValue = function (w, p) {
+    let v = 0;
+    for (const tk in p.inv.st) v += p.inv.st[tk] * w.mkt.byTk[tk].price;
+    return Math.round(v);
+  };
+  P.invValue = (w, p) => Math.round(p.inv.idx * w.mkt.idx) + P.stockValue(w, p);
+
+  // ---- Ageing genes (heritable): onset age, yearly decline (% of peak), floor (% of peak) ----
+  const gene = (R, [mean, sd, lo, hi]) => U.clamp(R.normal(mean, sd), lo, hi);
+  P.makeAgeing = function (R) {
+    const A = C.AGEING;
+    return {
+      bOnset: gene(R, A.bOnset), bRate: gene(R, A.bRate), bFloor: R.range(A.bFloor[0], A.bFloor[1]),
+      mOnset: gene(R, A.mOnset), mRate: gene(R, A.mRate), mFloor: R.range(A.mFloor[0], A.mFloor[1]),
+    };
+  };
+  // Child = half parents' average + half a fresh random draw (roughly 50% heritable).
+  P.inheritAgeing = function (R, a, b) {
+    const fresh = P.makeAgeing(R), out = {};
+    for (const k of Object.keys(fresh)) out[k] = 0.5 * (a[k] + b[k]) / 2 + 0.5 * fresh[k];
+    return out;
+  };
+  // Goal-comparable wealth: real (Year-1 money) or nominal, per settings.
+  P.goalWorth = (w, p) => (w.cfg.goalMode === 'real' ? p.nw / w.price : p.nw);
+  P.realWorth = (w, p) => p.nw / w.price;
 
   P.bizValue = function (w, p) {
     let v = 0;

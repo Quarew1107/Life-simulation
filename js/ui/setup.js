@@ -9,7 +9,7 @@
     for (const m of LES.SETTINGS_META) {
       const el = $(`set-${m.key}`);
       if (!el) continue;
-      if (m.type === 'int') cfg[m.key] = el.value.trim() === '' ? NaN : Number(el.value);
+      if (m.type === 'int' || m.type === 'num') cfg[m.key] = el.value.trim() === '' ? NaN : Number(el.value);
       else cfg[m.key] = el.value;
     }
     return cfg;
@@ -18,7 +18,7 @@
   function field(m, v) {
     let input;
     if (m.type === 'select') input = `<select id="set-${m.key}">${m.options.map(([k, l]) => `<option value="${k}" ${k === v ? 'selected' : ''}>${U.esc(l)}</option>`).join('')}</select>`;
-    else if (m.type === 'int') input = `<input id="set-${m.key}" type="number" step="1" min="${m.min}" max="${m.max}" value="${v}">`;
+    else if (m.type === 'int' || m.type === 'num') input = `<input id="set-${m.key}" type="number" step="${m.step || 1}" min="${m.min}" max="${m.max}" value="${v}">`;
     else input = `<input id="set-${m.key}" type="text" maxlength="40" value="${U.esc(v)}">`;
     return `<div class="field"><label for="set-${m.key}">${U.esc(m.label)}</label>${input}${m.help ? `<div class="help">${U.esc(m.help)}</div>` : ''}</div>`;
   }
@@ -27,12 +27,16 @@
     open(app, first) {
       const base = Object.assign({}, LES.DEFAULTS, app.lastCfg || {});
       const card = $('modal-card');
+      card.onclick = null;
+      card.classList.remove('wide');
+      LES.UI.bursaOpen = false;
       card.innerHTML = `
         <h1>${first ? 'Life Evolution Simulator' : 'Create a new world'}</h1>
         <p class="lead">${first
           ? 'A town of strangers, each born different, each chasing RM100 million. You set the rules of the world — then you can only watch who makes it, and why.'
           : 'Change the rules, then start a fresh world. The current world will be replaced.'}</p>
-        <div class="form-grid">${LES.SETTINGS_META.map(m => field(m, base[m.key])).join('')}</div>
+        ${['World', 'Economy', 'Society'].map(g => `<h2 class="set-group">${g}</h2><div class="form-grid">${LES.SETTINGS_META.filter(m => m.group === g).map(m => field(m, base[m.key])).join('')}</div>`).join('')}
+        <details class="set-adv"><summary>Advanced settings</summary><div class="form-grid">${LES.SETTINGS_META.filter(m => m.group === 'Advanced').map(m => field(m, base[m.key])).join('')}</div></details>
         <div class="msgs" id="set-msgs"></div>
         <div class="modal-actions">
           <button class="ghost" id="set-random">Random seed</button>

@@ -18,9 +18,9 @@
     const n = R.poisson(lambda);
     for (let i = 0; i < n; i++) {
       const j = C.JOBS[R.weighted(C.JOB_FREQ)];
-      const salary = U.RM(Math.round(j.salary * U.clamp(R.normal(1, 0.12), 0.7, 1.5) * w.macro().wageMult / 10) * 10);
+      const salary = Math.round(w.px(j.salary * U.clamp(R.normal(1, 0.12), 0.7, 1.5) * w.macro().wageMult) / 1000) * 1000;
       const days = R.int(w.cfg.vacancyDaysMin, w.cfg.vacancyDaysMax);
-      w.vacancies.push({ id: w.nextVacId++, job: j, salary, openDay: day, closeDay: day + days, applicants: [], place: w.town.byKind[j.place] });
+      w.vacancies.push({ id: w.nextVacId++, job: j, salary, openDay: day, closeDay: day + days, applicants: [], place: R.pick(w.town.kinds[j.place]) });
       w.stats.vacOpened++;
     }
   };
@@ -32,7 +32,7 @@
       if (seen.has(id)) continue;
       seen.add(id);
       const p = w.people[id];
-      if (!P.isAdult(w, p) || p.retired || !P.hasCred(p, v.job.req)) continue;
+      if (!P.isAdult(w, p) || p.away || p.retired || !P.hasCred(p, v.job.req)) continue;
       if (p.job && p.job.salary >= v.salary) continue;
       const a = U.clamp(LES.Actions.attrScore(p, v.job.w) / 10, 0, 1);
       const e = U.clamp(p.xp[v.job.cat] / 5, 0, 1);
@@ -56,7 +56,7 @@
     P.log(w, p, old
       ? `Switched from ${old.title} to ${v.job.title} at ${U.fmtMoney(v.salary)}/mo${others}`
       : `Hired as ${v.job.title} at ${U.fmtMoney(v.salary)}/mo${others}`,
-    'career', v.salary >= U.RM(6000) ? 1 : 0);
+    'career', v.salary >= w.px(6000) ? 1 : 0);
     w.stats.hires++;
   };
 
@@ -71,7 +71,7 @@
       const ee = Math.round(gross * 0.11), er = Math.round(gross * 0.13);
       w.ledger.pay('EMPLOYER', p, 'cash', gross - ee);
       w.ledger.pay('EMPLOYER', p, 'epf', ee + er);
-      const tax = L.incomeTax(gross - ee);
+      const tax = L.incomeTax(w, gross - ee);
       w.ledger.spend(p, 'cash', 'TAX', tax);
       p.earned.wages += gross + er;
       p.monthIncome += gross - ee - tax;
@@ -80,14 +80,15 @@
   };
 
   // Progressive monthly income tax (sen in, sen out).
-  L.incomeTax = function (sen) {
-    const g = sen / 100;
+  // Bands are in Year-1 RM and move with the price level (no bracket creep).
+  L.incomeTax = function (w, sen) {
+    const g = sen / 100 / w.price;
     let tax = 0, lo = 0;
     for (const [hi, rate] of C.TAX_BANDS) {
       if (g > lo) tax += (Math.min(g, hi) - lo) * rate;
       lo = hi;
     }
-    return U.RM(tax);
+    return Math.round(U.RM(tax) * w.price);
   };
 
   L.endJob = function (w, p, reason, silent) {
@@ -110,6 +111,7 @@
     const r = LES.Actions.taskRoll(w, p, course.w, course.diff, 0, null);
     e.progress += r.ok ? 1 : 0.4;
     LES.Actions.improve(w, p, C.INT, r.ok ? 0.25 : 0.1);
+    p.yr.mental++;
     p.energy -= 18; p.stress += 3;
     if (e.progress >= course.months * 12) L.graduate(w, p, course);
   };
@@ -132,7 +134,7 @@
       return;
     }
     const scholar = w.derived.eduMult > 0 && R.next() < U.clamp(0.04 + 0.05 * (p.att[C.INT] - 6), 0, 0.4);
-    const fee = scholar ? 0 : Math.round(U.RM(course.fee) * w.derived.eduMult / course.months);
+    const fee = scholar ? 0 : Math.round(w.px(course.fee) * w.derived.eduMult / course.months);
     p.enrol = { course: course.id, startDay: w.day, progress: 0, scholarship: scholar, feeMonthly: fee, monthsPaid: 0 };
     P.log(w, p, `Enrolled in ${course.name}${scholar ? ' with a full scholarship!' : ''}`, 'edu', scholar ? 1 : 0);
     if (scholar) w.stats.scholarships++;
@@ -198,12 +200,14 @@
       const age = P.age(w, p);
       const job = p.job;
       if (job) {
+        // Wages only partly follow inflation each year: real pay can erode.
+        job.salary = Math.round(job.salary * (1 + w.infl * R.range(0.4, 1.0)));
         const perf = job.perfN ? job.perfOk / job.perfN : 0.5;
         const pr = U.clamp(0.04 + 0.3 * (perf - 0.6) + 0.025 * p.xp[job.cat], 0.01, 0.35) * m.promoMult;
         if (job.level < 5 && w.day - job.startDay > 300 && R.next() < pr) {
           job.level++;
           job.salary = Math.round(job.salary * 1.12 / 1000) * 1000;
-          P.log(w, p, `Promoted to ${L.title(job)} (${U.fmtMoney(job.salary)}/mo)`, 'career', job.salary >= U.RM(10000) ? 1 : 0);
+          P.log(w, p, `Promoted to ${L.title(job)} (${U.fmtMoney(job.salary)}/mo)`, 'career', job.salary >= w.px(10000) ? 1 : 0);
           w.stats.promotions++;
         }
         job.perfOk = 0; job.perfN = 0;

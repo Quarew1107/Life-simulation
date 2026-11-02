@@ -15,7 +15,24 @@
   const CHILD = ['.hhh.', 'hhhhh', '.ese.', '.sss.', 'ttttt', '.ttt.', '.p.p.', '.f.f.'];
   const BABY = ['.hh.', 'ssss', 'eses', 'tttt', 'tttt'];
 
-  function colour(ch, look, grey) {
+  // Work uniforms: optional shirt/pants override and a hat over the top two rows.
+  const OUTFITS = {
+    chef: { shirt: '#f4f4f4', hat: '#ffffff' },
+    medic: { shirt: '#f4f4f4', pants: '#7fb3cf' },
+    hardhat: { shirt: '#ff8c42', hat: '#f4c430' },
+    rider: { shirt: '#2a9d8f', hat: '#e63946' },
+    office: { pants: '#22223b' },
+    school: { shirt: '#f8f8f8', pants: '#1d3557' },
+    sport: { shirt: '#e63946', pants: '#1b1b1b' },
+  };
+  LES.OUTFITS = OUTFITS;
+
+  function colour(ch, look, grey, row, of) {
+    if (of) {
+      if (of.hat && ch === 'h' && row <= 1) return of.hat;
+      if (of.shirt && ch === 't') return of.shirt;
+      if (of.pants && ch === 'p') return of.pants;
+    }
     switch (ch) {
       case 'h': return grey ? '#c9c9c9' : look.hair;
       case 's': case 'a': return look.skin;
@@ -30,8 +47,9 @@
 
   // group: 'baby' | 'child' | 'adult' | 'elder'; frame 0/1 for walking legs
   LES.Sprites = {
-    person(look, group, frame) {
-      const key = `${look.skin}${look.hair}${look.shirt}${look.pants}${look.style}${look.scarf}|${group}|${frame}`;
+    person(look, group, frame, outfit) {
+      const key = `${look.skin}${look.hair}${look.shirt}${look.pants}${look.style}${look.scarf}|${group}|${frame}|${outfit || ''}`;
+      const of = OUTFITS[outfit];
       let cv = cache.get(key);
       if (cv) return cv;
       let rows;
@@ -55,7 +73,7 @@
         g.fillRect(x, y + 1, 3, 1); g.fillRect(x + 1, y, 1, 3);
       }
       for (let y = 0; y < hpx; y++) for (let x = 0; x < wpx; x++) {
-        const c = colour(rows[y][x], look, grey);
+        const c = colour(rows[y][x], look, grey, y, of);
         if (!c) continue;
         g.fillStyle = c;
         g.fillRect(x + 1, y + 1, 1, 1);

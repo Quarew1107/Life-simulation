@@ -35,6 +35,7 @@
     if (a >= 1e4) return `${s}RM${(a / 1e3).toFixed(1)}k`;
     return `${s}RM${Math.round(a).toLocaleString('en-US')}`;
   };
+  U.fmtPrice = sen => `RM${(sen / 100).toFixed(sen < 1000 ? 3 : 2)}`; // share prices
   U.fmtPct = x => `${Math.round(x * 100)}%`;
 
   U.esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
