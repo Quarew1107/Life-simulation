@@ -45,6 +45,7 @@ For developers:
 ## Music and sound
 
 Turn sound on with 🔇 on the map, or with **Sound off** on the setup screen. Your choice and both volumes are remembered. Browsers only start audio after your first click.
+- **Music plays at 1× and, a little faster, at 10×.** At 60× and faster it fades out and picks up where it left off when you slow down. Sound effects and event cues play at every speed.
 - **Music follows the town:**
   - a setup theme
   - calm daytime, or night city at slow speeds after dark
@@ -57,7 +58,7 @@ Turn sound on with 🔇 on the map, or with **Sound off** on the setup screen. Y
   - graduations, hires and promotions
   - new businesses, bankruptcies and crashes
   
-  These play for notable town events and for everything that happens to the person you have selected. At 10 days/s and faster, only the biggest events make a sound.
+  These play for notable town events and for everything that happens to the person you have selected, at every speed. Each sound has a short cooldown, so fast runs don't pile them up.
 - **At slow speeds:** train horns as trains pull in, the odd car horn, and fireworks on New Year and Merdeka nights.
 
 The files live in `Sound effects/`. Keep their names if you swap any of them.
