@@ -38,8 +38,8 @@
     };
     q.L = Math.round(n * 0.14);
     if (varied) { // worship districts and a justice district (taken from the lot share)
-      q.J = Math.max(1, Math.round(n / 25)); q.j = 1 + Math.floor(n / 200);
-      q.L = Math.max(1, q.L - q.J - q.j);
+      q.J = Math.max(1, Math.round(n / 25)); q.j = 1 + Math.floor(n / 200); q.g = 1;
+      q.L = Math.max(1, q.L - q.J - q.j - q.g);
     }
     const used = Object.values(q).reduce((a, b) => a + b, 0);
     const homes = Math.max(5, n - used);
@@ -95,9 +95,10 @@
       A: (c, r) => 2.5 * dRich(c, r) + 1.5 * dCentre(c, r),
       L: (c, r) => 2 * dCentre(c, r) + 0.6 * nearest('L', c, r),
       j: (c, r) => 1.2 * dCentre(c, r) + 2 * nearest('j', c, r), // the prison sits toward the edge of town
+      g: (c, r) => -2.5 * dCentre(c, r), // the town hall is central
     };
     const spread = (c, r, code) => -0.5 * dCentre(c, r) + 3 * nearest(code, c, r); // Q P D V E S
-    const order = ['O', 'U', 'M', 'H', 'Z', 'Y', 'B', 'C', 'I', 'W', 'Q', 'P', 'E', 'J', 'j', 'D', 'V', 'S', 'R', 'F', 'K', 'A', 'L', 'T'];
+    const order = ['O', 'U', 'M', 'H', 'Z', 'Y', 'B', 'C', 'I', 'W', 'Q', 'P', 'E', 'J', 'j', 'g', 'D', 'V', 'S', 'R', 'F', 'K', 'A', 'L', 'T'];
     for (const code of order) {
       for (let k = 0; k < (quota[code] || 0); k++) {
         let best = null, bestS = -Infinity;
@@ -165,6 +166,9 @@
     police: 'Balai Polis: the police station. Patrol cars go out from here; arrest chances depend on police strength.',
     court: "Mahkamah: the magistrates' court. Most cases end in conviction; a lawyer helps those who can pay.",
     prison: 'Penjara: the prison. Inmates lose their jobs; a record makes hiring harder and reoffending likelier.',
+    jail: 'Lokap: the police lock-up. Suspects wait here on remand until the court hears their case.',
+    townhall: "Dewan Bandaraya: the town hall, office of the elected leader. The treasury collects taxes and pays for police, aid and services.",
+    padang: 'Padang: the town field, where election rallies gather.',
     rehab: 'Pusat Pemulihan: drug rehabilitation (AADK-style). Many relapse after release.',
   };
 
@@ -291,10 +295,15 @@
         at('gereja', 'Gereja St. Mary', 9, 8, 5, 3);
         break;
       case 'j': // justice: police station, magistrates' court, prison, drug rehabilitation centre
-        at('police', 'Balai Polis', 1, 0, 6, 4);
+        at('police', 'Balai Polis', 0, 0, 4, 4);
+        at('jail', 'Lokap', 4, 0, 3, 4);
         at('court', 'Mahkamah', 8, 0, 6, 4);
         at('prison', 'Penjara', 0, 5, 9, 6);
         at('rehab', 'Pusat Pemulihan', 10, 5, 4, 6);
+        break;
+      case 'g': // the town hall and the padang where rallies are held
+        at('townhall', 'Dewan Bandaraya', 1, 1, 8, 8);
+        at('padang', 'Padang', 10, 0, 4, 11, { decor: true });
         break;
       case 'Z': at('golf', 'Kelab Golf Rezeki', 0, 0, 14, 11, { venue: true }); break;
       case 'N':
@@ -414,7 +423,7 @@
       while (q.length) for (const n of adj.get(q.pop())) if (!seen.has(n)) { seen.add(n); q.push(n); }
       return seen.size === nodes.length;
     };
-    const special = (c, r) => 'NGZUj'.includes(tpl[r][c]);
+    const special = (c, r) => 'NGZUjg'.includes(tpl[r][c]);
     // Superblocks: drop a few short road pieces between neighbouring blocks.
     for (let r = 0; r < rows; r++) for (let c = 1; c < cols - 1; c++) {
       if (c === river || bx.x.has(c) || special(c, r) || special(c + 1 < cols ? c + 1 : c, r) || R.next() > 0.2) continue;

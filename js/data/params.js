@@ -27,7 +27,13 @@
     interfaith: 'malaysia',   // malaysia (a non-Muslim converts to marry a Muslim) | free
     crime: 'lively',          // lively (Malaysian rates x10) | realistic (x1) | lawless (x30) | off
     drugPolicy: 'malaysia',   // malaysia (rehab first, prison for repeat) | punitive | treatment | decriminalised
-    police: 'normal',         // weak | normal | strong (arrest chances)
+    police: 'normal',         // weak | normal | strong (arrest chances; with a government the police budget decides)
+    government: 'on',         // town treasury, laws, elections (off = original engine)
+    leaderTitle: 'president', // president | mayor | datuk
+    termYears: 5,             // years between elections (Malaysia: parliament at most 5)
+    termLimit: 'none',        // none | 2 (terms)
+    identityVoting: 'moderate', // none | moderate | strong: weight of shared ethnicity / religion in voting
+    freezeLaws: 'no',         // yes = laws stay at their starting values (elections still happen)
     stopOnWinner: 'no',
     inflMin: -0.5,            // % per year; Malaysia 2010s ~0.7-3.9%, 2020 -1.1%, 2022 3.3%
     inflMax: 4.5,
@@ -61,8 +67,8 @@
   // Presets fill the setup form. Classic reproduces the original engine (harsher, more
   // children, longer lives); Malaysia is calibrated to DOSM figures (tools/calibration.html).
   LES.PRESETS = {
-    malaysia: { name: 'Malaysia today', values: { safetyNet: 'on', fertility: 'malaysia', mortMult: 1.9, layout: 'varied', society: 'on', ethnicMix: 'malaysia', crime: 'lively' } },
-    classic: { name: 'Classic (original rules)', values: { safetyNet: 'off', fertility: 'normal', mortMult: 1, layout: 'grid', society: 'off', ethnicMix: 'classic', crime: 'off' } },
+    malaysia: { name: 'Malaysia today', values: { safetyNet: 'on', fertility: 'malaysia', mortMult: 1.9, layout: 'varied', society: 'on', ethnicMix: 'malaysia', crime: 'lively', government: 'on' } },
+    classic: { name: 'Classic (original rules)', values: { safetyNet: 'off', fertility: 'normal', mortMult: 1, layout: 'grid', society: 'off', ethnicMix: 'classic', crime: 'off', government: 'off' } },
   };
   LES.presetOf = function (cfg) {
     for (const k of Object.keys(LES.PRESETS)) {
@@ -94,6 +100,11 @@
     { group: 'Society', key: 'crime', label: 'Crime & vice', type: 'select', options: [['lively', 'Lively (Malaysian rates x10)'], ['realistic', 'Realistic (Malaysian rates: rare in a small town)'], ['lawless', 'Lawless (x30)'], ['off', 'Off (original engine)']], help: "Crime, police, courts, prison, drugs and gangs. Malaysia's real rates (170 index crimes per 100k a year) mean a 300-person town sees about one crime every two years, so Lively is the default for watching." },
     { group: 'Society', key: 'drugPolicy', label: 'Drug policy', type: 'select', options: [['malaysia', 'Malaysian mix (rehab first, prison for repeat)'], ['punitive', 'Punitive (prison)'], ['treatment', 'Treatment first (short rehab, voluntary help)'], ['decriminalised', 'Decriminalised use']] },
     { group: 'Society', key: 'police', label: 'Police strength', type: 'select', options: [['normal', 'Normal'], ['strong', 'Strong (more arrests)'], ['weak', 'Weak']], help: 'Until the town has a budget (next phase), this sets how often crimes are solved.' },
+    { group: 'Society', key: 'government', label: 'Government & elections', type: 'select', options: [['on', 'On (treasury, laws, elections, police force)'], ['off', 'Off (original engine)']], help: 'Taxes fund police, aid and services; an elected leader changes the laws; voters weigh what each law means for them.' },
+    { group: 'Society', key: 'leaderTitle', label: 'Leader title', type: 'select', options: [['president', 'President'], ['mayor', 'Mayor'], ['datuk', 'Datuk Bandar']] },
+    { group: 'Society', key: 'termYears', label: 'Years between elections', type: 'int', min: 2, max: 10 },
+    { group: 'Society', key: 'termLimit', label: 'Term limit', type: 'select', options: [['none', 'None (like Malaysia)'], ['2', 'Two terms']] },
+    { group: 'Society', key: 'identityVoting', label: 'Identity in voting', type: 'select', options: [['moderate', 'Moderate'], ['none', 'None'], ['strong', 'Strong']], help: 'How much voters favour candidates of their own ethnicity or religion.' },
     { group: 'Society', key: 'genetics', label: 'Child attributes', type: 'select', options: [['evolution', 'Evolution (potential + mutation)'], ['original', 'Original (average of parents, rounded down)']] },
     { group: 'Society', key: 'strategyMode', label: 'Life strategies', type: 'select', options: [['adaptive', 'Adaptive (can change after setbacks)'], ['fixed', 'Fixed for life']] },
     { group: 'Society', key: 'fertility', label: 'Birth rate', type: 'select', options: [['malaysia', 'Malaysia today (~1.6 children per woman)'], ['low', 'Low'], ['normal', 'Normal (original, ~2.5)'], ['high', 'High']] },
@@ -102,6 +113,7 @@
     { group: 'Advanced', key: 'marketInfluenceCap', label: 'Max town influence on prices (%)', type: 'int', min: 0, max: 100 },
     { group: 'Advanced', key: 'migInMult', label: 'Move-in rate multiplier', type: 'num', min: 0, max: 20, step: 0.1 },
     { group: 'Advanced', key: 'migOutMult', label: 'Move-out rate multiplier', type: 'num', min: 0, max: 20, step: 0.1 },
+    { group: 'Advanced', key: 'freezeLaws', label: 'Laws fixed at the starting values', type: 'select', options: [['no', 'No: elected leaders change them'], ['yes', 'Yes (for controlled experiments)']] },
     { group: 'Advanced', key: 'mortMult', label: 'Old-age mortality multiplier', type: 'num', min: 0, max: 5, step: 0.1, help: '1 = original engine (~80-year lives), 1.9 = Malaysia (75.3 years). 0 = nobody dies of old age.' },
   ];
 

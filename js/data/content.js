@@ -60,6 +60,11 @@
   ];
   C.JOB_BY_ID = {};
   for (const j of C.JOBS) C.JOB_BY_ID[j.id] = j;
+  // Public-sector jobs: not in the random vacancy market; the government hires to its budget.
+  C.GOV_JOBS = {
+    police: { id: 'police', title: 'Police Officer', salary: 3000, req: null, w: w(.1, .3, .3, .1, .1, .1), diff: 4.5, cat: 'office', place: 'police', risk: 'physical', gov: true, freq: 0 },
+  };
+  for (const j of Object.values(C.GOV_JOBS)) C.JOB_BY_ID[j.id] = j;
   C.JOB_FREQ = C.JOBS.map(j => j.freq);
   C.LEVEL_PREFIX = ['', '', 'Senior ', 'Lead ', 'Head ', 'Chief '];
 

@@ -16,6 +16,7 @@
 <script src="../js/sim/goals.js"></script>
 <script src="../js/sim/society.js"></script>
 <script src="../js/sim/crime.js"></script>
+<script src="../js/sim/government.js"></script>
 <script src="../js/sim/world.js"></script>
 <script src="../js/sim/save.js"></script>
 <script src="../js/sim/calibration.js"></script>
@@ -25,7 +26,7 @@
 (function () {
   const q = new URLSearchParams(location.search);
   const seeds = (q.get('seeds') || 'cal-1,cal-2,cal-3').split(','), years = Number(q.get('years') || 80);
-  const extra = JSON.parse(q.get('cfg') || '{"founders":150,"crime":"realistic"}'); // realistic crime: Lively (x10) distorts the demography
+  const extra = JSON.parse(q.get('cfg') || '{"founders":150,"crime":"realistic","freezeLaws":"yes"}'); // realistic crime (Lively x10 distorts the demography), Malaysian laws held fixed
   const out = document.getElementById('out'), rows = [];
   out.textContent = `Running ${seeds.length} seeds x ${years} years...`;
   let i = 0;

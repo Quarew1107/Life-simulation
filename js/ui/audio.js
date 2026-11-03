@@ -132,6 +132,7 @@
       case 'wealth': s = 'chime'; break;
       case 'family': s = /^Became partners/.test(t) ? 'wedding' : /^Welcomed baby/.test(t) ? 'baby' : null; break;
       case 'death': s = 'funeral'; break;
+      case 'politics': s = /won the election|re-elected/.test(t) ? 'hired' : /Scandal/.test(t) ? 'sad' : null; break;
       case 'crime': s = /was killed|convicted of murdering/.test(t) ? 'funeral' : /Police raid|gang formed/.test(t) ? 'sad' : null; break;
       case 'edu': if (/^Graduated/.test(t)) s = 'graduation'; break;
       case 'career': if (/^(Hired|Switched|Promoted)/.test(t)) s = 'hired'; break;

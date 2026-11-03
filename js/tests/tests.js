@@ -401,7 +401,7 @@
     check('Crimes, arrests, convictions and prison admissions all happen', (st.total.theft || 0) > 0 && st.arrests > 0 && st.convictions > 0 && st.admissions > 0, JSON.stringify(st.total));
     check('Drug use, rehab and drug arrests happen', st.startedUsing > 0 && st.rehabAdmissions > 0 && st.drugArrests > 0);
     check('At least one gang formed', st.gangs.length > 0);
-    const inmates = w.people.filter(p => p.inst);
+    const inmates = w.people.filter(p => p.inst && p.inst.kind !== 'remand'); // on remand they keep job and family until the verdict
     check('Prisoners hold no job, course, business role or children', inmates.every(p => !p.job && !p.enrol && p.manages < 0 && !p.careOf.length));
     // Admission: job lost, children re-homed, record after release.
     const w2 = new LES.World({ seed: 'crime-unit', founders: 60 });
@@ -417,12 +417,46 @@
     await runDays(r1, 8 * 365); await runDays(r2, 8 * 365);
     const tot = x => Object.values(x.crime.total).reduce((a, b) => a + b, 0);
     check('Lawless towns see far more crime than realistic ones', tot(r2) > 5 * Math.max(1, tot(r1)), `${tot(r1)} vs ${tot(r2)}`);
-    const dec = new LES.World({ seed: 'cr-d', founders: 200, crime: 'lawless', drugPolicy: 'decriminalised' });
+    const dec = new LES.World({ seed: 'cr-d', founders: 200, crime: 'lawless', drugPolicy: 'decriminalised', freezeLaws: 'yes' });
     await runDays(dec, 8 * 365);
     check('Decriminalised drug use: no possession arrests', dec.crime.drugArrests === 0);
     const off = new LES.World({ seed: 'cr-off', founders: 40, crime: 'off' });
     await runDays(off, 200);
     check('Crime off: no crime state and nobody in an institution', !off.crime && off.people.every(q => !q.inst));
+  }
+
+  // Phase-4 government: treasury, laws, police force, remand, elections, events.
+  async function govTests() {
+    print('--- Government & elections ---', 'info');
+    const GV = LES.Gov;
+    const w = new LES.World({ seed: 'gov-test', founders: 200 });
+    check('A leader is elected by the founders at the start', w.gov.president >= 0 && w.gov.elections.length === 1);
+    let errs = [];
+    await runDays(w, 16 * 365, wx => { if (!errs.length) errs = wx.checkInvariants(); });
+    check('16 years: no invariant violations (treasury in the money check, votes add up)', errs.length === 0, errs.slice(0, 3).join(' | '));
+    const g = w.gov, e = g.elections;
+    check('Elections every term (3+ in 16 years) with turnout 50-95%', e.length >= 3 && e.slice(1).every(x => x.voted / x.eligible > 0.5 && x.voted / x.eligible < 0.95), e.map(x => `${x.voted}/${x.eligible}`).join(' '));
+    check('Taxes reach the treasury and pay for things', g.last && g.last.revTotal > 0 && Object.keys(g.last.spend).length > 0);
+    check('Police officers are hired as public servants', w.living.some(p => p.job && p.job.jobId === 'police') && g.officers > 0);
+    check('Every law has a valid setting and the policy matches it', GV.LAWS.every(l => l.options.some(o => o[0] === g.laws[l.key])) && w.policy.minWage === Number(g.laws.minWage));
+    // Law levers really act on the engine.
+    const t = new LES.World({ seed: 'gov-law', founders: 40 });
+    const p = t.people.find(q => q.job);
+    const before = LES.Labour.incomeTax(t, LES.U.RM(9000));
+    t.gov.laws.incomeTax = 'high'; t.policy = GV.policyOf(t.gov.laws);
+    check('Income tax law changes the tax people pay', LES.Labour.incomeTax(t, LES.U.RM(9000)) > before);
+    t.gov.laws.minWage = '2500'; t.policy = GV.policyOf(t.gov.laws); p.job.salary = LES.U.RM(1000);
+    LES.Systems.all().find(x => x.id === 'gov').month(t);
+    check('The minimum wage lifts low salaries', p.job.salary >= t.px(2500));
+    // More police -> more crime solved.
+    const lo = new LES.World({ seed: 'gov-pol', founders: 200, crime: 'lawless' }), hi = new LES.World({ seed: 'gov-pol', founders: 200, crime: 'lawless' });
+    lo.gov.laws.police = '2'; lo.policy = GV.policyOf(lo.gov.laws); hi.gov.laws.police = '7'; hi.policy = GV.policyOf(hi.gov.laws);
+    lo.gov.frozen = hi.gov.frozen = true;
+    await runDays(lo, 6 * 365); await runDays(hi, 6 * 365);
+    check('A bigger police force arrests more people per crime', hi.crime.arrests / Math.max(1, Object.values(hi.crime.total).reduce((a, b) => a + b, 0)) > lo.crime.arrests / Math.max(1, Object.values(lo.crime.total).reduce((a, b) => a + b, 0)), `${lo.gov.laws.police}: ${lo.crime.arrests} · ${hi.gov.laws.police}: ${hi.crime.arrests}`);
+    check('Suspects are held on remand in the lock-up before court', hi.crime.remanded > 0);
+    const off = new LES.World({ seed: 'gov-off', founders: 40, government: 'off' });
+    check('Government off: no treasury, laws or leanings', !off.gov && !off.policy && off.people.every(q => !q.pol));
   }
 
   async function runAll() {
@@ -436,6 +470,7 @@
       await foundationTests();
       await societyTests();
       await crimeTests();
+      await govTests();
       await determinism();
       await invariantSweep(3, 60);
     } catch (err) {
@@ -446,6 +481,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests };
+  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

@@ -245,7 +245,7 @@
   }
 
   // Ground surface of each district block, before buildings are drawn on it.
-  const PAVED = new Set(['O', 'H', 'S', 'M', 'D', 'X', 'V', 'Y', 'N', 'j']);
+  const PAVED = new Set(['O', 'H', 'S', 'M', 'D', 'X', 'V', 'Y', 'N', 'j', 'g']);
   const INDUSTRIAL = new Set(['I', 'W', 'G']);
   function drawGround(g, town, R) {
     const T = town.T, W = town.W * T, H = town.H * T;
@@ -811,6 +811,34 @@
         door(g, X + W / 2, Y + H - 4, 10, 10, '#1d3557');
         rect(g, X + W - 26, Y + H - 12, 16, 8, '#f4f6f8'); rect(g, X + W - 26, Y + H - 9, 16, 2, '#1d3557'); rect(g, X + W - 20, Y + H - 14, 4, 2, '#e63946'); rect(g, X + W - 16, Y + H - 14, 2, 2, '#3a86ff');
         sign(g, 'POLIS', X + W / 2, Y + 4, '#1d3557', '#f2e8cf');
+        break;
+      }
+      case 'jail': { // police lock-up: barred windows
+        const s = building(g, X + 2, Y + 4, W - 4, H - 8, { wall: '#c9ced3', roof: '#1d3557', wallH: 26 });
+        for (let i = 0; i < 3; i++) { const wx = X + 6 + i * 12; rect(g, wx, s.wallY + 6, 8, 8, '#2b2d42'); for (let k = 1; k < 8; k += 2) rect(g, wx + k, s.wallY + 6, 1, 8, '#9aa0a6'); }
+        door(g, X + W / 2, Y + H - 4, 8, 10, '#3d405b');
+        sign(g, 'LOKAP', X + W / 2, Y + 2, '#2b2d42', '#f2e8cf');
+        break;
+      }
+      case 'townhall': { // Dewan Bandaraya: white colonial-style hall with a clock tower and flags
+        rect(g, X, Y + H - 26, W, 26, '#e8e1d0');
+        const s = building(g, X + 6, Y + 18, W - 12, 80, { wall: '#f7f4ec', roof: '#b5483a', roofType: 'hip', wallH: 36 });
+        windows(g, X + 12, s.wallY + 6, W - 24, 24, 7, 2, { col: PAL.glass, frame: '#e8e1d0', lit: 0.8 });
+        for (let i = 0; i < 6; i++) rect(g, X + 16 + i * 18, s.wallY + 2, 3, s.wallH - 4, '#ffffff');
+        const tx = X + W / 2 - 10;
+        rect(g, tx + 3, Y + 2, 20, 30, 'rgba(0,0,0,0.2)'); rect(g, tx, Y, 20, 30, '#f7f4ec'); rect(g, tx + 16, Y, 4, 30, '#d9d3c7');
+        g.fillStyle = '#b5483a'; g.beginPath(); g.moveTo(tx - 2, Y + 1); g.lineTo(tx + 10, Y - 12); g.lineTo(tx + 22, Y + 1); g.fill();
+        rect(g, tx + 4, Y + 8, 12, 12, '#ffffff'); rect(g, tx + 9, Y + 10, 2, 6, '#333'); rect(g, tx + 10, Y + 14, 4, 2, '#333');
+        door(g, X + W / 2, Y + 98, 16, 18, PAL.woodDark);
+        for (const fx of [X + 8, X + W - 18]) { rect(g, fx, Y + H - 40, 1, 22, '#ddd'); for (let k = 0; k < 4; k++) rect(g, fx + 1, Y + H - 40 + k, 9, 1, k % 2 ? '#ffffff' : '#d62828'); rect(g, fx + 1, Y + H - 40, 4, 2, '#1d3557'); }
+        sign(g, 'DEWAN BANDARAYA', X + W / 2, Y + H - 14, '#7a2632', '#f2e8cf');
+        break;
+      }
+      case 'padang': {
+        rect(g, X, Y, W, H, '#7fbf5a'); for (let y = Y; y < Y + H; y += 8) rect(g, X, y, W, 4, '#77b553');
+        g.strokeStyle = '#f4f1e8'; g.lineWidth = 1; g.strokeRect(X + 4.5, Y + 6.5, W - 9, H - 13);
+        rect(g, X + W / 2 - 10, Y + 8, 20, 8, '#cfc6b0'); rect(g, X + W / 2 - 10, Y + 8, 20, 2, '#e8e1d0'); // the stage
+        sign(g, 'PADANG', X + W / 2, Y + H - 14, '#2d6a4f');
         break;
       }
       case 'court': { // court with columns and a dome-capped clock tower

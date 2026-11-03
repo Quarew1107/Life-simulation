@@ -339,7 +339,7 @@
   F.valueBiz = function (b) {
     const t = b.typeDef;
     const n = b.profitHist.length;
-    const t12 = n ? U.sum(b.profitHist) * 12 / n * (1 - C.CORP_TAX) : 0;
+    const t12 = n ? U.sum(b.profitHist) * 12 / n * (1 - C.CORP_TAX) : 0; // valued at the statutory rate
     const net = b.cash + b.fixed - b.debt;
     b.equity = Math.max(0, Math.round(net + Math.max(0, t.multiple * t12)));
     if (b.equity > b.peakEquity) b.peakEquity = b.equity;
@@ -416,8 +416,9 @@
     L.spend(b, 'cash', 'SUPPLIER', opCost);
     L.spend(b, 'cash', 'BANK', interest + principal);
     b.debt -= principal;
-    if (profit > 0) L.spend(b, 'cash', 'TAX', Math.min(b.cash, Math.round(profit * C.CORP_TAX)));
-    const netProfit = profit > 0 ? Math.round(profit * (1 - C.CORP_TAX)) : profit;
+    const corp = w.policy ? w.policy.corpTax : C.CORP_TAX;
+    if (profit > 0) L.spend(b, 'cash', 'TAX', Math.min(b.cash, Math.round(profit * corp)));
+    const netProfit = profit > 0 ? Math.round(profit * (1 - corp)) : profit;
 
     // Rare booms (viral hit, big contract, franchise) and busts.
     // Networking: country-club membership and recent golf/lounge visits bring deals.

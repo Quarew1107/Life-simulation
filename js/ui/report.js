@@ -222,6 +222,17 @@
 </div></section>`;
   }
 
+  function govSection(w) {
+    const GV = LES.Gov, g = w.gov;
+    if (!g || !GV) return '';
+    const rows = g.elections.map(e => { const win = e.cands.find(c => c.id === e.winner); return `<tr><td>Y${U.dayToDate(e.day).year}</td><td>${esc(win ? win.name : '?')}${win && win.incumbent ? ' (re-elected)' : ''}</td><td>${win ? win.votes : 0} of ${e.voted}</td><td>${e.eligible ? Math.round(e.voted / e.eligible * 100) : 0}%</td></tr>`; }).join('');
+    return `<section><h2>Government and elections</h2><div class="grid">
+<div class="card"><b>Elections</b><table><tr><th>Year</th><th>Winner</th><th>Votes</th><th>Turnout</th></tr>${rows}</table></div>
+<div class="card"><b>Laws at the end</b><table>${GV.LAWS.map(l => `<tr><td>${esc(l.name)}</td><td>${esc(GV.optName(l.key, g.laws[l.key]))}</td></tr>`).join('')}</table>
+<p class="note">${g.lawLog.length} law changes · ${g.scandals} corruption scandals · treasury ${U.fmtMoney(g.treasury.cash)}, debt ${U.fmtMoney(g.debt)} · ${g.floods} floods, ${g.hazes} haze episodes.</p></div>
+</div></section>`;
+  }
+
   function crimeSection(w) {
     const CR = LES.Crime, st = w.crime;
     if (!st || !CR) return '';
@@ -294,6 +305,7 @@ ${compare}
 ${a.strat ? `<section><h2>Strategies</h2><table><tr><th>Starting strategy</th><th>People</th><th>Median peak wealth</th><th>In top 10</th><th>Business failures</th></tr>${a.strat.map(s => `<tr><td>${C.STRATEGY_NAMES[s.s]}</td><td>${s.n}</td><td>${U.fmtMoney(s.med)}</td><td>${s.inTop}</td><td>${s.fail}</td></tr>`).join('')}</table></section>` : ''}
 ${societySection(w)}
 ${crimeSection(w)}
+${govSection(w)}
 <section><h2>Top 20 fortunes</h2><table><tr><th>#</th><th>Name</th><th>Peak (Y1 money)</th><th>Strategy</th><th>Education</th><th>Inherited share</th><th>Status</th></tr>${a.top.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(P.name(r.p))}</td><td>${U.fmtMoney(r.peakReal)}</td><td>${C.STRATEGY_NAMES[r.strategy]}</td><td>${r.qual}</td><td>${pct(r.inheritShare)}</td><td>${r.p.alive ? (r.p.away ? 'moved away' : 'alive') : 'died ' + Math.floor(r.age)}</td></tr>`).join('')}</table></section>
 <section><h2>What you can try next</h2><ul>
 <li><b>Replay this world with one change</b> (same seed): New world → change one setting → Start. The next report compares both runs.</li>

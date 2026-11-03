@@ -40,6 +40,8 @@
   A.festival = day => LES.Calendar.festival(day); // shared calendar (core/util.js)
   // ---- Weather: north-east monsoon (Nov-Feb) is rainy; mid-year can bring haze ----
   A.weather = function (day) {
+    const gw = globalThis.LES_APP && LES_APP.world;
+    if (gw && gw.gov && gw.gov.haze && day < gw.gov.haze.until && day >= gw.gov.haze.until - 25) return { id: 'haze', name: 'Haze (unhealthy air)' };
     const m = U.dayToDate(day).month, r = rnd(day * 31 + 7);
     const monsoon = m >= 10 || m <= 1;
     if (r < (monsoon ? 0.45 : 0.12)) return { id: 'rain', name: monsoon ? 'Monsoon rain' : 'Rain', heavy: monsoon && r < 0.2 };
