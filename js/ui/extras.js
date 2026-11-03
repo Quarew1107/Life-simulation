@@ -1,5 +1,5 @@
-// Batch-5 extras: interactive family tree, compare two people, map overlays and
-// generated chiptune music / sound effects (Web Audio, muted by default).
+// Batch-5 extras: interactive family tree, compare two people and map overlays.
+// (Music and sound effects live in audio.js.)
 (function (LES) {
   'use strict';
   const U = LES.U, C = LES.C, P = LES.P, UI = LES.UI;
@@ -103,65 +103,5 @@
       return rel ? '#f2c14e' : null;
     }
     return null;
-  };
-
-  // ---------------- Chiptune music & sound effects ----------------
-  const S = X.sound = { on: false, ctx: null, next: 0, step: 0, master: null, volume: 0.8 };
-  try { const v = Number(localStorage.getItem('les-volume')); if (v >= 0 && v <= 1 && localStorage.getItem('les-volume') !== null) S.volume = v; } catch (e) { /* storage blocked */ }
-  // 0..1 slider value -> master gain. Notes are quiet sine/square blips, so the master
-  // needs real gain; a limiter afterwards stops chords from clipping.
-  X.setVolume = function (v) {
-    S.volume = Math.min(1, Math.max(0, v));
-    try { localStorage.setItem('les-volume', String(S.volume)); } catch (e) { /* storage blocked */ }
-    if (S.master) S.master.gain.value = 2.2 * S.volume * S.volume;
-  };
-  const SCALES = { growth: [0, 2, 4, 7, 9, 12, 14], normal: [0, 2, 4, 5, 7, 9, 12], recession: [0, 2, 3, 5, 7, 8, 12] };
-  function tone(freq, t, dur, type, vol) {
-    const o = S.ctx.createOscillator(), g = S.ctx.createGain();
-    o.type = type; o.frequency.value = freq;
-    g.gain.setValueAtTime(vol, t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g); g.connect(S.master);
-    o.start(t); o.stop(t + dur + 0.02);
-  }
-  X.toggleSound = function () {
-    S.on = !S.on;
-    if (S.on && !S.ctx) {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (!AC) { S.on = false; return false; }
-      S.ctx = new AC();
-      S.master = S.ctx.createGain();
-      const limiter = S.ctx.createDynamicsCompressor();
-      limiter.threshold.value = -6; limiter.knee.value = 6; limiter.ratio.value = 12;
-      limiter.attack.value = 0.003; limiter.release.value = 0.15;
-      S.master.connect(limiter);
-      limiter.connect(S.ctx.destination);
-      X.setVolume(S.volume);
-    }
-    if (S.ctx) { if (S.on) S.ctx.resume(); else S.ctx.suspend(); }
-    S.next = S.ctx ? S.ctx.currentTime + 0.1 : 0;
-    return S.on;
-  };
-  // Called every frame: schedules the next few notes of a generated melody.
-  X.soundTick = function (w, paused) {
-    if (!S.on || !S.ctx || paused) return;
-    const regime = w.regime, scale = SCALES[regime];
-    const tempo = regime === 'growth' ? 0.16 : regime === 'recession' ? 0.24 : 0.2;
-    const root = regime === 'recession' ? 196 : 220;
-    while (S.next < S.ctx.currentTime + 0.3) {
-      const i = S.step++;
-      const seed = (Math.floor(i / 16) * 7919 + (i % 16) * 104729) >>> 0;
-      const deg = scale[(seed >>> 3) % scale.length];
-      if (i % 2 === 0 || seed % 5 === 0) tone(root * Math.pow(2, deg / 12), S.next, tempo * 0.9, 'square', 0.12);
-      if (i % 4 === 0) tone(root / 2 * Math.pow(2, scale[(i / 4) % 3 === 0 ? 0 : 4] / 12), S.next, tempo * 3.5, 'triangle', 0.2);
-      if (i % 8 === 4) tone(80, S.next, 0.05, 'square', 0.08);
-      S.next += tempo;
-    }
-  };
-  X.sfx = function (kind) {
-    if (!S.on || !S.ctx) return;
-    const t = S.ctx.currentTime + 0.02;
-    const seq = { milestone: [523, 659, 784, 1047], goal: [523, 659, 784, 1047, 1319, 1568], birth: [880, 1175], bad: [330, 247, 196] }[kind] || [660];
-    seq.forEach((f, i) => tone(f, t + i * 0.09, 0.12, 'square', 0.15));
   };
 })(globalThis.LES = globalThis.LES || {});

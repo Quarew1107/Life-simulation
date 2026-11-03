@@ -29,6 +29,7 @@
     if (near(lunar(day, 40), 3)) return { id: 'cny', name: 'Chinese New Year' };
     if (near(lunar(day, 300), 3)) return { id: 'deepavali', name: 'Deepavali' };
     if (near(242, 2)) return { id: 'merdeka', name: 'Hari Merdeka' };
+    if (near(358, 2)) return { id: 'christmas', name: 'Christmas' };
     return null;
   };
   // ---- Weather: north-east monsoon (Nov-Feb) is rainy; mid-year can bring haze ----
@@ -107,6 +108,13 @@
       if (fest.id === 'raya') for (const id of town.kinds.kampung || []) { const b = town.buildings[id]; for (let i = 0; i < 6; i++) { g.fillStyle = (i + blink) % 2 ? '#ffb703' : '#fb8500'; g.fillRect(b.x * T + 2 + i * 8, (b.y + b.h) * T + 2, 2, 3); } }
       if (fest.id === 'cny') for (const id of town.shoplots) { const b = town.buildings[id]; for (let i = 0; i < 3; i++) { g.fillStyle = '#d62828'; g.fillRect(b.x * T + 8 + i * 20, b.y * T + 29, 5, 6); g.fillStyle = '#ffd166'; g.fillRect(b.x * T + 10 + i * 20, b.y * T + 35, 1, 3); } }
       if (fest.id === 'deepavali') for (const tier of [1, 2]) for (const id of town.homesByTier[tier]) { const b = town.buildings[id]; for (let i = 0; i < 5; i++) { g.fillStyle = ['#ff006e', '#ffbe0b', '#3a86ff', '#8338ec', '#fb5607'][(i + blink) % 5]; g.fillRect(b.x * T + 4 + i * 6, (b.y + b.h) * T + 3, 3, 3); } }
+      if (fest.id === 'christmas') for (const id of town.kinds.mall || []) { // a lit tree outside each mall
+        const b = town.buildings[id], x = (b.x + b.w) * T - 14, y = (b.y + b.h) * T - 2;
+        g.fillStyle = '#6b4226'; g.fillRect(x + 4, y - 3, 2, 3);
+        g.fillStyle = '#2d6a4f'; for (let r = 0; r < 4; r++) g.fillRect(x + 4 - r, y - 6 - (3 - r) * 3, 2 + 2 * r, 3);
+        for (let i = 0; i < 4; i++) { g.fillStyle = (i + blink) % 2 ? '#ffd166' : '#e63946'; g.fillRect(x + 2 + (i * 3) % 6, y - 14 + i * 3, 1, 1); }
+        g.fillStyle = '#ffd166'; g.fillRect(x + 4, y - 19, 2, 2);
+      }
       if (fest.id === 'merdeka') for (const b of town.buildings) { if (!['office', 'school', 'hospital', 'university', 'condo', 'mall'].includes(b.kind)) continue; const x = b.x * T + 3, y = b.y * T - 10; g.fillStyle = '#ddd'; g.fillRect(x, y, 1, 10); for (let k = 0; k < 4; k++) { g.fillStyle = k % 2 ? '#ffffff' : '#d62828'; g.fillRect(x + 1, y + k, 8, 1); } g.fillStyle = '#1d3557'; g.fillRect(x + 1, y, 4, 2); g.fillStyle = '#ffd166'; g.fillRect(x + 2, y, 1, 1); }
     }
     // Birds crossing the sky
