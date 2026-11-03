@@ -17,6 +17,20 @@
   // Travel speed in map pixels per simulated minute, by transport tier.
   LES.TRAVEL_SPEED = [64, 220, 290, 300];
 
+  // How a person looks while doing an activity: 'city' = drives around town (value =
+  // vehicle mode), 'area' = moves around the site, 'outside' = stands/sits outdoors,
+  // 'inside' = inside the building (not drawn; the building shows a headcount).
+  const CITY_JOBS = { rider: 1, delivery: 1, ehailing: 2 };
+  const AREA_JOBS = new Set(['construction', 'electrician', 'labour', 'running', 'sports', 'gym', 'pasar', 'promoter']);
+  LES.motionOf = function (e, b) {
+    if (!e) return 'inside';
+    if (e.sub && CITY_JOBS[e.sub]) return 'city';
+    if (e.sub && AREA_JOBS.has(e.sub)) return 'area';
+    if (e.act === 'SOCIAL') return b && b.kind === 'park' ? 'area' : 'outside';
+    if (e.act === 'HOME' && /Playing/.test(e.label || '')) return 'outside';
+    return 'inside';
+  };
+
   const hash = n => { n = Math.imul(n ^ (n >>> 16), 0x45d9f3b); n = Math.imul(n ^ (n >>> 16), 0x45d9f3b); return (n ^ (n >>> 16)) >>> 0; };
   const FONT = '"Silkscreen", "Press Start 2P", monospace';
 
@@ -519,11 +533,14 @@
       const home = p.homeId >= 0 ? p.homeId : this.town.byKind.welfare;
       const plan = p.plan;
       const tm = t * 1440;
-      const night = tm >= 1020 || tm < 30;
-      if (!plan || !plan.length) return { ...this.spot(home, p.id), hidden: night, moving: false };
+      if (!plan || !plan.length) return { ...this.spot(home, p.id), hidden: true, inside: home, moving: false };
       const A = plan[0].loc >= 0 ? plan[0].loc : home;
       const B = plan[1] && plan[1].loc >= 0 ? plan[1].loc : A;
-      if (fast) return { ...this.spot(tm < LES.SLOT_B ? A : B, p.id), moving: false };
+      if (fast) {
+        if (tm < LES.SLOT_A - 30 || tm >= LES.SLOT_END) return { ...this.spot(home, p.id), hidden: true, inside: home };
+        const slot = tm < LES.SLOT_B ? 0 : 1;
+        return this.atPlace(p, slot ? B : A, plan[slot] || plan[0], tm, slot);
+      }
       let an = this.anim.get(p.id);
       if (!an || an.day !== this.w.lastDay || an.A !== A || an.B !== B || an.H !== home) {
         const t1 = this.planTrip(p, home, A, null, LES.SLOT_A);
@@ -539,10 +556,73 @@
         const q = this.along(s.r, (tm - s.t0) / Math.max(0.001, s.t1 - s.t0));
         return { x: q.x, y: q.y, dx: q.dx, dy: q.dy, moving: true, mode: s.kind === 'drive' ? s.mode : 0 };
       }
-      if (tm < an.t1.start) return { ...this.spot(home, p.id), hidden: tm < 30, moving: false };
-      if (tm < LES.SLOT_B) return { ...this.spot(A, p.id), moving: false };
-      if (tm < LES.SLOT_END) return { ...this.spot(B, p.id), moving: false };
-      return { ...this.spot(home, p.id), hidden: night, moving: false };
+      if (tm < an.t1.start) return { ...this.spot(home, p.id), hidden: true, inside: home, moving: false };
+      if (tm < LES.SLOT_B) return this.atPlace(p, A, plan[0], tm, 0);
+      if (tm < LES.SLOT_END) return this.atPlace(p, B, plan[1] || plan[0], tm, 1);
+      return { ...this.spot(home, p.id), hidden: true, inside: home, moving: false };
+    }
+
+    // Where someone is while doing their activity at building `loc`.
+    atPlace(p, loc, e, tm, slot) {
+      const b = this.town.buildings[loc];
+      const m = LES.motionOf(e, b);
+      if (m === 'city') return this.cityLoop(p, loc, e, tm, slot);
+      if (m === 'area') return this.wander(p, b, tm);
+      if (m === 'outside') return { ...this.spot(loc, p.id), moving: false };
+      return { ...this.spot(loc, p.id), hidden: true, inside: loc, moving: false };
+    }
+
+    // Moving around the site: laps of a track/park, criss-crossing a work site, or
+    // pacing the frontage of a shop or market.
+    wander(p, b, tm) {
+      if (!b) return { x: 0, y: 0, hidden: true };
+      const T = this.town.T, h = hash(p.id * 31 + b.id);
+      const ph = (h % 1000) / 1000 * Math.PI * 2, sp = 0.035 + (h % 40) / 1000;
+      const X = b.x * T, Y = b.y * T, W = b.w * T, H = b.h * T;
+      let x, y, dx;
+      if (b.kind === 'park' || b.kind === 'gym') {
+        const a = ph + tm * sp;
+        x = X + W / 2 + (W / 2 - 7) * Math.cos(a);
+        y = Y + H / 2 + (H / 2 - 9) * Math.sin(a) + 6;
+        dx = -Math.sign(Math.sin(a)) || 1;
+      } else if (b.kind === 'construction' || b.kind === 'padi') {
+        x = X + 5 + (W - 10) * (0.5 + 0.45 * Math.sin(tm * sp + ph));
+        y = Y + 10 + (H - 12) * (0.5 + 0.45 * Math.sin(tm * sp * 1.37 + ph * 2));
+        dx = Math.sign(Math.cos(tm * sp + ph)) || 1;
+      } else {
+        const front = this.spot(b.id, p.id);
+        x = X + 4 + (W - 8) * (0.5 + 0.48 * Math.sin(tm * sp * 0.7 + ph));
+        y = front.y;
+        dx = Math.sign(Math.cos(tm * sp * 0.7 + ph)) || 1;
+      }
+      return { x, y, dx, dy: 0, moving: true, mode: 0 };
+    }
+
+    // Delivery riders and e-hailing drivers loop around town on the road network.
+    cityLoop(p, loc, e, tm, slot) {
+      const day = this.w.lastDay, key = p.id * 2 + slot;
+      this.cityRoutes = this.cityRoutes || new Map();
+      let c = this.cityRoutes.get(key);
+      if (!c || c.day !== day || c.loc !== loc) {
+        const bs = this.town.buildings;
+        const stops = [loc];
+        for (let k = 0; k < 4; k++) stops.push(hash(p.id * 131 + day * 7 + k * 977 + slot) % bs.length);
+        stops.push(loc);
+        const pts = [this.spot(loc, p.id)];
+        for (let k = 1; k < stops.length; k++) {
+          const path = LES.townPath(this.town, bs[stops[k - 1]], bs[stops[k]]);
+          for (const q of path.slice(1, -1)) pts.push({ x: q.x + 7, y: q.y + 7 });
+          pts.push(k === stops.length - 1 ? this.spot(loc, p.id) : bs[stops[k]].door);
+        }
+        c = { day, loc, r: LES.polyline(pts) };
+        this.cityRoutes.set(key, c);
+        if (this.cityRoutes.size > 4000) this.cityRoutes.clear();
+      }
+      const mode = e.sub === 'ehailing' ? Math.max(2, p.tiers.transport) : 1;
+      const start = slot ? LES.SLOT_B : LES.SLOT_A;
+      const dist = Math.max(0, tm - start) * LES.TRAVEL_SPEED[mode] * 0.6;
+      const q = this.along(c.r, c.r.total ? (dist % c.r.total) / c.r.total : 0);
+      return { x: q.x, y: q.y, dx: q.dx, dy: q.dy, moving: true, mode };
     }
 
     frame(t, fast, now) {
@@ -571,11 +651,12 @@
       // People and their vehicles, sorted by y for depth
       const list = [];
       const walkFrame = Math.floor((now || 0) / 180) % 2;
-      const busLoad = new Map();
+      const busLoad = new Map(), inside = new Map();
       for (const p of w.living) {
         if (!p.alive) continue;
         const pos = this.posOf(p, t, fast);
         if (pos.riding) { const k = `${pos.riding.line.id}|${pos.riding.bus}`; busLoad.set(k, (busLoad.get(k) || 0) + 1); }
+        if (pos.inside !== undefined) inside.set(pos.inside, (inside.get(pos.inside) || 0) + 1);
         if (pos.hidden && (p.id !== this.selectedId || pos.riding)) continue;
         list.push({ p, ...pos });
       }
@@ -613,9 +694,26 @@
         if (P.goalWorth(w, p) >= millionaire) rect(g, x + spr.width / 2 - 1, y - 3, 3, 2, '#f2c14e');
         this.screenPos.push({ id: p.id, x: (it.x - this.cx) * this.z, y: (it.y - spr.height / 2 - this.cy) * this.z });
       }
+      this.drawInside(g, inside, tm);
       this.drawNight(g, t, fast);
       LES.Ambience.drawScreen(this, g, w, t, now, fast, this.nightLevel || 0);
       this.drawLabels(g, w);
+    }
+
+    // Small headcount badge on non-home buildings with people working/studying inside.
+    drawInside(g, inside, tm) {
+      if (tm < LES.SLOT_A - 30 || tm >= LES.SLOT_END || this.z < 1.1) return;
+      const T = this.town.T;
+      g.font = `7px ${FONT}`; g.textBaseline = 'top';
+      for (const [id, n] of inside) {
+        const b = this.town.buildings[id];
+        if (!b || b.home || n <= 0) continue;
+        const text = String(n), tw = Math.ceil(g.measureText(text).width);
+        const x = (b.x + b.w) * T - tw - 13, y = b.y * T + 2;
+        rect(g, x, y, tw + 11, 9, 'rgba(16,20,26,0.85)');
+        rect(g, x + 2, y + 2, 2, 2, '#f4f1e8'); rect(g, x + 1, y + 4, 4, 3, '#f4f1e8'); // tiny person icon
+        g.fillStyle = '#f4f1e8'; g.fillText(text, x + 7, y + 1);
+      }
     }
 
     drawNight(g, t, fast) {

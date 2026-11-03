@@ -89,6 +89,7 @@
     badge.style.color = r.color;
     const day0 = Math.max(0, w.lastDay), fest = LES.Ambience.festival(day0), wx = LES.Ambience.weather(day0);
     $('mood').innerHTML = `${{ rain: '🌧️', haze: '🌫️', clear: '☀️' }[wx.id]} ${wx.name}${fest ? ` · 🎉 <b>${fest.name}</b>` : ''}`;
+    $('mood').title = `${wx.name}${fest ? ` · ${fest.name}` : ''}`; // full text if the fixed-width box truncates it
     const h = w.history[w.history.length - 1];
     const adults = w.counts.adults;
     const employed = w.living.filter(p => p.alive && p.job).length;
@@ -440,10 +441,20 @@
   // ---------------- Director mode ----------------
   // Picks the most interesting recent events (only things that really happened),
   // flies the camera to the person and shows a caption with context from their life.
-  UI.director = { on: false, queue: [], until: 0 };
+  // At 1 day/s or faster a shot runs in slow motion (60x = 1 sim hour per second) so the
+  // viewer can actually follow the person, then the user's speed comes back and the town
+  // runs at full speed for a while before the next shot.
+  const DIRECTOR_SHOT_MS = 9000, DIRECTOR_GAP_MS = 6000, SLOWMO_SPEED = 2, FAST_FROM = 3;
+  UI.director = { on: false, queue: [], until: 0, resumeSpeed: null, nextShot: 0 };
   UI.directorTick = function (now) {
     const d = UI.director, app = UI.app, w = app.world;
-    if (!d.on || now < d.until || !d.queue.length) { if (d.on && now >= d.until) $('caption').classList.add('hidden'); return; }
+    if (now >= d.until && d.resumeSpeed !== null) {
+      const back = d.resumeSpeed;
+      d.resumeSpeed = null;
+      if (!app.paused) app.setSpeed(back, true);
+      d.nextShot = now + DIRECTOR_GAP_MS;
+    }
+    if (!d.on || now < d.until || now < d.nextShot || !d.queue.length) { if (now >= d.until) $('caption').classList.add('hidden'); return; }
     d.queue.sort((a, b) => b.imp - a.imp || b.seq - a.seq);
     const e = d.queue.shift();
     d.queue = d.queue.filter(x => w.day - x.day < 120).slice(0, 12);
@@ -456,7 +467,12 @@
     const ctx = past ? `${Math.max(1, Math.round((e.day - past.day) / 365))} years earlier: ${past.text.charAt(0).toLowerCase()}${past.text.slice(1)}.` : `${C.STRATEGY_NAMES[p.strategy]} · net worth ${U.fmtMoney(p.nw)}`;
     $('caption').innerHTML = `<div class="cap-when">${U.fmtDate(e.day)} · ${esc(P.name(p))}, ${age}</div><div class="cap-text">${esc(e.text)}</div><div class="cap-ctx">${esc(ctx)}</div>`;
     $('caption').classList.remove('hidden');
-    d.until = now + 9000;
+    d.until = now + DIRECTOR_SHOT_MS;
+    if (!app.paused && app.speedIdx >= FAST_FROM) {
+      d.resumeSpeed = app.speedIdx;
+      app.setSpeed(SLOWMO_SPEED, true);
+      app.dayFrac = Math.min(app.dayFrac, 0.3); // start the shot in the morning, not at night
+    }
   };
 
   UI.checkToasts = function () {

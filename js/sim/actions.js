@@ -396,7 +396,9 @@
         chosen = A.choose(w, cands);
       }
       A.resolve(w, p, chosen, ctx, slot);
-      p.plan.push({ act: chosen.id, label: chosen.label, loc: chosen.loc, ok: chosen.ok });
+      // sub = which job / gig / training, so the map can show movers vs indoor work.
+      const sub = chosen.id === 'WORK' ? p.job && p.job.jobId : chosen.data && typeof chosen.data.id === 'string' ? chosen.data.id : null;
+      p.plan.push({ act: chosen.id, label: chosen.label, loc: chosen.loc, ok: chosen.ok, sub });
       cands.sort((a, b) => b.p - a.p);
       why.push({
         chosen: chosen.label, act: chosen.id, forced, ok: chosen.ok,

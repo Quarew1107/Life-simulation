@@ -124,7 +124,12 @@
       + SPEEDS.map((s, i) => `<button data-s="${i}" class="${!app.paused && i === app.speedIdx ? 'on' : ''}" title="${s.tip} (key ${i + 1})">${s.label}</button>`).join('')
       + `<button data-s="night" class="${app.skipNights ? 'on night' : 'night'}" title="Fast-forward nights 23:00-06:00 at slow speeds">🌙</button>`;
   }
-  app.setSpeed = function (i) { app.speedIdx = i; app.paused = false; renderSpeed(); };
+  // byDirector = true when Director mode slows down for a shot; a speed the user picks
+  // themselves always wins and cancels the Director's planned resume.
+  app.setSpeed = function (i, byDirector) {
+    if (!byDirector) UI.director.resumeSpeed = null;
+    app.speedIdx = i; app.paused = false; renderSpeed();
+  };
   app.togglePause = function () { if (app.world && app.world.ended) return; app.paused = !app.paused; renderSpeed(); };
   function stepDay() {
     if (!app.world || app.world.ended) return;
@@ -230,10 +235,29 @@
       const rect = cv.getBoundingClientRect();
       r.zoomAt(e.clientX - rect.left, e.clientY - rect.top, e.deltaY < 0 ? 1.15 : 1 / 1.15);
     }, { passive: false });
+    $('vol').addEventListener('input', e => LES.Extras.setVolume(Number(e.target.value) / 100));
     $('map-tools').addEventListener('click', e => {
       const b = e.target.closest('button'); if (!b) return;
-      if (b.dataset.z === 'sound') { const on = LES.Extras.toggleSound(); b.textContent = on ? '🔊' : '🔇'; b.classList.toggle('on', on); return; }
-      if (b.dataset.z === 'director') { UI.director.on = !UI.director.on; b.classList.toggle('on', UI.director.on); if (!UI.director.on) { r.follow = false; $('caption').classList.add('hidden'); } return; }
+      if (b.dataset.z === 'sound') {
+        const on = LES.Extras.toggleSound();
+        b.textContent = on ? '🔊' : '🔇';
+        b.classList.toggle('on', on);
+        $('vol').classList.toggle('hidden', !on);
+        $('vol').value = Math.round(LES.Extras.sound.volume * 100);
+        return;
+      }
+      if (b.dataset.z === 'director') {
+        const d = UI.director;
+        d.on = !d.on;
+        b.classList.toggle('on', d.on);
+        if (!d.on) {
+          r.follow = false;
+          $('caption').classList.add('hidden');
+          if (d.resumeSpeed !== null) app.setSpeed(d.resumeSpeed, true); // leave slow motion
+          d.resumeSpeed = null; d.until = 0;
+        }
+        return;
+      }
       if (b.dataset.z === 'fit') { r.fit(); r.follow = false; }
       else r.zoomAt(r.vw / 2, r.vh / 2, b.dataset.z === 'in' ? 1.3 : 1 / 1.3);
     });

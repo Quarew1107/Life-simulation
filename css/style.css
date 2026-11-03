@@ -264,3 +264,13 @@ button.primary { border-radius: 6px; box-shadow: 3px 3px 0 #7d5f17; }
 .toast { border-radius: 6px; box-shadow: 3px 3px 0 #0a0d11; }
 .lb-row .rank, .stat .v { font-family: var(--pixel); }
 .stat .v { font-size: 13px; }
+
+/* Volume slider pops out to the left of the sound button */
+.vol-wrap { position: relative; }
+#vol { position: absolute; right: 40px; top: 6px; width: 120px; accent-color: var(--gold); background: rgba(22,29,37,.9); border-radius: 6px; padding: 4px 6px; }
+
+/* Fixed-width status items so the speed bar never jumps when weather/economy text changes */
+.clock { width: 112px; min-width: 112px; }
+#regime { width: 150px; text-align: center; flex: none; }
+#mood { width: 200px; flex: none; overflow: hidden; text-overflow: ellipsis; }
+#speed { flex: none; }

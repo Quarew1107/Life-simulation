@@ -33,6 +33,17 @@
       const pad = { l: 52, r: 10, t: 22, b: 20 };
       const series = opts.series.filter(s => s.data.length);
       if (!series.length) { g.fillStyle = AXIS; g.fillText('No data yet', pad.l, h / 2); return; }
+      // Lay the legend out first, wrapping onto extra rows, and make room for it.
+      const legend = [];
+      let lx = pad.l, ly = 9;
+      for (const s of series) {
+        if (!s.label) continue;
+        const wd = g.measureText(s.label).width + 28;
+        if (lx > pad.l && lx + wd > w - pad.r) { lx = pad.l; ly += 14; }
+        legend.push({ s, x: lx, y: ly });
+        lx += wd;
+      }
+      pad.t = Math.max(pad.t, ly + 13);
       const tf = opts.logY ? v => Math.log10(Math.max(1, v)) : v => v;
       let xmin = Infinity, xmax = -Infinity, ymin = opts.yMin !== undefined ? tf(opts.yMin) : Infinity, ymax = -Infinity;
       for (const s of series) for (const [x, y] of s.data) {
@@ -78,13 +89,10 @@
       }
       g.setLineDash([]);
       // legend
-      let lx = pad.l;
       g.textAlign = 'left'; g.textBaseline = 'middle';
-      for (const s of series) {
-        if (!s.label) continue;
-        g.fillStyle = s.color; g.fillRect(lx, 7, 10, 3);
-        g.fillStyle = '#cbd5df'; g.fillText(s.label, lx + 14, 9);
-        lx += g.measureText(s.label).width + 28;
+      for (const it of legend) {
+        g.fillStyle = it.s.color; g.fillRect(it.x, it.y - 2, 10, 3);
+        g.fillStyle = '#cbd5df'; g.fillText(it.s.label, it.x + 14, it.y);
       }
     },
 
