@@ -72,6 +72,7 @@
     if (UI.tab === 'leaders' && due('leaders', 600)) UI.renderLeaders();
     if (UI.tab === 'feed' && due('feed', 500)) UI.renderFeed();
     if (UI.tab === 'stats' && due('stats', 1200)) UI.renderStats();
+    if (UI.tab === 'society' && due('society', 1500)) UI.renderSociety();
     if (UI.tab === 'place' && due('place', 700)) UI.renderPlace();
     if (UI.bursaOpen && due('bursa', 1500)) UI.renderBursa();
     if (due('toasts', 300)) UI.checkToasts();
@@ -243,6 +244,7 @@
       ${C.PERS.map(k => bar(C.PERS_NAMES[k], p.pers[k], 100, '#b892ff')).join('')}
       ${bar('Family desire', p.famDesire, 100, '#f28482')}</div>`;
 
+    html += UI.societyCard ? UI.societyCard(w, p) : '';
     if (p.adult) {
       html += `<div class="card tiers"><h3>Lifestyle <small class="muted">${U.fmtMoney(p.mcost)}/month incl. children</small></h3>
         ${C.TIER_CATS.map(cat => {

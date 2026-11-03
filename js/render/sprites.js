@@ -57,6 +57,7 @@
     saree: look => ({ shirt: look.scarf, pants: look.scarf, sash: '#f2c14e' }),
     kurta: () => ({ shirt: '#f3ead7', pants: '#f3ead7' }),
     cny: () => ({ shirt: '#c1121f' }),
+    gawai: () => ({ shirt: '#1b1b1b', pants: '#9b2226', sash: '#e9c46a' }), // Iban / Kadazan dress: black with red and gold
   };
   LES.OUTFITS = OUTFITS;
 

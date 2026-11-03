@@ -89,7 +89,8 @@
   };
 
   // ---------------- Map overlays ----------------
-  X.OVERLAYS = [['none', 'No overlay'], ['wealth', 'Wealth'], ['strategy', 'Strategy'], ['stress', 'Stress'], ['family', "Selected person's family"]];
+  X.OVERLAYS = [['none', 'No overlay'], ['wealth', 'Wealth'], ['strategy', 'Strategy'], ['stress', 'Stress'], ['class', 'Class (B40/M40/T20)'], ['religion', 'Religion'], ['ethnicity', 'Ethnicity'], ['family', "Selected person's family"]];
+  const ETH_COLOURS = { malay: '#2a9d8f', chinese: '#e63946', indian: '#f4a261', bumi: '#b892ff', other: '#e8edf2' };
   X.overlayColour = function (w, p, mode, selected) {
     if (mode === 'wealth') {
       const v = U.clamp((Math.log10(Math.max(1, P.realWorth(w, p) / 100)) - 3) / 5, 0, 1); // RM1k..RM100M
@@ -97,6 +98,9 @@
     }
     if (mode === 'strategy') return C.STRATEGY_COLORS[p.strategy];
     if (mode === 'stress') return `hsl(${Math.round(120 - p.stress * 1.2)}, 80%, 50%)`;
+    if (mode === 'class') return p.elite ? '#ffffff' : p.cls ? LES.Society.CLASS_COLOURS[p.cls] : null;
+    if (mode === 'religion') return p.rel ? LES.Society.RELIGIONS[p.rel].colour : null;
+    if (mode === 'ethnicity') return ETH_COLOURS[p.eth] || null;
     if (mode === 'family' && selected) {
       if (p.id === selected.id) return '#3ec7b5';
       const rel = selected.parents.includes(p.id) || selected.children.includes(p.id) || p.parents.some(x => selected.parents.includes(x)) || selected.partnerId === p.id;

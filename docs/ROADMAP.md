@@ -21,8 +21,9 @@ The improvement plan agreed in November 2026. Each phase is one tested push.
 |---|---|---|
 | 0. Foundations | System hooks (`js/sim/systems.js`), save/load (`js/sim/save.js`), Malaysia/Classic presets, calibration report (`js/sim/calibration.js`, `tools/calibration.html`), Node harness (`tools/headless.js`) | Done |
 | 1. Art | Palette and 3/4-view painters (`js/render/art.js`), new ground, Malaysian buildings, directional people sprites, festival clothes, golden hour and night lighting with real lit windows, off-screen culling | Done (pixel UI icons and mini-map still to do) |
-| 2. Society | Social class (B40/M40/T20 from household income, T1 elite, hardship), mobility matrix, ethnicity update (DOSM 2025 shares, Other Bumiputera), religion (census shares, religiosity, worship, zakat/charity funds, Ramadan, Shariah-compliant investing), worship buildings, Society tab | Next |
-| 3. Crime and justice | Temptation score, crime types, police, courts, prison, records and reoffending, drugs and rehab, gangs and turf, crime overlays and charts | |
+| 1b. Layout | Varied, seed-dependent towns (`layout: 'varied'`): uneven plots, avenues, a river, superblocks, coast or hills, wild lots; routing on the road graph | Done |
+| 2. Society | Social class (B40/M40/T20 from household income, T1 elite, hardship), mobility matrix, ethnicity update (DOSM 2025 shares, Other Bumiputera), religion (census shares, religiosity, worship, zakat/charity funds, Ramadan, Shariah-compliant investing), worship districts, Society tab, overlays, report section | Done |
+| 3. Crime and justice | Temptation score, crime types, police, courts, prison, records and reoffending, drugs and rehab, gangs and turf, crime overlays and charts | Next |
 | 4. Government | Town treasury (taxes fund services), law catalogue, elections every 5 years, voters who partly misunderstand laws, approval, corruption, events (floods, haze, scandals), Government tab | |
 | 5. Scenarios | Scenario framework on the setup screen, then Born Equal, Great Reset, Eternal Life, Education Ban, Pandemic, Robot Age; later Lawless Town, Aristocracy vs Meritocracy, Five Clans, Isolated Island | |
 | 6. Polish | Calibration pass (median wage is still about RM3.5k vs Malaysia's RM3k), report sections, "Berita Rezeki" newspaper, compare-with-normal-world runs | |

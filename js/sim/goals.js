@@ -211,6 +211,7 @@
     }
     return avail.ok;
   };
+  const venueBias = (w, p, k) => { let s = 0; for (const x of w.sys.venueBias) s += x.venueBias(w, p, k); return s; };
   G.pickVenue = function (w, p, ctx, slot) {
     const list = venueList(), lt = p.tiers.leisure, ok = venueAvail(w.town);
     const statusSeek = 0.25 * (n(p.pers.risk) + (P.prestige(p) > 0 ? 1 : 0)) + (lt >= 2 ? 0.25 : 0);
@@ -219,6 +220,7 @@
     // Prices feel smaller to the wealthy: compare cost with daily budget or with wealth.
     const budget = Math.max(ctx.daily, p.nw / 2000, 1), spare = p.cash - ctx.mc * 0.3;
     let best = null, bestS = -Infinity;
+    const vb = w.sys.venueBias;
     for (const e of list) {
       if ((e.slot >= 0 && e.slot !== slot) || e.member > lt || e.tier > lt + 1) continue;
       const cost = e.cost * 100 * w.price;
@@ -226,7 +228,8 @@
       if (!ok[e.i]) continue;
       const sc = 0.12 * e.joy - 1.2 * cost / budget + statusSeek * e.tier - (e.tier > lt ? 0.4 : 0)
         + (e.sport ? sporty : 0) + (e.social ? social : 0) + (e.outdoor ? calm : 0)
-        + ((p.id * 7 + w.day * 13 + e.i * 31) % 17) / 40; // variety from day to day
+        + ((p.id * 7 + w.day * 13 + e.i * 31) % 17) / 40 // variety from day to day
+        + (vb.length ? venueBias(w, p, e.k) : 0);
       if (sc > bestS) { bestS = sc; best = e.k; }
     }
     return best;

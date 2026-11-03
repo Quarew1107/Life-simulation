@@ -15,10 +15,18 @@
 //   invariants(w, errs)             push problems found into errs
 //   hash(w, parts)                  add state to the reproducibility fingerprint
 //   snapshot(w, row)                add fields to this month's history row (for charts)
+//   personCreated(w, p, how)        a founder, newcomer ('adult') or child ('child') was just created
+//   coupleWeight(w, a, b)           multiplier on the chance that two singles who met get together
+//   coupled(w, a, b)                a couple has just formed
+//   breakupWeight(w, a, b)          multiplier on a couple's monthly break-up chance
+//   venueBias(w, p, venueKey)       added to how much a person likes a leisure venue
+//   stockOk(w, p, ticker)           false = this person will not buy that share
+//   money(w)                        sen held in accounts the system owns (for the money check)
 (function (LES) {
   'use strict';
   const reg = [];
-  const HOOKS = ['init', 'day', 'month', 'year', 'candidates', 'resolve', 'label', 'death', 'invariants', 'hash', 'snapshot'];
+  const HOOKS = ['init', 'day', 'month', 'year', 'candidates', 'resolve', 'label', 'death', 'invariants', 'hash', 'snapshot',
+    'personCreated', 'coupleWeight', 'coupled', 'breakupWeight', 'venueBias', 'stockOk', 'money'];
 
   LES.Systems = {
     register(sys) {

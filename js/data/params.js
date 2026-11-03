@@ -22,6 +22,9 @@
     goalMode: 'real',         // real (Year-1 money) | nominal
     mapSize: 'auto',          // auto | kampung | pekan | bandar | bandaraya | metropolis
     layout: 'varied',         // varied (seeded avenues, river, superblocks) | grid (original equal blocks)
+    society: 'on',            // social class + religion systems (off = original engine)
+    ethnicMix: 'malaysia',    // malaysia (DOSM 2025 shares, 5 groups) | classic (original 3 groups)
+    interfaith: 'malaysia',   // malaysia (a non-Muslim converts to marry a Muslim) | free
     stopOnWinner: 'no',
     inflMin: -0.5,            // % per year; Malaysia 2010s ~0.7-3.9%, 2020 -1.1%, 2022 3.3%
     inflMax: 4.5,
@@ -55,8 +58,8 @@
   // Presets fill the setup form. Classic reproduces the original engine (harsher, more
   // children, longer lives); Malaysia is calibrated to DOSM figures (tools/calibration.html).
   LES.PRESETS = {
-    malaysia: { name: 'Malaysia today', values: { safetyNet: 'on', fertility: 'malaysia', mortMult: 1.9, layout: 'varied' } },
-    classic: { name: 'Classic (original rules)', values: { safetyNet: 'off', fertility: 'normal', mortMult: 1, layout: 'grid' } },
+    malaysia: { name: 'Malaysia today', values: { safetyNet: 'on', fertility: 'malaysia', mortMult: 1.9, layout: 'varied', society: 'on', ethnicMix: 'malaysia' } },
+    classic: { name: 'Classic (original rules)', values: { safetyNet: 'off', fertility: 'normal', mortMult: 1, layout: 'grid', society: 'off', ethnicMix: 'classic' } },
   };
   LES.presetOf = function (cfg) {
     for (const k of Object.keys(LES.PRESETS)) {
@@ -82,6 +85,9 @@
     { group: 'Economy', key: 'education', label: 'University fees', type: 'select', options: [['free', 'Free'], ['subsidised', 'Subsidised'], ['expensive', 'Expensive (x2.5)']] },
     { group: 'Society', key: 'safetyNet', label: 'Social safety net', type: 'select', options: [['off', 'Off - original harsh rules'], ['on', 'On - welfare food & child guardians']] },
     { group: 'Society', key: 'migration', label: 'Migration in/out of town', type: 'select', options: [['off', 'Off'], ['low', 'Low (default)'], ['normal', 'Normal'], ['high', 'High']], help: 'Crowding and rent push people out; jobs pull newcomers in.' },
+    { group: 'Society', key: 'society', label: 'Social class & religion', type: 'select', options: [['on', 'On (B40/M40/T20, religion, festivals)'], ['off', 'Off (original engine)']], help: 'Class is calculated from household income each month. Religion works through worship, zakat and donations, fasting and festivals - never as a success bonus.' },
+    { group: 'Society', key: 'ethnicMix', label: 'Population mix', type: 'select', options: [['malaysia', 'Malaysia 2025 (Malay, Chinese, other Bumiputera, Indian, others)'], ['classic', 'Classic (Malay, Chinese, Indian)']], help: 'Groups differ in names, looks, festivals and religion mix - not in ability.' },
+    { group: 'Society', key: 'interfaith', label: 'Interfaith marriage', type: 'select', options: [['malaysia', 'Malaysian rule (convert to marry a Muslim)'], ['free', 'Free choice']] },
     { group: 'Society', key: 'genetics', label: 'Child attributes', type: 'select', options: [['evolution', 'Evolution (potential + mutation)'], ['original', 'Original (average of parents, rounded down)']] },
     { group: 'Society', key: 'strategyMode', label: 'Life strategies', type: 'select', options: [['adaptive', 'Adaptive (can change after setbacks)'], ['fixed', 'Fixed for life']] },
     { group: 'Society', key: 'fertility', label: 'Birth rate', type: 'select', options: [['malaysia', 'Malaysia today (~1.6 children per woman)'], ['low', 'Low'], ['normal', 'Normal (original, ~2.5)'], ['high', 'High']] },

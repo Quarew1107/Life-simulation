@@ -747,6 +747,62 @@
         sign(g, (b.label || 'MENARA').toUpperCase(), X + W / 2, Y + H - 16, '#3d2b05', '#ffe9a8');
         break;
       }
+      // ---- Places of worship ----
+      case 'masjid': { // courtyard, prayer hall with a dome, a minaret
+        rect(g, X + 2, Y + 2, W - 4, H - 4, '#e8e1d0');
+        g.fillStyle = tiledPattern(g, '#efe9db', '#ddd4bf', 8, false); g.fillRect(X + 4, Y + 70, W - 8, H - 74);
+        rect(g, X + 2, Y + 2, W - 4, 2, '#cfc6b0'); rect(g, X + 2, Y + H - 4, W - 4, 2, '#cfc6b0');
+        const s = building(g, X + 12, Y + 26, W - 30, 46, { wall: '#f7f4ec', roof: '#e8e4da', wallH: 24 });
+        for (let i = 0; i < 4; i++) { const ax = X + 18 + i * 16; rect(g, ax, s.wallY + 6, 8, 16, '#2a9d8f'); g.fillStyle = '#2a9d8f'; g.beginPath(); g.arc(ax + 4, s.wallY + 6, 4, Math.PI, 0); g.fill(); addLight(ax + 1, s.wallY + 7, 6, 14, 0.9, 'rgba(255,230,160,0.95)'); }
+        const cx = X + 12 + (W - 30) / 2, cy = Y + 30;
+        g.fillStyle = 'rgba(0,0,0,0.25)'; g.beginPath(); g.ellipse(cx + 3, cy + 6, 20, 8, 0, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#1f7a6d'; g.beginPath(); g.arc(cx, cy + 4, 20, Math.PI, 0); g.fill(); // the dome
+        g.fillStyle = '#2fa58f'; g.beginPath(); g.arc(cx - 5, cy - 2, 9, Math.PI, 0); g.fill();
+        rect(g, cx - 20, cy + 3, 40, 3, '#1a5f56'); rect(g, cx - 1, cy - 22, 2, 6, '#f2c14e'); rect(g, cx - 3, cy - 24, 6, 2, '#f2c14e');
+        const mx = X + W - 14; // minaret
+        rect(g, mx + 2, Y + 10, 8, 66, 'rgba(0,0,0,0.2)'); rect(g, mx, Y + 8, 8, 66, '#f7f4ec'); rect(g, mx + 6, Y + 8, 2, 66, '#d9d3c7');
+        rect(g, mx - 2, Y + 24, 12, 3, '#2a9d8f'); rect(g, mx - 2, Y + 50, 12, 3, '#2a9d8f');
+        g.fillStyle = '#1f7a6d'; g.beginPath(); g.moveTo(mx - 1, Y + 9); g.lineTo(mx + 4, Y - 4); g.lineTo(mx + 9, Y + 9); g.fill();
+        rect(g, mx + 3, Y - 8, 2, 5, '#f2c14e');
+        palm(g, X + 4, Y + 80); palm(g, X + W - 22, Y + 92);
+        sign(g, (b.label || 'MASJID').toUpperCase(), X + W / 2 - 6, Y + H - 14, '#1f6b40', '#f2e8cf');
+        break;
+      }
+      case 'tokong': { // Chinese temple: red pillars, curved roof with upswept ends, lanterns, incense urn
+        castShadow(g, X + 4, Y + 6, W - 8, H - 10, 3);
+        facade(g, X + 6, Y + 24, W - 12, H - 30, '#c1121f');
+        for (const px of [X + 10, X + W - 14]) rect(g, px, Y + 24, 4, H - 30, '#8d0801');
+        door(g, X + W / 2, Y + H - 6, 14, 16, '#3d0c0c'); rect(g, X + W / 2 - 7, Y + H - 22, 14, 2, '#f2c14e');
+        roof(g, X + 2, Y + 6, W - 4, 19, '#c94c2c', 'gable');
+        rect(g, X + 2, Y + 6, W - 4, 2, '#f2c14e');
+        for (const ex of [X - 2, X + W - 4]) { rect(g, ex, Y + 2, 6, 4, '#c94c2c'); rect(g, ex + (ex < X ? 0 : 4), Y, 2, 3, '#f2c14e'); } // upswept eaves
+        rect(g, X + W / 2 - 6, Y + 3, 12, 3, '#2a9d8f'); // ridge ornament
+        for (const lx of [X + 16, X + W - 20]) { rect(g, lx, Y + 27, 5, 6, '#e63946'); rect(g, lx + 2, Y + 33, 1, 2, '#f2c14e'); addLight(lx, Y + 27, 5, 6, 1, 'rgba(255,80,60,1)'); }
+        rect(g, X + W / 2 - 4, Y + H + 1, 8, 4, '#8a6a43'); rect(g, X + W / 2 - 1, Y + H - 3, 1, 4, '#bbb'); // incense urn
+        sign(g, 'TOKONG', X + W / 2, Y + 14, '#7a1f1f', '#ffd166');
+        break;
+      }
+      case 'kuil': { // Hindu temple: a colourful stepped gopuram tower beside the hall
+        castShadow(g, X + 2, Y + 8, W - 6, H - 10, 3);
+        const hs = building(g, X + 30, Y + 22, W - 32, H - 24, { wall: '#f4e3c3', roof: '#e9c46a', wallH: 22, noShadow: true });
+        windows(g, X + 34, hs.wallY + 4, W - 40, 10, 2, 1, { col: '#ffb703', lit: 1, night: 'rgba(255,190,60,1)' });
+        const tiers = ['#e76f51', '#f4a261', '#2a9d8f', '#e9c46a', '#e63946'];
+        for (let i = 0; i < 5; i++) { const tw = 26 - i * 4, ty = Y + H - 6 - (i + 1) * 11; rect(g, X + 4 + i * 2, ty, tw, 11, tiers[i]); rect(g, X + 4 + i * 2, ty, tw, 2, shade(tiers[i], 1.25)); for (let k = 0; k < tw; k += 4) rect(g, X + 5 + i * 2 + k, ty + 5, 2, 3, shade(tiers[i], 0.7)); }
+        rect(g, X + 14, Y + H - 6 - 60, 6, 5, '#f2c14e');
+        door(g, X + 17, Y + H - 4, 8, 10, '#5c3b20');
+        sign(g, 'KUIL', X + W - 22, Y + H - 13, '#9c4221', '#ffe9a8');
+        break;
+      }
+      case 'gereja': { // church: white walls, pitched roof, steeple with a cross
+        const s = building(g, X + 4, Y + 10, W - 20, H - 12, { wall: '#f7f4ec', roof: '#55606b', roofType: 'gable', wallH: 16 });
+        windows(g, X + 8, s.wallY + 3, W - 28, 10, 3, 1, { col: '#8ecae6', lit: 0.8, night: 'rgba(255,220,150,0.95)' });
+        const tx = X + W - 18;
+        rect(g, tx + 2, Y + 2, 12, H - 2, 'rgba(0,0,0,0.2)'); rect(g, tx, Y + 4, 12, H - 6, '#f7f4ec'); rect(g, tx + 9, Y + 4, 3, H - 6, '#d9d3c7');
+        g.fillStyle = '#55606b'; g.beginPath(); g.moveTo(tx - 1, Y + 5); g.lineTo(tx + 6, Y - 8); g.lineTo(tx + 13, Y + 5); g.fill();
+        rect(g, tx + 5, Y - 16, 2, 9, '#e8e4da'); rect(g, tx + 3, Y - 13, 6, 2, '#e8e4da'); // cross
+        door(g, tx + 6, Y + H - 2, 6, 9, PAL.wood);
+        break;
+      }
       // ---- Leisure venues ----
       case 'cinema': {
         const s = building(g, X + 2, Y + 2, W - 4, H - 4, { wall: '#2b2d42', roof: '#14213d', wallH: H - 20 });
