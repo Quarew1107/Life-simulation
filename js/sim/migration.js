@@ -137,7 +137,7 @@
       p.away.wealth *= 1 + (0.02 + w.infl) / 12 + R.normal(0, 0.03);
       p.away.wealth = Math.max(0, p.away.wealth);
       p.nw = Math.round(p.away.wealth) - p.debt.study;
-      const pYear = LES.mortalityYear(P.age(w, p));
+      const pYear = LES.mortalityYear(P.age(w, p), w.cfg.mortMult);
       if (R.next() < 1 - Math.pow(1 - pYear, 1 / 12)) { w.die(p, 'natural causes (abroad)'); continue; }
     }
     const mult = w.derived.migMult;

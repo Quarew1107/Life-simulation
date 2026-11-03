@@ -205,7 +205,11 @@
       case 'SOCIAL': return `Leisure: ${C.VENUES[data].name}`;
       case 'START_BIZ': return `Start a ${data.type.name}`;
       case 'MANAGE_BIZ': return `Run ${data.name}`;
-      default: return A.LABELS[id];
+      default: {
+        const sl = LES.Systems ? LES.Systems.all() : [];
+        for (const s of sl) if (s.label) { const t = s.label(id, data); if (t) return t; }
+        return A.LABELS[id] || id;
+      }
     }
   };
 
@@ -356,6 +360,9 @@
       const u = 1.2 + B.MANAGE_BIZ + 0.4 * ctx.resp + 0.4 * ctx.dis - 1.2 * n.tired - 0.5 * n.stressed + (b.mgmt < 16 ? 0.6 : -0.6);
       addCand(out, gb.MANAGE_BIZ, 'MANAGE_BIZ', u, b.place, b);
     }
+    // Choices offered by optional systems (crime, worship, politics...).
+    const sc = w.sys.candidates;
+    for (let i = 0; i < sc.length; i++) sc[i].candidates(w, p, ctx, slot, (g, id, u, loc, data) => addCand(out, g, id, u, loc, data));
     return out;
   };
 
@@ -461,6 +468,12 @@
         A.practice(w, p, b.typeDef.w, 0.12);
         break;
       }
+      default: {
+        const sr = w.sys.resolve;
+        let done = false;
+        for (let i = 0; i < sr.length && !done; i++) done = sr[i].resolve(w, p, c, ctx, slot) === true;
+        if (!done) throw new Error(`No system handled the choice ${c.id}`);
+      }
     }
     A.clampNeeds(p);
   };
@@ -497,6 +510,8 @@
       return out;
     }
   }
+
+  A.WhySlot = WhySlot;
 
   // Plan and act both slots for one adult. Stores the plan (for the map) and the
   // probability table (for the "Why" panel).

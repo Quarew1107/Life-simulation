@@ -40,6 +40,8 @@
         <div class="msgs" id="set-msgs"></div>
         <div class="modal-actions">
           <button class="ghost" id="set-random">Random seed</button>
+          <button class="ghost" id="set-load" title="Open a world saved with 💾 Save">📂 Load saved world</button>
+          <input type="file" id="set-load-file" accept=".json,.gz,application/json,application/gzip" hidden>
           <button class="ghost" id="btn-sound-setup" title="Music &amp; sound effects">${LES.Audio.on ? '🔊 Sound on' : '🔇 Sound off'}</button>
           <span class="spacer"></span>
           ${first ? '' : '<button class="ghost" id="set-cancel">Cancel</button>'}
@@ -56,8 +58,18 @@
         $('set-start').style.opacity = v.blockers.length ? 0.5 : 1;
         return v;
       };
-      card.oninput = refresh;
-      card.onchange = refresh;
+      // Picking a preset fills its settings; editing one of them switches the preset to Custom.
+      const syncPreset = e => {
+        const sel = $('set-preset');
+        if (e && e.target === sel) {
+          const pr = LES.PRESETS[sel.value];
+          if (pr) for (const [k, v] of Object.entries(pr.values)) { const el = $(`set-${k}`); if (el) el.value = v; }
+        } else if (sel) sel.value = LES.presetOf(readForm(base));
+      };
+      card.oninput = e => { syncPreset(e); refresh(); };
+      card.onchange = e => { syncPreset(e); refresh(); };
+      $('set-load').onclick = () => $('set-load-file').click();
+      $('set-load-file').onchange = e => { const f = e.target.files[0]; if (f) app.loadWorld(f); e.target.value = ''; };
       refresh();
       $('btn-sound-setup').onclick = () => { $('btn-sound-setup').textContent = app.toggleSound() ? '🔊 Sound on' : '🔇 Sound off'; };
       $('set-random').onclick = () => { $('set-seed').value = `world-${Math.floor(Math.random() * 1e6)}`; refresh(); };

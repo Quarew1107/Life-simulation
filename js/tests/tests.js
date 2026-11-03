@@ -267,6 +267,58 @@
     check('Happiness is spread out (not everyone 0 or 100)', hap[Math.floor(hap.length * 0.9)] - hap[Math.floor(hap.length * 0.1)] > 10, `${hap[0]}..${hap[hap.length - 1]}`);
   }
 
+  // Phase-0 foundations: the original engine is preserved, saves are exact, systems plug in.
+  async function foundationTests() {
+    print('--- Foundations (presets, save/load, systems) ---', 'info');
+    // Fingerprints of the original engine at day 1500 (recorded before the new systems).
+    const ORIGINAL = { 'h-1': 'c76e85d7f49f755fca57e16717e54509', 'h-2': 'a6b095e2ab769cca04f009da2458d86c' };
+    for (const seed of Object.keys(ORIGINAL)) {
+      const w = new LES.World(Object.assign({ seed }, LES.PRESETS.classic.values));
+      await runDays(w, 1500);
+      check(`Classic preset reproduces the original engine exactly (${seed})`, w.hash() === ORIGINAL[seed], w.hash());
+    }
+    check('Defaults are the Malaysia preset', LES.presetOf(LES.DEFAULTS) === 'malaysia');
+
+    // Save -> load -> continue gives the same history as never saving.
+    const a = new LES.World({ seed: 'save-rt', founders: 120, migration: 'high' });
+    await runDays(a, 6 * 365 + 40);
+    const text = LES.Save.toJSON(a);
+    const b = LES.Save.fromJSON(text);
+    check('Loaded world has the same fingerprint', a.hash() === b.hash());
+    await runDays(a, 3 * 365); await runDays(b, 3 * 365);
+    check('Loaded world continues with identical history (3 more years)', a.hash() === b.hash() && a.feed.length === b.feed.length);
+    check('Loaded world passes its consistency checks', b.checkInvariants().length === 0, b.checkInvariants().slice(0, 3).join(' | '));
+    let bad = false;
+    try { LES.Save.fromJSON('{"app":"other"}'); } catch (e) { bad = true; }
+    check('A file that is not a save is rejected with an error', bad);
+
+    // A test system: its choice is offered, chosen sometimes, resolved, and checked.
+    const seen = { cand: 0, done: 0, month: 0, inv: 0 };
+    LES.Systems.register({
+      id: 'test-pray', enabled: cfg => cfg._testSys === true,
+      candidates(w, p, ctx, slot, add) { seen.cand++; add(0, 'TEST_ACT', 0.5, p.homeId, 'x'); },
+      resolve(w, p, c) { if (c.id !== 'TEST_ACT') return false; seen.done++; p.stress -= 1; return true; },
+      label: id => (id === 'TEST_ACT' ? 'Test action' : undefined),
+      month() { seen.month++; }, invariants() { seen.inv++; },
+    });
+    let offHash = '', onHash = '';
+    try {
+      const off = new LES.World({ seed: 'sys', founders: 30 }), on = new LES.World({ seed: 'sys', founders: 30, _testSys: true });
+      await runDays(off, 200); await runDays(on, 200);
+      on.checkInvariants();
+      offHash = off.hash(); onHash = on.hash();
+      check('An enabled system offers and resolves its choices', seen.cand > 0 && seen.done > 0 && seen.month >= 6 && seen.inv === 1, JSON.stringify(seen));
+      check('Its choice appears with its label in the Why panel', LES.Actions.labelOf('TEST_ACT') === 'Test action');
+    } finally { LES.Systems.unregister('test-pray'); }
+    const plain = new LES.World({ seed: 'sys', founders: 30 });
+    await runDays(plain, 200);
+    check('A registered but switched-off system changes nothing', plain.hash() === offHash && onHash !== offHash);
+
+    // Calibration measures are finite for a normal run.
+    const m = LES.Calibration.measure(a);
+    check('Calibration measures are computed', ['e0', 'unemp', 'medWage', 'hhGini'].every(k => Number.isFinite(m[k])), JSON.stringify(m));
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -275,6 +327,7 @@
       await unitTests();
       await townTests();
       await goalTests();
+      await foundationTests();
       await determinism();
       await invariantSweep(3, 60);
     } catch (err) {
@@ -285,6 +338,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests };
+  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

@@ -155,18 +155,10 @@
     rail: 'Railway line to the big city.',
   };
 
-  LES.buildTown = function (size, seed) {
-    size = LES.MAP_ALIASES[size] || size;
-    if (!LES.MAP_SIZES[size]) size = 'pekan';
-    const tpl = LES.planDistricts(size, seed === undefined ? 'rezeki-1' : seed);
-    const rows = tpl.length, cols = tpl[0].length;
-    const T = 16, W = cols * (BW + ROAD), H = rows * (BH + ROAD);
-    const roadsX = [], roadsY = [];
-    for (let c = 0; c < cols; c++) roadsX.push(c * (BW + ROAD) + BW);
-    for (let r = 0; r < rows; r++) roadsY.push(r * (BH + ROAD) + BH);
-    const town = { size, T, W, H, cols, rows, roadsY, roadsX, plan: tpl, buildings: [], byKind: {}, kinds: {}, homesByTier: [[], [], [], [], []], shoplots: [], lots: [], blocks: [] };
-
-    function add(kind, label, x, y, w, h, extra) {
+  // Adds a building to a town (kept as a closure on town.add for the block fillers).
+  LES.townAdder = function (town) {
+    const { roadsY, T } = town;
+    const add = function (kind, label, x, y, w, h, extra) {
       const cy = y + h / 2;
       let road = roadsY[0], bestD = Infinity;
       for (const ry of roadsY) {
@@ -185,8 +177,23 @@
       if (b.tier !== undefined) town.homesByTier[b.tier].push(b.id);
       if (kind === 'shoplot') town.shoplots.push(b.id);
       return b;
-    }
-    town.add = add;
+    };
+    add.$restore = 'townAdd'; // lets a saved world rebuild this closure
+    return add;
+  };
+
+  LES.buildTown = function (size, seed) {
+    size = LES.MAP_ALIASES[size] || size;
+    if (!LES.MAP_SIZES[size]) size = 'pekan';
+    const tpl = LES.planDistricts(size, seed === undefined ? 'rezeki-1' : seed);
+    const rows = tpl.length, cols = tpl[0].length;
+    const T = 16, W = cols * (BW + ROAD), H = rows * (BH + ROAD);
+    const roadsX = [], roadsY = [];
+    for (let c = 0; c < cols; c++) roadsX.push(c * (BW + ROAD) + BW);
+    for (let r = 0; r < rows; r++) roadsY.push(r * (BH + ROAD) + BH);
+    const town = { size, T, W, H, cols, rows, roadsY, roadsX, plan: tpl, buildings: [], byKind: {}, kinds: {}, homesByTier: [[], [], [], [], []], shoplots: [], lots: [], blocks: [] };
+
+    town.add = LES.townAdder(town);
 
     tpl.forEach((line, r) => {
       for (let c = 0; c < cols; c++) {

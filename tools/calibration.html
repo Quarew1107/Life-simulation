@@ -1,0 +1,47 @@
+<!doctype html><html><head><meta charset="utf-8"><title>calibration</title></head><body><pre id="out">running</pre>
+<script src="../js/core/rng.js"></script>
+<script src="../js/core/util.js"></script>
+<script src="../js/data/content.js"></script>
+<script src="../js/data/params.js"></script>
+<script src="../js/data/town.js"></script>
+<script src="../js/sim/ledger.js"></script>
+<script src="../js/sim/systems.js"></script>
+<script src="../js/sim/person.js"></script>
+<script src="../js/sim/market.js"></script>
+<script src="../js/sim/actions.js"></script>
+<script src="../js/sim/labour.js"></script>
+<script src="../js/sim/finance.js"></script>
+<script src="../js/sim/family.js"></script>
+<script src="../js/sim/migration.js"></script>
+<script src="../js/sim/goals.js"></script>
+<script src="../js/sim/world.js"></script>
+<script src="../js/sim/save.js"></script>
+<script src="../js/sim/calibration.js"></script>
+<script>
+// Calibration report: calibration.html?seeds=a,b,c&years=80&cfg={"founders":150}
+// Runs the default (Malaysia) settings and compares the results with DOSM figures.
+(function () {
+  const q = new URLSearchParams(location.search);
+  const seeds = (q.get('seeds') || 'cal-1,cal-2,cal-3').split(','), years = Number(q.get('years') || 80);
+  const extra = JSON.parse(q.get('cfg') || '{"founders":150}');
+  const out = document.getElementById('out'), rows = [];
+  out.textContent = `Running ${seeds.length} seeds x ${years} years...`;
+  let i = 0;
+  function next() {
+    if (i >= seeds.length) {
+      out.textContent = LES.Calibration.table(rows) + '\n\nSources:\n' + Object.values(LES.Calibration.TARGETS).map(t => `- ${t.label}: ${t.src}`).join('\n');
+      document.title = 'calibration done';
+      return;
+    }
+    const w = new LES.World(Object.assign({ seed: seeds[i] }, extra));
+    const step = () => {
+      const stop = Math.min(years * 365, w.day + 3650);
+      while (!w.ended && w.day < stop) w.step();
+      out.textContent = `Seed ${seeds[i]}: year ${Math.floor(w.day / 365)} of ${years}`;
+      if (w.ended || w.day >= years * 365) { rows.push(LES.Calibration.measure(w)); i++; setTimeout(next, 0); } else setTimeout(step, 0);
+    };
+    step();
+  }
+  next();
+})();
+</script></body></html>

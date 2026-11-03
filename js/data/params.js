@@ -4,7 +4,8 @@
   'use strict';
 
   LES.DEFAULTS = {
-    // Normal settings
+    // Normal settings (defaults = the Malaysia preset; see LES.PRESETS)
+    preset: 'malaysia',       // malaysia | classic | custom (setup-screen shortcut, recorded in reports)
     seed: 'rezeki-1',
     founders: 100,
     startAgeMin: 18,
@@ -12,10 +13,10 @@
     wealthDist: 'moderate',   // equal | moderate | unequal
     economy: 'normal',        // stable | normal | volatile
     education: 'subsidised',  // free | subsidised | expensive
-    safetyNet: 'off',         // off = Original harsh rules, on = welfare/guardians
+    safetyNet: 'on',          // on = welfare/guardians (Malaysia has JKM welfare), off = Original harsh rules
     genetics: 'evolution',    // original (floor of parents' average) | evolution
     strategyMode: 'adaptive', // adaptive | fixed
-    fertility: 'normal',      // low | normal | high
+    fertility: 'malaysia',    // malaysia | low | normal | high
     horizonYears: 120,
     goalRM: 100000000,
     goalMode: 'real',         // real (Year-1 money) | nominal
@@ -27,6 +28,7 @@
     // Advanced
     migInMult: 1,
     migOutMult: 1,
+    mortMult: 1.9,            // old-age mortality multiplier (1.9 gives Malaysia's ~75-year life expectancy)
     marketOutsideRM: 200000000, // size of the outside market the town trades against
     marketInfluenceCap: 80,     // max % of price movement the residents can drive
     // Advanced (FSD 15.1 provisional values)
@@ -49,7 +51,22 @@
     gestationDays: 270,
   };
 
+  // Presets fill the setup form. Classic reproduces the original engine (harsher, more
+  // children, longer lives); Malaysia is calibrated to DOSM figures (tools/calibration.html).
+  LES.PRESETS = {
+    malaysia: { name: 'Malaysia today', values: { safetyNet: 'on', fertility: 'malaysia', mortMult: 1.9 } },
+    classic: { name: 'Classic (original rules)', values: { safetyNet: 'off', fertility: 'normal', mortMult: 1 } },
+  };
+  LES.presetOf = function (cfg) {
+    for (const k of Object.keys(LES.PRESETS)) {
+      const v = LES.PRESETS[k].values;
+      if (Object.keys(v).every(x => cfg[x] === v[x])) return k;
+    }
+    return 'custom';
+  };
+
   LES.SETTINGS_META = [
+    { group: 'World', key: 'preset', label: 'Preset', type: 'select', options: [['malaysia', 'Malaysia today (calibrated to DOSM data)'], ['classic', 'Classic (original harsh rules)'], ['custom', 'Custom']], help: 'Fills the settings below. Malaysia: welfare on, ~1.6 children per woman, ~75-year life expectancy.' },
     { group: 'World', key: 'seed', label: 'World seed', type: 'text', help: 'Same seed + same settings = the exact same world history.' },
     { group: 'World', key: 'founders', label: 'Founding population', type: 'int', min: 20, max: 6000, help: '100 strangers by default.' },
     { group: 'World', key: 'mapSize', label: 'Map size', type: 'select', options: [['auto', 'Auto (suggested from population)'], ['kampung', 'Kampung - up to ~60 founders'], ['pekan', 'Pekan - 60-250 founders'], ['bandar', 'Bandar - 250-700 founders'], ['bandaraya', 'Bandaraya - 700-2,000 founders'], ['metropolis', 'Metropolis - 2,000-5,000+ founders']], help: 'Bigger maps have more homes, shops, venues, bus lines and land to grow on. Layout changes with the seed.' },
@@ -65,18 +82,19 @@
     { group: 'Society', key: 'migration', label: 'Migration in/out of town', type: 'select', options: [['off', 'Off'], ['low', 'Low (default)'], ['normal', 'Normal'], ['high', 'High']], help: 'Crowding and rent push people out; jobs pull newcomers in.' },
     { group: 'Society', key: 'genetics', label: 'Child attributes', type: 'select', options: [['evolution', 'Evolution (potential + mutation)'], ['original', 'Original (average of parents, rounded down)']] },
     { group: 'Society', key: 'strategyMode', label: 'Life strategies', type: 'select', options: [['adaptive', 'Adaptive (can change after setbacks)'], ['fixed', 'Fixed for life']] },
-    { group: 'Society', key: 'fertility', label: 'Birth rate', type: 'select', options: [['low', 'Low'], ['normal', 'Normal'], ['high', 'High']] },
+    { group: 'Society', key: 'fertility', label: 'Birth rate', type: 'select', options: [['malaysia', 'Malaysia today (~1.6 children per woman)'], ['low', 'Low'], ['normal', 'Normal (original, ~2.5)'], ['high', 'High']] },
     { group: 'Society', key: 'stopOnWinner', label: 'Pause when goal is reached', type: 'select', options: [['no', 'No, keep going'], ['yes', 'Yes']] },
     { group: 'Advanced', key: 'marketOutsideRM', label: 'Outside stock market size (RM)', type: 'int', min: 1000000, max: 1e13, help: 'Town influence = town holdings / (town + this). Smaller = residents move prices more.' },
     { group: 'Advanced', key: 'marketInfluenceCap', label: 'Max town influence on prices (%)', type: 'int', min: 0, max: 100 },
     { group: 'Advanced', key: 'migInMult', label: 'Move-in rate multiplier', type: 'num', min: 0, max: 20, step: 0.1 },
     { group: 'Advanced', key: 'migOutMult', label: 'Move-out rate multiplier', type: 'num', min: 0, max: 20, step: 0.1 },
+    { group: 'Advanced', key: 'mortMult', label: 'Old-age mortality multiplier', type: 'num', min: 0, max: 5, step: 0.1, help: '1 = original engine (~80-year lives), 1.9 = Malaysia (75.3 years). 0 = nobody dies of old age.' },
   ];
 
   LES.derive = function (cfg) {
     return {
       eduMult: { free: 0, subsidised: 1, expensive: 2.5 }[cfg.education],
-      fertMult: { low: 0.6, normal: 1, high: 1.6 }[cfg.fertility],
+      fertMult: { malaysia: 0.42, low: 0.6, normal: 1, high: 1.6 }[cfg.fertility],
       goal: Math.round(cfg.goalRM * 100),
       horizonDays: cfg.horizonYears * 365,
       welfare: cfg.safetyNet === 'on',

@@ -40,375 +40,12 @@
     const r = Math.min(255, Math.round(((n >> 16) & 255) * f)), gg = Math.min(255, Math.round(((n >> 8) & 255) * f)), b = Math.min(255, Math.round((n & 255) * f));
     return `rgb(${r},${gg},${b})`;
   }
-  function box(g, X, Y, W, H, wall, roof, roofH) {
-    rect(g, X + 3, Y + 3, W, H, 'rgba(30,40,20,0.28)');
-    rect(g, X, Y, W, H, wall);
-    if (roof) { rect(g, X, Y, W, roofH, roof); rect(g, X, Y + roofH - 2, W, 2, shade(roof, 0.75)); rect(g, X, Y, W, 2, shade(roof, 1.2)); }
-    g.strokeStyle = shade(wall, 0.6); g.lineWidth = 1; g.strokeRect(X + 0.5, Y + 0.5, W - 1, H - 1);
-  }
-  function windows(g, X, Y, W, H, cols, rows, col, frame) {
-    const cw = W / cols, rh = H / rows;
-    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
-      const x = Math.round(X + c * cw + cw * 0.25), y = Math.round(Y + r * rh + rh * 0.2);
-      const ww = Math.max(2, Math.round(cw * 0.5)), hh = Math.max(2, Math.round(rh * 0.55));
-      if (frame) rect(g, x - 1, y - 1, ww + 2, hh + 2, frame);
-      rect(g, x, y, ww, hh, col);
-      rect(g, x, y, ww, 1, 'rgba(255,255,255,0.35)');
-    }
-  }
-  function sign(g, text, cx, y, bg, fg) {
-    g.font = `8px ${FONT}`;
-    const tw = Math.ceil(g.measureText(text).width);
-    const x = Math.round(cx - tw / 2 - 3);
-    rect(g, x + 1, y + 1, tw + 6, 11, 'rgba(0,0,0,0.35)');
-    rect(g, x, y, tw + 6, 11, bg || '#20262e');
-    g.fillStyle = fg || '#f4f1e8';
-    g.textBaseline = 'top';
-    g.fillText(text, x + 3, y + 2);
-  }
-  function tree(g, x, y, palm) {
-    if (palm) {
-      rect(g, x + 3, y + 5, 2, 9, '#8a6a43');
-      g.fillStyle = '#3f8f3a';
-      for (const [dx, dy, w, h] of [[-2, 3, 12, 2], [0, 1, 8, 2], [2, 0, 4, 6], [-1, 5, 3, 2], [7, 5, 3, 2]]) g.fillRect(x + dx, y + dy, w, h);
-      rect(g, x + 2, y + 2, 4, 1, '#5fb34f');
-    } else {
-      rect(g, x + 3, y + 9, 3, 5, '#7a5a3a');
-      rect(g, x, y + 2, 9, 8, '#3e8a3e'); rect(g, x + 1, y, 7, 11, '#3e8a3e');
-      rect(g, x + 2, y + 1, 4, 3, '#5aa84f'); rect(g, x + 1, y + 9, 7, 2, '#2f6f31');
-    }
-  }
 
-  // ---------------- Building painters ----------------
-  const SHOP_COLOURS = ['#f4a261', '#e9c46a', '#a8dadc', '#f6bd60', '#cdb4db', '#90be6d', '#f28482', '#84a59d'];
-  function drawBuilding(g, b, R) {
-    const T = 16, X = b.x * T, Y = b.y * T, W = b.w * T, H = b.h * T;
-    switch (b.kind) {
-      case 'kampung': {
-        rect(g, X + 3, Y + 42, 42, 4, 'rgba(30,40,20,0.25)');
-        for (const sx of [8, 22, 36]) rect(g, X + sx, Y + 36, 3, 9, '#5c3d22');
-        rect(g, X + 5, Y + 18, 38, 20, '#b07d48');
-        for (let i = 7; i < 43; i += 4) rect(g, X + i, Y + 18, 1, 20, '#9a6a3a');
-        for (let r = 0; r < 16; r++) { const w = 14 + r * 2.4; rect(g, Math.round(X + 24 - w / 2), Y + 3 + r, Math.round(w), 1, r % 3 === 0 ? '#a14a33' : '#8c3b2a'); }
-        rect(g, X + 13, Y + 23, 8, 7, '#3b2a1d'); rect(g, X + 14, Y + 24, 6, 5, '#f0c96b');
-        rect(g, X + 28, Y + 23, 8, 15, '#6b4426');
-        for (let i = 0; i < 4; i++) rect(g, X + 37 + i * 2, Y + 38 + i * 2, 3, 1, '#7a5230');
-        break;
-      }
-      case 'flat': {
-        const wall = b.id % 2 ? '#e8dcc0' : '#cfe3d8';
-        box(g, X + 2, Y + 2, W - 4, H - 4, wall, '#8f969e', 8);
-        windows(g, X + 5, Y + 12, W - 10, H - 24, 4, 7, '#7fb3cf', shade(wall, 0.75));
-        for (let i = 0; i < 14; i++) rect(g, X + 6 + R.int(0, W - 14), Y + 16 + R.int(0, H - 34), 2, 2, R.pick(C.SHIRTS));
-        rect(g, X + W / 2 - 6, Y + H - 12, 12, 10, '#5b4a3f');
-        sign(g, 'PPR', X + W / 2, Y + 1, '#3d5a80');
-        break;
-      }
-      case 'terrace': {
-        const units = Math.floor(W / 32);
-        for (let i = 0; i < units; i++) {
-          const ux = X + i * 32 + 1;
-          rect(g, ux + 2, Y + 3, 30, H - 1, 'rgba(30,40,20,0.25)');
-          rect(g, ux, Y + 12, 30, H - 12, '#f3ead7');
-          rect(g, ux, Y, 30, 13, i % 2 ? '#c4553b' : '#b54a31');
-          rect(g, ux, Y + 5, 30, 1, '#8e3a26');
-          rect(g, ux + 4, Y + 16, 6, 5, '#8cc6de');
-          rect(g, ux + 18, Y + 15, 6, 10, '#7a4f2b');
-          rect(g, ux + 29, Y + 12, 1, H - 12, '#c9bda4');
-        }
-        break;
-      }
-      case 'condo': {
-        box(g, X + 2, Y, W - 4, H - 2, '#b9cfdc', '#5b6b78', 8);
-        for (let yy = Y + 12; yy < Y + H - 12; yy += 10) {
-          rect(g, X + 5, yy, W - 10, 6, '#7fa7c2');
-          rect(g, X + 4, yy + 6, W - 8, 2, '#eef3f6');
-        }
-        rect(g, X + W / 2 - 1, Y - 6, 2, 6, '#5b6b78');
-        rect(g, X + W / 2 - 5, Y + H - 12, 10, 10, '#3a4a58');
-        break;
-      }
-      case 'bungalow': {
-        rect(g, X + 1, Y + 1, W - 2, H - 2, '#6fae5a');
-        for (let i = 0; i < W - 4; i += 4) rect(g, X + 2 + i, Y + H - 4, 2, 3, '#f4f1e8');
-        box(g, X + 8, Y + 8, 46, 34, '#fbf7ef', b.id % 2 ? '#3e6f9e' : '#b5523b', 13);
-        windows(g, X + 10, Y + 22, 42, 12, 4, 1, '#8cc6de');
-        rect(g, X + 26, Y + 32, 8, 10, '#6b4426');
-        rect(g, X + 58, Y + 34, 18, 22, '#ffffff'); rect(g, X + 60, Y + 36, 14, 18, '#5fc4e0'); rect(g, X + 61, Y + 37, 6, 2, '#a6e3f2');
-        tree(g, X + 62, Y + 8, true);
-        break;
-      }
-      case 'mamak': {
-        box(g, X + 2, Y + 2, W - 4, 30, '#f7f2e4', '#2f7d4f', 10);
-        for (let i = 0; i < W - 4; i += 8) { rect(g, X + 2 + i, Y + 30, 4, 7, '#2f9e5b'); rect(g, X + 6 + i, Y + 30, 4, 7, '#ffffff'); }
-        for (let k = 0; k < 5; k++) { const tx = X + 8 + k * 14, ty = Y + 44 + (k % 2) * 8; rect(g, tx, ty, 8, 5, '#d7dde2'); rect(g, tx - 3, ty + 1, 2, 3, '#e63946'); rect(g, tx + 9, ty + 1, 2, 3, '#e63946'); }
-        sign(g, (b.label || 'Mamak').toUpperCase(), X + W / 2, Y + 12, '#1f6b40');
-        break;
-      }
-      case 'hawker': {
-        rect(g, X + 3, Y + 3, W, H - 4, 'rgba(30,40,20,0.25)');
-        rect(g, X, Y + 12, W, H - 14, '#5a4a42');
-        for (let i = 0; i < W; i += 6) rect(g, X + i, Y, 4, 14, i % 12 ? '#c94c4c' : '#b23f3f');
-        rect(g, X, Y + 12, W, 2, '#8e3333');
-        for (let k = 0; k < 6; k++) rect(g, X + 4 + k * 18, Y + 16, 14, 6, SHOP_COLOURS[k % SHOP_COLOURS.length]);
-        for (let k = 0; k < 8; k++) rect(g, X + 8 + (k % 4) * 26, Y + 32 + Math.floor(k / 4) * 18, 12, 6, '#e6e1d6');
-        for (const px of [X + 1, X + W - 4]) rect(g, px, Y + 12, 3, H - 14, '#8a7a70');
-        sign(g, 'HAWKER CENTRE', X + W / 2, Y + 2, '#7a1f1f');
-        break;
-      }
-      case 'university': {
-        rect(g, X, Y + 74, W, H - 74, '#7fbf5a');
-        g.strokeStyle = '#c96a4a'; g.lineWidth = 3; g.strokeRect(X + 14, Y + 86, W - 28, H - 96);
-        g.strokeStyle = '#f4f1e8'; g.lineWidth = 1; g.strokeRect(X + 28, Y + 96, W - 56, H - 116);
-        box(g, X + 6, Y + 18, W - 12, 52, '#efe4cc', '#2e5c8a', 12);
-        windows(g, X + 12, Y + 34, W - 24, 28, 12, 2, '#8cc6de', '#c8b893');
-        box(g, X + W / 2 - 14, Y + 2, 28, 66, '#f4ead6', '#24476b', 10);
-        rect(g, X + W / 2 - 6, Y + 14, 12, 12, '#ffffff'); rect(g, X + W / 2 - 1, Y + 16, 2, 6, '#333'); rect(g, X + W / 2, Y + 20, 4, 2, '#333');
-        rect(g, X + W / 2 - 6, Y + 52, 12, 16, '#5b4a3f');
-        sign(g, 'UNIVERSITI REZEKI', X + W / 2, Y + 75, '#24476b');
-        break;
-      }
-      case 'kolej': box(g, X + 2, Y + 4, W - 4, H - 8, '#efe3c9', '#6f8f3a', 12); windows(g, X + 6, Y + 20, W - 12, 24, 5, 2, '#8cc6de'); sign(g, 'KOLEJ VOKASIONAL', X + W / 2, Y + H - 12, '#4d6a26'); break;
-      case 'library': box(g, X + 2, Y + 4, W - 4, H - 8, '#e9e1d0', '#8b5a2b', 12); for (let i = 0; i < 5; i++) rect(g, X + 10 + i * 16, Y + 20, 4, 40, '#f8f4ea'); sign(g, 'LIBRARY', X + W / 2, Y + H - 12, '#6b4423'); break;
-      case 'hall': {
-        box(g, X + 2, Y + 10, W - 4, H - 12, '#f0dcc0', null, 0);
-        for (let r = 0; r < 12; r++) rect(g, X + 2 + r, Y + 10 - Math.min(r, 8), W - 4 - r * 2, 1, '#b5651d');
-        rect(g, X + 2, Y, 4, 10, '#b5651d'); rect(g, X + W - 6, Y, 4, 10, '#b5651d');
-        windows(g, X + 8, Y + 24, W - 16, 16, 4, 1, '#8cc6de');
-        sign(g, 'DEWAN', X + W / 2, Y + H - 14, '#7a3f12');
-        break;
-      }
-      case 'office': case 'techhub': {
-        const tech = b.kind === 'techhub';
-        box(g, X + 2, Y, W - 4, H - 2, tech ? '#2e5f8a' : '#5f7f99', tech ? '#1d3b57' : '#3a4a58', 8);
-        windows(g, X + 5, Y + 10, W - 10, H - 26, 3, 14, tech ? '#7fd8f0' : '#9fc0d6');
-        if (tech) for (let yy = Y + 20; yy < Y + H - 20; yy += 30) rect(g, X + 2, yy, W - 4, 2, '#3ec7b5');
-        rect(g, X + W / 2 - 1, Y - 8, 2, 8, '#ccc');
-        rect(g, X + W / 2 - 6, Y + H - 14, 12, 12, '#203040');
-        sign(g, tech ? 'TECH HUB' : 'MENARA', X + W / 2, Y + H + 1, tech ? '#13615a' : '#2b3a48');
-        break;
-      }
-      case 'bank': {
-        box(g, X + 2, Y + 12, W - 4, H - 14, '#e8e4da', null, 0);
-        for (let r = 0; r < 10; r++) rect(g, X + 2 + r * 2.6, Y + 12 - r, W - 4 - r * 5.2, 1, '#9aa0a6');
-        for (let i = 0; i < 4; i++) rect(g, X + 9 + i * 14, Y + 18, 4, 32, '#ffffff');
-        sign(g, 'BANK', X + W / 2, Y + 2, '#8a6d1d', '#ffe9a8');
-        break;
-      }
-      case 'bursa': {
-        box(g, X + 2, Y + 2, W - 4, H - 4, '#24384c', '#16222e', 8);
-        rect(g, X + 8, Y + 16, W - 16, 26, '#0e1620');
-        g.strokeStyle = '#57d38c'; g.lineWidth = 2; g.beginPath();
-        for (let i = 0; i <= 10; i++) { const xx = X + 10 + i * (W - 20) / 10, yy = Y + 36 - i * 1.6 - (i % 3) * 3; if (i) g.lineTo(xx, yy); else g.moveTo(xx, yy); }
-        g.stroke();
-        rect(g, X + W / 2 - 8, Y + H - 16, 16, 12, '#0e1620');
-        sign(g, 'BURSA', X + W / 2, Y + 3, '#0e1620', '#57d38c');
-        break;
-      }
-      case 'mall': {
-        box(g, X + 2, Y + 2, W - 4, H - 4, '#e9dff5', '#9b7fc4', 12);
-        windows(g, X + 8, Y + 20, W - 16, 60, 4, 3, '#c9b8e8');
-        rect(g, X + 20, Y + H - 34, W - 40, 30, '#8fc1d8'); rect(g, X + W / 2, Y + H - 34, 1, 30, '#5b7f94');
-        sign(g, 'REZEKI MALL', X + W / 2, Y + 4, '#5e3f8f');
-        break;
-      }
-      case 'shoplot': {
-        // Two-storey shophouse: tiled roof, sign band over the upper floor, five-foot way below.
-        const col = SHOP_COLOURS[b.id % SHOP_COLOURS.length];
-        rect(g, X + 3, Y + 3, W - 1, H - 1, 'rgba(30,40,20,0.25)');
-        rect(g, X, Y, W - 1, 6, '#a0522d'); rect(g, X, Y + 5, W - 1, 1, '#7a3c20');
-        rect(g, X, Y + 6, W - 1, 22, col);
-        rect(g, X, Y + 28, W - 1, H - 28, '#5b4a3f');
-        rect(g, X + 3, Y + 31, W - 7, H - 33, '#3a2f28');
-        for (const px of [X, X + 21, X + 42, X + W - 3]) rect(g, px, Y + 28, 2, H - 28, '#d9cfc0');
-        break;
-      }
-      case 'hospital': {
-        box(g, X + 2, Y + 2, W - 4, H - 4, '#f6f8f9', '#2a9d8f', 10);
-        windows(g, X + 8, Y + 16, W - 16, H - 40, 5, 4, '#9fd3e0');
-        rect(g, X + W / 2 - 9, Y + H - 26, 18, 18, '#2a9d8f'); rect(g, X + W / 2 - 2, Y + H - 23, 4, 12, '#fff'); rect(g, X + W / 2 - 6, Y + H - 19, 12, 4, '#fff');
-        rect(g, X + 6, Y + H - 16, 16, 9, '#ffffff'); rect(g, X + 6, Y + H - 12, 16, 2, '#e63946');
-        sign(g, 'HOSPITAL', X + W / 2, Y + 1, '#1d6f66');
-        break;
-      }
-      case 'school': {
-        rect(g, X, Y + 50, W, H - 50, '#8bc34a');
-        g.strokeStyle = '#f4f1e8'; g.strokeRect(X + 8.5, Y + 56.5, W - 17, H - 64);
-        box(g, X + 2, Y + 4, W - 4, 44, '#f2d16b', '#3b6ea8', 10);
-        windows(g, X + 6, Y + 18, W - 12, 24, 6, 2, '#8cc6de');
-        rect(g, X + W - 10, Y + 52, 1, 20, '#ddd'); rect(g, X + W - 9, Y + 52, 8, 3, '#d62828'); rect(g, X + W - 9, Y + 55, 8, 3, '#ffffff');
-        sign(g, 'SEKOLAH', X + W / 2, Y + 4, '#2c5282');
-        break;
-      }
-      case 'factory': {
-        box(g, X + 2, Y + 14, W - 4, H - 16, '#a3acb5', null, 0);
-        for (let i = 0; i < W - 4; i += 16) for (let r = 0; r < 10; r++) rect(g, X + 2 + i, Y + 14 - r, 16 - r * 1.5, 1, '#7d8790');
-        for (const cx of [X + 20, X + 44]) { rect(g, cx, Y - 10, 8, 24, '#6c757d'); rect(g, cx, Y - 4, 8, 3, '#d62828'); }
-        windows(g, X + 8, Y + 30, W - 16, 30, 8, 2, '#c3d7e0');
-        rect(g, X + W - 40, Y + H - 26, 30, 24, '#5d666f');
-        for (let i = 0; i < 6; i++) rect(g, X + W - 40, Y + H - 24 + i * 4, 30, 1, '#4a525a');
-        sign(g, 'KILANG', X + W / 2, Y + H - 14, '#3d454d');
-        break;
-      }
-      case 'workshop': box(g, X + 2, Y + 4, W - 4, H - 6, '#c9b49b', '#7a6a5a', 8); for (const gx of [X + 8, X + 50]) { rect(g, gx, Y + 24, 34, 34, '#6c757d'); for (let i = 0; i < 8; i++) rect(g, gx, Y + 26 + i * 4, 34, 1, '#58606a'); } sign(g, 'BENGKEL', X + W / 2, Y + 12, '#5a4632'); break;
-      case 'warehouse': {
-        box(g, X + 2, Y + 2, W - 4, H - 6, '#b8c4cc', '#7c8a94', 10);
-        rect(g, X + 12, Y + 22, 40, 36, '#7c8a94');
-        rect(g, X + 62, Y + 40, 28, 14, '#f4f1e8'); rect(g, X + 90, Y + 44, 10, 10, '#2a9d8f'); rect(g, X + 66, Y + 54, 5, 4, '#222'); rect(g, X + 90, Y + 54, 5, 4, '#222');
-        sign(g, 'GUDANG', X + W / 2, Y + 12, '#4a5861');
-        break;
-      }
-      case 'construction': {
-        rect(g, X, Y, W, H, '#c9ad7f');
-        for (let i = 0; i < 30; i++) rect(g, X + R.int(0, W - 3), Y + R.int(0, H - 3), 3, 2, '#b39465');
-        rect(g, X + 40, Y + 6, 80, 50, '#9ea4a8');
-        for (let i = 0; i < 5; i++) rect(g, X + 40 + i * 20, Y + 6, 3, 50, '#7a8086');
-        for (let i = 0; i < 3; i++) rect(g, X + 40, Y + 6 + i * 20, 80, 3, '#7a8086');
-        rect(g, X + 150, Y - 30, 5, 88, '#f4c430'); rect(g, X + 110, Y - 30, 100, 4, '#f4c430'); rect(g, X + 130, Y - 26, 1, 30, '#333'); rect(g, X + 126, Y + 4, 9, 6, '#7a5230');
-        sign(g, 'TAPAK BINAAN', X + 30, Y + H - 14, '#7a5a1d');
-        break;
-      }
-      case 'park': {
-        rect(g, X, Y, W, H, '#93c96b');
-        g.fillStyle = '#4fa3c7'; g.beginPath(); g.ellipse(X + W / 2, Y + H / 2 + 10, W / 2 - 14, H / 2 - 40, 0, 0, Math.PI * 2); g.fill();
-        g.fillStyle = '#7cc3e0'; g.beginPath(); g.ellipse(X + W / 2 - 8, Y + H / 2 + 2, 14, 8, 0, 0, Math.PI * 2); g.fill();
-        g.strokeStyle = '#e2cf9f'; g.lineWidth = 4; g.beginPath(); g.ellipse(X + W / 2, Y + H / 2 + 10, W / 2 - 8, H / 2 - 32, 0, 0, Math.PI * 2); g.stroke();
-        for (const [tx, ty] of [[6, 6], [W - 18, 10], [8, H - 26], [W - 20, H - 24], [W / 2 - 4, 4]]) tree(g, X + tx, Y + ty, false);
-        sign(g, 'TAMAN TASIK', X + W / 2, Y + H - 14, '#2d6a4f');
-        break;
-      }
-      case 'gym': {
-        rect(g, X + 2, Y + 2, W - 4, H - 4, '#c0573e');
-        rect(g, X + 10, Y + 10, W - 20, H - 20, '#6fb35a');
-        g.strokeStyle = '#f4f1e8'; g.strokeRect(X + 6.5, Y + 6.5, W - 13, H - 13);
-        sign(g, 'STADIUM', X + W / 2, Y + H / 2 - 5, '#7a2e1e');
-        break;
-      }
-      case 'welfare': box(g, X + 2, Y + 4, W - 4, H - 6, '#f0e6d2', '#9c6644', 10); rect(g, X + 10, Y + 22, 6, 6, '#e63946'); sign(g, 'RUMAH KEBAJIKAN', X + W / 2, Y + H - 4, '#6b3f22'); break;
-      case 'padi': {
-        for (let r = 0; r < H; r += 4) rect(g, X, Y + r, W, 4, r % 8 ? '#a6d36b' : '#8cc152');
-        for (let c = 0; c < W; c += 48) rect(g, X + c, Y, 2, H, '#6fb0c9');
-        sign(g, 'SAWAH PADI', X + W / 2, Y + H / 2 - 5, '#4a6a1f');
-        break;
-      }
-      case 'depot': {
-        box(g, X + 2, Y + 4, W - 4, H - 6, '#d6d0c4', '#5b6b78', 10);
-        for (let i = 0; i < 3; i++) rect(g, X + 8 + i * 28, Y + 24, 22, 32, '#6c757d');
-        sign(g, 'DEPOT BAS', X + W / 2, Y + 12, '#3d5a80');
-        break;
-      }
-      case 'memorial': {
-        rect(g, X, Y, W, H, '#7fb069');
-        g.strokeStyle = '#e2cf9f'; g.lineWidth = 3; g.strokeRect(X + 8.5, Y + 8.5, W - 17, H - 17);
-        rect(g, X + W / 2 - 8, Y + H / 2 - 10, 16, 20, '#cfc6b0'); rect(g, X + W / 2 - 5, Y + H / 2 - 16, 10, 6, '#b8ad95');
-        for (const [tx, ty] of [[4, 4], [W - 14, 6], [6, H - 22], [W - 16, H - 20]]) tree(g, X + tx, Y + ty, false);
-        sign(g, 'TAMAN KENANGAN', X + W / 2, Y + H - 14, '#4a5a3a');
-        break;
-      }
-      case 'lot': {
-        if (b.built) break;
-        rect(g, X + 6, Y + 6, W - 12, H - 12, '#9cc06f');
-        g.strokeStyle = '#8b6b43'; g.lineWidth = 1; g.setLineDash([3, 3]); g.strokeRect(X + 6.5, Y + 6.5, W - 13, H - 13); g.setLineDash([]);
-        rect(g, X + W / 2 - 1, Y + H / 2 - 4, 2, 14, '#6b4423');
-        sign(g, 'TANAH DIJUAL', X + W / 2, Y + H / 2 - 12, '#7a5a1d');
-        break;
-      }
-      case 'builtlot': rect(g, X + 2, Y + 2, W - 4, H - 4, '#a9b98a'); break;
-      case 'hq': {
-        rect(g, X - 8, Y + H - 20, W + 16, 20, '#d9cfc0');
-        box(g, X + 2, Y, W - 4, H - 22, '#c9a227', '#7a5c12', 10);
-        windows(g, X + 6, Y + 14, W - 12, H - 44, 4, 12, '#fff3c4');
-        rect(g, X + W / 2 - 1, Y - 14, 2, 14, '#ccc'); rect(g, X + W / 2 - 3, Y - 16, 6, 3, '#e63946');
-        sign(g, (b.label || 'MENARA').toUpperCase(), X + W / 2, Y + H - 16, '#3d2b05', '#ffe9a8');
-        break;
-      }
-      // ---- Leisure venues ----
-      case 'cinema': {
-        box(g, X + 2, Y + 2, W - 4, H - 4, '#2b2d42', '#14213d', 10);
-        rect(g, X + 8, Y + 16, W - 16, 22, '#f2c14e'); rect(g, X + 10, Y + 18, W - 20, 18, '#1b1b1b');
-        for (let i = 0; i < 6; i++) rect(g, X + 12 + i * 12, Y + 22 + (i % 2) * 6, 6, 4, ['#e63946', '#3ec7b5', '#f4a261'][i % 3]);
-        for (let i = 0; i < W - 8; i += 6) rect(g, X + 4 + i, Y + 12, 3, 2, (i / 6) % 2 ? '#ffd166' : '#fff3c4');
-        rect(g, X + W / 2 - 6, Y + H - 16, 12, 12, '#8d0801');
-        sign(g, 'PAWAGAM', X + W / 2, Y + 1, '#8d0801', '#ffe9a8');
-        break;
-      }
-      case 'karaoke': {
-        box(g, X + 2, Y + 2, W - 4, H - 4, '#3a0ca3', '#240046', 9);
-        windows(g, X + 6, Y + 16, W - 12, 20, 4, 1, '#f72585');
-        rect(g, X + W / 2 - 5, Y + H - 14, 10, 10, '#10002b');
-        sign(g, 'KARAOKE & BAR', X + W / 2, Y + 1, '#7209b7', '#ffe9ff');
-        break;
-      }
-      case 'bowling': {
-        box(g, X + 2, Y + 2, W - 4, H - 4, '#e9ecef', '#457b9d', 9);
-        for (let i = 0; i < 5; i++) rect(g, X + 10 + i * 16, Y + 18, 3, 9, '#ffffff');
-        g.fillStyle = '#e63946'; g.beginPath(); g.arc(X + W - 14, Y + H - 14, 5, 0, Math.PI * 2); g.fill();
-        sign(g, 'BOWLING', X + W / 2, Y + 1, '#1d3557');
-        break;
-      }
-      case 'futsal': {
-        rect(g, X + 2, Y + 2, W - 4, H - 4, '#2d6a4f'); rect(g, X + 5, Y + 5, W - 10, H - 10, '#52b788');
-        g.strokeStyle = '#f4f1e8'; g.lineWidth = 1; g.strokeRect(X + 5.5, Y + 5.5, W - 11, H - 11);
-        rect(g, X + W / 2, Y + 5, 1, H - 10, '#f4f1e8');
-        rect(g, X + 5, Y + H / 2 - 6, 4, 12, '#ffffff'); rect(g, X + W - 9, Y + H / 2 - 6, 4, 12, '#ffffff');
-        sign(g, 'FUTSAL', X + W / 2, Y + H - 13, '#1b4332');
-        break;
-      }
-      case 'finedine': {
-        box(g, X + 2, Y + 2, W - 4, H - 4, '#f8f1e7', '#6b2737', 11);
-        for (let i = 0; i < W - 8; i += 10) rect(g, X + 4 + i, Y + 11, 6, 6, '#a4133c');
-        windows(g, X + 6, Y + 22, W - 12, 18, 4, 1, '#ffe8a3', '#c9a227');
-        rect(g, X + W / 2 - 4, Y + H - 14, 8, 12, '#6b2737');
-        sign(g, 'RESTORAN MEWAH', X + W / 2, Y + 1, '#3d0c15', '#f2c14e');
-        break;
-      }
-      case 'lounge': {
-        box(g, X + 2, Y, W - 4, H - 2, '#1d3557', '#0b132b', 8);
-        windows(g, X + 5, Y + 10, W - 10, H - 30, 3, 10, '#a8dadc');
-        rect(g, X, Y - 4, W, 6, '#f2c14e'); rect(g, X + 4, Y - 8, W - 8, 4, '#e9c46a');
-        sign(g, 'SKY LOUNGE', X + W / 2, Y + H + 1, '#0b132b', '#f2c14e');
-        break;
-      }
-      case 'spa': {
-        box(g, X + 2, Y + 2, W - 4, H - 4, '#e9f5db', '#52796f', 10);
-        rect(g, X + W - 26, Y + 20, 18, 14, '#ffffff'); rect(g, X + W - 24, Y + 22, 14, 10, '#8ecae6');
-        tree(g, X + 8, Y + 18, true);
-        sign(g, 'SPA', X + W / 2, Y + 1, '#2f3e46', '#e9f5db');
-        break;
-      }
-      case 'golf': {
-        rect(g, X, Y, W, H, '#5a9e47');
-        for (let i = 0; i < 260; i++) rect(g, X + R.int(0, W - 2), Y + R.int(0, H - 2), 2, 1, R.next() < 0.5 ? '#4f8f3e' : '#6db356');
-        const fair = [[30, 40, 60, 30], [120, 60, 70, 34], [70, 120, 80, 30]];
-        for (const [fx, fy, fw, fh] of fair) { g.fillStyle = '#8fd16a'; g.beginPath(); g.ellipse(X + fx, Y + fy, fw / 2, fh / 2, 0.3, 0, Math.PI * 2); g.fill(); }
-        g.fillStyle = '#e9d8a6'; g.beginPath(); g.ellipse(X + 160, Y + 120, 16, 9, 0, 0, Math.PI * 2); g.fill();
-        g.fillStyle = '#4fa3c7'; g.beginPath(); g.ellipse(X + 40, Y + 120, 20, 12, 0, 0, Math.PI * 2); g.fill();
-        for (const [hx, hy] of [[44, 40], [140, 60], [86, 122]]) { rect(g, X + hx, Y + hy - 14, 1, 14, '#f4f1e8'); rect(g, X + hx + 1, Y + hy - 14, 6, 4, '#e63946'); rect(g, X + hx - 1, Y + hy, 3, 2, '#1b1b1b'); }
-        box(g, X + W - 70, Y + 8, 60, 34, '#fbf7ef', '#7a1f1f', 12);
-        windows(g, X + W - 66, Y + 24, 52, 12, 4, 1, '#8cc6de');
-        for (const [tx, ty] of [[6, 4], [100, 6], [8, 70], [200, 90], [180, 150]]) if (tx < W - 10 && ty < H - 14) tree(g, X + tx, Y + ty, false);
-        sign(g, 'KELAB GOLF', X + W - 40, Y + 2, '#3d0c15', '#f2c14e');
-        break;
-      }
-      case 'station': {
-        rect(g, X - 2, Y - 10, W + 4, 10, '#b8ad95'); // platform
-        for (let i = 0; i < W; i += 12) rect(g, X + i, Y - 9, 6, 1, '#f4f1e8');
-        box(g, X + 2, Y + 2, W - 4, H - 4, '#f2e8cf', '#bc4749', 12);
-        for (let i = 0; i < 3; i++) rect(g, X + 12 + i * 40, Y + 22, 20, 30, '#8cc6de');
-        rect(g, X + W / 2 - 10, Y + H - 22, 20, 18, '#6b4423');
-        rect(g, X + W / 2 - 8, Y + 14, 16, 6, '#ffffff'); rect(g, X + W / 2 - 1, Y + 15, 2, 4, '#333');
-        sign(g, 'STESEN KERETAPI', X + W / 2, Y + H - 2, '#386641', '#f2e8cf');
-        break;
-      }
-      case 'rail': {
-        rect(g, X, Y + 6, W + 32, 20, '#8a7f6e'); // ballast continues under the road
-        for (let i = 0; i < W + 32; i += 8) rect(g, X + i, Y + 8, 4, 16, '#5c4033');
-        rect(g, X, Y + 11, W + 32, 2, '#c0c0c0'); rect(g, X, Y + 19, W + 32, 2, '#c0c0c0');
-        break;
-      }
-      default: box(g, X, Y, W, H, '#ccc', '#999', 8);
-    }
-  }
+
+
+
+
+  // Building painters, ground and trees live in art.js (LES.Art).
 
   class Renderer {
     constructor(canvas) {
@@ -475,23 +112,8 @@
       cv.width = W; cv.height = H;
       const g = cv.getContext('2d');
       g.imageSmoothingEnabled = false;
-      rect(g, 0, 0, W, H, '#86b85f');
-      for (let i = 0; i < W * H / 400; i++) rect(g, R.int(0, W), R.int(0, H), 2, 1, R.next() < 0.5 ? '#79a955' : '#93c46b');
-
-      // Roads with sidewalks and lane markings
-      for (const ry of town.roadsY) { rect(g, 0, ry * T - 4, W, 2 * T + 8, '#cfc6b0'); rect(g, 0, ry * T, W, 2 * T, '#4b4f58'); }
-      for (const rx of town.roadsX) { rect(g, rx * T - 4, 0, 2 * T + 8, H, '#cfc6b0'); rect(g, rx * T, 0, 2 * T, H, '#4b4f58'); }
-      for (const ry of town.roadsY) for (let x = 0; x < W; x += 14) rect(g, x, ry * T + T - 1, 7, 2, '#e9d16b');
-      for (const rx of town.roadsX) for (let y = 0; y < H; y += 14) rect(g, rx * T + T - 1, y, 2, 7, '#e9d16b');
-      for (const ry of town.roadsY) for (const rx of town.roadsX) {
-        rect(g, rx * T, ry * T, 2 * T, 2 * T, '#4b4f58');
-        for (let i = 0; i < 4; i++) {
-          rect(g, rx * T - 10, ry * T + 2 + i * 8, 7, 4, '#e8e4da');
-          rect(g, rx * T + 2 * T + 3, ry * T + 2 + i * 8, 7, 4, '#e8e4da');
-          rect(g, rx * T + 2 + i * 8, ry * T - 10, 4, 7, '#e8e4da');
-          rect(g, rx * T + 2 + i * 8, ry * T + 2 * T + 3, 4, 7, '#e8e4da');
-        }
-      }
+      LES.Art.beginLights();
+      LES.Art.drawGround(g, town, R);
 
       // Occupancy grid for placing trees
       const busy = new Uint8Array(town.W * town.H);
@@ -502,11 +124,10 @@
         if (b.kind === 'lot' && !b.built) continue; // trees may grow on empty lots
         for (let x = b.x - 1; x <= b.x + b.w; x++) for (let y = b.y - 1; y <= b.y + b.h + 1; y++) mark(x, y);
       }
-      for (const b of town.buildings) drawBuilding(g, b, R);
-      for (let y = 0; y < town.H; y++) for (let x = 0; x < town.W; x++) {
-        if (busy[y * town.W + x] || R.next() > 0.3) continue;
-        tree(g, x * T + R.int(0, 6), y * T + R.int(0, 4), x < 15 || R.next() < 0.3);
-      }
+      // Back-to-front so taller buildings overlap the ones behind them.
+      const order = town.buildings.slice().sort((a, b) => (a.y + a.h) - (b.y + b.h) || a.id - b.id);
+      for (const b of order) LES.Art.drawBuilding(g, b, R);
+      LES.Art.drawGreenery(g, town, busy, R);
       // Bus stops (shelter on the sidewalk) and the town gateway arch
       for (const line of town.busLines) for (const st of line.stops) {
         const sx = st.pt.x + 18, sy = st.pt.y - 26;
@@ -514,11 +135,11 @@
         rect(g, sx - 3, sy - 4, 3, 14, line.colour);
       }
       const gw = town.gateway;
-      rect(g, gw.x + 2, gw.y - 22, 4, 40, '#8b5a2b'); rect(g, gw.x + 2, gw.y - 26, 70, 9, '#b23a48');
+      rect(g, gw.x + 4, gw.y - 20, 4, 40, 'rgba(0,0,0,0.25)'); rect(g, gw.x + 2, gw.y - 22, 4, 40, '#8b5a2b'); rect(g, gw.x + 2, gw.y - 26, 70, 9, '#b23a48'); rect(g, gw.x + 2, gw.y - 26, 70, 1, '#d9606d');
       g.font = `7px ${FONT}`; g.fillStyle = '#ffe9a8'; g.textBaseline = 'top';
       g.fillText('SELAMAT DATANG', gw.x + 5, gw.y - 25);
       this.bg = cv;
-      this.lights = LES.Ambience.buildLights(town);
+      this.lights = LES.Ambience.buildLights(town, LES.Art.takeLights());
       this.bgVersion = this.w ? this.w.townVersion : 0;
     }
 
@@ -769,7 +390,11 @@
       this.screenPos = [];
       const millionaire = U.RM(1e6);
       const dots = this.z < 1 || (w.counts.living > 1500 && this.z < 1.6);
+      const festDay = w.lastDay < 0 ? 0 : w.lastDay;
+      // Only draw what is on screen (plus a margin for sprites and labels).
+      const vx0 = this.cx - 40, vy0 = this.cy - 40, vx1 = this.cx + this.vw / this.z + 40, vy1 = this.cy + this.vh / this.z + 60;
       for (const it of list) {
+        if (it.x < vx0 || it.x > vx1 || it.y < vy0 || it.y > vy1) continue;
         if (it.bus) { drawBus(g, it); continue; }
         if (dots) { // zoomed out or a huge town: people as coloured dots, vehicles as dashes
           const sel = this.selectedId >= 0 ? w.people[this.selectedId] : null;
@@ -793,9 +418,14 @@
         }
         const slotAct = !it.moving && p.plan ? p.plan[tm < LES.SLOT_B ? 0 : 1] : null;
         const atPlace = slotAct && !it.waiting && tm >= LES.SLOT_A && tm < LES.SLOT_END;
-        const spr = LES.Sprites.person(p.look, group, it.moving ? walkFrame : 0, atPlace ? LES.Ambience.outfitFor(p, slotAct) : null);
+        // Face the way they walk (routes are straight road segments, so one of dx/dy is 0).
+        const view = !it.moving ? 'front' : it.dx !== 0 ? 'side' : it.dy < 0 ? 'back' : 'front';
+        const outfit = (atPlace && LES.Ambience.outfitFor(p, slotAct)) || LES.Ambience.festivalOutfit(p, festDay);
+        const spr = LES.Sprites.person(p.look, group, it.moving ? walkFrame : 0, outfit, view);
         const x = Math.round(it.x - spr.width / 2), y = Math.round(it.y - spr.height);
-        g.drawImage(spr, x, y);
+        if (view === 'side' && it.dx < 0) { // walking left: mirror the right-facing sprite
+          g.save(); g.translate(x + spr.width, y); g.scale(-1, 1); g.drawImage(spr, 0, 0); g.restore();
+        } else g.drawImage(spr, x, y);
         if (it.leaving) { rect(g, x + spr.width - 1, y + spr.height - 6, 4, 5, '#8b5a2b'); rect(g, x + spr.width, y + spr.height - 7, 2, 1, '#3b2a1d'); } // suitcase
         g.globalAlpha = 1;
         if (atPlace && this.z >= 2.2 && !fast) LES.Ambience.bubble(g, it.x, y - 1, LES.Actions.ICONS[slotAct.act] || '•');
@@ -845,16 +475,28 @@
       }
     }
 
+    // Day/night: a warm tint at dawn and dusk, then a blue multiply so lit windows and
+    // street lamps (added on top in Ambience.drawScreen) glow against the dark.
     drawNight(g, t, fast) {
       if (fast) { this.nightLevel = 0; return; }
       const hr = (t * 24 + 6) % 24; // dusk 19:00-20:30, dawn 06:00-07:00
       let night = hr >= 20.5 || hr < 6 ? 1 : hr >= 19 ? (hr - 19) / 1.5 : hr < 7 ? 1 - (hr - 6) : 0;
       this.nightLevel = night;
+      const golden = hr >= 17.5 && hr < 20 ? Math.min(1, (hr - 17.5) / 1, (20 - hr) / 0.8) : hr >= 6 && hr < 7.5 ? Math.min(1, (7.5 - hr) / 1.2) * 0.7 : 0;
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      if (golden > 0) {
+        g.globalCompositeOperation = 'soft-light';
+        g.fillStyle = `rgba(255,150,60,${0.45 * golden})`;
+        g.fillRect(0, 0, this.cv.width, this.cv.height);
+        g.globalCompositeOperation = 'source-over';
+      }
       if (night <= 0) return;
       if (LES.Ambience.weather(this.w.lastDay < 0 ? 0 : this.w.lastDay).id === 'rain') night = Math.min(1, night + 0.1);
-      g.setTransform(1, 0, 0, 1, 0, 0);
-      g.fillStyle = `rgba(12,20,52,${0.38 * night})`;
+      const k = 0.62 * night, mix = (a, b) => Math.round(a + (b - a) * k);
+      g.globalCompositeOperation = 'multiply';
+      g.fillStyle = `rgb(${mix(255, 40)},${mix(255, 52)},${mix(255, 110)})`;
       g.fillRect(0, 0, this.cv.width, this.cv.height);
+      g.globalCompositeOperation = 'source-over';
     }
 
     drawLabels(g, w) {
