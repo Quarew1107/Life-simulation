@@ -4,7 +4,8 @@
   'use strict';
   const U = LES.U, C = LES.C, P = LES.P, A = LES.Actions, F = LES.Finance, Fa = LES.Family, Lb = LES.Labour;
 
-  const mortalityYear = age => age < 1 ? 0.004 : age < 18 ? 0.0003 : 0.0004 + 0.000015 * Math.exp(0.1 * age);
+  // Yearly death risk by age; mult scales the old-age (Gompertz) part (settings: mortMult).
+  const mortalityYear = (age, mult = 1) => age < 1 ? 0.004 : age < 18 ? 0.0003 : 0.0004 + 0.000015 * mult * Math.exp(0.1 * age);
   LES.mortalityYear = mortalityYear;
 
   class World {
@@ -13,6 +14,7 @@
       const v = LES.validateConfig(this.cfg);
       if (v.blockers.length) throw new Error('Invalid settings: ' + v.blockers.join(' '));
       this.derived = LES.derive(this.cfg);
+      this.attachSystems();
       this.rng = {};
       for (const k of ['init', 'decide', 'outcome', 'jobs', 'market', 'biz', 'family', 'luck', 'mortality', 'migration', 'goals']) {
         this.rng[k] = new LES.RNG(`${this.cfg.seed}|${k}`);
@@ -54,10 +56,19 @@
       this.goal = this.derived.goal;
       this.milestoneList = [...new Set([U.RM(1e5), U.RM(1e6), U.RM(1e7), this.goal])].filter(x => x <= this.goal).sort((a, b) => a - b);
       this.initFounders();
+      for (const s of this.sys.init) s.init(this);
       F.updateRent(this);
       this.refreshLiving();
       LES.Market.monthly(this);
       this.snapshotMonth();
+    }
+
+    // Optional systems switched on by the settings (not saved: rebuilt from cfg on load).
+    attachSystems() {
+      Object.defineProperty(this, 'sys', { value: LES.Systems.active(this.cfg), enumerable: false, writable: true, configurable: true });
+    }
+    afterLoad() {
+      this.attachSystems();
     }
 
     macro() { return C.REGIMES[this.regime]; }
@@ -193,6 +204,7 @@
         } else this.childDay(p);
       }
       Fa.daily(this);
+      for (const s of this.sys.day) s.day(this);
       this.endOfDay();
       if (this.date.lastOfMonth) this.monthClose();
       if (this.date.lastOfYear) this.yearClose();
@@ -226,7 +238,7 @@
           Fa.comeOfAge(this, p);
         }
         // Poor health raises mortality; long unhappiness a little too.
-        const pYear = Math.min(0.95, mortalityYear(age) * (1 + Math.max(0, 60 - p.health) / 15) * (p.adult ? 1 + Math.max(0, 40 - p.happy) / 80 : 1));
+        const pYear = Math.min(0.95, mortalityYear(age, this.cfg.mortMult) * (1 + Math.max(0, 60 - p.health) / 15) * (p.adult ? 1 + Math.max(0, 40 - p.happy) / 80 : 1));
         if (R.next() < 1 - Math.pow(1 - pYear, 1 / 365)) {
           this.die(p, age >= 60 ? 'old age' : age < 1 ? 'infant illness' : 'illness');
         }
@@ -311,6 +323,7 @@
       this.refreshLiving();
       for (const p of this.living) if (p.alive && !p.adult) Fa.childMonth(this, p);
       LES.Market.monthly(this);
+      for (const s of this.sys.month) s.month(this);
       for (const p of this.people) {
         if (!p.alive) continue;
         if (!p.away) p.nw = P.netWorth(this, p);
@@ -352,6 +365,7 @@
         this.ageAttributes(p, age);
         p.attHist.push([this.day, p.att.map(x => Math.round(x * 100) / 100)]);
       }
+      for (const s of this.sys.year) s.year(this);
     }
 
     // Crowded town: an empty lot becomes a new estate (or shop row) for the most crowded need.
@@ -449,6 +463,7 @@
       if (p.homeId >= 0) this.occupancy[p.homeId] = Math.max(0, (this.occupancy[p.homeId] || 0) - 1);
       this.stats.deaths++;
       P.log(this, p, `Died aged ${age} (${cause})`, 'death', p.adult || cause.includes('abandon') || cause.includes('neglect') ? 1 : 0);
+      for (const s of this.sys.death) s.death(this, p, cause);
       Fa.settleEstate(this, p);
       p.nw = 0;
       p.nwHist.push([this.day, 0]);
@@ -490,6 +505,8 @@
         crowding: this.crowding, pressure: this.townMood.pressure, opportunity: this.townMood.opportunity,
         away: this.counts.away || 0, migrants: adults.filter(p => p.migrant).length, stratMedian,
       });
+      const row = this.history[this.history.length - 1];
+      for (const s of this.sys.snapshot) s.snapshot(this, row);
     }
 
     // ---------------- Verification ----------------
@@ -537,6 +554,7 @@
         if (e.heirs.length && dist !== e.total) errs.push(`Estate of P${e.decedent}: ${dist} != ${e.total}`);
       }
       if (!Number.isFinite(this.mkt.idx) || this.mkt.stocks.some(st => !Number.isFinite(st.price)) || !Number.isFinite(this.price)) errs.push('market/prices not finite');
+      for (const s of this.sys.invariants) s.invariants(this, errs);
       return errs;
     }
 
@@ -547,6 +565,7 @@
           p.att.map(a => Math.round(a * 1e4)).join(','), p.job ? p.job.jobId + p.job.salary : '-', p.partnerId, p.strategy);
       }
       for (const b of this.biz) parts.push(b.cash, Math.round(b.scale), b.open ? 1 : 0);
+      for (const s of this.sys.hash) s.hash(this, parts);
       return LES.hashString(parts.join('|')).map(x => x.toString(16).padStart(8, '0')).join('');
     }
   }

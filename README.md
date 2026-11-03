@@ -6,6 +6,15 @@ A town of strangers in **Bandar Rezeki** each try to reach **RM100 million**. No
 
 Double-click **`Start Simulation.bat`**, or open `index.html` in Edge or Chrome. Nothing to install, and it works offline. The pixel font loads from Google Fonts when you're online. Offline, a plain font is used instead.
 
+**Presets:** the setup screen starts on **Malaysia today**, calibrated to DOSM figures:
+- the welfare safety net is on
+- about 1.6 children per woman
+- life expectancy of about 75
+
+**Classic** brings back the original rules: harsh mode, about 2.5 children per woman and longer lives. Changing any preset setting switches the preset to Custom.
+
+**Save / load:** 💾 **Save** in the top bar downloads the whole world as a compressed file. Open it again with **📂 Load saved world** on the New world screen. A loaded world continues exactly as it would have without saving.
+
 | Control | What it does |
 |---|---|
 | Click a person | Their life: net worth, "Why did they do that?" probabilities, attributes and ageing genes, lifestyle, career, family tree, life story |
@@ -21,9 +30,17 @@ Double-click **`Start Simulation.bat`**, or open `index.html` in Edge or Chrome.
 
 At slow speeds the night (23:00–06:00) fast-forwards automatically. You can toggle this in the top bar.
 
-**Engine tests:** open `tests.html` and click **Run all tests**. This runs the FSD acceptance cases, a determinism check, and 60-year invariant sweeps. `tools/balance.html?seeds=a,b&years=120` runs a headless balance report. For developers:
+**Engine tests:** open `tests.html` and click **Run all tests**. This runs:
+- the FSD acceptance cases and a determinism check
+- 60-year invariant sweeps
+- the foundation checks: the Classic preset still reproduces the original engine exactly, save/load is exact, and optional systems plug in cleanly
+
+`tools/balance.html?seeds=a,b&years=120` runs a headless balance report. `tools/calibration.html` runs the default settings for 80 years and compares them with Malaysian figures (life expectancy, fertility, unemployment, wages, income inequality).
+
+For developers:
 - `tools/hash.html?seeds=a,b&days=1500` prints state fingerprints, to confirm that an optimisation changes nothing.
 - `tools/profile.html?founders=5000&days=60` times the engine and lists the hottest functions.
+- With Node installed, `node tools/headless.js tests|soak|calib|hash|bench` runs the same checks without a browser (see the top of the file).
 
 ## Music and sound
 
@@ -66,6 +83,24 @@ Bigger maps have more of everything, plus empty lots the town builds on as it gr
 **Performance:** small towns run at hundreds of simulated days per second. A 5,000-person Metropolis runs roughly 15–30 days/s at MAX on a Ryzen 5 laptop (about 12–25 seconds per simulated year), depending on how busy the laptop is. It slows down as the town grows. People show as coloured dots when zoomed out.
 - At 10 days/s and faster, the simulation runs in short slices between screen frames, so big towns keep the map responsive.
 - Speed-ups never change results: the same seed and settings still give exactly the same history.
+
+## How the town looks
+
+The map is drawn in a 3/4 top-down pixel style: you see each building's roof and front wall, with a soft shadow. Everything is drawn by code from one shared palette, with no image files, so it still works offline and costs almost nothing per frame.
+- **Malaysian buildings:**
+  - kampung stilt houses with zinc or attap roofs
+  - Peranakan-style shophouses with five-foot-ways
+  - PPR flats with laundry poles and motorbikes
+  - terrace rows with porches and cars
+  - condos with rooftop pools
+  - gated bungalows
+- **Streets:** grass, pavements, longkang drains and zebra crossings.
+- **People:**
+  - face the way they walk, with shading and an outline
+  - wear work uniforms
+  - wear festival clothes on their own community's festivals: baju Melayu and songkok or baju kurung at Raya, saree or kurta at Deepavali, red at Chinese New Year
+- **Light:** at dusk the town turns golden. At night, real windows, mamak fronts, cinema marquees and karaoke neon light up.
+- **Performance:** only on-screen people are drawn, so big towns stay smooth when zoomed in.
 
 ## What's simulated
 
@@ -116,6 +151,12 @@ Bigger maps have more of everything, plus empty lots the town builds on as it gr
 
 ## Planned next
 
-Character and family creator, save/load, Research Mode (thousands of headless runs with comparisons), life replay and forks, and a downloadable desktop package.
+The roadmap is in `docs/ROADMAP.md`:
+- social class, religion and an ethnicity update
+- crime, justice, drugs and gangs
+- elections, laws and a town treasury
+- what-if scenarios: Born Equal, Great Reset, Eternal Life, Education Ban and more
+
+Each new system can be switched off, and with all of them off the Classic preset reproduces the original engine exactly.
 
 *Results describe outcomes of this simulation under its assumptions and random seed. They do not establish universal real-world causes of success.*

@@ -19,6 +19,19 @@
     return null;
   };
 
+  const fcache = { day: -1, f: null };
+  // Festival clothes on the big days (only for the communities that celebrate them).
+  A.festivalOutfit = function (p, day) {
+    if (!p.adult) return null;
+    if (fcache.day !== day) { fcache.day = day; fcache.f = A.festival(day); } // once per day, not per person
+    const f = fcache.f;
+    if (!f) return null;
+    if (f.id === 'raya' && p.eth === 'malay') return p.sex === 'M' ? 'bajuMelayu' : 'kurung';
+    if (f.id === 'deepavali' && p.eth === 'indian') return p.sex === 'F' ? 'saree' : 'kurta';
+    if (f.id === 'cny' && p.eth === 'chinese') return 'cny';
+    return null;
+  };
+
   // ---- Calendar: festivals (lunar ones drift ~11 days earlier each year) ----
   const lunar = (day, baseDoy) => { const y = Math.floor(day / 365); return ((baseDoy - 11 * y) % 365 + 365) % 365; };
   A.festival = function (day) {
@@ -42,20 +55,18 @@
   };
 
   // ---- Night lights layer (built once per town version) ----
-  A.buildLights = function (town) {
+  A.buildLights = function (town, rects) {
     const T = town.T, cv = document.createElement('canvas');
     cv.width = town.W * T; cv.height = town.H * T;
     const g = cv.getContext('2d');
-    for (const b of town.buildings) {
-      if (['lot', 'builtlot', 'padi', 'park', 'construction', 'memorial'].includes(b.kind)) continue;
-      const X = b.x * T, Y = b.y * T, W = b.w * T, H = b.h * T;
-      const n = Math.max(2, Math.floor(W * H / 500));
-      for (let i = 0; i < n; i++) {
-        if (rnd(b.id * 977 + i) < 0.35) continue;
-        const x = X + 4 + rnd(b.id * 131 + i * 7) * (W - 10), y = Y + 8 + rnd(b.id * 71 + i * 13) * (H - 14);
-        g.fillStyle = 'rgba(255,214,120,0.9)'; g.fillRect(Math.round(x), Math.round(y), 3, 3);
-      }
-    }
+    // Lit windows: a stable random share of the real windows the art painted.
+    (rects || []).forEach((r, i) => {
+      if (rnd(i * 977 + 13) >= r.lit) return;
+      g.fillStyle = r.c || (rnd(i * 31 + 5) < 0.75 ? 'rgba(255,214,120,0.95)' : 'rgba(190,225,255,0.85)');
+      g.fillRect(r.x, r.y, r.w, r.h);
+      g.fillStyle = 'rgba(255,200,110,0.18)';
+      g.fillRect(r.x - 1, r.y - 1, r.w + 2, r.h + 2);
+    });
     // Street lamps along every road
     const glow = (x, y) => {
       const gr = g.createRadialGradient(x, y, 0, x, y, 14);

@@ -44,8 +44,14 @@
     if (app.world && app.world.lastDay > 365) { try { app.prevSummary = LES.Report.summary(app.world); } catch (e) { console.error(e); } }
     let w;
     try { w = new LES.World(cfg); } catch (e) { showError(`Could not create world: ${e.message}`); console.error(e); return false; }
+    app.useWorld(w);
+    return true;
+  };
+
+  // Show a world (new or loaded): reset selection, camera, feed and audio.
+  app.useWorld = function (w) {
     app.world = w;
-    app.lastCfg = cfg;
+    app.lastCfg = w.cfg;
     app.selected = -1;
     app.dayFrac = 0;
     app._rich.t = 0;
@@ -59,7 +65,48 @@
     LES.Audio.newWorld();
     renderSpeed();
     UI.update(true);
-    return true;
+  };
+
+  // ---- Save / load (gzip-compressed JSON where the browser supports it) ----
+  app.saveWorld = async function () {
+    const w = app.world;
+    if (!w) return;
+    const wasPaused = app.paused;
+    app.paused = true; renderSpeed();
+    try {
+      const text = LES.Save.toJSON(w);
+      let blob = new Blob([text], { type: 'application/json' }), ext = 'json';
+      if (typeof CompressionStream === 'function') {
+        blob = await new Response(blob.stream().pipeThrough(new CompressionStream('gzip'))).blob();
+        ext = 'json.gz';
+      }
+      const d = U.dayToDate(w.day);
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `LES-${w.cfg.seed}-Y${d.year}-${U.MONTH_NAMES[d.month]}${d.dom}.${ext}`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      UI.toast(`💾 Saved ${U.esc(a.download)}`);
+    } catch (e) { console.error(e); showError(`Save failed: ${e.message}`); }
+    app.paused = wasPaused; renderSpeed();
+  };
+  app.loadWorld = async function (file) {
+    try {
+      let bytes = new Uint8Array(await file.arrayBuffer());
+      if (bytes[0] === 0x1f && bytes[1] === 0x8b) {
+        if (typeof DecompressionStream !== 'function') throw new Error('This browser cannot open compressed saves.');
+        bytes = new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
+      }
+      const w = LES.Save.fromJSON(new TextDecoder().decode(bytes));
+      const errs = w.checkInvariants();
+      if (errs.length) throw new Error(`the saved world failed its consistency checks (${errs[0]})`);
+      app.prevSummary = null;
+      app.useWorld(w);
+      app.paused = true; renderSpeed();
+      LES.Setup.close();
+      UI.toast(`📂 Loaded ${U.esc(file.name)} (${U.fmtDate(w.day)})`);
+      return true;
+    } catch (e) { console.error(e); showError(`Could not load ${file.name}: ${e.message}`); return false; }
   };
 
   app.showEnd = function () {
@@ -330,6 +377,7 @@
       document.activeElement.blur(); // so Space toggles pause instead of re-clicking
     });
     $('btn-step').addEventListener('click', () => { stepDay(); $('btn-step').blur(); });
+    $('btn-save').addEventListener('click', () => app.saveWorld());
     $('btn-new').addEventListener('click', () => { app.paused = true; renderSpeed(); LES.Setup.open(app, false); });
     $('btn-report').addEventListener('click', () => { try { LES.Report.open(app.world, app.prevSummary); } catch (e) { console.error(e); showError(`Report failed: ${e.message}`); } });
     window.addEventListener('keydown', e => {
