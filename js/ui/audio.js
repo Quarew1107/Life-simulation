@@ -2,6 +2,8 @@
 // (not Web Audio decoding) so it also works when index.html is opened straight from
 // disk. Off by default; the on/off choice and both volumes are remembered.
 //
+// Music plays only at 1x (and a little faster at 10x); at higher speeds it fades out
+// and waits, while sound effects and event cues keep playing at every speed.
 // Music follows the town: a setup theme, calm daytime / night city in normal times,
 // an upbeat track in a boom, a melancholy one in a recession, a festival cue when
 // Hari Raya, Chinese New Year, Deepavali or Christmas begins, and the report theme
@@ -41,7 +43,9 @@
   Au.sfx = saved('les-sfx-vol', Au.sfx);
 
   // ---------------- Music: two players crossfading ----------------
-  const players = [], state = { cur: -1, key: null, since: 0, fade: null, festPlayed: {}, lastFestAt: -1e9, festKey: null };
+  const players = [], state = { cur: -1, key: null, since: 0, fade: null, festPlayed: {}, lastFestAt: -1e9, festKey: null, mute: 1, lastTick: 0, rate: 1 };
+  // Music speed by simulation speed index: 1x normal, 10x a bit faster, faster speeds: none.
+  const MUSIC_RATE = [1, 1.5];
   function player() {
     const a = new Audio();
     a.preload = 'auto';
@@ -56,6 +60,8 @@
     a.src = url(MUSIC[key]);
     a.loop = !FESTIVAL_TRACKS.includes(key);
     a.volume = 0;
+    a.preservesPitch = true; // faster tempo, same pitch
+    a.playbackRate = state.rate;
     playSafe(a);
     state.cur = next; state.key = key; state.since = nowS();
     state.fade = { t0: nowS(), from: old || null, fromVol: old ? old.volume : 0 };
@@ -64,8 +70,8 @@
     const f = state.fade, a = players[state.cur];
     if (!a) return;
     const k = f ? Math.min(1, (nowS() - f.t0) / FADE_S) : 1;
-    a.volume = Au.music * k;
-    if (f && f.from) f.from.volume = f.fromVol * (1 - k);
+    a.volume = Au.music * k * state.mute;
+    if (f && f.from) f.from.volume = f.fromVol * (1 - k) * state.mute;
     if (f && k >= 1) { if (f.from) { f.from.pause(); f.from.removeAttribute('src'); f.from.load(); } state.fade = null; }
   }
 
@@ -86,7 +92,7 @@
     if (state.festKey) return state.festKey; // plays to the end of the cue
     if (w.regime === 'growth') return 'boom';
     if (w.regime === 'recession') return 'recession';
-    return app.speedIdx <= 2 && LES.isNight(app.dayFrac) ? 'night' : 'day';
+    return LES.isNight(app.dayFrac) ? 'night' : 'day';
   }
 
   // ---------------- Sound effects ----------------
@@ -119,7 +125,7 @@
     const t = e.text, mine = e.pid >= 0 && e.pid === app.selected;
     if (mine && !fromLog) return;
     if (/REACHED THE GOAL/.test(t)) return Au.play('fanfare', true);
-    if (!(mine || e.imp >= 2) || (app.speedIdx >= 4 && !mine && e.imp < 3)) return;
+    if (!(mine || e.imp >= 2)) return; // every speed: per-sound cooldowns keep fast runs from piling up
     let s = null;
     switch (e.cat) {
       case 'goal': if (/^Achieved a life goal/.test(t)) s = 'fanfare'; break;
@@ -152,12 +158,23 @@
   Au.tick = function (app) {
     if (!Au.on) return;
     watchSelected(app);
-    const want = wanted(app);
-    const t = nowS();
+    const t = nowS(), dt = Math.min(0.5, t - (state.lastTick || t));
+    state.lastTick = t;
+    // Music only at 1x and 10x (and always on the setup and report screens).
+    const allowed = !!Au.scene || app.speedIdx < MUSIC_RATE.length;
+    state.mute = Math.max(0, Math.min(1, state.mute + (allowed ? 1 : -1) * dt / FADE_S));
+    const rate = Au.scene ? 1 : MUSIC_RATE[app.speedIdx] || 1;
+    if (rate !== state.rate) { state.rate = rate; for (const a of players) if (a) a.playbackRate = rate; }
+    const cur = players[state.cur];
+    if (!allowed) {
+      stepFade();
+      if (state.mute <= 0 && cur && !cur.paused) cur.pause(); // resumes where it left off
+    } else if (cur && cur.paused && cur.src && !cur.ended) playSafe(cur);
+    const want = allowed ? wanted(app) : state.key;
     // Hold a track for a while so fast regime flips don't make the music jump around.
     const urgent = Au.scene || state.key === 'setup' || state.key === 'report' || FESTIVAL_TRACKS.includes(want);
-    if (want !== state.key && (urgent || t - state.since > MIN_HOLD_S || state.key === null)) startTrack(want);
-    stepFade();
+    if (allowed && want !== state.key && (urgent || t - state.since > MIN_HOLD_S || state.key === null)) startTrack(want);
+    if (allowed) stepFade();
 
     const w = app.world;
     if (!w || app.paused || app.speedIdx > 2 || Au.scene) { town.lastTm = -1; return; }
