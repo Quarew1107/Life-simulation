@@ -14,6 +14,10 @@
     medWage: { label: 'Median monthly wage (Year-1 RM)', target: 3000, band: 600, fmt: x => `RM${Math.round(x)}`, src: 'DOSM formal-sector median wage, Q2 2026' },
     hhGini: { label: 'Household income Gini', target: 0.39, band: 0.06, fmt: x => x.toFixed(2), src: 'DOSM Household Income Survey 2024' },
     starve: { label: 'Deaths from starvation (share)', target: 0, band: 0.01, fmt: U.fmtPct, src: 'Hardcore poverty nearly eradicated (DOSM HIES 2024)' },
+    // Crime rates are compared at the "Realistic" scale (the town's rate divided by the intensity).
+    crimeIdx: { label: 'Index crime per 100k (realistic scale)', target: 170, band: 70, fmt: x => x.toFixed(0), src: 'DOSM Crime Statistics 2025 (58,255 cases in 2024)' },
+    drugUsers: { label: 'Drug users per 100k (realistic scale)', target: 586, band: 250, fmt: x => x.toFixed(0), src: 'AADK 2024 (192,857 users)' },
+    prison: { label: 'Prisoners per 100k (realistic scale)', target: 256, band: 110, fmt: x => x.toFixed(0), src: 'World Prison Brief, Nov 2024 (87,419)' },
   };
 
   // Period life expectancy from deaths and person-years lived in the last `years` years
@@ -65,6 +69,11 @@
     r.hhGini = U.gini(hh);
     const dead = w.people.filter(p => !p.alive && p.causeOfDeath);
     r.starve = dead.length ? dead.filter(p => p.causeOfDeath === 'starvation').length / dead.length : 0;
+    if (w.crime) { // averaged over the yearly history rows after year 5, scaled back to "Realistic"
+      const k = LES.Crime.INTENSITY[w.cfg.crime] || 1, rows = w.history.filter(x => x.cr && x.day > 5 * 365 && U.dayToDate(x.day).month === 11);
+      const avg = f => (rows.length ? rows.reduce((s, x) => s + f(x.cr), 0) / rows.length / k : NaN);
+      r.crimeIdx = avg(c => c.index); r.drugUsers = avg(c => c.users); r.prison = avg(c => c.prison);
+    }
     return r;
   };
 

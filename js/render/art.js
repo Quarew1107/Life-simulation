@@ -245,7 +245,7 @@
   }
 
   // Ground surface of each district block, before buildings are drawn on it.
-  const PAVED = new Set(['O', 'H', 'S', 'M', 'D', 'X', 'V', 'Y', 'N']);
+  const PAVED = new Set(['O', 'H', 'S', 'M', 'D', 'X', 'V', 'Y', 'N', 'j']);
   const INDUSTRIAL = new Set(['I', 'W', 'G']);
   function drawGround(g, town, R) {
     const T = town.T, W = town.W * T, H = town.H * T;
@@ -801,6 +801,44 @@
         g.fillStyle = '#55606b'; g.beginPath(); g.moveTo(tx - 1, Y + 5); g.lineTo(tx + 6, Y - 8); g.lineTo(tx + 13, Y + 5); g.fill();
         rect(g, tx + 5, Y - 16, 2, 9, '#e8e4da'); rect(g, tx + 3, Y - 13, 6, 2, '#e8e4da'); // cross
         door(g, tx + 6, Y + H - 2, 6, 9, PAL.wood);
+        break;
+      }
+      // ---- Justice ----
+      case 'police': { // blue-and-white Balai Polis with a patrol car out front
+        const s = building(g, X + 2, Y + 2, W - 4, H - 6, { wall: '#f4f6f8', roof: '#1d3557', wallH: 26, details: 'ac', seed: b.id });
+        rect(g, X + 2, s.wallY + 2, W - 4, 3, '#1d3557');
+        windows(g, X + 8, s.wallY + 8, W - 16, 10, 4, 1, { col: PAL.glass, lit: 1, night: 'rgba(200,230,255,0.95)' });
+        door(g, X + W / 2, Y + H - 4, 10, 10, '#1d3557');
+        rect(g, X + W - 26, Y + H - 12, 16, 8, '#f4f6f8'); rect(g, X + W - 26, Y + H - 9, 16, 2, '#1d3557'); rect(g, X + W - 20, Y + H - 14, 4, 2, '#e63946'); rect(g, X + W - 16, Y + H - 14, 2, 2, '#3a86ff');
+        sign(g, 'POLIS', X + W / 2, Y + 4, '#1d3557', '#f2e8cf');
+        break;
+      }
+      case 'court': { // court with columns and a dome-capped clock tower
+        const s = building(g, X + 2, Y + 4, W - 4, H - 8, { wall: '#eee6d6', roof: '#7a2632', roofType: 'hip', wallH: 26 });
+        for (let i = 0; i < 6; i++) { const cx = X + 8 + i * ((W - 20) / 5); rect(g, cx, s.wallY + 3, 3, s.wallH - 6, '#ffffff'); rect(g, cx + 2, s.wallY + 3, 1, s.wallH - 6, '#cfc6b0'); }
+        door(g, X + W / 2, Y + H - 4, 10, 13, '#5c3b20');
+        g.fillStyle = '#c9a227'; g.beginPath(); g.arc(X + W / 2, Y + 6, 7, Math.PI, 0); g.fill();
+        sign(g, 'MAHKAMAH', X + W / 2, Y + H - 3, '#3d0c15', '#f2c14e');
+        break;
+      }
+      case 'prison': { // high walls, watchtowers, cell blocks and an exercise yard
+        rect(g, X + 4, Y + 4, W - 4, H - 4, 'rgba(0,0,0,0.25)');
+        rect(g, X, Y, W - 2, H - 2, '#8a8f96'); rect(g, X + 4, Y + 4, W - 10, H - 10, '#b8b3a6');
+        rect(g, X, Y, W - 2, 2, '#a3a8ae');
+        for (const [bx, by] of [[10, 10], [10, 44]]) { building(g, X + bx, Y + by, 58, 26, { wall: '#d6d0c4', roof: '#6c757d', wallH: 12, noShadow: true }); windows(g, X + bx + 3, Y + by + 16, 52, 6, 10, 1, { col: '#3a3d44', wide: 0.4, lit: 0.5, night: 'rgba(255,220,140,0.8)' }); }
+        rect(g, X + 76, Y + 12, 54, 58, '#c9b48a'); g.strokeStyle = '#f4f1e8'; g.lineWidth = 1; g.strokeRect(X + 80.5, Y + 16.5, 46, 50); // yard
+        for (const [tx, ty] of [[-3, -3], [W - 9, -3], [-3, H - 9], [W - 9, H - 9]]) { rect(g, X + tx, Y + ty, 10, 10, '#5d666f'); rect(g, X + tx + 2, Y + ty + 2, 6, 3, '#2b2d42'); }
+        for (let x = X + 2; x < X + W - 4; x += 4) rect(g, x, Y - 2, 2, 2, '#c0c0c0'); // razor wire
+        sign(g, 'PENJARA', X + W / 2 - 20, Y + H - 14, '#2b2d42', '#f2e8cf');
+        break;
+      }
+      case 'rehab': {
+        rect(g, X + 2, Y + 2, W - 4, H - 4, '#9cc06f');
+        const s = building(g, X + 4, Y + 8, W - 8, 46, { wall: '#eef6e2', roof: '#52796f', roofType: 'gable', wallH: 22 });
+        windows(g, X + 8, s.wallY + 4, W - 16, 12, 2, 1, { col: PAL.glass });
+        door(g, X + W / 2, Y + 54, 8, 9, PAL.wood);
+        garden(g, X + 6, Y + 60, W - 12, H - 70, R);
+        sign(g, 'PEMULIHAN', X + W / 2, Y + 2, '#2f3e46', '#e9f5db');
         break;
       }
       // ---- Leisure venues ----

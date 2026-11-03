@@ -171,7 +171,15 @@ The map is drawn in a 3/4 top-down pixel style: you see each building's roof and
   - devout Muslims avoid the bar and non-Shariah-compliant shares
   - devotion raises the wish for children and lowers break-ups
   - under the Malaysian interfaith rule, a non-Muslim converts to marry a Muslim (a setting)
-- **Map overlays:** class, religion and ethnicity.
+- **Crime & justice (Crime & vice: Lively, Realistic, Lawless or Off):**
+  - **Temptation:** each month every adult gets a temptation score made of need (little cash, no job, cravings), low self-control, age (offending peaks at 18–25), peers and record, minus deterrence (police), devotion, children and a good job. A few people get a crime opportunity. It shows up as a choice in "Why did they do that?", and they may still say no.
+  - **Crimes:** snatch theft, house-breaking, vehicle theft, scams, robbery and assault. About 2% of violent crimes end in a killing.
+  - **Justice:** police solve some cases. Courts convict about 7 in 10 people arrested, less often if they can afford a lawyer. Sentences range from fines to prison. Prisoners lose their jobs, partners may leave and children go to family or welfare. A criminal record lowers hiring chances.
+  - **Drugs:** users start through stress, peers and age. Addiction costs money (to dealers) and health, and some people overdose. People recover by quitting or in rehab, and many relapse. The drug-policy setting picks Malaysian mix, punitive, treatment or decriminalised.
+  - **Gangs:** gangs form around a bold, charismatic offender. They deal drugs, take a share of members' crimes and collect protection money from shops on their turf. They recruit young unemployed people, fight rival gangs and get raided by the police.
+  - **Calibration:** at **Realistic**, rates land near Malaysia's: about 170 index crimes, 590 drug users and 260 prisoners per 100k. **Lively** (the default) multiplies them by 10, so a small town shows something.
+  - **On the map and in the UI:** a justice district (police, court, prison with an exercise yard, rehab), patrol cars, gang graffiti, crime and gang-turf overlays, a Crime tab and a report section.
+- **Map overlays:** class, religion, ethnicity, crime and gang turf.
 - **Report and analysis:** an end-of-run report with a rule-based "why it turned out this way" summary, Hall of Fame, charts and a migrants vs. locals comparison, plus CSV export. In the app: family trees, compare-two-people and Director mode.
 - **Integrity:** a double-entry-style ledger (money is never created or lost), consistency checks every quarter, and deterministic seeds (same seed and settings give the same history).
 

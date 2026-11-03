@@ -37,9 +37,10 @@
     const outBase = C.MIG_BASE_OUT * mult * w.cfg.migOutMult;
     for (const p of w.living) {
       if (!p.alive || p.away || !p.adult || !p.isHead) continue;
+      if (p.inst || (p.partnerId !== null && w.people[p.partnerId].inst)) continue; // nobody leaves town from prison
       const age = P.age(w, p);
       const hardship = (!p.job && p.manages < 0 && !p.retired && age < 64 ? 1 : 0) + (p.stress > 70 ? 0.5 : 0) + (p.cash < p.mcost ? 1 : 0);
-      const push = 1 + 1.5 * ind.pressure + Math.max(0, 0.3 - ind.opportunity) + hardship;
+      const push = 1 + 1.5 * ind.pressure + Math.max(0, 0.3 - ind.opportunity) + hardship + (p.cr ? p.cr.fear : 0); // fear of crime
       const minors = p.careOf.filter(id => w.people[id].alive).length;
       const parentsHere = p.parents.filter(id => { const q = w.people[id]; return q.alive && !q.away; }).length;
       const roots = 1 + 0.7 * (p.partnerId !== null ? 1 : 0) + 0.7 * Math.min(2, minors) + 0.5 * Math.min(2, parentsHere) + (p.manages >= 0 ? 2 : 0);

@@ -34,13 +34,14 @@
       if (seen.has(id)) continue;
       seen.add(id);
       const p = w.people[id];
-      if (!P.isAdult(w, p) || p.away || p.retired || !P.hasCred(p, v.job.req)) continue;
+      if (!P.isAdult(w, p) || p.away || p.inst || p.retired || !P.hasCred(p, v.job.req)) continue;
       if (p.job && p.job.salary >= v.salary) continue;
       const a = U.clamp(LES.Actions.attrScore(p, v.job.w) / 10, 0, 1);
       const e = U.clamp(p.xp[v.job.cat] / 5, 0, 1);
       const q = U.clamp(P.extraQuals(p, v.job.req) / 2, 0, 1);
       const referral = p.netMonth > 0 ? 0.04 : 0; // contacts made at the golf club / lounge
-      cands.push({ p, score: hw[0] * a + hw[1] * e + hw[2] * q + referral, tie: w.rng.jobs.next() });
+      const hm = w.sys.hireWeight.length ? w.sysMul('hireWeight', p, v) : 1; // e.g. a criminal record
+      cands.push({ p, score: (hw[0] * a + hw[1] * e + hw[2] * q + referral) * hm, tie: w.rng.jobs.next() });
     }
     if (!cands.length) { w.stats.vacUnfilled++; return; }
     cands.sort((x, y) => (y.score - x.score) || (y.tie - x.tie) || (x.p.id - y.p.id));
