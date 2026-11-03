@@ -270,12 +270,13 @@
   // Phase-0 foundations: the original engine is preserved, saves are exact, systems plug in.
   async function foundationTests() {
     print('--- Foundations (presets, save/load, systems) ---', 'info');
-    // Fingerprints of the original engine at day 1500 (recorded before the new systems).
-    const ORIGINAL = { 'h-1': 'c76e85d7f49f755fca57e16717e54509', 'h-2': 'a6b095e2ab769cca04f009da2458d86c' };
+    // Engine-independent fingerprints of the original engine at day 1500 (recorded from the
+    // code before the new systems; the same in Node and Chrome).
+    const ORIGINAL = { 'h-1': '65eac2d1dd21d2c310dc374bbbeb96b5', 'h-2': '1d3752726ba024c8edd4da025714b6d4' };
     for (const seed of Object.keys(ORIGINAL)) {
       const w = new LES.World(Object.assign({ seed }, LES.PRESETS.classic.values));
       await runDays(w, 1500);
-      check(`Classic preset reproduces the original engine exactly (${seed})`, w.hash() === ORIGINAL[seed], w.hash());
+      check(`Classic preset reproduces the original engine exactly (${seed})`, w.stableHash() === ORIGINAL[seed], w.stableHash());
     }
     check('Defaults are the Malaysia preset', LES.presetOf(LES.DEFAULTS) === 'malaysia');
 

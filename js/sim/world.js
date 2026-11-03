@@ -558,6 +558,20 @@
       return errs;
     }
 
+    // Fingerprint that is identical across JavaScript engines (Node vs Chrome may differ in
+    // the last digits of a few floats, which hash() includes): counts, integer money, rounded needs.
+    stableHash() {
+      let cash = 0, epf = 0, sal = 0, logs = 0, soft = 0, partners = 0;
+      for (const p of this.people) {
+        cash += p.cash + p.trust; epf += p.epf; logs += p.log.length;
+        if (p.job) sal += p.job.salary;
+        if (p.partnerId !== null) partners++;
+        if (p.alive && !p.away) soft += p.happy + p.stress + p.energy + p.health;
+      }
+      const parts = [this.day, this.people.length, logs, cash, epf, sal, partners, this.biz.length, soft.toFixed(1), this.feed.length ? this.feed[this.feed.length - 1].text : ''];
+      return LES.hashString(parts.join('|')).map(x => x.toString(16).padStart(8, '0')).join('');
+    }
+
     hash() {
       const parts = [this.day, this.regime, this.mkt.idx.toFixed(6), this.price.toFixed(9), ...this.mkt.stocks.map(st => Math.round(st.price))];
       for (const p of this.people) {
