@@ -140,21 +140,69 @@
     UI.update(true);
   }
 
+  // ---------------- Simulation pump (10 days/s and faster) ----------------
+  // Fast speeds simulate in short slices between animation frames (MessageChannel
+  // tasks) instead of inside them, so the simulation is not tied to the frame rate:
+  // a big town that is slow to draw no longer leaves the processor waiting. After a
+  // while without a frame (45 ms, or about two simulated days in a huge town where
+  // one day takes longer than that) the pump waits for the map to be drawn.
+  const PUMP_MS = 14;
+  const pump = new MessageChannel();
+  let pumpOn = false, pumpLast = 0, lastFrameAt = 0, pumpAfterFrame = false, stepMs = 2;
+  const pumpNext = () => {
+    if (performance.now() - lastFrameAt > U.clamp(1.6 * stepMs, 45, 150)) pumpAfterFrame = true;
+    else pump.port2.postMessage(0);
+  };
+  const timedStep = () => {
+    const t = performance.now();
+    safeStep();
+    stepMs = stepMs * 0.8 + (performance.now() - t) * 0.2;
+  };
+  const pumpWanted = () => {
+    const w = app.world;
+    return !!w && !app.paused && !w.ended && !w.pauseRequested && SPEEDS[app.speedIdx].dps >= 10 && !document.hidden;
+  };
+  function kickPump() {
+    if (pumpOn || !pumpWanted()) return;
+    pumpOn = true; pumpLast = performance.now();
+    pump.port2.postMessage(0);
+  }
+  pump.port1.onmessage = function () {
+    if (!pumpWanted()) { pumpOn = false; return; }
+    const w = app.world, sp = SPEEDS[app.speedIdx], t0 = performance.now();
+    if (w.lastDay < 0) safeStep();
+    if (sp.dps === Infinity) {
+      while (performance.now() - t0 < PUMP_MS && !app.paused && !w.ended && !w.pauseRequested) timedStep();
+      app.dayFrac = 0.3;
+      pumpNext();
+    } else {
+      app.dayFrac += Math.min(0.25, (t0 - pumpLast) / 1000) * sp.dps;
+      while (app.dayFrac >= 1 && !app.paused && !w.ended && !w.pauseRequested && performance.now() - t0 < PUMP_MS) { timedStep(); app.dayFrac -= 1; }
+      if (app.dayFrac >= 1) {
+        app.dayFrac = Math.min(app.dayFrac, 2); // can't keep up: run flat out, keep only a small backlog
+        pumpNext();
+      } else {
+        // Nothing due yet: wait for the next day instead of spinning.
+        setTimeout(() => pump.port2.postMessage(0), Math.max(1, (1 - app.dayFrac) / sp.dps * 1000));
+      }
+    }
+    pumpLast = t0;
+  };
+
   // ---------------- Main loop ----------------
   let last = performance.now();
   function frame(now) {
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
+    lastFrameAt = performance.now();
     const w = app.world;
     if (w && !app.paused && !w.ended) {
       const sp = SPEEDS[app.speedIdx];
       app.fast = sp.dps >= 1;
-      if (w.lastDay < 0) safeStep();
-      if (sp.dps === Infinity) {
-        const t0 = performance.now();
-        while (performance.now() - t0 < 18 && !app.paused && !w.ended && !w.pauseRequested) safeStep();
-        app.dayFrac = 0.3;
+      if (sp.dps >= 10) {
+        kickPump(); // fast speeds step in the pump
       } else {
+        if (w.lastDay < 0) safeStep();
         const ff = app.skipNights && sp.dps < 1 && LES.isNight(app.dayFrac) ? NIGHT_FF : 1;
         app.dayFrac += dt * sp.dps * ff;
         let n = 0;
@@ -175,6 +223,7 @@
       UI.directorTick(now);
       LES.Extras.soundTick(w, app.paused);
     }
+    if (pumpAfterFrame) { pumpAfterFrame = false; lastFrameAt = performance.now(); pump.port2.postMessage(0); }
     requestAnimationFrame(frame);
   }
 

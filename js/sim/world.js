@@ -35,7 +35,7 @@
       this.mkt = LES.Market.create();
       this.regime = 'normal';
       this.regimeHist = [{ day: 0, regime: 'normal' }];
-      this.feed = []; this.feedSeq = 0; this.estates = []; this.history = []; this.socialPools = {};
+      this.feed = []; this.feedSeq = 0; this.estates = []; this.history = []; this.socialPools = new Map();
       this.occupancy = {}; this.shoplotOwner = {};
       this.stats = {
         births: 0, deaths: 0, twins: 0, hires: 0, fired: 0, laidOff: 0, promotions: 0, graduations: 0, dropouts: 0,
@@ -249,7 +249,8 @@
           const tf = C.TIERS.food[p.tiers.food], th = C.TIERS.housing[p.tiers.housing];
           const tt = C.TIERS.transport[p.tiers.transport], tl = C.TIERS.leisure[p.tiers.leisure];
           const age = P.age(this, p);
-          const wentOut = p.plan && p.plan.some(s => s.act !== 'REST' && s.act !== 'CHILDCARE');
+          let wentOut = false;
+          if (p.plan) for (const s of p.plan) if (s.act !== 'REST' && s.act !== 'CHILDCARE') { wentOut = true; break; }
           p.energy += 38 + (tf.energy || 0) + (th.energy || 0) + (wentOut ? (tt.energy || 0) : 0);
           p.stress += -2 + (tf.stress || 0) + (th.stress || 0) + (tt.stress || 0) + (tl.stress || 0);
           p.health += (tf.health || 0) + (p.health < 80 ? 0.03 : 0) - (p.stress > 75 ? 0.08 : 0)
@@ -270,8 +271,10 @@
     }
 
     checkMilestones(p) {
+      const gw = P.goalWorth(this, p);
+      if (gw < this.milestoneList[0]) return; // most people, most days
       for (const th of this.milestoneList) {
-        if (P.goalWorth(this, p) < th || p.milestones.includes(th)) continue;
+        if (gw < th || p.milestones.includes(th)) continue;
         p.milestones.push(th);
         const age = Math.floor(P.age(this, p));
         if (th === this.goal) {

@@ -29,7 +29,7 @@
       injuredUntil: -1, ideaUntil: -1, lastEnrollTry: -99999, lastBizTry: -99999, lastInvestDay: -99999,
       earned: { wages: 0, gigs: 0, business: 0, invest: 0, inherit: 0, gifts: 0, interest: 0, welfare: 0, luck: 0 },
       nw: 0, peakNw: 0, milestones: [], log: [], nwHist: [], attHist: [],
-      plan: null, why: null, friends: 0,
+      plan: null, why: null, whyBuf: null, friends: 0, _ageHint: 0, _hungryLogged: false,
     };
   };
 
@@ -46,9 +46,14 @@
   // Qualifications beyond the job's minimum (capped bonus in hiring).
   P.extraQuals = (p, req) => Math.max(0, p.quals.length - (req ? 1 : 0));
 
+  // Same sum as looping C.TIER_CATS (food, housing, transport, leisure), unrolled: hot path.
   P.prestige = function (p) {
+    const T = C.TIERS, t = p.tiers;
     let s = 0;
-    for (const cat of C.TIER_CATS) s += C.TIERS[cat][p.tiers[cat]].prestige || 0;
+    s += T.food[t.food].prestige || 0;
+    s += T.housing[t.housing].prestige || 0;
+    s += T.transport[t.transport].prestige || 0;
+    s += T.leisure[t.leisure].prestige || 0;
     return s;
   };
 

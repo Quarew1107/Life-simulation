@@ -102,6 +102,8 @@
       dis: (pr.dis - 50) / 50, pat: (pr.pat - 50) / 50, risk: (pr.risk - 50) / 50,
       resp: (pr.resp - 50) / 50, res: (pr.res - 50) / 50,
       injured: p.injuredUntil > w.day,
+      // Filled in on first use each day (declared here so every context has one shape).
+      gig: undefined, gigE: 0, vac: undefined, train: undefined, trainR: -1,
     };
   };
 
@@ -142,28 +144,89 @@
     return best;
   };
 
+  // Training courses that build the body (cached: the goal bias asks on every decision).
+  const BODY_TRAINING = new Map();
+  const isBodyTraining = t => {
+    let b = BODY_TRAINING.get(t);
+    if (b === undefined) BODY_TRAINING.set(t, b = !!(t && t.attrs && t.attrs.some(a => C.BODY_ATTRS.includes(a))));
+    return b;
+  };
+
+  // Vacancies a person could apply for, grouped by which qualifications they hold.
+  // Listings only change in Labour.dailyMarket (before anyone decides), so the
+  // filtered lists are rebuilt once per day; order stays best-paid first.
+  let VAC_REQS = null;
+  const vacCache = { w: null, day: -1, list: null, len: -1, byMask: new Map() };
+  function eligibleVacancies(w, p) {
+    if (!VAC_REQS) VAC_REQS = [...new Set(C.JOBS.map(j => j.req || null))];
+    const vc = vacCache;
+    if (vc.w !== w || vc.day !== w.day || vc.list !== w.vacancies || vc.len !== w.vacancies.length) {
+      vc.w = w; vc.day = w.day; vc.list = w.vacancies; vc.len = w.vacancies.length; vc.byMask.clear();
+    }
+    let mask = 0;
+    for (let i = 0; i < VAC_REQS.length; i++) if (P.hasCred(p, VAC_REQS[i])) mask |= 1 << i;
+    let list = vc.byMask.get(mask);
+    if (!list) {
+      list = w.vacancies.filter(v => mask & (1 << VAC_REQS.indexOf(v.job.req || null)));
+      vc.byMask.set(mask, list);
+    }
+    return list;
+  }
+
+  // Strategy and life-goal preferences as fixed-shape rows (every action present, 0 if
+  // none), so the hot loop reads plain fields instead of looking keys up by name.
+  const row = src => ({
+    WORK: src.WORK || 0, GIG: src.GIG || 0, STUDY: src.STUDY || 0, ENROLL: src.ENROLL || 0, APPLY: src.APPLY || 0,
+    TRAIN_BODY: src.TRAIN_BODY || 0, TRAIN_MIND: src.TRAIN_MIND || 0, REST: src.REST || 0, SOCIAL: src.SOCIAL || 0,
+    HEALTH: src.HEALTH || 0, CHILDCARE: src.CHILDCARE || 0, INVEST: src.INVEST || 0, START_BIZ: src.START_BIZ || 0, MANAGE_BIZ: src.MANAGE_BIZ || 0,
+  });
+  const STRAT_ROW = {};
+  const stratRow = s => STRAT_ROW[s] || (STRAT_ROW[s] = row(Object.fromEntries(Object.keys(BIAS).map(k => [k, BIAS[k][s]]).concat([['TRAIN_BODY', BIAS.TRAIN[s]], ['TRAIN_MIND', BIAS.TRAIN[s]]]))));
+  const GOAL_ROW = {}, NO_GOAL = row({});
+  const goalRow = p => (p.goal ? GOAL_ROW[p.goal.id] || (GOAL_ROW[p.goal.id] = row(LES.Goals.DEFS[p.goal.id].bias)) : NO_GOAL);
+
+  // One candidate option; g = the person's life-goal preference for it (goals never
+  // change odds of success). p and ok are filled in later (softmax, resolve).
+  // Labels are only built when shown (A.labelOf), not for every option weighed.
+  function addCand(out, g, id, u, loc, data) {
+    u += g;
+    if (Number.isFinite(u)) out.push({ id, u, loc, data, label: '', p: 0, ok: undefined });
+  }
+
+  // Display text of an option from its action and data (WORK data = the job).
+  A.labelOf = function (id, data) {
+    switch (id) {
+      case 'WORK': return `Work: ${data.title}`;
+      case 'GIG': return `Gig: ${data.name}`;
+      case 'STUDY': return `Class: ${data.name}`;
+      case 'ENROLL': return `Apply: ${data.name}`;
+      case 'APPLY': return `Apply: ${data.job.title}`;
+      case 'TRAIN': return data.name;
+      case 'SOCIAL': return `Leisure: ${C.VENUES[data].name}`;
+      case 'START_BIZ': return `Start a ${data.type.name}`;
+      case 'MANAGE_BIZ': return `Run ${data.name}`;
+      default: return A.LABELS[id];
+    }
+  };
+
   A.candidates = function (w, p, ctx, slot) {
     const n = needs(p), s = p.strategy, out = [], town = w.town, date = w.date;
     // Life-changing choices (study, start a business) are only weighed on a personal
     // monthly "reflection day", so a tiny daily probability cannot snowball.
     const reflect = date.dom === (p.id % 28) + 1;
-    // Every option also gets the person's life-goal preference (never changes odds of success).
-    const add = (id, u, loc, data, label) => {
-      u += LES.Goals.bias(p, id, data);
-      if (Number.isFinite(u)) out.push({ id, u, loc, data, label: label || A.LABELS[id] });
-    };
+    const gb = goalRow(p), B = stratRow(s);
     const canExert = !ctx.injured && p.health >= 15;
 
-    add('REST', 0.3 + 2.2 * n.tired + 1.0 * n.stressed + 0.8 * n.sick - 0.35 * ctx.dis + BIAS.REST[s], p.homeId);
+    addCand(out, gb.REST, 'REST', 0.3 + 2.2 * n.tired + 1.0 * n.stressed + 0.8 * n.sick - 0.35 * ctx.dis + B.REST, p.homeId);
 
     if (p.job && canExert && p.job.lastShiftDay !== w.day && p.energy >= 12) {
       const need = Math.max(0, w.cfg.shiftsPerMonth - p.job.shiftsMonth);
       const daysLeft = date.dim - date.dom + 1;
       const pace = need / daysLeft;
-      let u = 1.0 + 2.2 * Math.min(pace, 1.5) + 0.5 * ctx.resp + 0.4 * ctx.dis + BIAS.WORK[s]
+      let u = 1.0 + 2.2 * Math.min(pace, 1.5) + 0.5 * ctx.resp + 0.4 * ctx.dis + B.WORK
         - 1.2 * n.tired - 0.6 * n.stressed + 0.4 * ctx.urg;
       if (need === 0) u -= 1.8;
-      add('WORK', u, p.job.place, null, `Work: ${p.job.title}`);
+      addCand(out, gb.WORK, 'WORK', u, p.job.place, p.job);
     }
 
     if (canExert && p.energy >= 20 && ctx.age < 75) {
@@ -180,8 +243,8 @@
       const best = ctx.gig, bestE = ctx.gigE;
       if (best) {
         const u = -0.3 + 1.6 * ctx.urg + (p.job || p.manages >= 0 ? -0.6 : 0.7) + 0.5 * Math.log(1 + w.px(bestE) / ctx.daily)
-          + BIAS.GIG[s] - 1.4 * n.tired - 0.4 * n.stressed - (p.retired ? 1 : 0);
-        add('GIG', u, LES.townNear(town, best.place, p.homeId), best, `Gig: ${best.name}`);
+          + B.GIG - 1.4 * n.tired - 0.4 * n.stressed - (p.retired ? 1 : 0);
+        addCand(out, gb.GIG, 'GIG', u, LES.townNear(town, best.place, p.homeId), best);
       }
     }
 
@@ -189,16 +252,16 @@
       const course = C.COURSE_BY_ID[p.enrol.course];
       const monthsIn = (w.day - p.enrol.startDay) / 30.4;
       const behind = U.clamp((monthsIn * 12 - p.enrol.progress) / 24, -1, 1);
-      const u = 1.0 + 0.6 * ctx.dis + 0.5 * ctx.pat + 0.8 * behind + BIAS.STUDY[s] - 1.2 * n.tired - 0.6 * n.stressed;
-      add('STUDY', u, LES.townNear(town, course.place, p.homeId), course, `Class: ${course.name}`);
+      const u = 1.0 + 0.6 * ctx.dis + 0.5 * ctx.pat + 0.8 * behind + B.STUDY - 1.2 * n.tired - 0.6 * n.stressed;
+      addCand(out, gb.STUDY, 'STUDY', u, LES.townNear(town, course.place, p.homeId), course);
     }
 
     if (reflect && !p.enrol && ctx.age < 45 && !p.retired && w.day - p.lastEnrollTry > 60 && p.bankruptUntil < w.day) {
       const pick = A.bestCourse(w, p);
       if (pick) {
-        const u = -1.6 + BIAS.ENROLL[s] + 0.7 * ctx.pat + 0.4 * ctx.dis - 0.06 * Math.max(0, ctx.age - 25)
+        const u = -1.6 + B.ENROLL + 0.7 * ctx.pat + 0.4 * ctx.dis - 0.06 * Math.max(0, ctx.age - 25)
           + 1.2 * pick.value - 0.6 * n.tired - (p.manages >= 0 ? 1 : 0);
-        add('ENROLL', u, LES.townNear(town, pick.course.place, p.homeId), pick.course, `Apply: ${pick.course.name}`);
+        addCand(out, gb.ENROLL, 'ENROLL', u, LES.townNear(town, pick.course.place, p.homeId), pick.course);
       }
     }
 
@@ -209,9 +272,11 @@
       if (ctx.vac === undefined) {
         ctx.vac = null;
         let bestV = -Infinity, seen = 0;
-        for (const v of w.vacancies) { // sorted best-paid first; look at the top 12 they qualify for
+        const list = eligibleVacancies(w, p);
+        for (let i = 0; i < list.length; i++) { // sorted best-paid first; look at the top 12 they qualify for
+          const v = list[i];
           if (v.salary < cur * 1.15) break;
-          if (!P.hasCred(p, v.job.req) || v.appSet.has(p.id)) continue;
+          if (v.appSet.has(p.id)) continue;
           const val = Math.log(v.salary / base) + A.attrScore(p, v.job.w) / 10;
           if (val > bestV) { bestV = val; ctx.vac = v; }
           if (++seen >= 12) break;
@@ -219,9 +284,9 @@
       }
       const best = ctx.vac && !ctx.vac.appSet.has(p.id) ? ctx.vac : null;
       if (best) {
-        const u = (p.job ? -0.6 : 1.5) + 1.0 * ctx.urg + BIAS.APPLY[s] + 0.8 * Math.log(best.salary / base)
+        const u = (p.job ? -0.6 : 1.5) + 1.0 * ctx.urg + B.APPLY + 0.8 * Math.log(best.salary / base)
           - 0.6 * n.tired - (p.manages >= 0 ? 1.2 : 0);
-        add('APPLY', u, best.place, best, `Apply: ${best.job.title}`);
+        addCand(out, gb.APPLY, 'APPLY', u, best.place, best);
       }
     }
 
@@ -238,24 +303,25 @@
       }
       const best = ctx.train, bestR = ctx.trainR;
       if (best) {
-        const u = -0.5 + BIAS.TRAIN[s] + 0.5 * ctx.dis + 0.3 * ctx.pat + 1.2 * bestR - 1.3 * n.tired - 1.2 * ctx.urg - 0.3 * n.stressed;
-        add('TRAIN', u, LES.townNear(town, best.place, p.homeId), best, best.name);
+        // Strategies weigh body and mind training alike (TRAIN_BODY = TRAIN_MIND in B).
+        const u = -0.5 + B.TRAIN_BODY + 0.5 * ctx.dis + 0.3 * ctx.pat + 1.2 * bestR - 1.3 * n.tired - 1.2 * ctx.urg - 0.3 * n.stressed;
+        addCand(out, isBodyTraining(best) ? gb.TRAIN_BODY : gb.TRAIN_MIND, 'TRAIN', u, LES.townNear(town, best.place, p.homeId), best);
       }
     }
 
     if (p.energy >= 10 && p.cash >= w.px(15)) {
       const single = !p.partnerId && ctx.age >= 20 && ctx.age <= 50;
       const u = -0.1 + 1.0 * n.stressed + (single ? 0.4 + 0.6 * p.famDesire / 100 : 0) + 0.04 * (p.att[C.CHA] - 5)
-        + BIAS.SOCIAL[s] - 0.6 * ctx.urg - 0.3 * ctx.dis - 0.4 * n.tired + (ctx.age > 65 ? 0.4 : 0);
+        + B.SOCIAL - 0.6 * ctx.urg - 0.3 * ctx.dis - 0.4 * n.tired + (ctx.age > 65 ? 0.4 : 0);
       // Leisure outing: the venue depends on budget, taste and status (see Goals.pickVenue).
       const vk = LES.Goals.pickVenue(w, p, ctx, slot);
       if (vk) {
         const v = C.VENUES[vk];
-        add('SOCIAL', u + 0.04 * v.joy, LES.townNear(town, vk, p.homeId), vk, `Leisure: ${v.name}`);
+        addCand(out, gb.SOCIAL, 'SOCIAL', u + 0.04 * v.joy, LES.townNear(town, vk, p.homeId), vk);
       }
     }
 
-    if (n.sick > 0.15 && p.cash >= w.px(60)) add('HEALTH', -1.5 + 4 * n.sick + BIAS.HEALTH[s], LES.townNear(town, 'hospital', p.homeId));
+    if (n.sick > 0.15 && p.cash >= w.px(60)) addCand(out, gb.HEALTH, 'HEALTH', -1.5 + 4 * n.sick + B.HEALTH, LES.townNear(town, 'hospital', p.homeId));
 
     if (p.careOf.length) {
       let deficit = 0;
@@ -264,31 +330,31 @@
         if (!c.alive || P.age(w, c) >= 12) continue;
         deficit = Math.max(deficit, U.clamp((8 - c.careSessions) / 8 * (0.3 + date.dom / date.dim), 0, 1));
       }
-      if (deficit > 0) add('CHILDCARE', 0.4 + 1.0 * ctx.resp + 1.6 * deficit + BIAS.CHILDCARE[s] - 0.5 * n.tired, p.homeId);
+      if (deficit > 0) addCand(out, gb.CHILDCARE, 'CHILDCARE', 0.4 + 1.0 * ctx.resp + 1.6 * deficit + B.CHILDCARE - 0.5 * n.tired, p.homeId);
     }
 
     const surplus = p.cash - ctx.mc * (4 - 2 * ctx.risk);
     if (surplus >= w.px(1000) && w.day - p.lastInvestDay > 20) {
       // Rising markets tempt risk-takers (FOMO); this feeds the town's influence on prices.
       const fomo = 2 * Math.max(0, LES.Market.retOver(w, 63) - 0.1) * (ctx.risk + 1) / 2;
-      const u = -0.8 + BIAS.INVEST[s] + 0.7 * ctx.pat + 0.4 * Math.log(1 + surplus / ctx.mc) - 0.5 * ctx.urg + fomo;
-      add('INVEST', u, town.byKind.bursa, surplus);
+      const u = -0.8 + B.INVEST + 0.7 * ctx.pat + 0.4 * Math.log(1 + surplus / ctx.mc) - 0.5 * ctx.urg + fomo;
+      addCand(out, gb.INVEST, 'INVEST', u, town.byKind.bursa, surplus);
     }
 
     if (reflect && !p.retired && ctx.age >= 20 && ctx.age < 65 && p.bankruptUntil < w.day && p.manages < 0 && w.day - p.lastBizTry > 120) {
       const pick = LES.Finance.bestBizType(w, p, ctx);
       if (pick) {
-        let u = -2.5 + BIAS.START_BIZ[s] + 1.3 * ctx.risk - 0.3 * ctx.pat + 0.25 * (pick.skill - 5)
+        let u = -2.5 + B.START_BIZ + 1.3 * ctx.risk - 0.3 * ctx.pat + 0.25 * (pick.skill - 5)
           - 0.5 * p.bizFailures * (1 - (ctx.res + 1) / 2) + (p.ideaUntil > w.day ? 1.0 : 0);
         if (p.job) u -= 0.3 * Math.max(0, Math.log(p.job.salary / w.px(3000)));
-        add('START_BIZ', u, LES.townNear(town, 'bank', p.homeId), pick, `Start a ${pick.type.name}`);
+        addCand(out, gb.START_BIZ, 'START_BIZ', u, LES.townNear(town, 'bank', p.homeId), pick);
       }
     }
 
     if (p.manages >= 0 && canExert && p.energy >= 12) {
       const b = w.biz[p.manages];
-      const u = 1.2 + BIAS.MANAGE_BIZ[s] + 0.4 * ctx.resp + 0.4 * ctx.dis - 1.2 * n.tired - 0.5 * n.stressed + (b.mgmt < 16 ? 0.6 : -0.6);
-      add('MANAGE_BIZ', u, b.place, b, `Run ${b.name}`);
+      const u = 1.2 + B.MANAGE_BIZ + 0.4 * ctx.resp + 0.4 * ctx.dis - 1.2 * n.tired - 0.5 * n.stressed + (b.mgmt < 16 ? 0.6 : -0.6);
+      addCand(out, gb.MANAGE_BIZ, 'MANAGE_BIZ', u, b.place, b);
     }
     return out;
   };
@@ -364,7 +430,8 @@
         p.happy = Math.min(100, p.happy + v.joy * 0.1);
         p.joyEma += (1 - p.joyEma) * v.joy / 100;
         if (v.network) p.netMonth++;
-        (w.socialPools[`${slot}|${c.loc}`] = w.socialPools[`${slot}|${c.loc}`] || []).push(p.id);
+        const key = c.loc * 2 + slot, pool = w.socialPools.get(key); // who is at this venue in this slot
+        if (pool) pool.push(p.id); else w.socialPools.set(key, [p.id]);
         break;
       }
       case 'HEALTH':
@@ -405,12 +472,39 @@
     p.hunger = U.clamp(p.hunger, 0, 100);
   };
 
+  // One slot of the "Why did they do that?" record. Kept compactly in reusable typed
+  // arrays: holding everyone's option objects until the next day was a large
+  // garbage-collection cost in big towns. The panel reads .options as usual.
+  const WHY_MAX = 16;
+  class WhySlot {
+    constructor() {
+      this.n = 0; this.chosen = ''; this.act = ''; this.forced = false; this.ok = undefined;
+      this.ids = new Array(WHY_MAX).fill(''); this.refs = new Array(WHY_MAX).fill(null);
+      this.u = new Float64Array(WHY_MAX); this.pr = new Float64Array(WHY_MAX);
+    }
+    record(cands, chosen, forced) {
+      const n = Math.min(WHY_MAX, cands.length);
+      for (let i = 0; i < n; i++) {
+        const c = cands[i];
+        this.ids[i] = c.id; this.refs[i] = c.data; this.u[i] = c.u; this.pr[i] = c.p;
+      }
+      for (let i = n; i < this.n; i++) this.refs[i] = null; // let go of yesterday's extras
+      this.n = n; this.chosen = chosen.label; this.act = chosen.id; this.forced = forced; this.ok = chosen.ok;
+    }
+    get options() {
+      const out = [];
+      for (let i = 0; i < this.n; i++) out.push({ id: this.ids[i], label: A.labelOf(this.ids[i], this.refs[i]), u: this.u[i], p: this.pr[i] });
+      return out;
+    }
+  }
+
   // Plan and act both slots for one adult. Stores the plan (for the map) and the
   // probability table (for the "Why" panel).
   A.liveDay = function (w, p) {
     const ctx = A.context(w, p);
     p.plan = [];
-    const why = [];
+    const buf = p.whyBuf || (p.whyBuf = [new WhySlot(), new WhySlot()]);
+    let slots = 0;
     for (let slot = 0; slot < 2; slot++) {
       if (!p.alive) break;
       const cands = A.candidates(w, p, ctx, slot);
@@ -423,13 +517,14 @@
       } else {
         chosen = A.choose(w, cands);
       }
+      chosen.label = A.labelOf(chosen.id, chosen.data);
       A.resolve(w, p, chosen, ctx, slot);
       // sub = which job / gig / training, so the map can show movers vs indoor work.
       const sub = chosen.id === 'WORK' ? p.job && p.job.jobId : typeof chosen.data === 'string' ? chosen.data : chosen.data && typeof chosen.data.id === 'string' ? chosen.data.id : null;
       p.plan.push({ act: chosen.id, label: chosen.label, loc: chosen.loc, ok: chosen.ok, sub });
-      // Raw candidates are kept; the Why panel sorts them only when it is shown.
-      why.push({ chosen: chosen.label, act: chosen.id, forced, ok: chosen.ok, options: cands });
+      buf[slot].record(cands, chosen, forced);
+      slots++;
     }
-    p.why = why;
+    p.why = slots === 2 ? buf : buf.slice(0, slots);
   };
 })(globalThis.LES = globalThis.LES || {});
