@@ -40,7 +40,11 @@
   const GANG_COLOURS = ['#e63946', '#8338ec', '#ff8c42', '#06d6a0', '#3a86ff', '#ffbe0b', '#d62828', '#8d99ae'];
 
   const K = w => CR.INTENSITY[w.cfg.crime] || 10;
-  const police = w => CR.POLICE[w.cfg.police] || 1;
+  // Police strength: with a government, set by how many officers the budget pays for
+  // (officers per 1,000 residents relative to Malaysia's ~4); otherwise the setting.
+  const police = w => (w.gov && Number.isFinite(w.gov.policeFactor) ? w.gov.policeFactor : CR.POLICE[w.cfg.police] || 1);
+  CR.policeFactor = police;
+  const drugPolicy = w => (w.policy ? w.policy.drugPolicy : w.cfg.drugPolicy);
   const n01 = v => (v - 50) / 50;
   const free = p => p.alive && !p.away && !p.inst;
   const state = w => w.crime;
@@ -156,8 +160,8 @@
 
   // ---------- Arrest, court, prison ----------
   function institution(w, kind) {
-    const t = w.town, k = kind === 'rehab' ? 'rehab' : 'prison';
-    if (t.kinds[k] && t.kinds[k].length) return t.kinds[k][0];
+    const t = w.town;
+    for (const k of kind === 'remand' ? ['jail', 'police', 'prison'] : [kind === 'rehab' ? 'rehab' : 'prison']) if (t.kinds[k] && t.kinds[k].length) return t.kinds[k][0];
     return t.byKind.welfare !== undefined ? t.byKind.welfare : 0;
   }
 
@@ -193,10 +197,21 @@
     P.log(w, p, kind === 'prison' ? 'Released from prison' : 'Finished drug rehabilitation', 'crime', 1);
   }
 
+  // Arrest: held in the police lock-up (remand) until the court hears the case.
   function arrest(w, c) {
     const p = w.people[c.off], st = state(w), R = w.rng.crime, def = CR.TYPES[c.type];
     if (!p || !free(p) || !p.adult) return;
     st.arrests++;
+    const days = c.type === 'murder' ? R.int(60, 180) : R.int(3, 45);
+    p.inst = { kind: 'remand', until: w.day + days, loc: institution(w, 'remand'), why: def.name.toLowerCase(), since: w.day, case: c };
+    p.stress = Math.min(100, p.stress + 15);
+    st.remanded++;
+    P.log(w, p, `Arrested for ${def.name.toLowerCase()} and held in the police lock-up`, 'crime', 1);
+  }
+
+  // The court hears the case at the end of remand.
+  function verdict(w, p, c) {
+    const st = state(w), R = w.rng.crime, def = CR.TYPES[c.type], served = (w.day - (c.remandFrom || w.day)) / 30.4;
     // A lawyer lowers the chance of conviction - if they can afford one.
     let conv = 0.72 + (p.cr.rec ? 0.08 : 0);
     if (p.cash > w.px(20000)) { const fee = Math.min(p.cash, w.px(R.range(5000, 30000))); w.ledger.spend(p, 'cash', 'MERCHANT', fee); conv *= 0.62; st.lawyers++; }
@@ -210,14 +225,14 @@
       P.log(w, p, `Convicted of ${def.name.toLowerCase()} and fined ${U.fmtMoney(fine)}`, 'crime', 1);
       return;
     }
-    const months = Math.max(1, Math.round(def.months * R.range(0.6, 1.5) * (p.cr.rec ? 1.4 : 1)));
+    const months = Math.max(1, Math.round(def.months * R.range(0.6, 1.5) * (p.cr.rec ? 1.4 : 1) - served)); // remand counts toward the sentence
     CR.admit(w, p, 'prison', months, def.name.toLowerCase());
     if (c.type === 'murder') w.pushFeed({ day: w.day, pid: p.id, text: `${P.name(p)} was convicted of murdering ${P.name(w.people[c.victim])}`, cat: 'crime', imp: 2 });
   }
 
   // ---------- Drugs ----------
   function drugsMonth(w, p, R) {
-    const cr = p.cr, st = state(w), age = P.age(w, p), policy = w.cfg.drugPolicy;
+    const cr = p.cr, st = state(w), age = P.age(w, p), policy = drugPolicy(w);
     if (!cr.user) {
       if (cr.addict > 0) { // in recovery: relapse risk falls with time clean
         cr.clean++;
@@ -369,13 +384,13 @@
     init(w) {
       w.crime = {
         cases: [], gangs: [], month: {}, total: {}, hist: [], victimsByClass: {},
-        arrests: 0, convictions: 0, acquitted: 0, lawyers: 0, admissions: 0, rehabAdmissions: 0, released: 0, reoffended: 0,
+        arrests: 0, remanded: 0, convictions: 0, acquitted: 0, lawyers: 0, admissions: 0, rehabAdmissions: 0, released: 0, reoffended: 0,
         drugArrests: 0, startedUsing: 0, overdoses: 0, voluntaryRehab: 0, protection: 0, crackdowns: 0, gangFights: 0,
       };
       for (const p of w.people) if (!p.cr) { p.cr = newCr(); p.inst = null; }
     },
     personCreated(w, p) { p.cr = newCr(); p.inst = null; },
-    hireWeight: (w, p) => (p.cr && p.cr.rec ? 0.6 : 1) * (p.cr && p.cr.user ? 0.8 : 1),
+    hireWeight: (w, p) => (p.cr && p.cr.rec && !(w.policy && !w.policy.recordCheck) ? 0.6 : 1) * (p.cr && p.cr.user ? 0.8 : 1),
     money(w) { let s = 0; for (const g of w.crime.gangs) s += g.cash; return s; },
 
     candidates(w, p, ctx, slot, add) {
@@ -404,7 +419,11 @@
         st.cases = rest;
         for (const c of due) arrest(w, c);
       }
-      for (const p of w.living) if (p.inst && w.day >= p.inst.until && p.alive) release(w, p);
+      for (const p of w.living) {
+        if (!p.inst || w.day < p.inst.until || !p.alive) continue;
+        if (p.inst.kind === 'remand') { const c = p.inst.case; c.remandFrom = p.inst.since; p.inst = null; verdict(w, p, c); }
+        else release(w, p);
+      }
     },
 
     month(w) {
@@ -445,7 +464,7 @@
       }
       for (const p of w.people) {
         if (!p.cr) continue;
-        if (p.inst && (!p.alive || p.job || p.enrol || p.manages >= 0 || p.careOf.length || p.away)) errs.push(`P${p.id} in ${p.inst.kind} still active`);
+        if (p.inst && (!p.alive || p.away || (p.inst.kind !== 'remand' && (p.job || p.enrol || p.manages >= 0 || p.careOf.length)))) errs.push(`P${p.id} in ${p.inst.kind} still active`);
         if (p.cr.gang >= 0 && (!w.crime.gangs[p.cr.gang] || !w.crime.gangs[p.cr.gang].members.includes(p.id))) errs.push(`P${p.id} gang link broken`);
         if (!(p.cr.addict >= 0 && p.cr.addict <= 100)) errs.push(`P${p.id} addiction ${p.cr.addict}`);
       }

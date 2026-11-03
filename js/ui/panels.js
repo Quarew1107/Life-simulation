@@ -7,8 +7,8 @@
   const esc = U.esc;
   const UI = LES.UI = { tab: 'person', lbMode: 'alive', feedFilter: 'all', last: {}, feedSeqShown: 0 };
 
-  const FEED_FILTERS = [['all', 'All'], ['goal', 'Goals'], ['wealth', 'Wealth'], ['biz', 'Business'], ['career', 'Career'], ['edu', 'Education'], ['family', 'Family'], ['luck', 'Luck'], ['migration', 'Migration'], ['crime', 'Crime'], ['death', 'Deaths'], ['economy', 'Economy']];
-  const CAT_ICON = { wealth: '💰', biz: '🏪', career: '💼', edu: '🎓', family: '👪', luck: '🎲', death: '🕯️', economy: '📊', money: '💵', life: '🧭', goal: '🎯', migration: '🚆', crime: '🚨' };
+  const FEED_FILTERS = [['all', 'All'], ['goal', 'Goals'], ['wealth', 'Wealth'], ['biz', 'Business'], ['career', 'Career'], ['edu', 'Education'], ['family', 'Family'], ['luck', 'Luck'], ['migration', 'Migration'], ['crime', 'Crime'], ['politics', 'Politics'], ['death', 'Deaths'], ['economy', 'Economy']];
+  const CAT_ICON = { wealth: '💰', biz: '🏪', career: '💼', edu: '🎓', family: '👪', luck: '🎲', death: '🕯️', economy: '📊', money: '💵', life: '🧭', goal: '🎯', migration: '🚆', crime: '🚨', politics: '🏛️' };
   const SLOT_NAMES = ['Day shift · 08:00–15:12', 'Evening · 15:40–22:24'];
 
   UI.init = function (app) {
@@ -74,6 +74,7 @@
     if (UI.tab === 'stats' && due('stats', 1200)) UI.renderStats();
     if (UI.tab === 'society' && due('society', 1500)) UI.renderSociety();
     if (UI.tab === 'crime' && due('crime', 1500)) UI.renderCrime();
+    if (UI.tab === 'gov' && due('gov', 1500)) UI.renderGov();
     if (UI.tab === 'place' && due('place', 700)) UI.renderPlace();
     if (UI.bursaOpen && due('bursa', 1500)) UI.renderBursa();
     if (due('toasts', 300)) UI.checkToasts();
@@ -247,6 +248,7 @@
 
     html += UI.societyCard ? UI.societyCard(w, p) : '';
     html += UI.crimeCard ? UI.crimeCard(w, p) : '';
+    html += UI.politicsCard ? UI.politicsCard(w, p) : '';
     if (p.adult) {
       html += `<div class="card tiers"><h3>Lifestyle <small class="muted">${U.fmtMoney(p.mcost)}/month incl. children</small></h3>
         ${C.TIER_CATS.map(cat => {

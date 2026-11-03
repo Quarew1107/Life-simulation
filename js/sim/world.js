@@ -16,7 +16,7 @@
       this.derived = LES.derive(this.cfg);
       this.attachSystems();
       this.rng = {};
-      for (const k of ['init', 'decide', 'outcome', 'jobs', 'market', 'biz', 'family', 'luck', 'mortality', 'migration', 'goals', 'society', 'crime']) {
+      for (const k of ['init', 'decide', 'outcome', 'jobs', 'market', 'biz', 'family', 'luck', 'mortality', 'migration', 'goals', 'society', 'crime', 'gov']) {
         this.rng[k] = new LES.RNG(`${this.cfg.seed}|${k}`);
       }
       const ms = this.cfg.mapSize === 'auto' ? LES.suggestMapSize(this.cfg.founders) : this.cfg.mapSize;
@@ -258,7 +258,7 @@
 
     // A day inside an institution (prison, rehab): no choices, shown at that building.
     instDay(p) {
-      const label = p.inst.kind === 'rehab' ? 'In drug rehabilitation' : 'Serving a prison sentence';
+      const label = p.inst.kind === 'rehab' ? 'In drug rehabilitation' : p.inst.kind === 'remand' ? 'Held in the police lock-up' : 'Serving a prison sentence';
       p.plan = [{ act: 'PRISON', label, loc: p.inst.loc, sub: p.inst.kind }, { act: 'PRISON', label, loc: p.inst.loc, sub: p.inst.kind }];
       p.why = null;
       p.energy = Math.min(100, p.energy + 5); p.stress = Math.min(100, p.stress + 0.3);

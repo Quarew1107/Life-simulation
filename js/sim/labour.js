@@ -51,8 +51,9 @@
   L.hire = function (w, p, v, nApplicants) {
     const old = p.job;
     if (old) L.payJob(w, p, old);
+    const salary = w.policy ? Math.max(v.salary, w.px(w.policy.minWage)) : v.salary; // minimum wage law
     p.job = {
-      jobId: v.job.id, title: v.job.title, salary: v.salary, level: 1, startDay: w.day, shiftsMonth: 0,
+      jobId: v.job.id, title: v.job.title, salary, level: 1, startDay: w.day, shiftsMonth: 0,
       lastShiftDay: -1, warnings: 0, place: v.place, perfOk: 0, perfN: 0, cat: v.job.cat,
     };
     p.retired = false;
@@ -79,6 +80,7 @@
       w.ledger.spend(p, 'cash', 'TAX', tax);
       p.earned.wages += gross + er;
       p.monthIncome += gross - ee - tax;
+      if (w.gov && C.JOB_BY_ID[job.jobId].gov) w.gov.month.wages += gross + er; // the treasury pays public servants
     }
     job.shiftsMonth = 0;
   };
@@ -92,7 +94,7 @@
       if (g > lo) tax += (Math.min(g, hi) - lo) * rate;
       lo = hi;
     }
-    return Math.round(U.RM(tax) * w.price);
+    return Math.round(U.RM(tax) * w.price * (w.policy ? w.policy.incomeTaxMult : 1));
   };
 
   L.endJob = function (w, p, reason, silent) {

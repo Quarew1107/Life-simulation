@@ -20,7 +20,7 @@
   // How a person looks while doing an activity: 'city' = drives around town (value =
   // vehicle mode), 'area' = moves around the site, 'outside' = stands/sits outdoors,
   // 'inside' = inside the building (not drawn; the building shows a headcount).
-  const CITY_JOBS = { rider: 1, delivery: 1, ehailing: 2 };
+  const CITY_JOBS = { rider: 1, delivery: 1, ehailing: 2, police: 4 };
   const AREA_JOBS = new Set(['construction', 'electrician', 'labour', 'running', 'sports', 'gym', 'pasar', 'promoter', 'park', 'futsal', 'golf', 'prison']);
   LES.motionOf = function (e, b) {
     if (!e) return 'inside';
@@ -336,9 +336,9 @@
         this.cityRoutes.set(key, c);
         if (this.cityRoutes.size > 4000) this.cityRoutes.clear();
       }
-      const mode = e.sub === 'ehailing' ? Math.max(2, p.tiers.transport) : 1;
+      const mode = e.sub === 'ehailing' ? Math.max(2, p.tiers.transport) : e.sub === 'police' ? 4 : 1;
       const start = slot ? LES.SLOT_B : LES.SLOT_A;
-      const dist = Math.max(0, tm - start) * LES.TRAVEL_SPEED[mode] * 0.6;
+      const dist = Math.max(0, tm - start) * LES.TRAVEL_SPEED[Math.min(3, mode)] * 0.6;
       const q = this.along(c.r, c.r.total ? (dist % c.r.total) / c.r.total : 0);
       return { x: q.x, y: q.y, dx: q.dx, dy: q.dy, moving: true, mode };
     }
@@ -360,6 +360,7 @@
       g.drawImage(this.bg, 0, 0);
       this.drawShops(g);
       if (w.crime) this.drawTurf(g, w);
+      if (w.gov) this.drawCivic(g, w, now);
       LES.Ambience.drawWorld(this, g, w, t, now, fast);
       if (this.selectedBuilding >= 0) {
         const b = this.town.buildings[this.selectedBuilding], T = this.town.T;
@@ -398,7 +399,7 @@
           list.push({ p: w.people[d.id], x: q.x, y: q.y, dx: q.dx, dy: q.dy, moving: true, mode: 0, leaving: true });
         }
       }
-      if (!fast && w.crime && tm > 30 && tm < 1080) { // police patrols
+      if (!fast && w.crime && !w.gov && tm > 30 && tm < 1080) { // police patrols (with a government, real officers drive them)
         const st = this.town.byKind.police !== undefined ? this.town.byKind.police : this.town.byKind.depot;
         const n = Math.max(1, Math.round(w.counts.living / 150 * (LES.Crime.POLICE[w.cfg.police] || 1)));
         for (let k = 0; k < n && st !== undefined; k++) {
@@ -427,6 +428,7 @@
         }
         const p = it.p, age = P.age(w, p);
         const group = age < 3 ? 'baby' : !p.adult ? 'child' : age >= 65 ? 'elder' : 'adult';
+        if (it.moving && it.mode === 4) { drawPolice(g, it, now); this.screenPos.push({ id: p.id, x: (it.x - this.cx) * this.z, y: (it.y - 4 - this.cy) * this.z }); continue; }
         if (it.moving && it.mode > 0) {
           drawVehicle(g, it.x, it.y, it.dx, it.dy, it.mode, p);
           this.screenPos.push({ id: p.id, x: (it.x - this.cx) * this.z, y: (it.y - 4 - this.cy) * this.z });
@@ -548,6 +550,26 @@
           g.strokeStyle = '#3ec7b5'; g.lineWidth = 2;
           g.beginPath(); g.ellipse(sp.x, sp.y + 7 * this.z, 8 * this.z, 3 * this.z, 0, 0, Math.PI * 2); g.stroke();
           label(this.selectedId, '#3ec7b5', P.name(w.people[this.selectedId]));
+        }
+      }
+    }
+
+    // Flood water on the flooded blocks, and campaign flags along the roads before an election.
+    drawCivic(g, w, now) {
+      const T = this.town.T, gv = w.gov;
+      if (gv.flood && w.day < gv.flood.until) {
+        const a = 0.35 + 0.05 * Math.sin((now || 0) / 600);
+        for (const i of gv.flood.blocks) { const bl = this.town.blocks[i]; if (!bl) continue; const X = (bl.px ?? bl.x) * T, Y = (bl.py ?? bl.y) * T; g.fillStyle = `rgba(120,95,60,${a})`; g.fillRect(X - 6, Y - 6, (bl.pw || 14) * T + 12, (bl.ph || 11) * T + 12); g.fillStyle = 'rgba(160,200,220,0.25)'; g.fillRect(X, Y + 4, (bl.pw || 14) * T, 3); }
+      }
+      if (gv.campaign) {
+        const cols = gv.campaign.map(c => c.colour);
+        let k = 0;
+        for (const p of LES.roadPieces(this.town).pieces) {
+          if (!p.h) continue;
+          for (let x = p.x + 12; x < p.x + p.w - 8; x += 26) {
+            const c = cols[(k++) % cols.length], y = p.y - 14;
+            rect(g, x, y, 1, 9, '#ddd'); rect(g, x + 1, y, 6, 4, c); rect(g, x + 1, y + 1, 2, 1, '#ffffff');
+          }
         }
       }
     }

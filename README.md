@@ -179,6 +179,30 @@ The map is drawn in a 3/4 top-down pixel style: you see each building's roof and
   - **Gangs:** gangs form around a bold, charismatic offender. They deal drugs, take a share of members' crimes and collect protection money from shops on their turf. They recruit young unemployed people, fight rival gangs and get raided by the police.
   - **Calibration:** at **Realistic**, rates land near Malaysia's: about 170 index crimes, 590 drug users and 260 prisoners per 100k. **Lively** (the default) multiplies them by 10, so a small town shows something.
   - **On the map and in the UI:** a justice district (police, court, prison with an exercise yard, rehab), patrol cars, gang graffiti, crime and gang-turf overlays, a Crime tab and a report section.
+- **Government & elections (on in the Malaysia preset):**
+  - **Treasury:** taxes go into a real town treasury (income tax, corporate tax, fines, inheritance tax). It pays for police wages, the leader's salary, cash aid, basic income, welfare, free university places, flood relief, interest and public services. When it runs short it borrows, and deep debt forces austerity.
+  - **Twelve laws the engine really uses:**
+    - income tax and corporate tax rates
+    - minimum wage (RM1,700 by default)
+    - B40 cash aid and universal basic income
+    - inheritance tax
+    - police force (officers per 1,000; Malaysia has about 4)
+    - drug policy and university fees
+    - criminal-record checks in hiring
+    - affirmative action
+    - whether bars are allowed
+  - **Elections** every 5 years (a setting):
+    - Candidates stand on platforms of law changes, and responsible ones avoid promises the town can't pay for.
+    - Each voter weighs what every promise would mean for them. They see the true effect plus noise, so better-educated people judge laws more accurately.
+    - Voters also weigh their left-right and conservative-liberal leanings, the leader's record and approval, shared ethnicity or religion (a setting), charisma and campaign spending, then decide whether to vote.
+    - Polling happens at the schools. Turnout lands around Malaysia's 74%.
+  - **Leader:** approval is tracked monthly. Corruption is possible (a leader low in responsibility may skim the treasury) and can end in scandal, prison and a snap election. Leaders also respond to recessions and crime waves.
+  - **Police:**
+    - Officers are public servants, hired up to the budgeted number.
+    - They drive the patrol cars, and their number sets how often crimes are solved.
+    - Arrested suspects wait on remand in the police lock-up (Lokap) until court. Time on remand counts toward the sentence, and long remand can cost people their jobs.
+  - **Events:** monsoon floods hit low-lying and riverside homes, with RM1,000 relief per household. Haze harms health.
+  - **On the map and in the UI:** the town hall (Dewan Bandaraya) and padang, campaign flags, flood water, a Government tab (laws, treasury, elections and how each class, religion and ethnic group voted), a politics card on each person and a report section.
 - **Map overlays:** class, religion, ethnicity, crime and gang turf.
 - **Report and analysis:** an end-of-run report with a rule-based "why it turned out this way" summary, Hall of Fame, charts and a migrants vs. locals comparison, plus CSV export. In the app: family trees, compare-two-people and Director mode.
 - **Integrity:** a double-entry-style ledger (money is never created or lost), consistency checks every quarter, and deterministic seeds (same seed and settings give the same history).
