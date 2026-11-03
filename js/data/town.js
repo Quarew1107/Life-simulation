@@ -161,7 +161,11 @@
     const add = function (kind, label, x, y, w, h, extra) {
       const cy = y + h / 2;
       let road = roadsY[0], bestD = Infinity;
-      for (const ry of roadsY) {
+      // Varied layouts: the door faces the nearest road that actually runs past this column.
+      const col = town.layout ? LES.townColOf(town, x + w / 2) : -1;
+      for (let j = 0; j < roadsY.length; j++) {
+        const ry = roadsY[j];
+        if (col >= 0 && !town.layout.hseg[j][col]) continue;
         const d = Math.abs(ry + 1 - cy);
         if (d < bestD) { bestD = d; road = ry; }
       }
@@ -182,23 +186,36 @@
     return add;
   };
 
-  LES.buildTown = function (size, seed) {
+  // layout: 'grid' = the original equal blocks and straight roads (Classic preset);
+  // 'varied' = seeded avenues, a river with bridges, merged superblocks and wild land.
+  LES.buildTown = function (size, seed, layout) {
     size = LES.MAP_ALIASES[size] || size;
     if (!LES.MAP_SIZES[size]) size = 'pekan';
-    const tpl = LES.planDistricts(size, seed === undefined ? 'rezeki-1' : seed);
+    seed = seed === undefined ? 'rezeki-1' : seed;
+    const tpl = LES.planDistricts(size, seed);
     const rows = tpl.length, cols = tpl[0].length;
-    const T = 16, W = cols * (BW + ROAD), H = rows * (BH + ROAD);
-    const roadsX = [], roadsY = [];
-    for (let c = 0; c < cols; c++) roadsX.push(c * (BW + ROAD) + BW);
-    for (let r = 0; r < rows; r++) roadsY.push(r * (BH + ROAD) + BH);
-    const town = { size, T, W, H, cols, rows, roadsY, roadsX, plan: tpl, buildings: [], byKind: {}, kinds: {}, homesByTier: [[], [], [], [], []], shoplots: [], lots: [], blocks: [] };
+    const L = layout === 'varied' ? LES.planLayout(size, seed, tpl) : null;
+    const gapX = L ? L.gapX : Array(cols).fill(ROAD), gapY = L ? L.gapY : Array(rows).fill(ROAD);
+    const padX = L ? L.padX : Array(cols).fill(0), padY = L ? L.padY : Array(rows).fill(0);
+    const colX = [], rowY = [], roadsX = [], roadsY = [];
+    let acc = 0; // column c: plot (BW + padX wide), then its road gap
+    for (let c = 0; c < cols; c++) { colX.push(acc); roadsX.push(acc + BW + padX[c] + Math.floor((gapX[c] - ROAD) / 2)); acc += BW + padX[c] + gapX[c]; }
+    const W = acc + (L && L.edge.side === 'e' ? L.edge.size : 0);
+    acc = 0;
+    for (let r = 0; r < rows; r++) { rowY.push(acc); roadsY.push(acc + BH + padY[r] + Math.floor((gapY[r] - ROAD) / 2)); acc += BH + padY[r] + gapY[r]; }
+    const T = 16, H = acc + (L && L.edge.side === 's' ? L.edge.size : 0);
+    const town = { size, T, W, H, cols, rows, roadsY, roadsX, colX, rowY, layout: L, plan: tpl, buildings: [], byKind: {}, kinds: {}, homesByTier: [[], [], [], [], []], shoplots: [], lots: [], blocks: [] };
+    if (!L) { delete town.colX; delete town.rowY; delete town.layout; } // grid towns keep their original shape
 
     town.add = LES.townAdder(town);
 
     tpl.forEach((line, r) => {
       for (let c = 0; c < cols; c++) {
         const code = line[c];
-        const block = { code, c, r, x: c * (BW + ROAD), y: r * (BH + ROAD) };
+        const block = { code, c, r, x: L ? colX[c] + Math.floor(padX[c] / 2) : c * (BW + ROAD), y: L ? rowY[r] + Math.floor(padY[r] / 2) : r * (BH + ROAD) };
+        // The whole plot (bigger than the 14x11 buildings in varied towns: room for car parks and gardens).
+        if (L) Object.assign(block, { px: colX[c], py: rowY[r], pw: BW + padX[c], ph: BH + padY[r] });
+        if (L && code === 'L') block.wild = L.wild[r][c]; // forest, oil palm or scrub until it is built on
         town.blocks.push(block);
         LES.fillBlock(town, block, code);
       }
@@ -296,10 +313,162 @@
     return best;
   };
 
-  // Walking/driving route between two buildings along the road grid (pixel points).
+  // Column / row of a tile coordinate (block index), for any layout.
+  LES.townColOf = function (town, x) {
+    if (!town.colX) return Math.max(0, Math.min(town.cols - 1, Math.floor(x / (BW + ROAD))));
+    let c = 0;
+    while (c + 1 < town.cols && town.colX[c + 1] <= x) c++;
+    return c;
+  };
+  LES.townRowOf = function (town, y) {
+    if (!town.rowY) return Math.max(0, Math.min(town.rows - 1, Math.floor(y / (BH + ROAD))));
+    let r = 0;
+    while (r + 1 < town.rows && town.rowY[r + 1] <= y) r++;
+    return r;
+  };
+  LES.townBlockAt = (town, x, y) => town.blocks[LES.townRowOf(town, y) * town.cols + LES.townColOf(town, x)];
+  // Road pieces: horizontal road j between vertical roads c-1 and c (c = 0 runs to the west
+  // edge), vertical road c between horizontal roads r-1 and r (r = 0 runs to the north edge).
+  LES.hasH = (town, j, c) => !town.layout || town.layout.hseg[j][c];
+  LES.hasV = (town, c, r) => !town.layout || town.layout.vseg[c][r];
+
+  // Every road piece and intersection that exists, in pixels (for drawing).
+  LES.roadPieces = function (town) {
+    const { cols, rows, roadsX, roadsY, T } = town, pieces = [], nodes = [];
+    for (let j = 0; j < rows; j++) for (let c = 0; c < cols; c++) {
+      if (!LES.hasH(town, j, c)) continue;
+      const x0 = c === 0 ? 0 : (roadsX[c - 1] + 2) * T, x1 = roadsX[c] * T;
+      pieces.push({ h: true, j, c, x: x0, y: roadsY[j] * T, w: x1 - x0, len: x1 - x0, edge: c === 0 });
+    }
+    for (let c = 0; c < cols; c++) for (let r = 0; r < rows; r++) {
+      if (!LES.hasV(town, c, r)) continue;
+      const y0 = r === 0 ? 0 : (roadsY[r - 1] + 2) * T, y1 = roadsY[r] * T;
+      pieces.push({ h: false, c, r, x: roadsX[c] * T, y: y0, h2: y1 - y0, len: y1 - y0, edge: r === 0 });
+    }
+    for (let j = 0; j < rows; j++) for (let c = 0; c < cols; c++) {
+      const W = LES.hasH(town, j, c), E = c + 1 < cols && LES.hasH(town, j, c + 1), N = LES.hasV(town, c, j), S = j + 1 < rows && LES.hasV(town, c, j + 1);
+      const deg = (W ? 1 : 0) + (E ? 1 : 0) + (N ? 1 : 0) + (S ? 1 : 0);
+      if (deg) nodes.push({ c, j, x: roadsX[c] * T, y: roadsY[j] * T, W, E, N, S, deg });
+    }
+    return { pieces, nodes };
+  };
+
+  // Seeded street plan for a varied town. Rules: the station column and the bus loops are
+  // never cut; every block keeps a road for its doors; the network stays connected.
+  LES.planLayout = function (size, seed, tpl) {
+    const R = new LES.RNG(`${seed}|layout|${size}`);
+    const rows = tpl.length, cols = tpl[0].length;
+    const gapX = Array(cols).fill(ROAD), gapY = Array(rows).fill(ROAD);
+    const avenueX = [], avenueY = [];
+    const bx = LES.busIndices(cols, rows);
+    // Plots of different sizes: the spare ground becomes car parks, playgrounds and gardens.
+    const padX = Array.from({ length: cols }, (_, c) => (c === 0 ? 0 : R.pick([0, 0, 1, 2, 3, 4, 5])));
+    const padY = Array.from({ length: rows }, () => R.pick([0, 0, 1, 2, 3, 4]));
+    // One side of the map is coast or forested hills (east or south).
+    const edge = { kind: R.pick(['sea', 'sea', 'hills', 'none']), side: R.next() < 0.5 ? 'e' : 's' };
+    edge.size = edge.kind === 'none' ? 0 : edge.side === 'e' ? 12 : 9;
+    for (let c = 1; c < cols - 1; c++) if (R.next() < 0.22) { gapX[c] = 4; avenueX.push(c); }
+    for (let r = 0; r < rows - 1; r++) if (R.next() < 0.2) { gapY[r] = 4; avenueY.push(r); }
+    // A river winds down one of the north-south gaps (no road along it, bridges across).
+    let river = -1;
+    if (cols >= 6 && R.next() < 0.9) {
+      const opts = [];
+      for (let c = 2; c < cols - 2; c++) if (!bx.x.has(c)) opts.push(c);
+      if (opts.length) { river = R.pick(opts); gapX[river] = 5; const i = avenueX.indexOf(river); if (i >= 0) avenueX.splice(i, 1); }
+    }
+    const vseg = Array.from({ length: cols }, (_, c) => Array(rows).fill(c !== river));
+    const hseg = Array.from({ length: rows }, () => Array(cols).fill(true));
+    const connected = () => {
+      const id = (c, r) => r * cols + c, adj = new Map();
+      const link = (a, b) => { (adj.get(a) || adj.set(a, []).get(a)).push(b); (adj.get(b) || adj.set(b, []).get(b)).push(a); };
+      for (let r = 0; r < rows; r++) for (let c = 1; c < cols; c++) if (hseg[r][c]) link(id(c - 1, r), id(c, r));
+      for (let c = 0; c < cols; c++) for (let r = 1; r < rows; r++) if (vseg[c][r]) link(id(c, r - 1), id(c, r));
+      const nodes = [...adj.keys()];
+      if (!nodes.length) return false;
+      const seen = new Set([nodes[0]]), q = [nodes[0]];
+      while (q.length) for (const n of adj.get(q.pop())) if (!seen.has(n)) { seen.add(n); q.push(n); }
+      return seen.size === nodes.length;
+    };
+    const special = (c, r) => 'NGZU'.includes(tpl[r][c]);
+    // Superblocks: drop a few short road pieces between neighbouring blocks.
+    for (let r = 0; r < rows; r++) for (let c = 1; c < cols - 1; c++) {
+      if (c === river || bx.x.has(c) || special(c, r) || special(c + 1 < cols ? c + 1 : c, r) || R.next() > 0.2) continue;
+      if (r === 0 || !vseg[c][r - 1] || (r + 1 < rows && !vseg[c][r + 1])) continue; // keep cuts apart
+      vseg[c][r] = false;
+      if (!connected()) vseg[c][r] = true;
+    }
+    for (let r = 1; r < rows - 1; r++) for (let c = 1; c < cols; c++) {
+      if (bx.y.has(r) || special(c, r) || special(c, r + 1) || c === river || c === river + 1 || R.next() > 0.18) continue; // bridges always lead somewhere
+      if (!hseg[r - 1][c] || !hseg[r + 1][c] || !hseg[r][c - 1] || (c + 1 < cols && !hseg[r][c + 1])) continue;
+      hseg[r][c] = false;
+      if (!connected()) hseg[r][c] = true;
+    }
+    const wild = tpl.map(line => [...line].map(() => R.pick(['forest', 'forest', 'palm', 'scrub'])));
+    return { gapX, gapY, padX, padY, edge, avenueX, avenueY, river, vseg, hseg, wild };
+  };
+
+  // Shortest road route between two intersections (Dijkstra, cached per start node).
+  function roadGraph(town) {
+    if (town._graph) return town._graph;
+    const { cols, rows, roadsX, roadsY, T } = town, n = cols * rows;
+    const nx = c => (roadsX[c] + 1) * T, ny = r => (roadsY[r] + 1) * T;
+    const adj = Array.from({ length: n }, () => []);
+    for (let r = 0; r < rows; r++) for (let c = 1; c < cols; c++) if (LES.hasH(town, r, c)) { const a = r * cols + c - 1, b = r * cols + c, d = nx(c) - nx(c - 1); adj[a].push([b, d]); adj[b].push([a, d]); }
+    for (let c = 0; c < cols; c++) for (let r = 1; r < rows; r++) if (LES.hasV(town, c, r)) { const a = (r - 1) * cols + c, b = r * cols + c, d = ny(r) - ny(r - 1); adj[a].push([b, d]); adj[b].push([a, d]); }
+    town._graph = { adj, nx, ny, from: new Map() };
+    Object.defineProperty(town, '_graph', { enumerable: false, writable: true, value: town._graph }); // a cache, not saved
+    return town._graph;
+  }
+  function shortest(g, src) {
+    let t = g.from.get(src);
+    if (t) return t;
+    const n = g.adj.length, dist = new Float64Array(n).fill(Infinity), prev = new Int32Array(n).fill(-1), done = new Uint8Array(n);
+    dist[src] = 0;
+    for (;;) { // n is a few hundred: a simple O(n^2) Dijkstra is fast enough
+      let u = -1, best = Infinity;
+      for (let i = 0; i < n; i++) if (!done[i] && dist[i] < best) { best = dist[i]; u = i; }
+      if (u < 0) break;
+      done[u] = 1;
+      for (const [v, d] of g.adj[u]) if (dist[u] + d < dist[v]) { dist[v] = dist[u] + d; prev[v] = u; }
+    }
+    t = { dist, prev };
+    g.from.set(src, t);
+    return t;
+  }
+  // Intersections at either end of the road piece in front of a building's door.
+  function doorEnds(town, b) {
+    const j = town.roadsY.indexOf(b.roadY / town.T - 1), c = LES.townColOf(town, b.door.x / town.T);
+    const ends = [{ node: j * town.cols + c, x: (town.roadsX[c] + 1) * town.T }];
+    if (c > 0) ends.push({ node: j * town.cols + c - 1, x: (town.roadsX[c - 1] + 1) * town.T });
+    return { j, c, ends };
+  }
+  function networkPath(town, a, b) {
+    const pa = a.door, pb = b.door, g = roadGraph(town);
+    const A = doorEnds(town, a), B = doorEnds(town, b);
+    if (A.j === B.j && A.c === B.c) return [pa, { x: pa.x, y: a.roadY }, { x: pb.x, y: b.roadY }, pb];
+    let best = null;
+    for (const ea of A.ends) {
+      const sp = shortest(g, ea.node);
+      for (const eb of B.ends) {
+        const d = Math.abs(pa.x - ea.x) + sp.dist[eb.node] + Math.abs(pb.x - eb.x);
+        if (!best || d < best.d) best = { d, ea, eb, sp };
+      }
+    }
+    if (!best || !Number.isFinite(best.d)) return [pa, pb];
+    const nodes = [];
+    for (let v = best.eb.node; v >= 0; v = best.sp.prev[v]) { nodes.push(v); if (v === best.ea.node) break; }
+    nodes.reverse();
+    const pts = [pa, { x: pa.x, y: a.roadY }];
+    for (const v of nodes) pts.push({ x: g.nx(v % town.cols), y: g.ny(Math.floor(v / town.cols)) });
+    pts.push({ x: pb.x, y: b.roadY }, pb);
+    return pts;
+  }
+
+  // Walking/driving route between two buildings along the roads (pixel points).
   LES.townPath = function (town, a, b) {
     const pa = a.door, pb = b.door;
     if (a.id === b.id) return [pa, pb];
+    if (town.layout) return networkPath(town, a, b);
     const ya = a.roadY, yb = b.roadY;
     if (ya === yb) return [pa, { x: pa.x, y: ya }, { x: pb.x, y: ya }, pb];
     const mid = (pa.x + pb.x) / 2;
@@ -313,6 +482,13 @@
 
   // ---- Bus lines: closed loops along road centre lines with stops at intersections ----
   LES.BUS = { speed: 260, headway: 12, walkSpeed: 64 }; // px per sim-minute, minutes between buses
+  // Road indices the bus loops use (kept uncut by the varied layout).
+  LES.busIndices = function (nx, ny) {
+    const x = new Set([0, nx - 2, Math.floor(nx / 4), Math.min(nx - 1, Math.floor(nx * 3 / 4) + 1)]);
+    const y = new Set([0, ny - 2, Math.floor(ny / 4), Math.min(ny - 1, Math.floor(ny * 3 / 4))]);
+    if (nx >= 9) { x.add(Math.floor(nx / 2)); x.add(nx - 1); y.add(ny - 1); }
+    return { x, y };
+  };
   LES.makeBusLines = function (town) {
     const T = town.T, cx = i => (town.roadsX[i] + 1) * T, cy = i => (town.roadsY[i] + 1) * T;
     const nx = town.roadsX.length, ny = town.roadsY.length;
@@ -336,6 +512,7 @@
         const horizontal = s.a.y === s.b.y;
         const xs = horizontal ? town.roadsX : town.roadsY;
         for (const r of xs) {
+          if (horizontal && town.layout && xs.indexOf(r) === town.layout.river) continue; // no stop on the bridge
           const v = (r + 1) * T;
           const lo = horizontal ? Math.min(s.a.x, s.b.x) : Math.min(s.a.y, s.b.y), hi = horizontal ? Math.max(s.a.x, s.b.x) : Math.max(s.a.y, s.b.y);
           if (v < lo || v >= hi) continue;

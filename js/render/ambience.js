@@ -74,8 +74,10 @@
       g.fillStyle = gr; g.fillRect(x - 14, y - 14, 28, 28);
       g.fillStyle = '#fff3c4'; g.fillRect(x - 1, y - 1, 2, 2);
     };
-    for (const ry of town.roadsY) for (let x = 24; x < town.W * T; x += 72) glow(x, ry * T - 2);
-    for (const rx of town.roadsX) for (let y = 40; y < town.H * T; y += 72) glow(rx * T - 2, y);
+    for (const p of LES.roadPieces(town).pieces) {
+      if (p.h) for (let x = p.x + 24; x < p.x + p.w; x += 72) glow(x, p.y - 2);
+      else for (let y = p.y + 40; y < p.y + p.h2; y += 72) glow(p.x - 2, y);
+    }
     return cv;
   };
 
