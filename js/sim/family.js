@@ -30,7 +30,9 @@
           if (b === a || b.sex === a.sex || b.partnerId !== null || Fa.related(w, a, b)) continue;
           const ageGap = Math.abs(P.age(w, a) - P.age(w, b));
           if (ageGap > 15) continue;
-          const compat = U.clamp(1.2 - ageGap / 10 + 0.06 * ((a.att[C.CHA] + b.att[C.CHA]) / 2 - 5) + 0.1 * (P.prestige(a) + P.prestige(b)) / 2, 0.1, 2);
+          // Moderate status matching: very different fortunes make a match less likely.
+          const gapW = Math.abs(Math.log10(Math.max(U.RM(1e4), a.nw) / Math.max(U.RM(1e4), b.nw)));
+          const compat = U.clamp(1.2 - ageGap / 10 + 0.06 * ((a.att[C.CHA] + b.att[C.CHA]) / 2 - 5) + 0.1 * (P.prestige(a) + P.prestige(b)) / 2 - 0.12 * gapW, 0.1, 2);
           const want = (0.5 + a.famDesire / 100) * (0.5 + b.famDesire / 100);
           // Strangers need time: chances grow as both have socialised more.
           const familiarity = Math.min(1, Math.min(a.friends, b.friends) / 20);
@@ -76,7 +78,7 @@
   // FSD 8.7: each partner independently decides; both must want a child.
   Fa.desire = function (w, p) {
     const fd = (p.famDesire - 50) / 50, st = (p.stress - 50) / 50;
-    return U.sigmoid(-0.5 + 2.2 * fd + 0.8 * resourceScore(p.nw) - 0.7 * minorChildren(w, p) - 1.2 * Math.max(0, st));
+    return U.sigmoid(-0.5 + 2.2 * fd + 0.8 * resourceScore(p.nw) - 0.7 * minorChildren(w, p) - 1.2 * Math.max(0, st) + LES.Goals.familyBoost(p));
   };
 
   Fa.monthCouples = function (w) {
@@ -118,7 +120,7 @@
     if (!parent.alive || !P.isAdult(w, parent)) return false;
     const resp = (parent.pers.resp - 50) / 50;
     const resStress = U.clamp(-resourceScore(parent.nw), 0, 1);
-    const p = U.clamp(U.sigmoid(1.6 + 2.4 * resp - 1.0 * resStress - 0.25 * minorChildren(w, parent)), 0.05, 0.99);
+    const p = U.clamp(U.sigmoid(1.6 + 2.4 * resp - 1.0 * resStress - 0.25 * minorChildren(w, parent) + LES.Goals.careBoost(parent)), 0.05, 0.99);
     return w.rng.family.next() < p;
   };
 
@@ -175,6 +177,7 @@
         Fa.addCare(w, g, c);
         F.setHome(w, c, g.homeId);
         P.log(w, g, `Took in ${P.name(c)} as guardian`, 'family', 1);
+        if (g.goal && g.goal.id === 'HELPER') g.donated += w.px(g.goal.target); // raising a child in need fulfils it
         return true;
       }
     }
@@ -233,6 +236,7 @@
     const followers = c.parents.map(id => w.people[id]).filter(par => R.next() < 0.4);
     c._ageHint = 18;
     c.strategy = followers.length ? followers[0].strategy : P.chooseStrategy(R, c);
+    LES.Goals.pick(w, c, 'adult');
     c.stratHist.push({ day: w.day, strategy: c.strategy, reason: followers.length ? 'followed a parent' : 'own choice' });
     if (c.trust > 0) w.ledger.move(c, 'trust', c, 'cash', c.trust);
     for (const pid of c.parents) {

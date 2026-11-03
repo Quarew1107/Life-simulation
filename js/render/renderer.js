@@ -21,12 +21,12 @@
   // vehicle mode), 'area' = moves around the site, 'outside' = stands/sits outdoors,
   // 'inside' = inside the building (not drawn; the building shows a headcount).
   const CITY_JOBS = { rider: 1, delivery: 1, ehailing: 2 };
-  const AREA_JOBS = new Set(['construction', 'electrician', 'labour', 'running', 'sports', 'gym', 'pasar', 'promoter']);
+  const AREA_JOBS = new Set(['construction', 'electrician', 'labour', 'running', 'sports', 'gym', 'pasar', 'promoter', 'park', 'futsal', 'golf']);
   LES.motionOf = function (e, b) {
     if (!e) return 'inside';
     if (e.sub && CITY_JOBS[e.sub]) return 'city';
     if (e.sub && AREA_JOBS.has(e.sub)) return 'area';
-    if (e.act === 'SOCIAL') return b && b.kind === 'park' ? 'area' : 'outside';
+    if (e.act === 'SOCIAL') return e.sub === 'mamak' || e.sub === 'hawker' ? 'outside' : 'inside';
     if (e.act === 'HOME' && /Playing/.test(e.label || '')) return 'outside';
     return 'inside';
   };
@@ -322,6 +322,90 @@
         sign(g, (b.label || 'MENARA').toUpperCase(), X + W / 2, Y + H - 16, '#3d2b05', '#ffe9a8');
         break;
       }
+      // ---- Leisure venues ----
+      case 'cinema': {
+        box(g, X + 2, Y + 2, W - 4, H - 4, '#2b2d42', '#14213d', 10);
+        rect(g, X + 8, Y + 16, W - 16, 22, '#f2c14e'); rect(g, X + 10, Y + 18, W - 20, 18, '#1b1b1b');
+        for (let i = 0; i < 6; i++) rect(g, X + 12 + i * 12, Y + 22 + (i % 2) * 6, 6, 4, ['#e63946', '#3ec7b5', '#f4a261'][i % 3]);
+        for (let i = 0; i < W - 8; i += 6) rect(g, X + 4 + i, Y + 12, 3, 2, (i / 6) % 2 ? '#ffd166' : '#fff3c4');
+        rect(g, X + W / 2 - 6, Y + H - 16, 12, 12, '#8d0801');
+        sign(g, 'PAWAGAM', X + W / 2, Y + 1, '#8d0801', '#ffe9a8');
+        break;
+      }
+      case 'karaoke': {
+        box(g, X + 2, Y + 2, W - 4, H - 4, '#3a0ca3', '#240046', 9);
+        windows(g, X + 6, Y + 16, W - 12, 20, 4, 1, '#f72585');
+        rect(g, X + W / 2 - 5, Y + H - 14, 10, 10, '#10002b');
+        sign(g, 'KARAOKE & BAR', X + W / 2, Y + 1, '#7209b7', '#ffe9ff');
+        break;
+      }
+      case 'bowling': {
+        box(g, X + 2, Y + 2, W - 4, H - 4, '#e9ecef', '#457b9d', 9);
+        for (let i = 0; i < 5; i++) rect(g, X + 10 + i * 16, Y + 18, 3, 9, '#ffffff');
+        g.fillStyle = '#e63946'; g.beginPath(); g.arc(X + W - 14, Y + H - 14, 5, 0, Math.PI * 2); g.fill();
+        sign(g, 'BOWLING', X + W / 2, Y + 1, '#1d3557');
+        break;
+      }
+      case 'futsal': {
+        rect(g, X + 2, Y + 2, W - 4, H - 4, '#2d6a4f'); rect(g, X + 5, Y + 5, W - 10, H - 10, '#52b788');
+        g.strokeStyle = '#f4f1e8'; g.lineWidth = 1; g.strokeRect(X + 5.5, Y + 5.5, W - 11, H - 11);
+        rect(g, X + W / 2, Y + 5, 1, H - 10, '#f4f1e8');
+        rect(g, X + 5, Y + H / 2 - 6, 4, 12, '#ffffff'); rect(g, X + W - 9, Y + H / 2 - 6, 4, 12, '#ffffff');
+        sign(g, 'FUTSAL', X + W / 2, Y + H - 13, '#1b4332');
+        break;
+      }
+      case 'finedine': {
+        box(g, X + 2, Y + 2, W - 4, H - 4, '#f8f1e7', '#6b2737', 11);
+        for (let i = 0; i < W - 8; i += 10) rect(g, X + 4 + i, Y + 11, 6, 6, '#a4133c');
+        windows(g, X + 6, Y + 22, W - 12, 18, 4, 1, '#ffe8a3', '#c9a227');
+        rect(g, X + W / 2 - 4, Y + H - 14, 8, 12, '#6b2737');
+        sign(g, 'RESTORAN MEWAH', X + W / 2, Y + 1, '#3d0c15', '#f2c14e');
+        break;
+      }
+      case 'lounge': {
+        box(g, X + 2, Y, W - 4, H - 2, '#1d3557', '#0b132b', 8);
+        windows(g, X + 5, Y + 10, W - 10, H - 30, 3, 10, '#a8dadc');
+        rect(g, X, Y - 4, W, 6, '#f2c14e'); rect(g, X + 4, Y - 8, W - 8, 4, '#e9c46a');
+        sign(g, 'SKY LOUNGE', X + W / 2, Y + H + 1, '#0b132b', '#f2c14e');
+        break;
+      }
+      case 'spa': {
+        box(g, X + 2, Y + 2, W - 4, H - 4, '#e9f5db', '#52796f', 10);
+        rect(g, X + W - 26, Y + 20, 18, 14, '#ffffff'); rect(g, X + W - 24, Y + 22, 14, 10, '#8ecae6');
+        tree(g, X + 8, Y + 18, true);
+        sign(g, 'SPA', X + W / 2, Y + 1, '#2f3e46', '#e9f5db');
+        break;
+      }
+      case 'golf': {
+        rect(g, X, Y, W, H, '#5a9e47');
+        for (let i = 0; i < 260; i++) rect(g, X + R.int(0, W - 2), Y + R.int(0, H - 2), 2, 1, R.next() < 0.5 ? '#4f8f3e' : '#6db356');
+        const fair = [[30, 40, 60, 30], [120, 60, 70, 34], [70, 120, 80, 30]];
+        for (const [fx, fy, fw, fh] of fair) { g.fillStyle = '#8fd16a'; g.beginPath(); g.ellipse(X + fx, Y + fy, fw / 2, fh / 2, 0.3, 0, Math.PI * 2); g.fill(); }
+        g.fillStyle = '#e9d8a6'; g.beginPath(); g.ellipse(X + 160, Y + 120, 16, 9, 0, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#4fa3c7'; g.beginPath(); g.ellipse(X + 40, Y + 120, 20, 12, 0, 0, Math.PI * 2); g.fill();
+        for (const [hx, hy] of [[44, 40], [140, 60], [86, 122]]) { rect(g, X + hx, Y + hy - 14, 1, 14, '#f4f1e8'); rect(g, X + hx + 1, Y + hy - 14, 6, 4, '#e63946'); rect(g, X + hx - 1, Y + hy, 3, 2, '#1b1b1b'); }
+        box(g, X + W - 70, Y + 8, 60, 34, '#fbf7ef', '#7a1f1f', 12);
+        windows(g, X + W - 66, Y + 24, 52, 12, 4, 1, '#8cc6de');
+        for (const [tx, ty] of [[6, 4], [100, 6], [8, 70], [200, 90], [180, 150]]) if (tx < W - 10 && ty < H - 14) tree(g, X + tx, Y + ty, false);
+        sign(g, 'KELAB GOLF', X + W - 40, Y + 2, '#3d0c15', '#f2c14e');
+        break;
+      }
+      case 'station': {
+        rect(g, X - 2, Y - 10, W + 4, 10, '#b8ad95'); // platform
+        for (let i = 0; i < W; i += 12) rect(g, X + i, Y - 9, 6, 1, '#f4f1e8');
+        box(g, X + 2, Y + 2, W - 4, H - 4, '#f2e8cf', '#bc4749', 12);
+        for (let i = 0; i < 3; i++) rect(g, X + 12 + i * 40, Y + 22, 20, 30, '#8cc6de');
+        rect(g, X + W / 2 - 10, Y + H - 22, 20, 18, '#6b4423');
+        rect(g, X + W / 2 - 8, Y + 14, 16, 6, '#ffffff'); rect(g, X + W / 2 - 1, Y + 15, 2, 4, '#333');
+        sign(g, 'STESEN KERETAPI', X + W / 2, Y + H - 2, '#386641', '#f2e8cf');
+        break;
+      }
+      case 'rail': {
+        rect(g, X, Y + 6, W + 32, 20, '#8a7f6e'); // ballast continues under the road
+        for (let i = 0; i < W + 32; i += 8) rect(g, X + i, Y + 8, 4, 16, '#5c4033');
+        rect(g, X, Y + 11, W + 32, 2, '#c0c0c0'); rect(g, X, Y + 19, W + 32, 2, '#c0c0c0');
+        break;
+      }
       default: box(g, X, Y, W, H, '#ccc', '#999', 8);
     }
   }
@@ -543,7 +627,9 @@
       }
       let an = this.anim.get(p.id);
       if (!an || an.day !== this.w.lastDay || an.A !== A || an.B !== B || an.H !== home) {
-        const t1 = this.planTrip(p, home, A, null, LES.SLOT_A);
+        const station = this.town.byKind.station;
+        const from = p.arrivedDay === this.w.lastDay && station !== undefined ? station : home; // newcomers step off the train
+        const t1 = this.planTrip(p, from, A, null, LES.SLOT_A);
         const t2 = this.planTrip(p, A, B, LES.SLOT_B, null);
         const t3 = this.planTrip(p, B, home, LES.SLOT_END, null);
         an = { day: this.w.lastDay, A, B, H: home, segs: [...t1.segs, ...t2.segs, ...t3.segs], t1, t2, t3 };
@@ -580,7 +666,7 @@
       const ph = (h % 1000) / 1000 * Math.PI * 2, sp = 0.035 + (h % 40) / 1000;
       const X = b.x * T, Y = b.y * T, W = b.w * T, H = b.h * T;
       let x, y, dx;
-      if (b.kind === 'park' || b.kind === 'gym') {
+      if (b.kind === 'park' || b.kind === 'gym' || b.kind === 'futsal' || b.kind === 'golf') {
         const a = ph + tm * sp;
         x = X + W / 2 + (W / 2 - 7) * Math.cos(a);
         y = Y + H / 2 + (H / 2 - 9) * Math.sin(a) + 6;
@@ -667,11 +753,32 @@
           list.push({ bus: true, line, k, x: pos.x, y: pos.y, load: busLoad.get(`${line.id}|${k}`) || 0, horiz: pos.dir !== 0 });
         }
       }
+      if (!fast && this.town.byKind.station !== undefined) {
+        const st = this.town.buildings[this.town.byKind.station];
+        for (const d of w.departures || []) {
+          if (d.day !== w.lastDay || d.home < 0) continue;
+          const f = (tm - 480 - (d.id % 30)) / 90;
+          if (f <= 0 || f >= 1) continue;
+          const hb = this.town.buildings[d.home];
+          const r = LES.polyline(LES.townPath(this.town, hb, st));
+          const q = this.along(r, f);
+          list.push({ p: w.people[d.id], x: q.x, y: q.y, dx: q.dx, dy: q.dy, moving: true, mode: 0, leaving: true });
+        }
+      }
       list.sort((a, b) => a.y - b.y);
       this.screenPos = [];
       const millionaire = U.RM(1e6);
+      const dots = this.z < 1 || (w.counts.living > 1500 && this.z < 1.6);
       for (const it of list) {
         if (it.bus) { drawBus(g, it); continue; }
+        if (dots) { // zoomed out or a huge town: people as coloured dots, vehicles as dashes
+          const sel = this.selectedId >= 0 ? w.people[this.selectedId] : null;
+          const oc = this.overlay && this.overlay !== 'none' ? LES.Extras.overlayColour(w, it.p, this.overlay, sel) : null;
+          const c = oc || (it.mode > 0 ? '#f4f1e8' : it.p.look.shirt);
+          if (it.moving && it.mode > 0) rect(g, it.x - 3, it.y - 2, 6, 3, c); else rect(g, it.x - 1.5, it.y - 3, 3, 3, c);
+          this.screenPos.push({ id: it.p.id, x: (it.x - this.cx) * this.z, y: (it.y - 2 - this.cy) * this.z });
+          continue;
+        }
         const p = it.p, age = P.age(w, p);
         const group = age < 3 ? 'baby' : !p.adult ? 'child' : age >= 65 ? 'elder' : 'adult';
         if (it.moving && it.mode > 0) {
@@ -689,15 +796,37 @@
         const spr = LES.Sprites.person(p.look, group, it.moving ? walkFrame : 0, atPlace ? LES.Ambience.outfitFor(p, slotAct) : null);
         const x = Math.round(it.x - spr.width / 2), y = Math.round(it.y - spr.height);
         g.drawImage(spr, x, y);
+        if (it.leaving) { rect(g, x + spr.width - 1, y + spr.height - 6, 4, 5, '#8b5a2b'); rect(g, x + spr.width, y + spr.height - 7, 2, 1, '#3b2a1d'); } // suitcase
         g.globalAlpha = 1;
         if (atPlace && this.z >= 2.2 && !fast) LES.Ambience.bubble(g, it.x, y - 1, LES.Actions.ICONS[slotAct.act] || '•');
         if (P.goalWorth(w, p) >= millionaire) rect(g, x + spr.width / 2 - 1, y - 3, 3, 2, '#f2c14e');
         this.screenPos.push({ id: p.id, x: (it.x - this.cx) * this.z, y: (it.y - spr.height / 2 - this.cy) * this.z });
       }
+      if (!fast) this.drawTrain(g, tm);
       this.drawInside(g, inside, tm);
       this.drawNight(g, t, fast);
       LES.Ambience.drawScreen(this, g, w, t, now, fast, this.nightLevel || 0);
       this.drawLabels(g, w);
+    }
+
+    // A train every 2 hours (06:30-22:30): rolls in from the west, waits, and leaves.
+    drawTrain(g, tm) {
+      const railId = (this.town.kinds.rail || [])[0], stId = this.town.byKind.station;
+      if (railId === undefined || stId === undefined) return;
+      const c = ((tm - 30) % 120 + 120) % 120;
+      if (c >= 24 || tm < 30 || tm > 1000) return;
+      const T = this.town.T, rail = this.town.buildings[railId], st = this.town.buildings[stId];
+      const L = 4 * 30, stopX = (st.x + st.w) * T - 4, y = rail.y * T + 8;
+      const ease = k => k * k * (3 - 2 * k);
+      const head = c < 8 ? -L + (stopX + L) * ease(c / 8) : c < 16 ? stopX : stopX - (stopX + L) * ease((c - 16) / 8);
+      for (let i = 0; i < 4; i++) {
+        const x = head - (i + 1) * 30 + 2;
+        if (x + 28 < 0) continue;
+        rect(g, x + 2, y + 2, 28, 14, 'rgba(0,0,0,0.25)');
+        rect(g, x, y, 28, 14, i === 0 ? '#1d3557' : '#f1faee');
+        rect(g, x, y + 9, 28, 3, i === 0 ? '#f2c14e' : '#1d3557');
+        for (let k = 0; k < 4; k++) rect(g, x + 3 + k * 6, y + 3, 4, 4, i === 0 && k === 3 ? '#ffe9a8' : '#8cc6de');
+      }
     }
 
     // Small headcount badge on non-home buildings with people working/studying inside.

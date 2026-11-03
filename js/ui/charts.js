@@ -103,7 +103,7 @@
       if (!valid.length) { g.fillStyle = AXIS; g.fillText('No data yet', 10, h / 2); return; }
       const max = Math.max(...valid.map(i => i.value), 1);
       const rowH = Math.min(24, (h - 6) / items.length);
-      const lw = 92, rw = 74;
+      const lw = Math.min(180, Math.max(60, ...items.map(i => g.measureText(i.label).width)) + 8), rw = 74; // label column fits the longest label
       g.textBaseline = 'middle';
       items.forEach((it, i) => {
         const y = 3 + i * rowH;

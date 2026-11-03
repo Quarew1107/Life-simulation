@@ -109,6 +109,9 @@
       L.spend(a, 'cash', 'BANK', payDebt);
       a.debt.study -= payDebt;
     }
+    // Remember who left today so the map can show them walking to the train.
+    w.departures = (w.departures || []).filter(d => w.day - d.day < 3);
+    for (const x of [...adults, ...kids]) w.departures.push({ id: x.id, home: x.homeId, day: w.day });
     for (const x of [...adults, ...kids]) Mi.exile(w, x, reason);
     P.log(w, head, `Moved away from ${C.TOWN_NAME} for ${reason}${adults.length > 1 || kids.length ? ` with ${adults.length - 1 + kids.length} family member${adults.length - 1 + kids.length > 1 ? 's' : ''}` : ''}`, 'migration', 1);
     w.stats.emigrants += adults.length + kids.length;

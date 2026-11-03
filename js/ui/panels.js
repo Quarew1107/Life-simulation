@@ -7,8 +7,8 @@
   const esc = U.esc;
   const UI = LES.UI = { tab: 'person', lbMode: 'alive', feedFilter: 'all', last: {}, feedSeqShown: 0 };
 
-  const FEED_FILTERS = [['all', 'All'], ['wealth', 'Wealth'], ['biz', 'Business'], ['career', 'Career'], ['edu', 'Education'], ['family', 'Family'], ['luck', 'Luck'], ['death', 'Deaths'], ['economy', 'Economy']];
-  const CAT_ICON = { wealth: '💰', biz: '🏪', career: '💼', edu: '🎓', family: '👪', luck: '🎲', death: '🕯️', economy: '📊', money: '💵', life: '🧭' };
+  const FEED_FILTERS = [['all', 'All'], ['goal', 'Goals'], ['wealth', 'Wealth'], ['biz', 'Business'], ['career', 'Career'], ['edu', 'Education'], ['family', 'Family'], ['luck', 'Luck'], ['migration', 'Migration'], ['death', 'Deaths'], ['economy', 'Economy']];
+  const CAT_ICON = { wealth: '💰', biz: '🏪', career: '💼', edu: '🎓', family: '👪', luck: '🎲', death: '🕯️', economy: '📊', money: '💵', life: '🧭', goal: '🎯', migration: '🚆' };
   const SLOT_NAMES = ['Day shift · 08:00–15:12', 'Evening · 15:40–22:24'];
 
   UI.init = function (app) {
@@ -201,6 +201,16 @@
         ${holdings ? `<div class="note">Shares held: ${esc(holdings)}</div>` : ''}
       </div>`;
 
+    if (p.adult && p.goal) {
+      const gd = LES.Goals.DEFS[p.goal.id];
+      const done = p.goalsDone.map(x => `<li><span>${LES.Goals.DEFS[x.id].icon} ${esc(x.text)}</span><span class="muted">age ${x.age}</span></li>`).join('');
+      html += `<div class="card"><h3>Life goal <small class="muted">since ${U.fmtMonthYear(Math.max(0, p.goal.since))}</small></h3>
+        <div class="goal-now"><span class="goal-ic">${gd.icon}</span><div><b>${esc(gd.name)}</b><div class="muted">${esc(LES.Goals.text(p.goal))}</div></div></div>
+        <div class="progress"><i style="width:${(p.goal.progress * 100).toFixed(1)}%"></i></div>
+        <div class="note">${Math.round(p.goal.progress * 100)}% there · happiness ${Math.round(p.happy)}/100 (2-year average ${Math.round(p.happyAvg)})</div>
+        ${done ? `<ul class="list-plain" style="margin-top:6px">${done}</ul>` : ''}</div>`;
+    }
+
     if (p.alive && !p.away && p.why && p.why.length) {
       html += `<div class="card"><h3>Why did they do that? <small class="muted">${U.fmtDate(w.lastDay)}</small></h3>`;
       const revealB = app.fast || app.paused || app.dayFrac * 1440 >= LES.SLOT_B;
@@ -208,8 +218,8 @@
         if (i === 1 && !revealB) { html += `<div class="why-slot"><div class="hd"><span class="muted">${SLOT_NAMES[1]}</span><span class="muted">decides at 15:12…</span></div></div>`; return; }
         const ok = s.ok === undefined ? '' : s.ok ? ' <span class="pos">✓ success</span>' : ' <span class="neg">✗ failed</span>';
         html += `<div class="why-slot"><div class="hd"><span class="muted">${SLOT_NAMES[i]}</span><span>${A.ICONS[s.act] || ''} ${esc(s.chosen)}${ok}${s.forced ? ' <span class="neg">(health override)</span>' : ''}</span></div>`;
-        for (const o of s.options) {
-          html += `<div class="why-opt ${o.label === s.chosen ? 'chosen' : ''}" title="Utility ${o.u.toFixed(2)}"><span>${A.ICONS[o.act] || ''} ${esc(o.label)}</span><div class="track"><i style="width:${(o.p * 100).toFixed(1)}%"></i></div><span class="pct">${(o.p * 100).toFixed(o.p < 0.1 ? 1 : 0)}%</span></div>`;
+        for (const o of s.options.slice().sort((a, b) => b.p - a.p).slice(0, 7)) {
+          html += `<div class="why-opt ${o.label === s.chosen ? 'chosen' : ''}" title="Utility ${o.u.toFixed(2)}"><span>${A.ICONS[o.act || o.id] || ''} ${esc(o.label)}</span><div class="track"><i style="width:${(o.p * 100).toFixed(1)}%"></i></div><span class="pct">${(o.p * 100).toFixed(o.p < 0.1 ? 1 : 0)}%</span></div>`;
         }
         html += '</div>';
       });
@@ -223,7 +233,7 @@
 
     if (p.alive) {
       html += `<div class="card bars"><h3>Condition</h3>
-        ${bar('Health', p.health, 100, '#57d38c')}${bar('Energy', p.energy, 100, '#5aa9e6')}${bar('Stress', p.stress, 100, '#ff6b6b')}${bar('Hunger', p.hunger, 100, '#f4a261')}</div>`;
+        ${bar('Happiness', p.happy, 100, '#f2c14e')}${bar('Health', p.health, 100, '#57d38c')}${bar('Energy', p.energy, 100, '#5aa9e6')}${bar('Stress', p.stress, 100, '#ff6b6b')}${bar('Hunger', p.hunger, 100, '#f4a261')}</div>`;
     }
     html += `<div class="card bars"><h3>Attributes <small class="muted">bar = current · line = inherited potential</small></h3>
       ${C.ATTR_NAMES.map((n, i) => bar(n, p.att[i], 10, '#f2c14e', p.pot[i], p.att[i].toFixed(1))).join('')}
@@ -353,16 +363,36 @@
     const q = $('search').value.trim().toLowerCase();
     let list;
     if (q) list = w.people.filter(p => P.name(p).toLowerCase().includes(q)).sort((a, b) => (b.alive - a.alive) || (b.nw - a.nw)).slice(0, 60);
-    else if (UI.lbMode === 'alive') list = w.living.filter(p => p.alive && p.adult).sort((a, b) => b.nw - a.nw).slice(0, 50);
-    else list = w.people.filter(p => p.adult || !p.alive).sort((a, b) => b.peakNw - a.peakNw).slice(0, 50);
-    const val = p => UI.lbMode === 'all' && !q ? p.peakNw : p.nw;
+    else {
+      // Several scoreboards: not everyone is racing for money.
+      const body = p => (p.att[C.STR] + p.att[C.END] + p.att[C.AGI]) / 3;
+      const kids = p => p.children.filter(id => w.people[id].alive).length;
+      const adults = w.living.filter(p => p.alive && p.adult);
+      const by = {
+        alive: [adults, p => p.nw], all: [w.people.filter(p => p.adult || !p.alive), p => p.peakNw],
+        happy: [adults, p => p.happy], family: [w.living.filter(p => p.alive && p.adult), kids],
+        fit: [adults, body], goals: [w.people.filter(p => p.adult), p => p.goalsDone.length],
+      }[UI.lbMode] || [adults, p => p.nw];
+      list = by[0].slice().sort((a, b) => (by[1](b) - by[1](a)) || (b.nw - a.nw)).slice(0, 50);
+    }
+    const val = p => {
+      if (q) return U.fmtMoney(p.nw);
+      switch (UI.lbMode) {
+        case 'all': return U.fmtMoney(p.peakNw);
+        case 'happy': return `😊 ${Math.round(p.happy)}`;
+        case 'family': return `👶 ${p.children.filter(id => w.people[id].alive).length}`;
+        case 'fit': return `💪 ${((p.att[C.STR] + p.att[C.END] + p.att[C.AGI]) / 3).toFixed(1)}`;
+        case 'goals': return `🎯 ${p.goalsDone.length}`;
+        default: return U.fmtMoney(p.nw);
+      }
+    };
     $('lb-list').innerHTML = list.map((p, i) => `
       <div class="lb-row ${p.id === app.selected ? 'sel' : ''}" data-pid="${p.id}">
         <span class="rank ${i < 3 && !q ? 'top' : ''}">${q ? '' : i + 1}</span>
         <span class="dot" style="background:${C.STRATEGY_COLORS[p.strategy]}" title="${C.STRATEGY_NAMES[p.strategy]}"></span>
         <span><div class="nm">${esc(P.name(p))}${p.alive ? '' : ' <span class="muted">†</span>'}</div>
-          <div class="sub">${Math.floor(P.age(w, p))} yrs · ${C.STRATEGY_NAMES[p.strategy]} · via ${UI.mainSource(p)}${p.gen ? ` · gen ${p.gen}` : ''}</div></span>
-        <span class="val">${U.fmtMoney(val(p))}</span>
+          <div class="sub">${Math.floor(P.age(w, p))} yrs · ${p.goal ? `${LES.Goals.DEFS[p.goal.id].icon} ${LES.Goals.DEFS[p.goal.id].name}` : C.STRATEGY_NAMES[p.strategy]} · via ${UI.mainSource(p)}${p.gen ? ` · gen ${p.gen}` : ''}</div></span>
+        <span class="val">${val(p)}</span>
       </div>`).join('') || '<p class="muted">Nobody matches.</p>';
   };
 
@@ -401,6 +431,9 @@
       <div class="card"><h3>Race to ${U.fmtMoney(w.goal)}</h3><ul class="list-plain">
         ${race.map(p => `<li><span>${UI.plink(w, p.id)} <span class="muted">${Math.floor(P.age(w, p))} · ${C.STRATEGY_NAMES[p.strategy]}</span></span><span>${U.fmtMoney(p.nw)}</span></li>`).join('')}</ul>
         ${w.winner ? `<div class="note">🏆 First to the goal: ${UI.plink(w, w.winner.pid)} in Y${U.dayToDate(w.winner.day).year} at age ${w.winner.age}.</div>` : ''}</div>
+      <div class="card"><h3>Life goals <small class="muted">achieved so far · median happiness ${Math.round(last.happy || 0)}/100</small></h3><canvas class="chart" id="st-goals"></canvas>
+        <div class="note">Not everyone is chasing money: each person has their own goal. Bars show how many times each goal has been achieved in this world.</div></div>
+      <div class="card"><h3>Happiness <small class="muted">median adult, 0-100</small></h3><canvas class="chart" id="st-happy"></canvas></div>
       <div class="card"><h3>Wealth <small class="muted">adults, Year-1 money, log · shading = boom / recession</small></h3><canvas class="chart tall" id="st-wealth"></canvas></div>
       <div class="card"><h3>Median net worth by strategy <small class="muted">adults 30+, today</small></h3><canvas class="chart" id="st-strat"></canvas>
         <div class="note">Exploratory only: one world, people also differ in age, ability and luck. Research Mode (later) will compare thousands of seeds.</div></div>
@@ -426,6 +459,9 @@
       series: [series('top', 'Richest', '#f2c14e'), series('p90', 'Top 10%', '#3ec7b5'), series('median', 'Median', '#5aa9e6')].map(s => ({ ...s, data: s.data.map(([x, y]) => [x, Math.max(0, y)]) })),
       logY: true, yFmt: LES.Charts.fmtAxisMoney, xFmt: xs, bands: UI.regimeBands(w),
     });
+    const GD = LES.Goals.DEFS;
+    LES.Charts.bars($('st-goals'), LES.Goals.IDS.map(id => ({ label: `${GD[id].icon} ${GD[id].name}`, value: st.goalsAchieved[id] || 0, color: '#f2c14e' })), v => String(v));
+    LES.Charts.line($('st-happy'), { series: [{ label: 'Median happiness', color: '#f2c14e', data: h.filter(r => r.happy !== undefined).map(r => [r.day / 365, r.happy]) }], xFmt: xs, yMin: 0 });
     LES.Charts.bars($('st-strat'), C.STRATEGIES.map(s => ({ label: C.STRATEGY_NAMES[s], value: last.stratMedian[s], color: C.STRATEGY_COLORS[s] })), v => U.fmtMoney(v));
     LES.Charts.line($('st-pop'), { series: [series('pop', 'Total', '#e8edf2'), series('adults', 'Adults', '#5aa9e6'), series('children', 'Children', '#f28482')], xFmt: xs, yMin: 0 });
     const mk = w.mkt, step = Math.max(1, Math.floor(mk.idxHist.length / 600));

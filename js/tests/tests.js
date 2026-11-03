@@ -223,12 +223,58 @@
     return rows;
   }
 
+  // Town generator: every size and several seeds must give a complete, valid town.
+  async function townTests() {
+    print('--- Town generator (5 sizes x 6 seeds) ---', 'info');
+    const need = ['kampung', 'flat', 'terrace', 'condo', 'bungalow', 'office', 'bank', 'bursa', 'techhub', 'mall', 'shoplot', 'mamak', 'hawker',
+      'university', 'kolej', 'library', 'hall', 'hospital', 'school', 'park', 'gym', 'factory', 'workshop', 'warehouse', 'construction',
+      'welfare', 'depot', 'memorial', 'station', 'rail', 'cinema', 'karaoke', 'bowling', 'futsal', 'finedine', 'lounge', 'spa', 'golf'];
+    let bad = [];
+    for (const size of LES.MAP_ORDER) {
+      for (const seed of ['t1', 't2', 't3', 't4', 't5', 't6']) {
+        const t = LES.buildTown(size, seed);
+        const missing = need.filter(k => !t.kinds[k] || !t.kinds[k].length);
+        const solid = t.buildings.filter(b => !b.decor);
+        let overlap = 0;
+        for (let i = 0; i < solid.length; i++) for (let j = i + 1; j < solid.length; j++) {
+          const a = solid[i], b = solid[j];
+          if (a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h) overlap++;
+        }
+        const outside = t.buildings.filter(b => b.x < 0 || b.y < 0 || b.x + b.w > t.W || b.y + b.h > t.H).length;
+        const st = t.buildings[t.byKind.station];
+        if (missing.length || overlap || outside || !st || st.block.c !== 0 || !t.busLines.length) bad.push(`${size}/${seed}: missing [${missing}] overlap ${overlap} outside ${outside}`);
+      }
+      const capOK = t => t.buildings.filter(b => b.home).reduce((s, b) => s + b.cap, 0) >= 2 * Math.min(LES.MAP_SIZES[size].maxFounders, 5000);
+      if (!capOK(LES.buildTown(size, 't1'))) bad.push(`${size}: not enough homes for 2x its suggested founders`);
+    }
+    check('Every map size and seed has every building type, no overlaps, station on the west edge', bad.length === 0, bad.slice(0, 3).join(' | '));
+    const a = LES.buildTown('pekan', 's').plan.join(), b = LES.buildTown('pekan', 's').plan.join(), c = LES.buildTown('pekan', 'other').plan.join();
+    check('Same seed gives the same town; another seed gives a different layout', a === b && a !== c);
+    await yieldUI();
+  }
+
+  // Life goals and happiness stay inside their ranges and get achieved over time.
+  async function goalTests() {
+    print('--- Life goals & happiness ---', 'info');
+    const w = new LES.World({ seed: 'goals', founders: 80 });
+    await runDays(w, 15 * 365);
+    const adults = w.living.filter(p => p.adult);
+    check('Every adult has a valid life goal with progress 0-1', adults.every(p => p.goal && LES.Goals.DEFS[p.goal.id] && p.goal.progress >= 0 && p.goal.progress <= 1));
+    check('Happiness always within 0-100', w.people.every(p => p.happy >= 0 && p.happy <= 100));
+    const kinds = new Set(Object.keys(w.stats.goalsAchieved));
+    check('Several different kinds of life goal get achieved in 15 years', kinds.size >= 3, [...kinds].join(','));
+    const hap = adults.map(p => p.happy).sort((x, y) => x - y);
+    check('Happiness is spread out (not everyone 0 or 100)', hap[Math.floor(hap.length * 0.9)] - hap[Math.floor(hap.length * 0.1)] > 10, `${hap[0]}..${hap[hap.length - 1]}`);
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
     const t0 = performance.now();
     try {
       await unitTests();
+      await townTests();
+      await goalTests();
       await determinism();
       await invariantSweep(3, 60);
     } catch (err) {
@@ -239,5 +285,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests };
+  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests };
+  if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

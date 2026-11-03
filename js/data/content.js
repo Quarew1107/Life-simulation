@@ -53,6 +53,10 @@
     { id: 'softdev', title: 'Software Developer', salary: 6800, req: 'BACH_ENG', w: w(.7, 0, .3, 0, 0, 0), diff: 7, cat: 'technical', place: 'techhub', freq: 3 },
     { id: 'manager', title: 'Manager', salary: 9000, req: 'BACH_BUS', w: w(.4, 0, .1, .5, 0, 0), diff: 7, cat: 'office', place: 'office', freq: 1.5 },
     { id: 'doctor', title: 'Doctor', salary: 11000, req: 'MED', w: w(.5, 0, .3, 0, .1, .1), diff: 7.5, cat: 'medical', place: 'hospital', freq: 1.5 },
+    // Commuter jobs in the big city: better pay, but a long train ride each way.
+    { id: 'cityretail', title: 'City Retail Supervisor', salary: 3300, req: null, w: w(.1, 0, .3, .5, 0, .1), diff: 4.5, cat: 'sales', place: 'station', freq: 1.5, commute: true },
+    { id: 'citycorp', title: 'City Office Executive', salary: 5600, req: 'BACH', w: w(.5, 0, .2, .3, 0, 0), diff: 6, cat: 'office', place: 'station', freq: 1.5, commute: true },
+    { id: 'citytech', title: 'City Software Engineer', salary: 8600, req: 'BACH_ENG', w: w(.7, 0, .3, 0, 0, 0), diff: 7, cat: 'technical', place: 'station', freq: 1, commute: true },
   ];
   C.JOB_BY_ID = {};
   for (const j of C.JOBS) C.JOB_BY_ID[j.id] = j;
@@ -219,5 +223,22 @@
     mOnset: [60, 5, 48, 75], mRate: [0.008, 0.003, 0.002, 0.018], mFloor: [0.6, 0.9],
   };
   C.BODY_ATTRS = [1, 4, 5];
+
+  // ---- Leisure venues (Socialise picks one). tier: 0 low, 1 mid, 2 high, 3 highest.
+  // cost in Year-1 RM per visit; joy = happiness gained; relief = stress removed.
+  // member = minimum leisure tier needed (golf is members only). network = deals & referrals.
+  C.VENUES = {
+    park: { name: 'Park', tier: 0, cost: 0, joy: 5, relief: 10, energy: 4, slot: 0, tags: ['outdoor'] },
+    futsal: { name: 'Futsal court', tier: 0, cost: 8, joy: 6, relief: 10, energy: 12, slot: 0, tags: ['sport'] },
+    mamak: { name: 'Mamak', tier: 0, cost: 12, joy: 6, relief: 12, energy: 6, tags: ['social'] },
+    mall: { name: 'Mall', tier: 1, cost: 40, joy: 7, relief: 10, energy: 6, tags: ['shopping'] },
+    cinema: { name: 'Cinema', tier: 1, cost: 30, joy: 8, relief: 12, energy: 4 },
+    bowling: { name: 'Bowling', tier: 1, cost: 45, joy: 8, relief: 12, energy: 8, tags: ['sport', 'social'] },
+    karaoke: { name: 'Karaoke & bar', tier: 1, cost: 70, joy: 9, relief: 14, energy: 8, slot: 1, tags: ['social'] },
+    finedine: { name: 'Fine dining', tier: 2, cost: 220, joy: 11, relief: 14, energy: 4, slot: 1, tags: ['status'] },
+    spa: { name: 'Spa', tier: 2, cost: 260, joy: 10, relief: 25, energy: -6 },
+    lounge: { name: 'Sky lounge', tier: 2, cost: 180, joy: 11, relief: 14, energy: 8, slot: 1, tags: ['social', 'status'], network: true },
+    golf: { name: 'Golf club', tier: 3, cost: 350, joy: 13, relief: 16, energy: 10, slot: 0, member: 3, tags: ['status', 'sport'], network: true },
+  };
   C.MIND_ATTRS = [0, 2];
 })(globalThis.LES = globalThis.LES || {});

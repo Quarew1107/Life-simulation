@@ -131,8 +131,29 @@
     const mig = rows.filter(r => r.p.migrant), loc = rows.filter(r => !r.p.migrant);
     if (mig.length >= 5) out.paras.push(`<b>Migrants vs locals.</b> Median peak wealth: migrants ${U.fmtMoney(median(mig.map(r => r.peakReal)))} (n=${mig.length}), locals ${U.fmtMoney(median(loc.map(r => r.peakReal)))} (n=${loc.length}). Migrants usually arrive later in life with less time in town, so compare with care.`);
 
+    // 8. Life goals and happiness: success is not only money.
+    const G = LES.Goals, adults = w.people.filter(p => p.adult);
+    const achieved = G.IDS.map(id => ({ id, n: st.goalsAchieved[id] || 0 })).sort((a, b) => b.n - a.n);
+    const totalGoals = U.sum(achieved.map(x => x.n));
+    const living = rows.filter(r => r.p.alive && !r.p.away);
+    const moneyHappy = living.length >= 8 ? spearman(living.map(r => r.p.nw), living.map(r => r.p.happy)) : 0;
+    out.goals = achieved;
+    out.moneyHappy = moneyHappy;
+    if (totalGoals) {
+      const top = achieved.filter(x => x.n).slice(0, 3).map(x => `${G.DEFS[x.id].icon} ${G.DEFS[x.id].name.toLowerCase()} (${x.n})`).join(', ');
+      const neverRich = adults.filter(p => p.goalsDone.length && p.peakNw / w.price < U.RM(1e6)).length;
+      out.paras.push(`<b>Life goals.</b> Residents achieved ${totalGoals} personal goals; the most common were ${top}. ${neverRich} people achieved at least one goal without ever becoming millionaires. Today's adults have ${corrWord(moneyHappy)} link between wealth and happiness (r = ${moneyHappy.toFixed(2)}) — ${moneyHappy < 0.25 ? 'money bought little happiness here; family, health and leisure mattered more' : 'money did help, mostly through better homes, leisure and less stress'}.`);
+    }
+
     // Hall of Fame
     const award = (title, r, why) => { if (r) out.awards.push({ title, pid: r.p.id, name: P.name(r.p), why }); };
+    const rowOf = p => rows.find(r => r.p === p) || { p };
+    const happiest = adults.filter(p => p.alive).sort((a, b) => b.happyAvg - a.happyAvg)[0];
+    if (happiest) award('Happiest', rowOf(happiest), `average happiness ${Math.round(happiest.happyAvg)}/100`);
+    const achiever = adults.slice().sort((a, b) => b.goalsDone.length - a.goalsDone.length)[0];
+    if (achiever && achiever.goalsDone.length >= 2) award('Most goals achieved', rowOf(achiever), `${achiever.goalsDone.length} life goals`);
+    const fittest = adults.filter(p => p.alive).sort((a, b) => (b.att[C.STR] + b.att[C.END] + b.att[C.AGI]) - (a.att[C.STR] + a.att[C.END] + a.att[C.AGI]))[0];
+    if (fittest) award('Fittest', rowOf(fittest), `strength/endurance/agility ${((fittest.att[C.STR] + fittest.att[C.END] + fittest.att[C.AGI]) / 3).toFixed(1)}`);
     award('Richest ever', richest, richest && `peak ${U.fmtMoney(richest.peakReal)}`);
     const selfMade = sorted.find(r => r.inheritShare < 0.05);
     award('Most self-made', selfMade, selfMade && `peak ${U.fmtMoney(selfMade.peakReal)}, under 5% inherited`);
@@ -234,6 +255,8 @@ ${compare}
 <section><h2>Charts</h2><div class="grid">${charts.map(([t, s]) => `<div class="card"><b>${t}</b>${s}</div>`).join('')}</div></section>
 <section><h2>Hall of Fame</h2><div class="grid">${a.awards.map(x => `<div class="card award"><b>${esc(x.title)}</b><div>${esc(x.name)}</div><div class="note">${esc(x.why || '')}</div></div>`).join('')}</div></section>
 <section><h2>Notable lives</h2><div class="grid">${a.bios.map(b => `<div class="card bio"><b>${esc(P.name(b.p))}</b> <span class="note">${b.p.alive ? `${Math.floor(P.age(w, b.p))} years old` : `died aged ${Math.floor(P.age(w, b.p))}`} · ${C.STRATEGY_NAMES[b.p.strategy]}${b.p.migrant ? ' · migrant' : ''}</span><ul>${b.events.map(e => `<li><span class="note">Y${U.dayToDate(e.day).year}</span> ${esc(e.text)}</li>`).join('')}</ul></div>`).join('')}</div></section>
+<section><h2>Life goals achieved</h2><table><tr><th>Goal</th><th>Times achieved</th></tr>${(a.goals || []).map(g => `<tr><td>${LES.Goals.DEFS[g.id].icon} ${esc(LES.Goals.DEFS[g.id].name)}</td><td>${g.n}</td></tr>`).join('')}</table>
+<p class="note">Everyone has a personal life goal (money, a dream home, family, happiness, fitness, career, education, helping others or a dynasty). Wealth vs happiness among living adults: rank correlation ${(a.moneyHappy || 0).toFixed(2)}.</p></section>
 <section><h2>Factors and peak wealth</h2><table><tr><th>Factor</th><th>Rank correlation with peak wealth</th></tr>${(a.factors || []).map(f => `<tr><td>${esc(f.name)}</td><td>${f.r.toFixed(2)} (${corrWord(f.r)})</td></tr>`).join('')}</table>
 <p class="note">Spearman rank correlation over adults who reached 30. Correlation is not causation: traits also affect who studies, who starts businesses and who has children.</p></section>
 ${a.strat ? `<section><h2>Strategies</h2><table><tr><th>Starting strategy</th><th>People</th><th>Median peak wealth</th><th>In top 10</th><th>Business failures</th></tr>${a.strat.map(s => `<tr><td>${C.STRATEGY_NAMES[s.s]}</td><td>${s.n}</td><td>${U.fmtMoney(s.med)}</td><td>${s.inTop}</td><td>${s.fail}</td></tr>`).join('')}</table></section>` : ''}
