@@ -21,6 +21,7 @@
     goalRM: 100000000,
     goalMode: 'real',         // real (Year-1 money) | nominal
     mapSize: 'auto',          // auto | kampung | pekan | bandar | bandaraya | metropolis
+    layout: 'varied',         // varied (seeded avenues, river, superblocks) | grid (original equal blocks)
     stopOnWinner: 'no',
     inflMin: -0.5,            // % per year; Malaysia 2010s ~0.7-3.9%, 2020 -1.1%, 2022 3.3%
     inflMax: 4.5,
@@ -54,8 +55,8 @@
   // Presets fill the setup form. Classic reproduces the original engine (harsher, more
   // children, longer lives); Malaysia is calibrated to DOSM figures (tools/calibration.html).
   LES.PRESETS = {
-    malaysia: { name: 'Malaysia today', values: { safetyNet: 'on', fertility: 'malaysia', mortMult: 1.9 } },
-    classic: { name: 'Classic (original rules)', values: { safetyNet: 'off', fertility: 'normal', mortMult: 1 } },
+    malaysia: { name: 'Malaysia today', values: { safetyNet: 'on', fertility: 'malaysia', mortMult: 1.9, layout: 'varied' } },
+    classic: { name: 'Classic (original rules)', values: { safetyNet: 'off', fertility: 'normal', mortMult: 1, layout: 'grid' } },
   };
   LES.presetOf = function (cfg) {
     for (const k of Object.keys(LES.PRESETS)) {
@@ -70,6 +71,7 @@
     { group: 'World', key: 'seed', label: 'World seed', type: 'text', help: 'Same seed + same settings = the exact same world history.' },
     { group: 'World', key: 'founders', label: 'Founding population', type: 'int', min: 20, max: 6000, help: '100 strangers by default.' },
     { group: 'World', key: 'mapSize', label: 'Map size', type: 'select', options: [['auto', 'Auto (suggested from population)'], ['kampung', 'Kampung - up to ~60 founders'], ['pekan', 'Pekan - 60-250 founders'], ['bandar', 'Bandar - 250-700 founders'], ['bandaraya', 'Bandaraya - 700-2,000 founders'], ['metropolis', 'Metropolis - 2,000-5,000+ founders']], help: 'Bigger maps have more homes, shops, venues, bus lines and land to grow on. Layout changes with the seed.' },
+    { group: 'World', key: 'layout', label: 'Street layout', type: 'select', options: [['varied', 'Varied (avenues, a river, superblocks)'], ['grid', 'Grid (original equal blocks)']], help: 'Varied layouts change with the seed.' },
     { group: 'World', key: 'wealthDist', label: 'Starting wealth', type: 'select', options: [['equal', 'Equal (RM10k each)'], ['moderate', 'Moderate inequality'], ['unequal', 'High inequality (some born rich)']] },
     { group: 'World', key: 'horizonYears', label: 'Simulation length (years)', type: 'int', min: 5, max: 300 },
     { group: 'World', key: 'goalRM', label: 'Wealth goal (RM)', type: 'int', min: 10000, max: 1e12 },

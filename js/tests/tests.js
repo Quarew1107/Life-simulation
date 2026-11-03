@@ -248,6 +248,36 @@
       if (!capOK(LES.buildTown(size, 't1'))) bad.push(`${size}: not enough homes for 2x its suggested founders`);
     }
     check('Every map size and seed has every building type, no overlaps, station on the west edge', bad.length === 0, bad.slice(0, 3).join(' | '));
+    // Varied street layouts: doors face real roads, every route stays on roads, same homes as the grid.
+    const vbad = [];
+    for (const size of LES.MAP_ORDER) for (const seed of ['v1', 'v2', 'v3', 'v4']) {
+      const t = LES.buildTown(size, seed, 'varied'), g = LES.buildTown(size, seed, 'grid');
+      for (const b of t.buildings) {
+        const j = t.roadsY.indexOf(b.roadY / t.T - 1), c = LES.townColOf(t, b.door.x / t.T);
+        if (j < 0 || !LES.hasH(t, j, c)) { vbad.push(`${size}/${seed}: ${b.kind} ${b.id} has no road at its door`); break; }
+      }
+      const cap = tt => tt.buildings.reduce((s2, b) => s2 + (b.cap || 0), 0);
+      if (cap(t) !== cap(g) || t.buildings.length !== g.buildings.length) vbad.push(`${size}/${seed}: homes differ from the grid town`);
+      const R = new LES.RNG(`route|${size}|${seed}`);
+      const onRoad = (x, y) => { // a point on a road centre line that exists
+        const tx = x / t.T - 1, ty = y / t.T - 1, jx = t.roadsX.indexOf(tx), jy = t.roadsY.indexOf(ty);
+        if (jy >= 0 && LES.hasH(t, jy, LES.townColOf(t, x / t.T))) return true;
+        if (jx >= 0 && LES.hasV(t, jx, LES.townRowOf(t, y / t.T))) return true;
+        return jx >= 0 && jy >= 0;
+      };
+      for (let k = 0; k < 40 && vbad.length < 5; k++) {
+        const a2 = t.buildings[R.int(0, t.buildings.length - 1)], b2 = t.buildings[R.int(0, t.buildings.length - 1)];
+        const pts = LES.townPath(t, a2, b2);
+        for (let i = 1; i < pts.length; i++) if (pts[i].x !== pts[i - 1].x && pts[i].y !== pts[i - 1].y) { vbad.push(`${size}/${seed}: diagonal route step`); break; }
+        for (let i = 2; i < pts.length - 2; i++) {
+          const m = { x: (pts[i].x + pts[i - 1].x) / 2, y: (pts[i].y + pts[i - 1].y) / 2 };
+          if (pts[i].x !== pts[i - 1].x || pts[i].y !== pts[i - 1].y) if (!onRoad(m.x, m.y)) { vbad.push(`${size}/${seed}: route leaves the roads near ${Math.round(m.x)},${Math.round(m.y)}`); break; }
+        }
+      }
+    }
+    check('Varied layouts (5 sizes x 4 seeds): doors on real roads, routes stay on roads, same homes as grid', vbad.length === 0, vbad.slice(0, 4).join(' | '));
+    const sig = t => JSON.stringify([t.layout.gapX, t.layout.padX, t.layout.river, t.layout.edge]);
+    check('Different seeds give different street layouts', sig(LES.buildTown('pekan', 'p1', 'varied')) !== sig(LES.buildTown('pekan', 'p2', 'varied')) && sig(LES.buildTown('pekan', 'p1', 'varied')) === sig(LES.buildTown('pekan', 'p1', 'varied')));
     const a = LES.buildTown('pekan', 's').plan.join(), b = LES.buildTown('pekan', 's').plan.join(), c = LES.buildTown('pekan', 'other').plan.join();
     check('Same seed gives the same town; another seed gives a different layout', a === b && a !== c);
     await yieldUI();

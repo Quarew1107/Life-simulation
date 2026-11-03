@@ -21,7 +21,7 @@
       }
       const ms = this.cfg.mapSize === 'auto' ? LES.suggestMapSize(this.cfg.founders) : this.cfg.mapSize;
       this.mapSize = LES.MAP_ALIASES[ms] || ms;
-      this.town = LES.buildTown(this.mapSize, this.cfg.seed);
+      this.town = LES.buildTown(this.mapSize, this.cfg.seed, this.cfg.layout);
       this.townVersion = 0;
       this.day = 0;
       this.lastDay = -1;

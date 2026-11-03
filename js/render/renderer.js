@@ -118,10 +118,16 @@
       // Occupancy grid for placing trees
       const busy = new Uint8Array(town.W * town.H);
       const mark = (x, y) => { if (x >= 0 && y >= 0 && x < town.W && y < town.H) busy[y * town.W + x] = 1; };
-      for (const ry of town.roadsY) for (let x = 0; x < town.W; x++) for (let y = ry - 1; y <= ry + 2; y++) mark(x, y);
-      for (const rx of town.roadsX) for (let y = 0; y < town.H; y++) for (let x = rx - 1; x <= rx + 2; x++) mark(x, y);
+      // No trees on roads, pavements, the river or along dropped road pieces (greenways have their own).
+      for (let j = 0; j < town.rows; j++) for (let x = 0; x < town.W; x++) if (!town.layout || LES.hasH(town, j, LES.townColOf(town, x))) for (let y = town.roadsY[j] - 1; y <= town.roadsY[j] + 2; y++) mark(x, y);
+      for (let c = 0; c < town.cols; c++) for (let y = 0; y < town.H; y++) for (let x = town.roadsX[c] - 1; x <= town.roadsX[c] + 2; x++) mark(x, y);
+      if (town.layout && town.layout.river >= 0) { const c = town.layout.river, x0 = town.colX[c] + 14 + town.layout.padX[c]; for (let y = 0; y < town.H; y++) for (let x = x0 - 1; x <= x0 + town.layout.gapX[c]; x++) mark(x, y); }
+      if (town.layout && town.layout.edge.size) { const e = town.layout.edge; for (let y = 0; y < town.H; y++) for (let x = 0; x < town.W; x++) if (e.side === 'e' ? x >= town.W - e.size - 1 : y >= town.H - e.size - 1) mark(x, y); }
+      // Spare plot ground has its own car parks and playgrounds: keep random trees off it.
+      if (town.layout) for (const bl of town.blocks) if (bl.px !== undefined && bl.code !== 'L') for (let x = bl.px; x < bl.px + bl.pw; x++) for (let y = bl.py; y < bl.py + bl.ph; y++) if (x < bl.x || x >= bl.x + 14 || y < bl.y || y >= bl.y + 11) mark(x, y);
+      if (town.layout) for (let j = 0; j < town.rows; j++) for (let x = 0; x < town.W; x++) if (!LES.hasH(town, j, LES.townColOf(town, x))) for (let y = town.roadsY[j] - 1; y <= town.roadsY[j] + 2; y++) mark(x, y);
       for (const b of town.buildings) {
-        if (b.kind === 'lot' && !b.built) continue; // trees may grow on empty lots
+        if (b.kind === 'lot' && !b.built && !(b.block && b.block.wild)) continue; // trees may grow on empty grass lots (wild lots draw their own)
         for (let x = b.x - 1; x <= b.x + b.w; x++) for (let y = b.y - 1; y <= b.y + b.h + 1; y++) mark(x, y);
       }
       // Back-to-front so taller buildings overlap the ones behind them.

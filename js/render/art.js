@@ -254,7 +254,8 @@
     const pave = tiledPattern(g, PAL.concrete, PAL.concreteLine, 8, true), grav = noisePattern(g, PAL.gravel, '#aea691', '#cbc4b3', 220);
     const dirt = noisePattern(g, PAL.sand, PAL.dirtDark, '#e6d0a3', 160);
     for (const bl of town.blocks) {
-      const X = bl.x * T, Y = bl.y * T, BW = 14 * T, BH = 11 * T;
+      const X = (bl.px !== undefined ? bl.px : bl.x) * T, Y = (bl.py !== undefined ? bl.py : bl.y) * T;
+      const BW = (bl.pw || 14) * T, BH = (bl.ph || 11) * T;
       if (PAVED.has(bl.code)) { g.fillStyle = pave; g.fillRect(X + 2, Y + 2, BW - 4, BH - 4); }
       else if (INDUSTRIAL.has(bl.code)) { g.fillStyle = grav; g.fillRect(X + 2, Y + 2, BW - 4, BH - 4); }
       else if (bl.code === 'K' || bl.code === 'A') { // kampung: sandy yards and footpaths
@@ -265,33 +266,170 @@
         for (let y = Y + 4; y < Y + BH - 4; y += 8) rect(g, X + 4, y, BW - 8, 4, PAL.lawnStripe);
       }
     }
-    // Roads: asphalt, kerbs, pavements with a drain (longkang) on the plot side.
+    // Roads: built from the pieces that exist (varied towns drop some, a river replaces one).
+    const { pieces, nodes } = LES.roadPieces(town);
+    const L = town.layout;
+    if (L) drawEdge(g, town, R);
+    if (L) drawPlotExtras(g, town, R);
+    if (L && L.river >= 0) drawRiver(g, town, R);
+    if (L) drawGreenways(g, town, R);
     const asph = noisePattern(g, PAL.asphalt, PAL.asphaltDark, PAL.asphaltLight, 260);
     const walk = tiledPattern(g, PAL.pave, PAL.paveLine, 6, false);
-    for (const ry of town.roadsY) {
-      g.fillStyle = walk; g.fillRect(0, ry * T - 6, W, 6); g.fillRect(0, ry * T + 2 * T, W, 6);
-      rect(g, 0, ry * T - 8, W, 2, PAL.drain); rect(g, 0, ry * T + 2 * T + 6, W, 2, PAL.drain);
-      rect(g, 0, ry * T - 8, W, 1, PAL.drainHi);
-      g.fillStyle = asph; g.fillRect(0, ry * T, W, 2 * T);
-      rect(g, 0, ry * T, W, 1, PAL.kerb); rect(g, 0, ry * T + 2 * T - 1, W, 1, PAL.kerb);
-    }
-    for (const rx of town.roadsX) {
-      g.fillStyle = walk; g.fillRect(rx * T - 6, 0, 6, H); g.fillRect(rx * T + 2 * T, 0, 6, H);
-      rect(g, rx * T - 8, 0, 2, H, PAL.drain); rect(g, rx * T + 2 * T + 6, 0, 2, H, PAL.drain);
-      g.fillStyle = asph; g.fillRect(rx * T, 0, 2 * T, H);
-      rect(g, rx * T, 0, 1, H, PAL.kerb); rect(g, rx * T + 2 * T - 1, 0, 1, H, PAL.kerb);
-    }
-    for (const ry of town.roadsY) for (let x = 0; x < W; x += 14) rect(g, x, ry * T + T - 1, 7, 2, PAL.laneY);
-    for (const rx of town.roadsX) for (let y = 0; y < H; y += 14) rect(g, rx * T + T - 1, y, 2, 7, PAL.laneY);
-    for (const ry of town.roadsY) for (const rx of town.roadsX) {
-      g.fillStyle = asph; g.fillRect(rx * T - 8, ry * T, 2 * T + 16, 2 * T); g.fillRect(rx * T, ry * T - 8, 2 * T, 2 * T + 16);
-      for (let i = 0; i < 4; i++) { // zebra crossings
-        rect(g, rx * T - 11, ry * T + 2 + i * 8, 8, 4, PAL.laneW);
-        rect(g, rx * T + 2 * T + 3, ry * T + 2 + i * 8, 8, 4, PAL.laneW);
-        rect(g, rx * T + 2 + i * 8, ry * T - 11, 4, 8, PAL.laneW);
-        rect(g, rx * T + 2 + i * 8, ry * T + 2 * T + 3, 4, 8, PAL.laneW);
+    const RW = 2 * T, ext = T + 8; // pavements run on through junctions; asphalt covers them where roads cross
+    for (const p of pieces) { // pavements and drains on both sides
+      g.fillStyle = walk;
+      if (p.h) {
+        const x0 = p.x - (p.edge ? 0 : ext), w = p.w + (p.edge ? ext : 2 * ext);
+        g.fillRect(x0, p.y - 6, w, 6); g.fillRect(x0, p.y + RW, w, 6);
+        rect(g, x0, p.y - 8, w, 2, PAL.drain); rect(g, x0, p.y + RW + 6, w, 2, PAL.drain); rect(g, x0, p.y - 8, w, 1, PAL.drainHi);
+      } else {
+        const y0 = p.y - (p.edge ? 0 : ext), h = p.h2 + (p.edge ? ext : 2 * ext);
+        g.fillRect(p.x - 6, y0, 6, h); g.fillRect(p.x + RW, y0, 6, h);
+        rect(g, p.x - 8, y0, 2, h, PAL.drain); rect(g, p.x + RW + 6, y0, 2, h, PAL.drain);
       }
-      rect(g, rx * T + T - 3, ry * T + T - 3, 6, 6, PAL.asphaltLight); rect(g, rx * T + T - 2, ry * T + T - 2, 4, 4, '#3a3d44'); // manhole
+    }
+    g.fillStyle = asph;
+    for (const p of pieces) { if (p.h) g.fillRect(p.x, p.y, p.w, RW); else g.fillRect(p.x, p.y, RW, p.h2); }
+    for (const n of nodes) g.fillRect(n.x, n.y, RW, RW);
+    for (const p of pieces) { // kerbs and lane markings
+      if (p.h) {
+        rect(g, p.x, p.y, p.w, 1, PAL.kerb); rect(g, p.x, p.y + RW - 1, p.w, 1, PAL.kerb);
+        for (let x = p.x + 4; x < p.x + p.w - 7; x += 14) rect(g, x, p.y + T - 1, 7, 2, PAL.laneY);
+      } else {
+        rect(g, p.x, p.y, 1, p.h2, PAL.kerb); rect(g, p.x + RW - 1, p.y, 1, p.h2, PAL.kerb);
+        for (let y = p.y + 4; y < p.y + p.h2 - 7; y += 14) rect(g, p.x + T - 1, y, 2, 7, PAL.laneY);
+      }
+    }
+    for (const n of nodes) {
+      if (n.deg >= 3) for (let i = 0; i < 4; i++) { // zebra crossings on every arm of a junction
+        if (n.W) rect(g, n.x - 11, n.y + 2 + i * 8, 8, 4, PAL.laneW);
+        if (n.E) rect(g, n.x + RW + 3, n.y + 2 + i * 8, 8, 4, PAL.laneW);
+        if (n.N) rect(g, n.x + 2 + i * 8, n.y - 11, 4, 8, PAL.laneW);
+        if (n.S) rect(g, n.x + 2 + i * 8, n.y + RW + 3, 4, 8, PAL.laneW);
+      }
+      if (n.deg >= 2) { rect(g, n.x + T - 3, n.y + T - 3, 6, 6, PAL.asphaltLight); rect(g, n.x + T - 2, n.y + T - 2, 4, 4, '#3a3d44'); } // manhole
+    }
+    if (L) { drawAvenues(g, town, pieces, R); if (L.river >= 0) drawBridges(g, town); }
+  }
+
+  // A river winding down one north-south gap, with sandy banks and a few reeds.
+  function drawRiver(g, town, R) {
+    const T = town.T, c = town.layout.river, X0 = (town.colX[c] + 14 + town.layout.padX[c]) * T, Wd = town.layout.gapX[c] * T, H = (town.layout.edge.side === 's' ? town.H - town.layout.edge.size : town.H) * T;
+    const mid = X0 + Wd / 2, ph = R.next() * 6;
+    const at = y => mid + Math.sin(y / 70 + ph) * T * 0.55 + Math.sin(y / 23 + ph * 2) * 3;
+    for (let y = 0; y < H; y += 2) {
+      const cx = at(y), half = T * 1.35 + Math.sin(y / 41 + ph) * 3;
+      rect(g, cx - half - 4, y, 2 * half + 8, 2, PAL.sand);
+      rect(g, cx - half, y, 2 * half, 2, '#3f8fb5');
+      rect(g, cx - half + 3, y, 2 * half - 6, 2, '#4a9cc2');
+      if (y % 10 === 0) rect(g, cx - half / 2 + Math.sin(y) * half / 2, y, 5, 1, '#7cc3e0');
+    }
+    for (let i = 0; i < H / 40; i++) { const y = R.int(0, H - 6), side = R.next() < 0.5 ? -1 : 1, x = at(y) + side * (T * 1.35 + 3); rect(g, x, y, 1, 4, '#5f8f43'); rect(g, x + 2, y + 1, 1, 3, '#6fa34b'); }
+  }
+  // Railings where roads cross the river.
+  function drawBridges(g, town) {
+    const T = town.T, c = town.layout.river, X0 = (town.colX[c] + 14 + town.layout.padX[c]) * T, Wd = town.layout.gapX[c] * T;
+    for (let j = 0; j < town.rows; j++) {
+      const y = town.roadsY[j] * T;
+      for (const yy of [y - 9, y + 2 * T + 7]) { rect(g, X0, yy, Wd, 2, '#cfc6b0'); for (let x = X0; x < X0 + Wd; x += 6) rect(g, x, yy - 2, 1, 2, '#a59f92'); }
+    }
+  }
+  // Where a road piece was dropped (superblocks) a shaded footpath joins the blocks.
+  function drawGreenways(g, town, R) {
+    const T = town.T, L = town.layout;
+    const path = (x, y, w, h) => { rect(g, x, y, w, h, PAL.sand); rect(g, x, y, w, 1, PAL.dirtDark); };
+    for (let c = 0; c < town.cols; c++) for (let r = 0; r < town.rows; r++) {
+      if (L.vseg[c][r] || c === L.river) continue;
+      const x = town.roadsX[c] * T, y0 = r === 0 ? 0 : (town.roadsY[r - 1] + 2) * T, y1 = town.roadsY[r] * T;
+      rect(g, x - 10, y0 + 2, 2 * T + 20, y1 - y0 - 4, PAL.lawn); // the two blocks join into one superblock
+      path(x + T - 3, y0, 6, y1 - y0);
+      for (let y = y0 + 8; y < y1 - 16; y += 34) { rainTree(g, x - 2, y, 0.8, R); rainTree(g, x + T + 4, y + 16, 0.8, R); }
+    }
+    for (let j = 0; j < town.rows; j++) for (let c = 0; c < town.cols; c++) {
+      if (L.hseg[j][c]) continue;
+      const y = town.roadsY[j] * T, x0 = c === 0 ? 0 : (town.roadsX[c - 1] + 2) * T, x1 = town.roadsX[c] * T;
+      rect(g, x0 + 2, y - 10, x1 - x0 - 4, 2 * T + 20, PAL.lawn);
+      path(x0, y + T - 3, x1 - x0, 6);
+      for (let x = x0 + 10; x < x1 - 20; x += 40) { shrub(g, x, y + 2); rainTree(g, x + 18, y + T + 4, 0.75, R); }
+    }
+  }
+  // Spare ground around a varied town's buildings: car parks, playgrounds and gardens.
+  const HOMES = new Set(['K', 'A', 'F', 'T', 'C', 'B', 'R']);
+  function drawPlotExtras(g, town, R) {
+    const T = town.T;
+    for (const bl of town.blocks) {
+      if (bl.px === undefined || bl.code === 'L' || bl.code === 'Z' || bl.code === 'P') continue;
+      const strips = [];
+      const wl = bl.x - bl.px, wr = bl.px + bl.pw - bl.x - 14, ht = bl.y - bl.py, hb = bl.py + bl.ph - bl.y - 11;
+      if (wl >= 2) strips.push({ x: bl.px, y: bl.y, w: wl, h: 11 });
+      if (wr >= 2) strips.push({ x: bl.x + 14, y: bl.y, w: wr, h: 11 });
+      if (ht >= 2) strips.push({ x: bl.px, y: bl.py, w: bl.pw, h: ht });
+      if (hb >= 2) strips.push({ x: bl.px, y: bl.y + 11, w: bl.pw, h: hb });
+      strips.forEach((st, i) => {
+        const X = st.x * T + 3, Y = st.y * T + 3, W = st.w * T - 6, H = st.h * T - 6;
+        const pick = (bl.c * 7 + bl.r * 13 + i) % 3;
+        if (!HOMES.has(bl.code) || (bl.code === 'F' || bl.code === 'C') && pick === 0) carPark(g, X, Y, W, H, R);
+        else if (pick === 1) playground(g, X, Y, W, H);
+        else garden(g, X, Y, W, H, R);
+      });
+    }
+  }
+  function carPark(g, X, Y, W, H, R) {
+    rect(g, X, Y, W, H, '#5a5e66'); rect(g, X, Y, W, 1, PAL.kerb); rect(g, X, Y + H - 1, W, 1, PAL.kerb);
+    const across = W >= H;
+    if (across) for (let x = X + 2; x + 14 < X + W; x += 16) { rect(g, x, Y + 2, 1, Math.min(10, H - 4), '#e8e4da'); if (R.next() < 0.6) car(g, x + 2, Y + 3, R.pick(['#e63946', '#457b9d', '#f1faee', '#2a9d8f', '#e9c46a', '#14141a'])); }
+    else for (let y = Y + 2; y + 9 < Y + H; y += 10) { rect(g, X + 2, y, Math.min(16, W - 4), 1, '#e8e4da'); if (R.next() < 0.6) car(g, X + 3, y + 2, R.pick(['#e63946', '#457b9d', '#f1faee', '#2a9d8f', '#e9c46a'])); }
+  }
+  function playground(g, X, Y, W, H) {
+    rect(g, X, Y, W, H, '#e3c98f'); rect(g, X + 1, Y + 1, W - 2, H - 2, '#ead6a3');
+    const cx = X + Math.min(W, 40) / 2, cy = Y + Math.min(H, 30) / 2;
+    rect(g, cx - 8, cy - 6, 2, 10, '#e63946'); rect(g, cx + 6, cy - 6, 2, 10, '#e63946'); rect(g, cx - 8, cy - 7, 16, 2, '#e63946'); // swings
+    rect(g, cx - 4, cy - 4, 1, 6, '#555'); rect(g, cx + 2, cy - 4, 1, 6, '#555'); rect(g, cx - 5, cy + 2, 3, 1, '#2a9d8f'); rect(g, cx + 1, cy + 2, 3, 1, '#2a9d8f');
+    if (W > 44 || H > 34) { const sx = X + W - 22, sy = Y + H - 18; rect(g, sx, sy, 4, 12, '#f4a261'); for (let i = 0; i < 10; i++) rect(g, sx + 4 + i, sy + 2 + i, 2, 1, '#3a86ff'); } // slide
+  }
+  function garden(g, X, Y, W, H, R) {
+    rect(g, X, Y, W, H, '#7fbf5a');
+    for (let i = 0; i < Math.max(2, W * H / 500); i++) shrub(g, X + R.int(0, Math.max(1, W - 10)), Y + R.int(0, Math.max(1, H - 8)), R.pick(['#4f9441', '#d65a8a', '#f4a261', '#4f9441']));
+    if (W >= 20 && H >= 10) { rect(g, X + W / 2 - 5, Y + H / 2, 10, 2, PAL.wood); rect(g, X + W / 2 - 5, Y + H / 2 + 2, 1, 2, PAL.woodDark); rect(g, X + W / 2 + 4, Y + H / 2 + 2, 1, 2, PAL.woodDark); }
+  }
+  // The coast (beach, sea and fishing boats) or a forested hill range along one edge.
+  function drawEdge(g, town, R) {
+    const e = town.layout.edge;
+    if (!e || !e.size) return;
+    const T = town.T, W = town.W * T, H = town.H * T, sz = e.size * T;
+    const east = e.side === 'e', len = east ? H : W, base = east ? W - sz : H - sz;
+    const wav = k => Math.sin(k / 53) * 10 + Math.sin(k / 17) * 4;
+    for (let k = 0; k < len; k += 2) {
+      const d = base + 10 + wav(k); // distance from the town side where the land ends
+      const span = (east ? W : H) - d;
+      const bandRect = (from, size, col) => east ? rect(g, from, k, size, 2, col) : rect(g, k, from, 2, size, col);
+      if (e.kind === 'sea') {
+        bandRect(d - 8, 8 + 18, PAL.sand);
+        bandRect(d + 18, span, '#3a8fc0');
+        bandRect(d + 18, 4, '#d7f0f7');
+        if (k % 6 === 0) bandRect(d + 30 + (k * 7) % 40, 1, '#62aad2');
+      } else {
+        bandRect(d - 6, span + 6, '#4f7f3c');
+        bandRect(d - 6, 3, '#3f6a30');
+      }
+    }
+    if (e.kind === 'sea') {
+      for (let i = 0; i < Math.max(2, len / 300); i++) { // fishing boats (perahu)
+        const k = R.int(20, len - 40), off = base + 50 + R.int(0, sz - 80);
+        const x = east ? off : k, y = east ? k : off;
+        rect(g, x, y + 4, 16, 4, '#b5483a'); rect(g, x + 2, y + 8, 12, 2, '#7a2632'); rect(g, x + 7, y - 4, 1, 8, '#6e4e31'); rect(g, x + 8, y - 3, 5, 5, '#f4f1e8');
+      }
+    } else {
+      for (let i = 0; i < len * sz / 260; i++) { const k = R.int(0, len - 10), off = base + 12 + R.int(0, sz - 24); rainTree(g, east ? off : k, east ? k : off, 0.9 + R.next() * 0.5, R); }
+    }
+  }
+
+  // Tree-lined avenues: palms or rain trees in the verges beside the pavements.
+  function drawAvenues(g, town, pieces, R) {
+    const T = town.T, L = town.layout;
+    for (const p of pieces) {
+      if (p.h && L.avenueY.includes(p.j)) for (let x = p.x + 10; x < p.x + p.w - 10; x += 36) { palm(g, x, p.y - 26); palm(g, x + 18, p.y + 2 * T + 2); }
+      if (!p.h && L.avenueX.includes(p.c)) for (let y = p.y + 6; y < p.y + p.h2 - 14; y += 36) { rainTree(g, p.x - 20, y, 0.75, R); rainTree(g, p.x + 2 * T + 6, y + 18, 0.75, R); }
     }
   }
 
@@ -592,6 +730,7 @@
       }
       case 'lot': {
         if (b.built) break;
+        if (b.block && b.block.wild) { wildLot(g, b, X, Y, W, H, R); break; }
         rect(g, X + 6, Y + 6, W - 12, H - 12, '#9cc06f');
         for (let i = 0; i < 40; i++) rect(g, X + 8 + R.int(0, W - 18), Y + 8 + R.int(0, H - 18), 2, 2, R.next() < 0.5 ? '#8fb463' : '#b0cd84');
         g.strokeStyle = '#8b6b43'; g.lineWidth = 1; g.setLineDash([3, 3]); g.strokeRect(X + 6.5, Y + 6.5, W - 13, H - 13); g.setLineDash([]);
@@ -702,13 +841,32 @@
     }
   }
 
+  // Undeveloped land in a varied town: jungle, an oil palm estate or scrub (cleared when built on).
+  function wildLot(g, b, X, Y, W, H, R) {
+    const kind = b.block.wild;
+    if (kind === 'palm') {
+      rect(g, X + 2, Y + 2, W - 4, H - 4, '#8fae5a');
+      for (let y = Y + 10; y < Y + H - 18; y += 22) for (let x = X + 8 + ((y / 22) % 2) * 11; x < X + W - 16; x += 22) palm(g, x, y);
+      sign(g, 'LADANG SAWIT', X + W / 2, Y + H - 13, '#4a6a1f');
+    } else if (kind === 'forest') {
+      rect(g, X + 2, Y + 2, W - 4, H - 4, '#5d8f43');
+      for (let i = 0; i < 46; i++) rainTree(g, X + R.int(0, W - 18), Y + R.int(0, H - 18), 0.8 + R.next() * 0.5, R);
+      sign(g, 'HUTAN', X + W / 2, Y + H - 13, '#2d4a1f');
+    } else {
+      rect(g, X + 4, Y + 4, W - 8, H - 8, '#a3bf6e');
+      for (let i = 0; i < 70; i++) rect(g, X + 6 + R.int(0, W - 14), Y + 6 + R.int(0, H - 14), 2, 2, R.next() < 0.5 ? '#8fb463' : '#c2b27a');
+      for (let i = 0; i < 8; i++) shrub(g, X + R.int(6, W - 16), Y + R.int(6, H - 14));
+      sign(g, 'TANAH DIJUAL', X + W / 2, Y + H / 2 - 12, '#7a5a1d');
+    }
+  }
+
   // Scatter of trees and plants on free ground (kampung gets palms and bananas).
   function drawGreenery(g, town, busy, R) {
     const T = town.T;
     for (let y = 0; y < town.H; y++) for (let x = 0; x < town.W; x++) {
       if (busy[y * town.W + x] || R.next() > 0.3) continue;
       const px = x * T + R.int(0, 6), py = y * T + R.int(0, 4);
-      const bl = town.blocks[Math.floor(y / 13) * town.cols + Math.floor(x / 16)]; // blocks are 14x11 + 2-tile roads, row-major
+      const bl = LES.townBlockAt(town, x, y);
       const code = bl ? bl.code : '';
       const v = R.next();
       if (code === 'K' || code === 'A') { if (v < 0.5) palm(g, px, py); else if (v < 0.75) banana(g, px, py); else rainTree(g, px, py, 0.8, R); }
