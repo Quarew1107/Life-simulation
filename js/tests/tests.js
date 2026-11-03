@@ -389,6 +389,42 @@
     check('Society off: no religion or class fields are created', !off.society && off.people.every(p => p.rel === undefined));
   }
 
+  // Phase-3 crime: invariants, justice, prison effects, drugs, gangs, policy settings.
+  async function crimeTests() {
+    print('--- Crime & justice ---', 'info');
+    const CR = LES.Crime;
+    const w = new LES.World({ seed: 'crime-test', founders: 250, crime: 'lawless' });
+    let errs = [];
+    await runDays(w, 15 * 365, wx => { if (!errs.length) errs = wx.checkInvariants(); });
+    check('15 lawless years: no invariant violations (money incl. gang funds balances)', errs.length === 0, errs.slice(0, 3).join(' | '));
+    const st = w.crime;
+    check('Crimes, arrests, convictions and prison admissions all happen', (st.total.theft || 0) > 0 && st.arrests > 0 && st.convictions > 0 && st.admissions > 0, JSON.stringify(st.total));
+    check('Drug use, rehab and drug arrests happen', st.startedUsing > 0 && st.rehabAdmissions > 0 && st.drugArrests > 0);
+    check('At least one gang formed', st.gangs.length > 0);
+    const inmates = w.people.filter(p => p.inst);
+    check('Prisoners hold no job, course, business role or children', inmates.every(p => !p.job && !p.enrol && p.manages < 0 && !p.careOf.length));
+    // Admission: job lost, children re-homed, record after release.
+    const w2 = new LES.World({ seed: 'crime-unit', founders: 60 });
+    const p = w2.people.find(q => q.job), job = p.job.title;
+    CR.admit(w2, p, 'prison', 2, 'test');
+    check('Going to prison ends the job and the person stops making choices', !p.job && p.inst && p.inst.kind === 'prison');
+    await runDays(w2, 70);
+    check('Released after the sentence with a criminal record', !p.inst && p.cr.rec === 1, `${job} → inst ${!!p.inst} rec ${p.cr.rec}`);
+    const sys = LES.Systems.all().find(x => x.id === 'crime');
+    check('A criminal record lowers the hiring score', sys.hireWeight(w2, p) < 1);
+    // Calendar of intensity: realistic has far fewer crimes than lawless.
+    const r1 = new LES.World({ seed: 'cr-k', founders: 200, crime: 'realistic' }), r2 = new LES.World({ seed: 'cr-k', founders: 200, crime: 'lawless' });
+    await runDays(r1, 8 * 365); await runDays(r2, 8 * 365);
+    const tot = x => Object.values(x.crime.total).reduce((a, b) => a + b, 0);
+    check('Lawless towns see far more crime than realistic ones', tot(r2) > 5 * Math.max(1, tot(r1)), `${tot(r1)} vs ${tot(r2)}`);
+    const dec = new LES.World({ seed: 'cr-d', founders: 200, crime: 'lawless', drugPolicy: 'decriminalised' });
+    await runDays(dec, 8 * 365);
+    check('Decriminalised drug use: no possession arrests', dec.crime.drugArrests === 0);
+    const off = new LES.World({ seed: 'cr-off', founders: 40, crime: 'off' });
+    await runDays(off, 200);
+    check('Crime off: no crime state and nobody in an institution', !off.crime && off.people.every(q => !q.inst));
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -399,6 +435,7 @@
       await goalTests();
       await foundationTests();
       await societyTests();
+      await crimeTests();
       await determinism();
       await invariantSweep(3, 60);
     } catch (err) {
@@ -409,6 +446,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests };
+  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

@@ -89,7 +89,7 @@
   };
 
   // ---------------- Map overlays ----------------
-  X.OVERLAYS = [['none', 'No overlay'], ['wealth', 'Wealth'], ['strategy', 'Strategy'], ['stress', 'Stress'], ['class', 'Class (B40/M40/T20)'], ['religion', 'Religion'], ['ethnicity', 'Ethnicity'], ['family', "Selected person's family"]];
+  X.OVERLAYS = [['none', 'No overlay'], ['wealth', 'Wealth'], ['strategy', 'Strategy'], ['stress', 'Stress'], ['class', 'Class (B40/M40/T20)'], ['religion', 'Religion'], ['ethnicity', 'Ethnicity'], ['crime', 'Crime (records, gangs, drugs, victims)'], ['gangs', 'Gang turf'], ['family', "Selected person's family"]];
   const ETH_COLOURS = { malay: '#2a9d8f', chinese: '#e63946', indian: '#f4a261', bumi: '#b892ff', other: '#e8edf2' };
   X.overlayColour = function (w, p, mode, selected) {
     if (mode === 'wealth') {
@@ -101,6 +101,16 @@
     if (mode === 'class') return p.elite ? '#ffffff' : p.cls ? LES.Society.CLASS_COLOURS[p.cls] : null;
     if (mode === 'religion') return p.rel ? LES.Society.RELIGIONS[p.rel].colour : null;
     if (mode === 'ethnicity') return ETH_COLOURS[p.eth] || null;
+    if (mode === 'crime' || mode === 'gangs') {
+      const cr = p.cr;
+      if (!cr) return null;
+      if (cr.gang >= 0 && w.crime.gangs[cr.gang]) return w.crime.gangs[cr.gang].colour;
+      if (mode === 'gangs') return null;
+      if (cr.rec) return '#e63946';
+      if (cr.user) return '#b892ff';
+      if (cr.fear > 0.15) return '#f4a261';
+      return null;
+    }
     if (mode === 'family' && selected) {
       if (p.id === selected.id) return '#3ec7b5';
       const rel = selected.parents.includes(p.id) || selected.children.includes(p.id) || p.parents.some(x => selected.parents.includes(x)) || selected.partnerId === p.id;

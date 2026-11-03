@@ -46,6 +46,7 @@
   // ---- Daily food ----
   F.dailyFood = function (w, p) {
     const L = w.ledger;
+    if (p.inst) { p.hunger = 0; return; } // meals are provided in prison and rehab
     const cost = Math.round(F.tierCost(w, 'food', p.tiers.food) / 30);
     if (p.cash < cost) F.raiseCash(w, p, cost - p.cash);
     if (p.cash >= cost) {
@@ -100,6 +101,7 @@
 
   // ---- Lifestyle tiers (monthly). Impatient people spend more of their income. ----
   F.reviewTiers = function (w, p) {
+    if (p.inst) return; // no lifestyle choices in prison or rehab
     const pat = (p.pers.pat - 50) / 50, dis = (p.pers.dis - 50) / 50;
     const spendRate = U.clamp(1.0 - 0.3 * pat - 0.15 * dis + LES.Goals.spendDelta(p), 0.5, 1.2);
     const budget = p.incomeEMA * spendRate + Math.max(0, p.nw) * 0.004 - F.careShare(w, p);
@@ -372,7 +374,7 @@
     let best = -1, bestShare = -1;
     for (const k of Object.keys(b.shares)) {
       const id = Number(k), p = w.people[id];
-      if (!P.isAdult(w, p) || p.away || (p.manages >= 0 && p.manages !== b.id)) continue;
+      if (!P.isAdult(w, p) || p.away || p.inst || (p.manages >= 0 && p.manages !== b.id)) continue;
       const s = b.shares[id] + (p.retired ? -0.5 : 0);
       if (s > bestShare || (s === bestShare && id < best)) { bestShare = s; best = id; }
     }

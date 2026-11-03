@@ -98,7 +98,7 @@
       const avgStress = (p.stress + q.stress) / 200;
       if (R.next() < (0.0012 + 0.008 * avgStress * avgStress) * w.sysMul('breakupWeight', p, q)) { Fa.separate(w, p, q, 'breakup'); continue; }
       // Conception
-      if (p.pregnancy || w.day - p.lastBirthDay < w.cfg.birthSpacingDays || P.age(w, q) > 65) continue;
+      if (p.pregnancy || p.inst || q.inst || w.day - p.lastBirthDay < w.cfg.birthSpacingDays || P.age(w, q) > 65) continue;
       const fert = fertility(P.age(w, p));
       if (fert <= 0) continue;
       if (R.next() < Fa.desire(w, p) && R.next() < Fa.desire(w, q) && R.next() < 0.11 * fert * w.derived.fertMult) {
@@ -143,12 +143,13 @@
       if (n === 2 && k === 0) w.stats.twins++;
 
       // Independent care decisions per parent (FSD 8.4).
-      const accepted = [mother, father].filter(par => Fa.acceptCare(w, par));
+      const accepted = [mother, father].filter(par => !par.inst && Fa.acceptCare(w, par)); // a parent in prison cannot care
       const twinTxt = n === 2 ? ' (twins!)' : '';
       for (const par of [mother, father]) {
         if (!par.alive) continue;
         const other = par === mother ? father : mother;
         if (accepted.includes(par)) P.log(w, par, `Welcomed baby ${c.first}${twinTxt} with ${P.name(other)}`, 'family', par === mother ? 1 : 0);
+        else if (par.inst) P.log(w, par, `Baby ${c.first}${twinTxt} was born while they were ${par.inst.kind === 'rehab' ? 'in rehab' : 'in prison'}`, 'family', 1);
         else P.log(w, par, `Refused to care for newborn ${c.first}`, 'family', 1);
       }
       if (accepted.length) {
@@ -179,7 +180,7 @@
       for (const sib of par.children) candidates.push(w.people[sib]);
     }
     for (const g of candidates) {
-      if (!g || g.id === c.id || tried.has(g.id) || !P.isAdult(w, g) || g.away) continue;
+      if (!g || g.id === c.id || tried.has(g.id) || !P.isAdult(w, g) || g.away || g.inst) continue;
       tried.add(g.id);
       if (Fa.acceptCare(w, g)) {
         Fa.addCare(w, g, c);

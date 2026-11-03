@@ -22,11 +22,13 @@
 //   venueBias(w, p, venueKey)       added to how much a person likes a leisure venue
 //   stockOk(w, p, ticker)           false = this person will not buy that share
 //   money(w)                        sen held in accounts the system owns (for the money check)
+//   hireWeight(w, p, vacancy)       multiplier on an applicant's hiring score (e.g. a criminal record)
+// People in an institution (p.inst = { kind, until, loc }: prison, rehab) skip their daily choices.
 (function (LES) {
   'use strict';
   const reg = [];
   const HOOKS = ['init', 'day', 'month', 'year', 'candidates', 'resolve', 'label', 'death', 'invariants', 'hash', 'snapshot',
-    'personCreated', 'coupleWeight', 'coupled', 'breakupWeight', 'venueBias', 'stockOk', 'money'];
+    'personCreated', 'coupleWeight', 'coupled', 'breakupWeight', 'venueBias', 'stockOk', 'money', 'hireWeight'];
 
   LES.Systems = {
     register(sys) {

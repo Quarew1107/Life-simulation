@@ -16,7 +16,7 @@
       this.derived = LES.derive(this.cfg);
       this.attachSystems();
       this.rng = {};
-      for (const k of ['init', 'decide', 'outcome', 'jobs', 'market', 'biz', 'family', 'luck', 'mortality', 'migration', 'goals', 'society']) {
+      for (const k of ['init', 'decide', 'outcome', 'jobs', 'market', 'biz', 'family', 'luck', 'mortality', 'migration', 'goals', 'society', 'crime']) {
         this.rng[k] = new LES.RNG(`${this.cfg.seed}|${k}`);
       }
       const ms = this.cfg.mapSize === 'auto' ? LES.suggestMapSize(this.cfg.founders) : this.cfg.mapSize;
@@ -209,6 +209,7 @@
       for (const p of this.living) {
         if (!p.alive) continue;
         if (p.adult) {
+          if (p.inst) { this.instDay(p); continue; } // in prison or rehab
           A.liveDay(this, p);
           if (this.date.dom === (p.id % 28) + 1) F.marketBehaviour(this, p);
         } else this.childDay(p);
@@ -253,6 +254,14 @@
           this.die(p, age >= 60 ? 'old age' : age < 1 ? 'infant illness' : 'illness');
         }
       }
+    }
+
+    // A day inside an institution (prison, rehab): no choices, shown at that building.
+    instDay(p) {
+      const label = p.inst.kind === 'rehab' ? 'In drug rehabilitation' : 'Serving a prison sentence';
+      p.plan = [{ act: 'PRISON', label, loc: p.inst.loc, sub: p.inst.kind }, { act: 'PRISON', label, loc: p.inst.loc, sub: p.inst.kind }];
+      p.why = null;
+      p.energy = Math.min(100, p.energy + 5); p.stress = Math.min(100, p.stress + 0.3);
     }
 
     childDay(c) {
@@ -454,6 +463,7 @@
       p.causeOfDeath = cause;
       if (p.job) Lb.endJob(this, p, 'died', true);
       p.enrol = null; p.pregnancy = null; p.plan = null;
+      if (p.inst) p.inst = null;
       if (p.partnerId !== null) {
         const q = this.people[p.partnerId];
         q.partnerId = null; p.partnerId = null;

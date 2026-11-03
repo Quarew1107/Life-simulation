@@ -52,6 +52,7 @@
     school: { shirt: '#f8f8f8', pants: '#1d3557' },
     sport: { shirt: '#e63946', pants: '#1b1b1b' },
     police: { shirt: '#1d3557', pants: '#1d3557', hat: '#14213d' },
+    prisoner: { shirt: '#f77f00', pants: '#f77f00' },
     bajuMelayu: look => ({ shirt: look.scarf, pants: look.scarf, hat: '#151515' }), // with songkok
     kurung: look => ({ shirt: look.scarf, pants: look.scarf }),
     saree: look => ({ shirt: look.scarf, pants: look.scarf, sash: '#f2c14e' }),

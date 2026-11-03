@@ -25,6 +25,9 @@
     society: 'on',            // social class + religion systems (off = original engine)
     ethnicMix: 'malaysia',    // malaysia (DOSM 2025 shares, 5 groups) | classic (original 3 groups)
     interfaith: 'malaysia',   // malaysia (a non-Muslim converts to marry a Muslim) | free
+    crime: 'lively',          // lively (Malaysian rates x10) | realistic (x1) | lawless (x30) | off
+    drugPolicy: 'malaysia',   // malaysia (rehab first, prison for repeat) | punitive | treatment | decriminalised
+    police: 'normal',         // weak | normal | strong (arrest chances)
     stopOnWinner: 'no',
     inflMin: -0.5,            // % per year; Malaysia 2010s ~0.7-3.9%, 2020 -1.1%, 2022 3.3%
     inflMax: 4.5,
@@ -58,8 +61,8 @@
   // Presets fill the setup form. Classic reproduces the original engine (harsher, more
   // children, longer lives); Malaysia is calibrated to DOSM figures (tools/calibration.html).
   LES.PRESETS = {
-    malaysia: { name: 'Malaysia today', values: { safetyNet: 'on', fertility: 'malaysia', mortMult: 1.9, layout: 'varied', society: 'on', ethnicMix: 'malaysia' } },
-    classic: { name: 'Classic (original rules)', values: { safetyNet: 'off', fertility: 'normal', mortMult: 1, layout: 'grid', society: 'off', ethnicMix: 'classic' } },
+    malaysia: { name: 'Malaysia today', values: { safetyNet: 'on', fertility: 'malaysia', mortMult: 1.9, layout: 'varied', society: 'on', ethnicMix: 'malaysia', crime: 'lively' } },
+    classic: { name: 'Classic (original rules)', values: { safetyNet: 'off', fertility: 'normal', mortMult: 1, layout: 'grid', society: 'off', ethnicMix: 'classic', crime: 'off' } },
   };
   LES.presetOf = function (cfg) {
     for (const k of Object.keys(LES.PRESETS)) {
@@ -88,6 +91,9 @@
     { group: 'Society', key: 'society', label: 'Social class & religion', type: 'select', options: [['on', 'On (B40/M40/T20, religion, festivals)'], ['off', 'Off (original engine)']], help: 'Class is calculated from household income each month. Religion works through worship, zakat and donations, fasting and festivals - never as a success bonus.' },
     { group: 'Society', key: 'ethnicMix', label: 'Population mix', type: 'select', options: [['malaysia', 'Malaysia 2025 (Malay, Chinese, other Bumiputera, Indian, others)'], ['classic', 'Classic (Malay, Chinese, Indian)']], help: 'Groups differ in names, looks, festivals and religion mix - not in ability.' },
     { group: 'Society', key: 'interfaith', label: 'Interfaith marriage', type: 'select', options: [['malaysia', 'Malaysian rule (convert to marry a Muslim)'], ['free', 'Free choice']] },
+    { group: 'Society', key: 'crime', label: 'Crime & vice', type: 'select', options: [['lively', 'Lively (Malaysian rates x10)'], ['realistic', 'Realistic (Malaysian rates: rare in a small town)'], ['lawless', 'Lawless (x30)'], ['off', 'Off (original engine)']], help: "Crime, police, courts, prison, drugs and gangs. Malaysia's real rates (170 index crimes per 100k a year) mean a 300-person town sees about one crime every two years, so Lively is the default for watching." },
+    { group: 'Society', key: 'drugPolicy', label: 'Drug policy', type: 'select', options: [['malaysia', 'Malaysian mix (rehab first, prison for repeat)'], ['punitive', 'Punitive (prison)'], ['treatment', 'Treatment first (short rehab, voluntary help)'], ['decriminalised', 'Decriminalised use']] },
+    { group: 'Society', key: 'police', label: 'Police strength', type: 'select', options: [['normal', 'Normal'], ['strong', 'Strong (more arrests)'], ['weak', 'Weak']], help: 'Until the town has a budget (next phase), this sets how often crimes are solved.' },
     { group: 'Society', key: 'genetics', label: 'Child attributes', type: 'select', options: [['evolution', 'Evolution (potential + mutation)'], ['original', 'Original (average of parents, rounded down)']] },
     { group: 'Society', key: 'strategyMode', label: 'Life strategies', type: 'select', options: [['adaptive', 'Adaptive (can change after setbacks)'], ['fixed', 'Fixed for life']] },
     { group: 'Society', key: 'fertility', label: 'Birth rate', type: 'select', options: [['malaysia', 'Malaysia today (~1.6 children per woman)'], ['low', 'Low'], ['normal', 'Normal (original, ~2.5)'], ['high', 'High']] },

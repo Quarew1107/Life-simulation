@@ -21,7 +21,7 @@
   // vehicle mode), 'area' = moves around the site, 'outside' = stands/sits outdoors,
   // 'inside' = inside the building (not drawn; the building shows a headcount).
   const CITY_JOBS = { rider: 1, delivery: 1, ehailing: 2 };
-  const AREA_JOBS = new Set(['construction', 'electrician', 'labour', 'running', 'sports', 'gym', 'pasar', 'promoter', 'park', 'futsal', 'golf']);
+  const AREA_JOBS = new Set(['construction', 'electrician', 'labour', 'running', 'sports', 'gym', 'pasar', 'promoter', 'park', 'futsal', 'golf', 'prison']);
   LES.motionOf = function (e, b) {
     if (!e) return 'inside';
     if (e.sub && CITY_JOBS[e.sub]) return 'city';
@@ -299,6 +299,10 @@
         x = X + W / 2 + (W / 2 - 7) * Math.cos(a);
         y = Y + H / 2 + (H / 2 - 9) * Math.sin(a) + 6;
         dx = -Math.sign(Math.sin(a)) || 1;
+      } else if (b.kind === 'prison') { // pacing the exercise yard
+        x = X + 84 + 40 * (0.5 + 0.48 * Math.sin(tm * sp * 0.5 + ph));
+        y = Y + 22 + 40 * (0.5 + 0.45 * Math.sin(tm * sp * 0.37 + ph * 2));
+        dx = Math.sign(Math.cos(tm * sp * 0.5 + ph)) || 1;
       } else if (b.kind === 'construction' || b.kind === 'padi') {
         x = X + 5 + (W - 10) * (0.5 + 0.45 * Math.sin(tm * sp + ph));
         y = Y + 10 + (H - 12) * (0.5 + 0.45 * Math.sin(tm * sp * 1.37 + ph * 2));
@@ -355,6 +359,7 @@
       g.imageSmoothingEnabled = false;
       g.drawImage(this.bg, 0, 0);
       this.drawShops(g);
+      if (w.crime) this.drawTurf(g, w);
       LES.Ambience.drawWorld(this, g, w, t, now, fast);
       if (this.selectedBuilding >= 0) {
         const b = this.town.buildings[this.selectedBuilding], T = this.town.T;
@@ -393,6 +398,14 @@
           list.push({ p: w.people[d.id], x: q.x, y: q.y, dx: q.dx, dy: q.dy, moving: true, mode: 0, leaving: true });
         }
       }
+      if (!fast && w.crime && tm > 30 && tm < 1080) { // police patrols
+        const st = this.town.byKind.police !== undefined ? this.town.byKind.police : this.town.byKind.depot;
+        const n = Math.max(1, Math.round(w.counts.living / 150 * (LES.Crime.POLICE[w.cfg.police] || 1)));
+        for (let k = 0; k < n && st !== undefined; k++) {
+          const q = this.cityLoop({ id: 900000 + k, tiers: { transport: 2 } }, st, { sub: 'ehailing' }, tm, k % 2);
+          list.push({ police: true, x: q.x, y: q.y, dx: q.dx, dy: q.dy });
+        }
+      }
       list.sort((a, b) => a.y - b.y);
       this.screenPos = [];
       const millionaire = U.RM(1e6);
@@ -403,6 +416,7 @@
       for (const it of list) {
         if (it.x < vx0 || it.x > vx1 || it.y < vy0 || it.y > vy1) continue;
         if (it.bus) { drawBus(g, it); continue; }
+        if (it.police) { drawPolice(g, it, now); continue; }
         if (dots) { // zoomed out or a huge town: people as coloured dots, vehicles as dashes
           const sel = this.selectedId >= 0 ? w.people[this.selectedId] : null;
           const oc = this.overlay && this.overlay !== 'none' ? LES.Extras.overlayColour(w, it.p, this.overlay, sel) : null;
@@ -427,7 +441,8 @@
         const atPlace = slotAct && !it.waiting && tm >= LES.SLOT_A && tm < LES.SLOT_END;
         // Face the way they walk (routes are straight road segments, so one of dx/dy is 0).
         const view = !it.moving ? 'front' : it.dx !== 0 ? 'side' : it.dy < 0 ? 'back' : 'front';
-        const outfit = (atPlace && LES.Ambience.outfitFor(p, slotAct)) || LES.Ambience.festivalOutfit(p, festDay);
+        const inYard = p.inst && p.inst.kind === 'prison' && !it.leaving;
+        const outfit = inYard ? 'prisoner' : (atPlace && LES.Ambience.outfitFor(p, slotAct)) || LES.Ambience.festivalOutfit(p, festDay);
         const spr = LES.Sprites.person(p.look, group, it.moving ? walkFrame : 0, outfit, view);
         const x = Math.round(it.x - spr.width / 2), y = Math.round(it.y - spr.height);
         if (view === 'side' && it.dx < 0) { // walking left: mirror the right-facing sprite
@@ -537,6 +552,25 @@
       }
     }
 
+    // Gang turf: graffiti tags on the blocks a gang controls (and a tint with the gang overlay).
+    drawTurf(g, w) {
+      const T = this.town.T;
+      for (const gang of w.crime.gangs) {
+        if (!gang.alive) continue;
+        for (const i of gang.turf) {
+          const bl = this.town.blocks[i];
+          if (!bl) continue;
+          const X = (bl.px !== undefined ? bl.px : bl.x) * T, Y = (bl.py !== undefined ? bl.py : bl.y) * T, W = (bl.pw || 14) * T, H = (bl.ph || 11) * T;
+          if (this.overlay === 'gangs') { g.fillStyle = gang.colour + '33'; g.fillRect(X, Y, W, H); g.strokeStyle = gang.colour; g.lineWidth = 2; g.strokeRect(X + 1, Y + 1, W - 2, H - 2); }
+          for (let k = 0; k < 4; k++) {
+            const hx = X + 6 + (hash(i * 31 + k) % Math.max(1, W - 24)), hy = Y + 4 + (hash(i * 17 + k * 7) % Math.max(1, H - 12));
+            g.fillStyle = gang.colour; g.fillRect(hx, hy, 8, 2); g.fillRect(hx + 2, hy + 2, 2, 3); g.fillRect(hx + 6, hy + 2, 3, 2);
+            g.fillStyle = '#1b1b1b'; g.fillRect(hx + 9, hy, 2, 2);
+          }
+        }
+      }
+    }
+
     drawShops(g) {
       const w = this.w, T = this.town.T;
       g.textBaseline = 'top';
@@ -632,6 +666,20 @@
       rect(g, x - 5, y - 9, 10, 16, 'rgba(0,0,0,0.25)');
       rect(g, x - 5, y - 10, 10, 16, body); rect(g, x - 4, y - 6, 8, 5, '#9fd3e0'); rect(g, x - 1, y - 5, 2, 2, skin);
       if (lux) rect(g, x - 1, y - 10, 2, 16, '#f2c14e');
+    }
+  }
+
+  function drawPolice(g, it, now) {
+    const x = Math.round(it.x), y = Math.round(it.y), horiz = it.dx !== 0 || it.dy === 0, blink = Math.floor((now || 0) / 250) % 2;
+    if (horiz) {
+      rect(g, x - 9, y - 6, 18, 8, 'rgba(0,0,0,0.25)');
+      rect(g, x - 9, y - 7, 18, 7, '#f4f6f8'); rect(g, x - 9, y - 4, 18, 2, '#1d3557'); rect(g, x - 5, y - 10, 10, 4, '#f4f6f8');
+      rect(g, x - 4, y - 9, 8, 2, '#9fd3e0'); rect(g, x - 3, y - 11, 3, 1, blink ? '#e63946' : '#ff9aa2'); rect(g, x, y - 11, 3, 1, blink ? '#8ecae6' : '#3a86ff');
+      rect(g, x - 7, y, 4, 2, '#111'); rect(g, x + 3, y, 4, 2, '#111');
+    } else {
+      rect(g, x - 5, y - 9, 10, 16, 'rgba(0,0,0,0.25)');
+      rect(g, x - 5, y - 10, 10, 16, '#f4f6f8'); rect(g, x - 5, y - 3, 10, 2, '#1d3557'); rect(g, x - 4, y - 6, 8, 3, '#9fd3e0');
+      rect(g, x - 3, y - 8, 3, 1, blink ? '#e63946' : '#ff9aa2'); rect(g, x, y - 8, 3, 1, blink ? '#8ecae6' : '#3a86ff');
     }
   }
 

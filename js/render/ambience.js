@@ -14,6 +14,7 @@
     if (!slotAct) return null;
     if (slotAct.act === 'WORK' && p.job) return JOB_OUTFIT[p.job.jobId] || null;
     if (slotAct.act === 'SCHOOL') return 'school';
+    if (slotAct.act === 'PRISON') return slotAct.sub === 'prison' ? 'prisoner' : null;
     if (slotAct.act === 'WORSHIP') return p.rel === 'islam' ? (p.sex === 'M' ? 'bajuMelayu' : 'kurung') : p.rel === 'hinduism' ? (p.sex === 'F' ? 'saree' : 'kurta') : p.rel === 'christianity' ? 'office' : null;
     if (slotAct.act === 'TRAIN' && /Gym|Sports|Running/.test(slotAct.label)) return 'sport';
     if (slotAct.act === 'GIG') return /labour/i.test(slotAct.label) ? 'hardhat' : /delivery/i.test(slotAct.label) ? 'rider' : null;

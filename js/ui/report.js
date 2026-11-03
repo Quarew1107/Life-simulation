@@ -222,6 +222,23 @@
 </div></section>`;
   }
 
+  function crimeSection(w) {
+    const CR = LES.Crime, st = w.crime;
+    if (!st || !CR) return '';
+    const r = CR.rates(w), k = CR.INTENSITY[w.cfg.crime], tot = Object.values(st.total).reduce((a, b) => a + b, 0);
+    return `<section><h2>Crime and justice</h2><div class="grid">
+<div class="card"><b>Crimes</b> <span class="note">intensity “${esc(w.cfg.crime)}” (Malaysian rates ×${k})</span><table>${Object.keys(CR.TYPES).map(t => `<tr><td>${CR.TYPES[t].icon} ${esc(CR.TYPES[t].name)}</td><td>${st.total[t] || 0}</td></tr>`).join('')}<tr><td><b>Total</b></td><td><b>${tot}</b></td></tr></table>
+<p class="note">Index crime in the last year: ${r.index.toFixed(0)} per 100k (Malaysia ${CR.MY.index}${k !== 1 ? ' ×' + k : ''}).</p></div>
+<div class="card"><b>Justice, drugs and gangs</b><table>
+<tr><td>Arrests / convictions / acquittals</td><td>${st.arrests} / ${st.convictions} / ${st.acquitted}</td></tr>
+<tr><td>Prison admissions / released / reoffended in 3 yrs</td><td>${st.admissions} / ${st.released} / ${st.reoffended}</td></tr>
+<tr><td>Started using drugs / rehab / overdoses</td><td>${st.startedUsing} / ${st.rehabAdmissions} / ${st.overdoses}</td></tr>
+<tr><td>Gangs formed / police raids / turf fights</td><td>${st.gangs.length} / ${st.crackdowns} / ${st.gangFights}</td></tr>
+<tr><td>Protection money taken from shops</td><td>${U.fmtMoney(st.protection)}</td></tr></table>
+<p class="note">Drug policy: ${esc(w.cfg.drugPolicy)} · police: ${esc(w.cfg.police)}. Try the same seed with another drug policy or police strength and compare.</p></div>
+</div></section>`;
+  }
+
   R.html = function (w, prev) {
     const a = R.analyse(w), h = w.history, cfg = w.cfg;
     const yr = r => r.day / 365;
@@ -276,6 +293,7 @@ ${compare}
 <p class="note">Spearman rank correlation over adults who reached 30. Correlation is not causation: traits also affect who studies, who starts businesses and who has children.</p></section>
 ${a.strat ? `<section><h2>Strategies</h2><table><tr><th>Starting strategy</th><th>People</th><th>Median peak wealth</th><th>In top 10</th><th>Business failures</th></tr>${a.strat.map(s => `<tr><td>${C.STRATEGY_NAMES[s.s]}</td><td>${s.n}</td><td>${U.fmtMoney(s.med)}</td><td>${s.inTop}</td><td>${s.fail}</td></tr>`).join('')}</table></section>` : ''}
 ${societySection(w)}
+${crimeSection(w)}
 <section><h2>Top 20 fortunes</h2><table><tr><th>#</th><th>Name</th><th>Peak (Y1 money)</th><th>Strategy</th><th>Education</th><th>Inherited share</th><th>Status</th></tr>${a.top.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(P.name(r.p))}</td><td>${U.fmtMoney(r.peakReal)}</td><td>${C.STRATEGY_NAMES[r.strategy]}</td><td>${r.qual}</td><td>${pct(r.inheritShare)}</td><td>${r.p.alive ? (r.p.away ? 'moved away' : 'alive') : 'died ' + Math.floor(r.age)}</td></tr>`).join('')}</table></section>
 <section><h2>What you can try next</h2><ul>
 <li><b>Replay this world with one change</b> (same seed): New world → change one setting → Start. The next report compares both runs.</li>
