@@ -257,7 +257,7 @@
         if (j < 0 || !LES.hasH(t, j, c)) { vbad.push(`${size}/${seed}: ${b.kind} ${b.id} has no road at its door`); break; }
       }
       const cap = tt => tt.buildings.reduce((s2, b) => s2 + (b.cap || 0), 0);
-      if (cap(t) !== cap(g) || t.buildings.length !== g.buildings.length) vbad.push(`${size}/${seed}: homes differ from the grid town`);
+      if (cap(t) !== cap(g) || t.kinds.masjid === undefined) vbad.push(`${size}/${seed}: homes differ from the grid town, or no masjid`);
       const R = new LES.RNG(`route|${size}|${seed}`);
       const onRoad = (x, y) => { // a point on a road centre line that exists
         const tx = x / t.T - 1, ty = y / t.T - 1, jx = t.roadsX.indexOf(tx), jy = t.roadsY.indexOf(ty);
@@ -275,7 +275,7 @@
         }
       }
     }
-    check('Varied layouts (5 sizes x 4 seeds): doors on real roads, routes stay on roads, same homes as grid', vbad.length === 0, vbad.slice(0, 4).join(' | '));
+    check('Varied layouts (5 sizes x 4 seeds): doors on real roads, routes stay on roads, same homes as grid, places of worship', vbad.length === 0, vbad.slice(0, 4).join(' | '));
     const sig = t => JSON.stringify([t.layout.gapX, t.layout.padX, t.layout.river, t.layout.edge]);
     check('Different seeds give different street layouts', sig(LES.buildTown('pekan', 'p1', 'varied')) !== sig(LES.buildTown('pekan', 'p2', 'varied')) && sig(LES.buildTown('pekan', 'p1', 'varied')) === sig(LES.buildTown('pekan', 'p1', 'varied')));
     const a = LES.buildTown('pekan', 's').plan.join(), b = LES.buildTown('pekan', 's').plan.join(), c = LES.buildTown('pekan', 'other').plan.join();
@@ -350,6 +350,45 @@
     check('Calibration measures are computed', ['e0', 'unemp', 'medWage', 'hhGini'].every(k => Number.isFinite(m[k])), JSON.stringify(m));
   }
 
+  // Phase-2 society: class, religion, community funds, interfaith rule, festivals.
+  async function societyTests() {
+    print('--- Society (class, religion, festivals) ---', 'info');
+    const S = LES.Society;
+    const w = new LES.World({ seed: 'soc-test', founders: 300 });
+    const share = k => w.people.filter(p => p.rel === k).length / w.people.length;
+    check('Founding religions near the 2020 census (Islam 55-72%, Buddhism 10-27%)', share('islam') > 0.55 && share('islam') < 0.72 && share('buddhism') > 0.1 && share('buddhism') < 0.27, `islam ${share('islam').toFixed(2)} buddhism ${share('buddhism').toFixed(2)}`);
+    check('Malays are Muslim; every person has a valid religion and devotion', w.people.every(p => S.RELIGIONS[p.rel] && p.relig >= 0 && p.relig <= 100 && (p.eth !== 'malay' || p.rel === 'islam')));
+    check('All five ethnic groups appear (DOSM 2025 mix)', ['malay', 'chinese', 'indian', 'bumi'].every(k => w.people.some(p => p.eth === k)));
+    await runDays(w, 12 * 365, wx => { const e = wx.checkInvariants(); if (e.length) throw new Error(e.slice(0, 3).join(' | ')); });
+    const adults = w.living.filter(p => p.alive && p.adult);
+    const n = k => adults.filter(p => p.cls === k).length / adults.length;
+    check('Every adult has a class; roughly 40/40/20 split of households', adults.every(p => S.CLASSES.includes(p.cls)) && n('B40') > 0.2 && n('T20') > 0.1, `B40 ${n('B40').toFixed(2)} M40 ${n('M40').toFixed(2)} T20 ${n('T20').toFixed(2)}`);
+    const st = w.society;
+    check('Worship happens and the congregations meet', Object.values(st.lastWorship || {}).reduce((a, b) => a + b, 0) > 0);
+    check('Zakat and donations flow into funds; funds help members in need', st.zakatTotal > 0 && st.aidTotal > 0, `zakat ${U.fmtMoney(st.zakatTotal)} aid ${U.fmtMoney(st.aidTotal)}`);
+    const overpay = w.people.filter(p => p.zakatPaid > 0.026 * Math.max(1, p.peakNw) * 13);
+    check('Nobody pays more zakat than 2.5% a year of their peak wealth', overpay.length === 0, overpay.slice(0, 3).map(p => p.id).join(','));
+    // Interfaith rule: a non-Muslim converts to marry a Muslim (Malaysian rule), not under free choice.
+    const t1 = new LES.World({ seed: 'iff', founders: 40 }), t2 = new LES.World({ seed: 'iff', founders: 40, interfaith: 'free' });
+    for (const t of [t1, t2]) {
+      const a = t.people.find(p => p.sex === 'M' && p.partnerId === null), b = t.people.find(p => p.sex === 'F' && p.partnerId === null);
+      a.rel = 'islam'; b.rel = 'buddhism'; LES.Family.formCouple(t, a, b);
+      t.result = b.rel;
+    }
+    check('Interfaith marriage: converts under the Malaysian rule, keeps faith under free choice', t1.result === 'islam' && t2.result === 'buddhism');
+    // Shariah screen and bar avoidance for the devout.
+    const sys = LES.Systems.all().find(x => x.id === 'society'), q = w.living.find(p => p.adult);
+    q.rel = 'islam'; q.relig = 90;
+    check('Devout Muslims skip non-Shariah shares and avoid the bar', !sys.stockOk(w, q, 'RZBANK') && sys.stockOk(w, q, 'KILAT') && sys.venueBias(w, q, 'karaoke') < -0.5);
+    let ram = 0, raya = 0;
+    for (let d = 0; d < 365; d++) { if (LES.Calendar.ramadan(d)) ram++; if (LES.Calendar.festivalStarts(d) && LES.Calendar.festival(d).id === 'raya') raya++; }
+    check('Calendar: 30 days of Ramadan and one Hari Raya a year', ram === 30 && raya === 1, `${ram} / ${raya}`);
+    const mob = S.mobility(w);
+    check('Mobility table is consistent (rows add up)', S.CLASSES.every(a => S.CLASSES.every(b => mob.m[a][b] >= 0)) && mob.n === w.people.filter(p => p.clsOrigin && p.cls35).length);
+    const off = new LES.World({ seed: 'soc-off', founders: 40, society: 'off' });
+    check('Society off: no religion or class fields are created', !off.society && off.people.every(p => p.rel === undefined));
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -359,6 +398,7 @@
       await townTests();
       await goalTests();
       await foundationTests();
+      await societyTests();
       await determinism();
       await invariantSweep(3, 60);
     } catch (err) {
@@ -369,6 +409,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests };
+  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

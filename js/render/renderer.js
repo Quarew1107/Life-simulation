@@ -27,6 +27,7 @@
     if (e.sub && CITY_JOBS[e.sub]) return 'city';
     if (e.sub && AREA_JOBS.has(e.sub)) return 'area';
     if (e.act === 'SOCIAL') return e.sub === 'mamak' || e.sub === 'hawker' ? 'outside' : 'inside';
+    if (e.act === 'WORSHIP') return 'outside'; // the congregation gathers in the courtyard
     if (e.act === 'HOME' && /Playing/.test(e.label || '')) return 'outside';
     return 'inside';
   };

@@ -14,6 +14,7 @@
     if (!slotAct) return null;
     if (slotAct.act === 'WORK' && p.job) return JOB_OUTFIT[p.job.jobId] || null;
     if (slotAct.act === 'SCHOOL') return 'school';
+    if (slotAct.act === 'WORSHIP') return p.rel === 'islam' ? (p.sex === 'M' ? 'bajuMelayu' : 'kurung') : p.rel === 'hinduism' ? (p.sex === 'F' ? 'saree' : 'kurta') : p.rel === 'christianity' ? 'office' : null;
     if (slotAct.act === 'TRAIN' && /Gym|Sports|Running/.test(slotAct.label)) return 'sport';
     if (slotAct.act === 'GIG') return /labour/i.test(slotAct.label) ? 'hardhat' : /delivery/i.test(slotAct.label) ? 'rider' : null;
     return null;
@@ -29,22 +30,13 @@
     if (f.id === 'raya' && p.eth === 'malay') return p.sex === 'M' ? 'bajuMelayu' : 'kurung';
     if (f.id === 'deepavali' && p.eth === 'indian') return p.sex === 'F' ? 'saree' : 'kurta';
     if (f.id === 'cny' && p.eth === 'chinese') return 'cny';
+    if (f.id === 'gawai' && p.eth === 'bumi') return 'gawai';
+    if (f.id === 'christmas' && p.rel === 'christianity') return 'office';
     return null;
   };
 
   // ---- Calendar: festivals (lunar ones drift ~11 days earlier each year) ----
-  const lunar = (day, baseDoy) => { const y = Math.floor(day / 365); return ((baseDoy - 11 * y) % 365 + 365) % 365; };
-  A.festival = function (day) {
-    const doy = day % 365;
-    const near = (d, span) => { const diff = (doy - d + 365) % 365; return diff < span; };
-    if (near(0, 2)) return { id: 'newyear', name: 'New Year' };
-    if (near(lunar(day, 100), 3)) return { id: 'raya', name: 'Hari Raya Aidilfitri' };
-    if (near(lunar(day, 40), 3)) return { id: 'cny', name: 'Chinese New Year' };
-    if (near(lunar(day, 300), 3)) return { id: 'deepavali', name: 'Deepavali' };
-    if (near(242, 2)) return { id: 'merdeka', name: 'Hari Merdeka' };
-    if (near(358, 2)) return { id: 'christmas', name: 'Christmas' };
-    return null;
-  };
+  A.festival = day => LES.Calendar.festival(day); // shared calendar (core/util.js)
   // ---- Weather: north-east monsoon (Nov-Feb) is rainy; mid-year can bring haze ----
   A.weather = function (day) {
     const m = U.dayToDate(day).month, r = rnd(day * 31 + 7);

@@ -62,6 +62,18 @@ Turn sound on with 🔇 on the map, or with **Sound off** on the setup screen. Y
 
 The files live in `Sound effects/`. Keep their names if you swap any of them.
 
+## Street layouts
+
+With the Malaysia preset (**Street layout: Varied**), each seed builds a different town:
+- plots of different sizes, with car parks, playgrounds and gardens on the spare ground
+- tree-lined avenues, and usually a river with bridges
+- superblocks where short road pieces are dropped and joined by footpaths
+- a coastline with beach and fishing boats, or forested hills, along one edge
+- empty land that starts as jungle, an oil palm estate or scrub until the town builds on it
+- worship districts with a masjid, a Chinese temple, a Hindu temple and a church
+
+People walk and drive along the real road network. **Grid** (the Classic preset) keeps the original equal blocks.
+
 ## Map sizes
 
 | Map | Suggested for | Homes for |
@@ -146,6 +158,19 @@ The map is drawn in a 3/4 top-down pixel style: you see each building's roof and
 - **Train station:** newcomers step off the train and leavers walk to it with suitcases. City commuter jobs pay more but cost a long daily ride.
 - **Movers vs indoors:** riders and drivers loop around town, joggers and labourers move around their site, and indoor workers stay inside. Buildings show how many people are inside.
 - **Families:** dating, couples and break-ups, pregnancy and twins. Each parent decides independently about care, with guardians, a harsh mode or a welfare mode. Upbringing shapes adult ability. Estates are split per parent at death, with trusts for minors.
+- **Social class (Society on):** recalculated every month from household income, the way DOSM defines **B40 / M40 / T20**.
+  - **Extra groups:** a T1 elite (the richest 1%) and households in hardship.
+  - **Mobility:** children carry their household's class at 12, and their own class is recorded at 35. This gives the Society tab's mobility table: did people who grew up B40 move up?
+  - **Comparison:** class cut-offs are charted against DOSM 2024 (RM5,250 and RM11,820).
+- **Ethnicity:** the 2025 DOSM mix (Malay, Chinese, other Bumiputera such as Iban and Kadazan-Dusun, Indian, others). Groups differ in names, looks, festivals and religion mix, **never in ability**.
+- **Religion (Society on):** Islam, Buddhism, Christianity, Hinduism, other or none, assigned from the 2020 census by ethnicity, with personal devotion half inherited. Religion acts only through practices:
+  - Friday prayers, Sunday service and temple visits relieve stress and build friendships, but take time
+  - zakat (2.5% of savings above the nisab) and donations feed each community's fund, which helps its poor
+  - Ramadan fasting, then festival spending (Raya, Chinese New Year, Deepavali, Christmas, Gawai)
+  - devout Muslims avoid the bar and non-Shariah-compliant shares
+  - devotion raises the wish for children and lowers break-ups
+  - under the Malaysian interfaith rule, a non-Muslim converts to marry a Muslim (a setting)
+- **Map overlays:** class, religion and ethnicity.
 - **Report and analysis:** an end-of-run report with a rule-based "why it turned out this way" summary, Hall of Fame, charts and a migrants vs. locals comparison, plus CSV export. In the app: family trees, compare-two-people and Director mode.
 - **Integrity:** a double-entry-style ledger (money is never created or lost), consistency checks every quarter, and deterministic seeds (same seed and settings give the same history).
 

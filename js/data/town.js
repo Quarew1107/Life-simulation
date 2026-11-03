@@ -27,7 +27,7 @@
   LES.suggestMapSize = founders => LES.MAP_ORDER.find(k => founders <= LES.MAP_SIZES[k].maxFounders) || 'metropolis';
 
   // How many blocks of each district a town of n blocks gets (facilities scale with size).
-  LES.districtQuota = function (n) {
+  LES.districtQuota = function (n, varied) {
     const q = {
       N: 1, G: 1,
       O: 1 + Math.floor(n / 50), H: 1 + Math.floor(n / 80), M: 1 + Math.floor(n / 70), U: 1 + Math.floor(n / 150),
@@ -37,6 +37,7 @@
       W: Math.max(1, Math.round(n / 28)), R: 1 + Math.floor(n / 120),
     };
     q.L = Math.round(n * 0.14);
+    if (varied) { q.J = Math.max(1, Math.round(n / 25)); q.L = Math.max(1, q.L - q.J); } // worship districts (from the lot share)
     const used = Object.values(q).reduce((a, b) => a + b, 0);
     const homes = Math.max(5, n - used);
     const shares = { K: 0.13, A: n < 80 ? 0.05 : 0.03, F: 0.24, T: 0.28, C: 0.2, B: 0.1 };
@@ -48,12 +49,12 @@
   };
 
   // Seeded district plan: returns an array of row strings like the old templates.
-  LES.planDistricts = function (size, seed) {
+  LES.planDistricts = function (size, seed, varied) {
     const S = LES.MAP_SIZES[size];
     const cols = S.cols, rows = S.rows, n = cols * rows;
     const R = new LES.RNG(`${seed}|map|${size}`);
     const grid = Array.from({ length: rows }, () => Array(cols).fill(null));
-    const quota = LES.districtQuota(n);
+    const quota = LES.districtQuota(n, varied);
     const cx = (cols - 1) / 2, cy = (rows - 1) / 2;
     const dCentre = (c, r) => Math.max(Math.abs(c - cx) / Math.max(1, cx), Math.abs(r - cy) / Math.max(1, cy));
     // The wealthy live around one of the right-hand corners; kampung sits far from them.
@@ -92,7 +93,7 @@
       L: (c, r) => 2 * dCentre(c, r) + 0.6 * nearest('L', c, r),
     };
     const spread = (c, r, code) => -0.5 * dCentre(c, r) + 3 * nearest(code, c, r); // Q P D V E S
-    const order = ['O', 'U', 'M', 'H', 'Z', 'Y', 'B', 'C', 'I', 'W', 'Q', 'P', 'E', 'D', 'V', 'S', 'R', 'F', 'K', 'A', 'L', 'T'];
+    const order = ['O', 'U', 'M', 'H', 'Z', 'Y', 'B', 'C', 'I', 'W', 'Q', 'P', 'E', 'J', 'D', 'V', 'S', 'R', 'F', 'K', 'A', 'L', 'T'];
     for (const code of order) {
       for (let k = 0; k < (quota[code] || 0); k++) {
         let best = null, bestS = -Infinity;
@@ -153,6 +154,10 @@
     golf: 'Golf & country club. The most exclusive venue in town: members only, where deals are made.',
     station: 'Stesen Keretapi: trains to the big city. Newcomers arrive and leavers depart here; commuters ride to city jobs.',
     rail: 'Railway line to the big city.',
+    masjid: 'Masjid: Friday prayers, the zakat and infaq fund, Ramadan and Hari Raya.',
+    tokong: 'Chinese temple (Buddhist and Taoist): prayers, offerings and the temple welfare fund.',
+    kuil: 'Hindu temple: prayers, Deepavali and the temple welfare fund.',
+    gereja: 'Church: Sunday service, tithes and the church welfare fund.',
   };
 
   // Adds a building to a town (kept as a closure on town.add for the block fillers).
@@ -192,7 +197,7 @@
     size = LES.MAP_ALIASES[size] || size;
     if (!LES.MAP_SIZES[size]) size = 'pekan';
     seed = seed === undefined ? 'rezeki-1' : seed;
-    const tpl = LES.planDistricts(size, seed);
+    const tpl = LES.planDistricts(size, seed, layout === 'varied');
     const rows = tpl.length, cols = tpl[0].length;
     const L = layout === 'varied' ? LES.planLayout(size, seed, tpl) : null;
     const gapX = L ? L.gapX : Array(cols).fill(ROAD), gapY = L ? L.gapY : Array(rows).fill(ROAD);
@@ -270,6 +275,12 @@
         at('finedine', 'Restoran Mewah', 1, 1, 6, 4, { venue: true });
         at('lounge', 'Sky Lounge', 9, 0, 4, 10, { venue: true });
         at('spa', 'Spa & Wellness', 1, 6, 6, 4, { venue: true });
+        break;
+      case 'J': // places of worship
+        at('masjid', 'Masjid Jamek', 1, 1, 7, 9);
+        at('tokong', 'Tokong Tian Hou', 9, 0, 5, 4);
+        at('kuil', 'Kuil Sri Murugan', 9, 4, 5, 4);
+        at('gereja', 'Gereja St. Mary', 9, 8, 5, 3);
         break;
       case 'Z': at('golf', 'Kelab Golf Rezeki', 0, 0, 14, 11, { venue: true }); break;
       case 'N':

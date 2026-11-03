@@ -207,6 +207,21 @@
     return svg + '</svg>';
   }
 
+  // Class mobility and religion (only when the society system is on).
+  function societySection(w) {
+    const S = LES.Society;
+    if (!w.society || !S) return '';
+    const mob = S.mobility(w), st = w.society, pc = x => `${Math.round(x * 100)}%`;
+    const rows = S.CLASSES.map(a => { const r = mob.m[a], n = S.CLASSES.reduce((t, b) => t + r[b], 0); return `<tr><td>${a}</td>${S.CLASSES.map(b => `<td>${n ? pc(r[b] / n) : '–'}</td>`).join('')}<td>${n}</td></tr>`; }).join('');
+    const rel = S.groupStats(w, 'rel');
+    return `<section><h2>Class and community</h2><div class="grid">
+<div class="card"><b>Social mobility</b> <span class="note">household class at 12 → own class at 35</span><table><tr><th>Grew up</th>${S.CLASSES.map(c => `<th>${c}</th>`).join('')}<th>n</th></tr>${rows}</table>
+<p class="note">B40 ceiling now ${U.fmtMoney(st.cut40)}, T20 floor ${U.fmtMoney(st.cut80)} (household income per month, Year-1 money; DOSM 2024: RM5,250 and RM11,820). The T20 earn ${pc(st.t20share)} of all income.</p></div>
+<div class="card"><b>Religion</b><table><tr><th></th><th>Adults</th><th>Median wealth</th><th>B40</th></tr>${S.REL_KEYS.filter(k => rel[k]).map(k => `<tr><td>${esc(S.RELIGIONS[k].name)}</td><td>${rel[k].n}</td><td>${U.fmtMoney(rel[k].medNw)}</td><td>${pc(rel[k].b40 / rel[k].n)}</td></tr>`).join('')}</table>
+<p class="note">Zakat paid ${U.fmtMoney(st.zakatTotal)} · aid from community funds ${U.fmtMoney(st.aidTotal)} · festival spending ${U.fmtMoney(st.festivalSpend)} · ${st.conversions} conversions. Groups differ in practices, not ability; differences here are outcomes of the model and of small samples.</p></div>
+</div></section>`;
+  }
+
   R.html = function (w, prev) {
     const a = R.analyse(w), h = w.history, cfg = w.cfg;
     const yr = r => r.day / 365;
@@ -260,6 +275,7 @@ ${compare}
 <section><h2>Factors and peak wealth</h2><table><tr><th>Factor</th><th>Rank correlation with peak wealth</th></tr>${(a.factors || []).map(f => `<tr><td>${esc(f.name)}</td><td>${f.r.toFixed(2)} (${corrWord(f.r)})</td></tr>`).join('')}</table>
 <p class="note">Spearman rank correlation over adults who reached 30. Correlation is not causation: traits also affect who studies, who starts businesses and who has children.</p></section>
 ${a.strat ? `<section><h2>Strategies</h2><table><tr><th>Starting strategy</th><th>People</th><th>Median peak wealth</th><th>In top 10</th><th>Business failures</th></tr>${a.strat.map(s => `<tr><td>${C.STRATEGY_NAMES[s.s]}</td><td>${s.n}</td><td>${U.fmtMoney(s.med)}</td><td>${s.inTop}</td><td>${s.fail}</td></tr>`).join('')}</table></section>` : ''}
+${societySection(w)}
 <section><h2>Top 20 fortunes</h2><table><tr><th>#</th><th>Name</th><th>Peak (Y1 money)</th><th>Strategy</th><th>Education</th><th>Inherited share</th><th>Status</th></tr>${a.top.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(P.name(r.p))}</td><td>${U.fmtMoney(r.peakReal)}</td><td>${C.STRATEGY_NAMES[r.strategy]}</td><td>${r.qual}</td><td>${pct(r.inheritShare)}</td><td>${r.p.alive ? (r.p.away ? 'moved away' : 'alive') : 'died ' + Math.floor(r.age)}</td></tr>`).join('')}</table></section>
 <section><h2>What you can try next</h2><ul>
 <li><b>Replay this world with one change</b> (same seed): New world → change one setting → Start. The next report compares both runs.</li>

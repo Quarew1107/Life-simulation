@@ -16,7 +16,7 @@
       this.derived = LES.derive(this.cfg);
       this.attachSystems();
       this.rng = {};
-      for (const k of ['init', 'decide', 'outcome', 'jobs', 'market', 'biz', 'family', 'luck', 'mortality', 'migration', 'goals']) {
+      for (const k of ['init', 'decide', 'outcome', 'jobs', 'market', 'biz', 'family', 'luck', 'mortality', 'migration', 'goals', 'society']) {
         this.rng[k] = new LES.RNG(`${this.cfg.seed}|${k}`);
       }
       const ms = this.cfg.mapSize === 'auto' ? LES.suggestMapSize(this.cfg.founders) : this.cfg.mapSize;
@@ -70,6 +70,13 @@
     afterLoad() {
       this.attachSystems();
     }
+    // Product of a multiplier hook over the active systems (1 when none are on).
+    sysMul(hook, a, b) {
+      const list = this.sys[hook];
+      let m = 1;
+      for (let i = 0; i < list.length; i++) m *= list[i][hook](this, a, b);
+      return m;
+    }
 
     macro() { return C.REGIMES[this.regime]; }
     // Year-1 RM -> today's sen (inflation-adjusted price).
@@ -101,7 +108,8 @@
       const lognormal = (median, sd) => Math.exp(R.normal(Math.log(median), sd));
       const p = this.addPerson();
       p.sex = o.sex || (R.next() < 0.5 ? 'M' : 'F');
-      p.eth = o.eth || C.ETHNICITIES[R.weighted(C.ETHNIC_WEIGHTS)];
+      const mix = C.ETHNIC_MIXES[cfg.ethnicMix] || C.ETHNIC_MIXES.classic;
+      p.eth = o.eth || mix.keys[R.weighted(mix.w)];
       p.first = R.pick(C.NAMES[p.eth][p.sex]);
       p.last = R.pick(C.NAMES[p.eth].last);
       p.birthDay = this.day - age * 365 - R.int(0, 364);
@@ -156,6 +164,7 @@
       p.nw = P.netWorth(this, p);
       p.peakNw = p.nw;
       LES.Goals.pick(this, p, null);
+      for (const s of this.sys.personCreated) s.personCreated(this, p, 'adult');
       if (!p.migrant) P.log(this, p, `Arrived in ${C.TOWN_NAME} aged ${age}${p.job ? ` working as ${p.job.title}` : ''} with ${U.fmtMoney(p.cash)}`, 'life', 0);
       return p;
     }
@@ -184,6 +193,7 @@
       c.tiers = { food: 1, housing: 0, transport: 0, leisure: 0 };
       father.children.push(c.id); mother.children.push(c.id);
       if (c.migrant) { Fa.addCare(this, father, c); Fa.addCare(this, mother, c); }
+      for (const s of this.sys.personCreated) s.personCreated(this, c, 'child');
       return c;
     }
 
@@ -538,6 +548,7 @@
           if (!b.open || Math.abs((b.shares[p.id] || 0) - p.shares[k]) > 1e-9) errs.push(`P${p.id} share mismatch biz ${k}`);
         }
       }
+      for (const s of this.sys.money) total += s.money(this);
       for (const b of this.biz) {
         total += b.cash;
         if (!Number.isInteger(b.cash) || b.cash < 0) errs.push(`Biz${b.id} cash=${b.cash}`);

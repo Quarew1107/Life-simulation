@@ -26,6 +26,30 @@
   U.fmtDate = day => { const d = U.dayToDate(day); return `${d.dom} ${U.MONTH_NAMES[d.month]} Y${d.year}`; };
   U.fmtMonthYear = day => { const d = U.dayToDate(day); return `${U.MONTH_NAMES[d.month]} Y${d.year}`; };
 
+  // ---- Week and festivals (shared by the simulation and the art) ----
+  // 1 Jan Year 1 is a Monday: dow 0 = Monday ... 4 = Friday, 6 = Sunday.
+  U.dow = day => ((day % 7) + 7) % 7;
+  const lunar = (day, baseDoy) => { const y = Math.floor(day / 365); return ((baseDoy - 11 * y) % 365 + 365) % 365; };
+  const near = (doy, d, span) => ((doy - d + 365) % 365) < span;
+  // Festivals: lunar ones drift ~11 days earlier each year. Returns the festival on this day (or null).
+  LES.Calendar = {
+    festival(day) {
+      const doy = ((day % 365) + 365) % 365;
+      if (near(doy, 0, 2)) return { id: 'newyear', name: 'New Year' };
+      if (near(doy, lunar(day, 100), 3)) return { id: 'raya', name: 'Hari Raya Aidilfitri' };
+      if (near(doy, lunar(day, 40), 3)) return { id: 'cny', name: 'Chinese New Year' };
+      if (near(doy, lunar(day, 300), 3)) return { id: 'deepavali', name: 'Deepavali' };
+      if (near(doy, 150, 2)) return { id: 'gawai', name: 'Gawai & Kaamatan' };
+      if (near(doy, 242, 2)) return { id: 'merdeka', name: 'Hari Merdeka' };
+      if (near(doy, 358, 2)) return { id: 'christmas', name: 'Christmas' };
+      return null;
+    },
+    // First day of a festival (when people spend and celebrate).
+    festivalStarts(day) { const f = LES.Calendar.festival(day), y = LES.Calendar.festival(day - 1); return f && (!y || y.id !== f.id) ? f : null; },
+    // The 30 days of fasting before Hari Raya.
+    ramadan(day) { const doy = ((day % 365) + 365) % 365, r = lunar(day, 100); const d = (r - doy + 365) % 365; return d >= 1 && d <= 30; },
+  };
+
   // ---- Money ----
   U.fmtMoney = function (sen) {
     if (!Number.isFinite(sen)) return 'RM?';

@@ -180,6 +180,7 @@
     const R = w.rng.outcome, stocks = w.mkt.stocks;
     const k = ctx.risk > 0.2 ? 4 : ctx.pat > 0.2 ? -3 : 0; // momentum chasers vs bargain hunters
     const weights = stocks.map(s => Math.exp(U.clamp(k * M.stockRet(s, 63), -3, 3)) * (s.def.sector === 'Technology' ? 1 + 0.5 * Math.max(0, ctx.risk) : 1));
+    if (w.sys.stockOk.length) stocks.forEach((s, i) => { for (const x of w.sys.stockOk) if (!x.stockOk(w, p, s.tk)) weights[i] = 0; });
     const picks = [];
     for (let i = 0; i < n; i++) {
       const j = R.weighted(weights);

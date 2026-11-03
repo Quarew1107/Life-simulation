@@ -148,8 +148,15 @@
   };
 
   // ---- Names (Malaysian mix) & looks ----
-  C.ETHNICITIES = ['malay', 'chinese', 'indian'];
-  C.ETHNIC_WEIGHTS = [0.6, 0.27, 0.13];
+  C.ETHNICITIES = ['malay', 'chinese', 'indian', 'bumi', 'other'];
+  C.ETHNIC_NAMES = { malay: 'Malay', chinese: 'Chinese', indian: 'Indian', bumi: 'Other Bumiputera', other: 'Others' };
+  // Population mixes. Classic = the original engine; Malaysia = DOSM Q4 2025 shares
+  // (Malay 58.2%, Chinese 22.2%, other Bumiputera 12.3%, Indian 6.5%, others 0.8%).
+  C.ETHNIC_MIXES = {
+    classic: { keys: ['malay', 'chinese', 'indian'], w: [0.6, 0.27, 0.13] },
+    malaysia: { keys: ['malay', 'chinese', 'bumi', 'indian', 'other'], w: [0.582, 0.222, 0.123, 0.065, 0.008] },
+  };
+  C.ETHNIC_WEIGHTS = C.ETHNIC_MIXES.classic.w;
   C.NAMES = {
     malay: {
       M: ['Ahmad', 'Hafiz', 'Amir', 'Faiz', 'Hakim', 'Irfan', 'Zul', 'Azlan', 'Danial', 'Syafiq', 'Rizal', 'Imran', 'Khairul', 'Aiman', 'Haziq', 'Firdaus', 'Naim', 'Adam'],
@@ -166,11 +173,23 @@
       F: ['Priya', 'Kavitha', 'Divya', 'Anjali', 'Lakshmi', 'Meena', 'Shalini', 'Revathi', 'Nisha', 'Deepa', 'Thanya'],
       last: ['Kumar', 'Raj', 'Pillai', 'Nair', 'Muthu', 'Krishnan', 'Rao', 'Singh', 'Subramaniam', 'Maniam'],
     },
+    bumi: { // Iban, Kadazan-Dusun, Bidayuh, Melanau, Orang Asli...
+      M: ['Jugah', 'Rentap', 'Linggi', 'Ngumbang', 'Michael', 'Gerald', 'Joseph', 'Ewon', 'Jimmy', 'Peter', 'Masidi', 'Anyi'],
+      F: ['Juliana', 'Mary', 'Linda', 'Doris', 'Rosnah', 'Jenny', 'Christina', 'Dayang', 'Grace', 'Nancy', 'Sumbang', 'Lilian'],
+      last: ['Jugah', 'Linggi', 'Gerunsin', 'Kitingan', 'Majimbun', 'Ngau', 'Lajim', 'Ongkili', 'Sindang', 'Sanggau'],
+    },
+    other: { // Eurasian and other Malaysians
+      M: ['Daniel', 'Marcus', 'Ryan', 'Adrian', 'Joshua', 'Gerard', 'Kevin', 'Nathan'],
+      F: ['Sarah', 'Natalie', 'Michelle', 'Rachel', 'Melissa', 'Joanne', 'Angela', 'Clara'],
+      last: ['Fernandez', 'De Souza', 'Pereira', "D'Cruz", 'Gomes', 'Rozario', 'Lazaroo', 'Theseira'],
+    },
   };
   C.SKIN = {
     malay: ['#c68642', '#b5763a', '#d29a5e'],
     chinese: ['#f1c27d', '#e8b98a', '#f3cfa0'],
     indian: ['#8d5524', '#7a4a22', '#9c6232'],
+    bumi: ['#b5763a', '#c68642', '#a86b3c'],
+    other: ['#e0ac69', '#c68642', '#f1c27d'],
   };
   C.HAIR = ['#1b1b1b', '#2b1d14', '#3b2a1d', '#141414'];
   C.SHIRTS = ['#e63946', '#f4a261', '#2a9d8f', '#457b9d', '#e9c46a', '#8d99ae', '#6a4c93', '#43aa8b', '#f28482', '#3d5a80', '#ffffff', '#ff7f51'];

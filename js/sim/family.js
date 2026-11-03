@@ -43,7 +43,7 @@
           const gapW = Math.abs(Math.log10(Math.max(U.RM(1e4), a.nw) / Math.max(U.RM(1e4), b.nw)));
           const compat = U.clamp(1.2 - ageGap / 10 + 0.06 * ((a.att[C.CHA] + b.att[C.CHA]) / 2 - 5) + 0.1 * (P.prestige(a) + P.prestige(b)) / 2 - 0.12 * gapW, 0.1, 2);
           const want = (0.5 + a.famDesire / 100) * (0.5 + b.famDesire / 100);
-          if (R.next() < 0.012 * compat * want * familiarity) { Fa.formCouple(w, a, b); break; }
+          if (R.next() < 0.012 * compat * want * familiarity * w.sysMul('coupleWeight', a, b)) { Fa.formCouple(w, a, b); break; }
         }
       }
     }
@@ -62,6 +62,7 @@
     P.log(w, a, `Became partners with ${P.name(b)}`, 'family', 1);
     P.log(w, b, `Became partners with ${P.name(a)}`, 'family', 0);
     w.stats.couples++;
+    for (const s of w.sys.coupled) s.coupled(w, a, b);
   };
 
   Fa.separate = function (w, a, b, reason) {
@@ -95,7 +96,7 @@
       const q = w.people[p.partnerId];
       // Breakups
       const avgStress = (p.stress + q.stress) / 200;
-      if (R.next() < 0.0012 + 0.008 * avgStress * avgStress) { Fa.separate(w, p, q, 'breakup'); continue; }
+      if (R.next() < (0.0012 + 0.008 * avgStress * avgStress) * w.sysMul('breakupWeight', p, q)) { Fa.separate(w, p, q, 'breakup'); continue; }
       // Conception
       if (p.pregnancy || w.day - p.lastBirthDay < w.cfg.birthSpacingDays || P.age(w, q) > 65) continue;
       const fert = fertility(P.age(w, p));
