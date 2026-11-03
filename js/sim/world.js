@@ -14,11 +14,12 @@
       if (v.blockers.length) throw new Error('Invalid settings: ' + v.blockers.join(' '));
       this.derived = LES.derive(this.cfg);
       this.rng = {};
-      for (const k of ['init', 'decide', 'outcome', 'jobs', 'market', 'biz', 'family', 'luck', 'mortality', 'migration']) {
+      for (const k of ['init', 'decide', 'outcome', 'jobs', 'market', 'biz', 'family', 'luck', 'mortality', 'migration', 'goals']) {
         this.rng[k] = new LES.RNG(`${this.cfg.seed}|${k}`);
       }
-      this.mapSize = this.cfg.mapSize === 'auto' ? LES.suggestMapSize(this.cfg.founders) : this.cfg.mapSize;
-      this.town = LES.buildTown(this.mapSize);
+      const ms = this.cfg.mapSize === 'auto' ? LES.suggestMapSize(this.cfg.founders) : this.cfg.mapSize;
+      this.mapSize = LES.MAP_ALIASES[ms] || ms;
+      this.town = LES.buildTown(this.mapSize, this.cfg.seed);
       this.townVersion = 0;
       this.day = 0;
       this.lastDay = -1;
@@ -40,7 +41,7 @@
         births: 0, deaths: 0, twins: 0, hires: 0, fired: 0, laidOff: 0, promotions: 0, graduations: 0, dropouts: 0,
         scholarships: 0, bizStarted: 0, bizClosed: 0, bizFailed: 0, booms: 0, bankruptcies: 0, couples: 0, breakups: 0,
         catastrophes: 0, illnesses: 0, scams: 0, windfalls: 0, welfareKids: 0, vacOpened: 0, vacUnfilled: 0,
-        panicSells: 0, emigrants: 0, immigrants: 0, returns: 0,
+        panicSells: 0, emigrants: 0, immigrants: 0, returns: 0, goalsAchieved: {},
       };
       this.counts = { adults: 0, children: 0, living: 0, away: 0 };
       this.winner = null; this.ended = false; this.endReason = null; this.pauseRequested = null;
@@ -143,6 +144,7 @@
       }
       p.nw = P.netWorth(this, p);
       p.peakNw = p.nw;
+      LES.Goals.pick(this, p, null);
       if (!p.migrant) P.log(this, p, `Arrived in ${C.TOWN_NAME} aged ${age}${p.job ? ` working as ${p.job.title}` : ''} with ${U.fmtMoney(p.cash)}`, 'life', 0);
       return p;
     }
@@ -223,7 +225,8 @@
           p.adult = true;
           Fa.comeOfAge(this, p);
         }
-        const pYear = Math.min(0.95, mortalityYear(age) * (1 + Math.max(0, 60 - p.health) / 15));
+        // Poor health raises mortality; long unhappiness a little too.
+        const pYear = Math.min(0.95, mortalityYear(age) * (1 + Math.max(0, 60 - p.health) / 15) * (p.adult ? 1 + Math.max(0, 40 - p.happy) / 80 : 1));
         if (R.next() < 1 - Math.pow(1 - pYear, 1 / 365)) {
           this.die(p, age >= 60 ? 'old age' : age < 1 ? 'infant illness' : 'illness');
         }
@@ -254,6 +257,7 @@
           const home = this.town.buildings[p.homeId];
           if (home && home.cap && (this.occupancy[p.homeId] || 0) > home.cap) p.stress += 0.4; // overcrowded home
           p.yr.stress += p.stress; p.yr.days++;
+          LES.Goals.daily(this, p);
         } else {
           p.health += p.health < 90 ? 0.05 : 0;
         }
@@ -295,6 +299,9 @@
         F.personMonth(this, p);
         F.luckMonth(this, p);
         this.strategyReview(p);
+        LES.Goals.monthly(this, p);
+        p.happyAvg = p.happyAvg * 0.9 + p.happy * 0.1;
+        p.netMonth = 0;
       }
       Fa.monthCouples(this);
       LES.Migration.monthly(this);
@@ -322,6 +329,8 @@
         p.strategy = P.chooseStrategy(R, p, old);
         p.stratHist.push({ day: this.day, strategy: p.strategy, reason });
         P.log(this, p, `After ${reason}, changed strategy: ${C.STRATEGY_NAMES[old]} -> ${C.STRATEGY_NAMES[p.strategy]}`, 'life', 1);
+        // A big setback sometimes changes what they want from life, not just how.
+        if (R.next() < 0.4) LES.Goals.pick(this, p, `rethinking life after ${reason}`, p.goal ? [p.goal.id] : []);
       } else {
         P.log(this, p, `Stayed with the ${C.STRATEGY_NAMES[p.strategy]} strategy despite ${reason}`, 'life', 0);
       }
@@ -451,6 +460,7 @@
       const adults = this.living.filter(p => p.alive && p.adult);
       // Wealth statistics are stored in Year-1 money so charts compare across inflation.
       const nws = adults.map(p => p.nw / this.price).sort((a, b) => a - b);
+      this.medianReal = Math.max(1, U.quantile(nws, 0.5));
       let employed = 0, students = 0, retired = 0, owners = 0, unemployed = 0;
       for (const p of adults) {
         if (p.job) employed++;
@@ -471,6 +481,8 @@
         businesses: this.biz.filter(b => b.open).length,
         median: U.quantile(nws, 0.5), p90: U.quantile(nws, 0.9), top: nws.length ? nws[nws.length - 1] : 0,
         millionaires: nws.filter(x => x >= U.RM(1e6)).length, gini: U.gini(nws),
+        happy: adults.length ? U.median(adults.map(p => p.happy)) : 0,
+        goalsDone: adults.reduce((s, p) => s + p.goalsDone.length, 0),
         regime: this.regime, idx: this.mkt.idx, alpha: this.mkt.alpha, price: this.price, infl: this.infl,
         crowding: this.crowding, pressure: this.townMood.pressure, opportunity: this.townMood.opportunity,
         away: this.counts.away || 0, migrants: adults.filter(p => p.migrant).length, stratMedian,

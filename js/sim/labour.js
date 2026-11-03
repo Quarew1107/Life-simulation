@@ -20,9 +20,11 @@
       const j = C.JOBS[R.weighted(C.JOB_FREQ)];
       const salary = Math.round(w.px(j.salary * U.clamp(R.normal(1, 0.12), 0.7, 1.5) * w.macro().wageMult) / 1000) * 1000;
       const days = R.int(w.cfg.vacancyDaysMin, w.cfg.vacancyDaysMax);
-      w.vacancies.push({ id: w.nextVacId++, job: j, salary, openDay: day, closeDay: day + days, applicants: [], place: R.pick(w.town.kinds[j.place]) });
+      w.vacancies.push({ id: w.nextVacId++, job: j, salary, openDay: day, closeDay: day + days, applicants: [], appSet: new Set(), place: R.pick(w.town.kinds[j.place]) });
       w.stats.vacOpened++;
     }
+    // Best-paid first (stable by id): job seekers read the top of the listings.
+    if (n) w.vacancies.sort((a, b) => (b.salary - a.salary) || (a.id - b.id));
   };
 
   // FSD 6.2: qualification is the only gate; best weighted score wins.
@@ -37,7 +39,8 @@
       const a = U.clamp(LES.Actions.attrScore(p, v.job.w) / 10, 0, 1);
       const e = U.clamp(p.xp[v.job.cat] / 5, 0, 1);
       const q = U.clamp(P.extraQuals(p, v.job.req) / 2, 0, 1);
-      cands.push({ p, score: hw[0] * a + hw[1] * e + hw[2] * q, tie: w.rng.jobs.next() });
+      const referral = p.netMonth > 0 ? 0.04 : 0; // contacts made at the golf club / lounge
+      cands.push({ p, score: hw[0] * a + hw[1] * e + hw[2] * q + referral, tie: w.rng.jobs.next() });
     }
     if (!cands.length) { w.stats.vacUnfilled++; return; }
     cands.sort((x, y) => (y.score - x.score) || (y.tie - x.tie) || (x.p.id - y.p.id));

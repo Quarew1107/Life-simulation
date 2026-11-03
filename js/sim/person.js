@@ -17,6 +17,7 @@
       cash: 0, trust: 0, epf: 0, inv: { idx: 0, st: {}, cost: 0 }, debt: { study: 0, studyOrig: 0 },
       ageing: null, peak: [0, 0, 0, 0, 0, 0], yr: { phys: 0, mental: 0, stress: 0, days: 0 },
       migrant: false, arrivedDay: null, away: null, timesMoved: 0,
+      happy: 60, happyAvg: 60, joyEma: 0, goal: null, goalsDone: [], netMonth: 0, donated: 0,
       arrears: 0, bankruptUntil: -1,
       shares: {}, manages: -1, bizFailures: 0,
       quals: [], enrol: null, job: null, retired: false,

@@ -1,7 +1,9 @@
 // Town generator for Bandar Rezeki. The map is a grid of 14x11-tile blocks
-// separated by 2-tile roads. Each map size has a district template (one letter per
-// block) and each letter is filled by a block painter below. Pure data, so the
-// headless simulation can use it without a canvas. Same size = same layout.
+// separated by 2-tile roads. Each map size has a grid size; the district of every
+// block is chosen by seeded placement rules (CBD near the centre, industry at the edge,
+// the wealthy around one corner, kampung on the far side, schools/clinics/parks spread
+// out, the train station on the left edge). Same seed + size = same town.
+// Pure data, so the headless simulation can use it without a canvas.
 (function (LES) {
   'use strict';
 
@@ -10,39 +12,103 @@
   // K kampung, A kampung+padi, F flats, T terrace, C condo, B bungalow, O CBD (offices/bank/Bursa),
   // H tech hub + shops, S shoplots, M mall + shops, D food (mamak + hawker), U university,
   // E college/library/hall, Q hospital + school, P park + stadium, I factory, W workshop/warehouse/site,
-  // R welfare home + flats, L empty lot (the town can grow here), G gateway square (bus depot, memorial)
-  LES.MAP_TEMPLATES = {
-    small: [
-      'KEUTB',
-      'ADOHC',
-      'FIMSC',
-      'FWQPG',
-    ],
-    medium: [
-      'AKEUTBB',
-      'KDOHSCT',
-      'FDOMSCT',
-      'FISQPCL',
-      'GWRQPTL',
-      'LIWFLTL',
-    ],
-    large: [
-      'AKKEUTTBBB',
-      'AKDOHSCCTB',
-      'FFDOOMSCTL',
-      'FISHQPSCTL',
-      'GIWSQPDCTL',
-      'RWIFEUSTLL',
-      'FWLFDQPTLL',
-      'LLLFLLLLLL',
-    ],
-  };
+  // R welfare home + flats, V mid-tier leisure (cinema, karaoke bar, bowling, futsal),
+  // Y upscale leisure (fine dining, sky lounge, spa), Z golf & country club,
+  // N train station, G gateway square (bus depot, memorial), L empty lot (the town grows here)
   LES.MAP_SIZES = {
-    small: { name: 'Kampung (small)', suggest: 'up to ~80 founders', maxFounders: 80 },
-    medium: { name: 'Bandar (medium)', suggest: '80-250 founders', maxFounders: 250 },
-    large: { name: 'Bandaraya (large)', suggest: '250+ founders', maxFounders: 1e9 },
+    kampung: { name: 'Kampung', cols: 6, rows: 5, suggest: 'up to ~60 founders', maxFounders: 60 },
+    pekan: { name: 'Pekan', cols: 9, rows: 6, suggest: '60-250 founders', maxFounders: 250 },
+    bandar: { name: 'Bandar', cols: 12, rows: 9, suggest: '250-700 founders', maxFounders: 700 },
+    bandaraya: { name: 'Bandaraya', cols: 18, rows: 12, suggest: '700-2,000 founders', maxFounders: 2000 },
+    metropolis: { name: 'Metropolis', cols: 26, rows: 18, suggest: '2,000-5,000+ founders', maxFounders: 1e9 },
   };
-  LES.suggestMapSize = founders => (founders <= 80 ? 'small' : founders <= 250 ? 'medium' : 'large');
+  LES.MAP_ALIASES = { small: 'kampung', medium: 'pekan', large: 'bandar' }; // older settings
+  LES.MAP_ORDER = ['kampung', 'pekan', 'bandar', 'bandaraya', 'metropolis'];
+  LES.suggestMapSize = founders => LES.MAP_ORDER.find(k => founders <= LES.MAP_SIZES[k].maxFounders) || 'metropolis';
+
+  // How many blocks of each district a town of n blocks gets (facilities scale with size).
+  LES.districtQuota = function (n) {
+    const q = {
+      N: 1, G: 1,
+      O: 1 + Math.floor(n / 50), H: 1 + Math.floor(n / 80), M: 1 + Math.floor(n / 70), U: 1 + Math.floor(n / 150),
+      E: 1 + Math.floor(n / 70), Q: Math.max(1, Math.round(n / 18)), P: Math.max(1, Math.round(n / 20)),
+      D: Math.max(1, Math.round(n / 22)), V: Math.max(1, Math.round(n / 30)), Y: 1 + Math.floor(n / 90),
+      Z: 1 + Math.floor(n / 220), S: Math.max(1, Math.round(n / 16)), I: Math.max(1, Math.round(n / 28)),
+      W: Math.max(1, Math.round(n / 28)), R: 1 + Math.floor(n / 120),
+    };
+    q.L = Math.round(n * 0.14);
+    const used = Object.values(q).reduce((a, b) => a + b, 0);
+    const homes = Math.max(5, n - used);
+    const shares = { K: 0.13, A: n < 80 ? 0.05 : 0.03, F: 0.24, T: 0.28, C: 0.2, B: 0.1 };
+    let given = 0;
+    for (const k of ['F', 'T', 'C', 'K', 'B', 'A']) { q[k] = Math.max(1, Math.round(homes * shares[k])); given += q[k]; }
+    q.T += homes - given; // keep the total exact
+    if (q.T < 1) { q.L += q.T - 1; q.T = 1; }
+    return q;
+  };
+
+  // Seeded district plan: returns an array of row strings like the old templates.
+  LES.planDistricts = function (size, seed) {
+    const S = LES.MAP_SIZES[size];
+    const cols = S.cols, rows = S.rows, n = cols * rows;
+    const R = new LES.RNG(`${seed}|map|${size}`);
+    const grid = Array.from({ length: rows }, () => Array(cols).fill(null));
+    const quota = LES.districtQuota(n);
+    const cx = (cols - 1) / 2, cy = (rows - 1) / 2;
+    const dCentre = (c, r) => Math.max(Math.abs(c - cx) / Math.max(1, cx), Math.abs(r - cy) / Math.max(1, cy));
+    // The wealthy live around one of the right-hand corners; kampung sits far from them.
+    const rich = { c: cols - 1, r: R.next() < 0.5 ? 0 : rows - 1 };
+    const span = Math.max(cols, rows);
+    const dRich = (c, r) => (Math.abs(c - rich.c) + Math.abs(r - rich.r)) / span;
+    const placed = {};
+    const put = (code, c, r) => { grid[r][c] = code; (placed[code] = placed[code] || []).push({ c, r }); };
+    const nearest = (code, c, r) => {
+      const list = placed[code];
+      if (!list || !list.length) return 1;
+      let best = Infinity;
+      for (const q of list) best = Math.min(best, (Math.abs(q.c - c) + Math.abs(q.r - r)) / span);
+      return best;
+    };
+    // Station on the left edge (trains arrive from the west); gateway square next to it.
+    const sr = R.int(Math.floor(rows / 3), Math.max(Math.floor(rows / 3), Math.ceil(rows * 2 / 3) - 1));
+    put('N', 0, sr);
+    put('G', 0, sr + 1 < rows ? sr + 1 : sr - 1);
+    const score = {
+      O: (c, r) => -3 * dCentre(c, r) + 0.5 * nearest('O', c, r),
+      H: (c, r) => -2 * dCentre(c, r) + 0.8 * nearest('H', c, r),
+      M: (c, r) => -1.5 * dCentre(c, r) + 1.5 * nearest('M', c, r),
+      U: (c, r) => -1 * dCentre(c, r) + 2 * nearest('U', c, r),
+      Y: (c, r) => -1.2 * dCentre(c, r) - 1.2 * dRich(c, r) + 1.2 * nearest('Y', c, r),
+      Z: (c, r) => -3 * dRich(c, r) + 2 * nearest('Z', c, r),
+      B: (c, r) => -3 * dRich(c, r),
+      C: (c, r) => -1.5 * dRich(c, r) - 0.8 * dCentre(c, r),
+      T: (c, r) => -Math.abs(dCentre(c, r) - 0.55) + 0.6 * nearest('T', c, r),
+      I: (c, r) => 2 * dCentre(c, r) + 2 * dRich(c, r) + 1.5 * nearest('I', c, r),
+      W: (c, r) => 2 * dCentre(c, r) + 1.5 * dRich(c, r) + 1.5 * nearest('W', c, r),
+      F: (c, r) => -1.5 * nearest('I', c, r) + 0.8 * dRich(c, r) + 0.5 * nearest('F', c, r),
+      R: (c, r) => -1 * nearest('F', c, r) + 1.5 * nearest('R', c, r),
+      K: (c, r) => 2.5 * dRich(c, r) + 0.5 * dCentre(c, r),
+      A: (c, r) => 2.5 * dRich(c, r) + 1.5 * dCentre(c, r),
+      L: (c, r) => 2 * dCentre(c, r) + 0.6 * nearest('L', c, r),
+    };
+    const spread = (c, r, code) => -0.5 * dCentre(c, r) + 3 * nearest(code, c, r); // Q P D V E S
+    const order = ['O', 'U', 'M', 'H', 'Z', 'Y', 'B', 'C', 'I', 'W', 'Q', 'P', 'E', 'D', 'V', 'S', 'R', 'F', 'K', 'A', 'L', 'T'];
+    for (const code of order) {
+      for (let k = 0; k < (quota[code] || 0); k++) {
+        let best = null, bestS = -Infinity;
+        for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+          if (grid[r][c]) continue;
+          const f = score[code];
+          const v = (f ? f(c, r) : spread(c, r, code)) + R.range(0, 0.6);
+          if (v > bestS) { bestS = v; best = { c, r }; }
+        }
+        if (!best) break;
+        put(code, best.c, best.r);
+      }
+    }
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) if (!grid[r][c]) put('T', c, r);
+    return grid.map(row => row.join(''));
+  };
 
   // Building descriptions (shown when a building is clicked).
   LES.KIND_INFO = {
@@ -77,17 +143,28 @@
     lot: 'Empty land. New buildings appear here when the town gets crowded.',
     depot: 'Bus depot and the town gateway. Newcomers arrive here.',
     memorial: 'Memorial garden. A lantern for every founder who has passed away.',
+    cinema: 'Panggung wayang: movies. Mid-tier entertainment.',
+    karaoke: 'Karaoke & bar: drinks and songs with friends. Mid-tier entertainment.',
+    bowling: 'Bowling alley. Mid-tier entertainment.',
+    futsal: 'Futsal court: cheap games with friends. Low-tier sport and leisure.',
+    finedine: 'Fine-dining restaurant. High-tier: expensive, very satisfying, a place to be seen.',
+    lounge: 'Sky lounge on the rooftop. High-tier nightlife where the well-off network.',
+    spa: 'Spa & wellness centre. High-tier relaxation that melts stress away.',
+    golf: 'Golf & country club. The most exclusive venue in town: members only, where deals are made.',
+    station: 'Stesen Keretapi: trains to the big city. Newcomers arrive and leavers depart here; commuters ride to city jobs.',
+    rail: 'Railway line to the big city.',
   };
 
-  LES.buildTown = function (size) {
-    size = LES.MAP_TEMPLATES[size] ? size : 'medium';
-    const tpl = LES.MAP_TEMPLATES[size];
+  LES.buildTown = function (size, seed) {
+    size = LES.MAP_ALIASES[size] || size;
+    if (!LES.MAP_SIZES[size]) size = 'pekan';
+    const tpl = LES.planDistricts(size, seed === undefined ? 'rezeki-1' : seed);
     const rows = tpl.length, cols = tpl[0].length;
     const T = 16, W = cols * (BW + ROAD), H = rows * (BH + ROAD);
     const roadsX = [], roadsY = [];
     for (let c = 0; c < cols; c++) roadsX.push(c * (BW + ROAD) + BW);
     for (let r = 0; r < rows; r++) roadsY.push(r * (BH + ROAD) + BH);
-    const town = { size, T, W, H, cols, rows, roadsY, roadsX, buildings: [], byKind: {}, kinds: {}, homesByTier: [[], [], [], [], []], shoplots: [], lots: [], blocks: [] };
+    const town = { size, T, W, H, cols, rows, roadsY, roadsX, plan: tpl, buildings: [], byKind: {}, kinds: {}, homesByTier: [[], [], [], [], []], shoplots: [], lots: [], blocks: [] };
 
     function add(kind, label, x, y, w, h, extra) {
       const cy = y + h / 2;
@@ -119,9 +196,10 @@
         LES.fillBlock(town, block, code);
       }
     });
-    // Gateway arch on the left end of the middle road (newcomers arrive here).
-    const gy = roadsY[Math.floor(rows / 2) - 1] || roadsY[0];
-    town.gateway = { x: 0, y: (gy + 1) * T };
+    // Gateway arch on the left end of the road beside the station (newcomers arrive here).
+    const st = town.buildings[town.byKind.station];
+    const gy = st ? st.roadY : (roadsY[Math.floor(rows / 2) - 1] + 1) * T;
+    town.gateway = { x: 0, y: gy };
     town.busLines = LES.makeBusLines(town);
     return town;
   };
@@ -158,6 +236,22 @@
       case 'R': at('welfare', 'Rumah Kebajikan', 1, 1, 6, 3); home('flat', 8, 1, 5, 9, 1, 40); break;
       case 'G': at('depot', 'Bus Depot', 1, 1, 6, 4); at('memorial', 'Taman Kenangan', 8, 1, 6, 8); break;
       case 'X': at('hq', block.hqName || 'Menara', 4, 0, 6, 10); at('park', 'Plaza', 0, 0, 3, 11, { decor: true }); break;
+      case 'V':
+        at('cinema', 'Panggung Wayang', 1, 1, 6, 5, { venue: true });
+        at('karaoke', 'Karaoke & Bar', 8, 1, 6, 4, { venue: true });
+        at('bowling', 'Bowling', 1, 7, 6, 4, { venue: true });
+        at('futsal', 'Futsal', 8, 6, 6, 5, { venue: true });
+        break;
+      case 'Y':
+        at('finedine', 'Restoran Mewah', 1, 1, 6, 4, { venue: true });
+        at('lounge', 'Sky Lounge', 9, 0, 4, 10, { venue: true });
+        at('spa', 'Spa & Wellness', 1, 6, 6, 4, { venue: true });
+        break;
+      case 'Z': at('golf', 'Kelab Golf Rezeki', 0, 0, 14, 11, { venue: true }); break;
+      case 'N':
+        at('station', 'Stesen Keretapi', 3, 4, 9, 5);
+        at('rail', '', 0, 1, 14, 2, { decor: true, rail: true });
+        break;
       case 'L': { const lot = at('lot', '', 0, 0, 14, 11, { decor: true }); town.lots.push(lot.id); break; }
       default: break;
     }
@@ -180,9 +274,9 @@
     const list = town.kinds[kind];
     if (!list || !list.length) return town.byKind[kind];
     if (list.length === 1 || fromId === undefined || fromId < 0) return list[0];
-    const key = `${kind}|${fromId}`;
-    town._near = town._near || new Map();
-    const hit = town._near.get(key);
+    town._near = town._near || {};
+    const cache = town._near[kind] || (town._near[kind] = new Map());
+    const hit = cache.get(fromId);
     if (hit !== undefined) return hit;
     const a = town.buildings[fromId].door;
     let best = list[0], bd = Infinity;
@@ -191,7 +285,7 @@
       const dist = Math.abs(d.x - a.x) + Math.abs(d.y - a.y);
       if (dist < bd) { bd = dist; best = id; }
     }
-    town._near.set(key, best);
+    cache.set(fromId, best);
     return best;
   };
 

@@ -19,7 +19,7 @@
     horizonYears: 120,
     goalRM: 100000000,
     goalMode: 'real',         // real (Year-1 money) | nominal
-    mapSize: 'auto',          // auto | small | medium | large
+    mapSize: 'auto',          // auto | kampung | pekan | bandar | bandaraya | metropolis
     stopOnWinner: 'no',
     inflMin: -0.5,            // % per year; Malaysia 2010s ~0.7-3.9%, 2020 -1.1%, 2022 3.3%
     inflMax: 4.5,
@@ -51,8 +51,8 @@
 
   LES.SETTINGS_META = [
     { group: 'World', key: 'seed', label: 'World seed', type: 'text', help: 'Same seed + same settings = the exact same world history.' },
-    { group: 'World', key: 'founders', label: 'Founding population', type: 'int', min: 20, max: 500, help: '100 strangers by default.' },
-    { group: 'World', key: 'mapSize', label: 'Map size', type: 'select', options: [['auto', 'Auto (suggested from population)'], ['small', 'Kampung - small (up to ~80 founders)'], ['medium', 'Bandar - medium (80-250 founders)'], ['large', 'Bandaraya - large (250+ founders)']], help: 'Bigger maps have more homes, shops, facilities, bus lines and land to grow on.' },
+    { group: 'World', key: 'founders', label: 'Founding population', type: 'int', min: 20, max: 6000, help: '100 strangers by default.' },
+    { group: 'World', key: 'mapSize', label: 'Map size', type: 'select', options: [['auto', 'Auto (suggested from population)'], ['kampung', 'Kampung - up to ~60 founders'], ['pekan', 'Pekan - 60-250 founders'], ['bandar', 'Bandar - 250-700 founders'], ['bandaraya', 'Bandaraya - 700-2,000 founders'], ['metropolis', 'Metropolis - 2,000-5,000+ founders']], help: 'Bigger maps have more homes, shops, venues, bus lines and land to grow on. Layout changes with the seed.' },
     { group: 'World', key: 'wealthDist', label: 'Starting wealth', type: 'select', options: [['equal', 'Equal (RM10k each)'], ['moderate', 'Moderate inequality'], ['unequal', 'High inequality (some born rich)']] },
     { group: 'World', key: 'horizonYears', label: 'Simulation length (years)', type: 'int', min: 5, max: 300 },
     { group: 'World', key: 'goalRM', label: 'Wealth goal (RM)', type: 'int', min: 10000, max: 1e12 },
@@ -112,11 +112,13 @@
 
     if (!blockers.length) {
       if (cfg.goalRM > 1e9) warnings.push('A goal above RM1 billion will very likely never be reached.');
-      if (cfg.founders > 300) warnings.push('Large populations can grow past 1,000 people and slow down the visual mode.');
+      if (cfg.founders > 1500) warnings.push('Very large populations run slower (120 years can take 10-15 minutes at MAX); people are drawn as dots when zoomed out.');
+      else if (cfg.founders > 300) warnings.push('Large populations can grow past 1,000 people and slow down the visual mode.');
       if (cfg.fertility === 'high' && cfg.horizonYears > 150) warnings.push('High birth rate over a long horizon may produce a very large population.');
       if (cfg.safetyNet === 'off') warnings.push('Harsh rules: abandoned children and people who cannot afford food can die.');
       if (cfg.horizonYears > 200) warnings.push('Very long runs use more memory for life histories.');
-      if (cfg.mapSize !== 'auto' && cfg.founders > LES.MAP_SIZES[cfg.mapSize].maxFounders) warnings.push(`${LES.MAP_SIZES[cfg.mapSize].name} map is small for ${cfg.founders} founders; homes will be crowded and rents high.`);
+      const msz = LES.MAP_SIZES[LES.MAP_ALIASES[cfg.mapSize] || cfg.mapSize];
+      if (cfg.mapSize !== 'auto' && msz && cfg.founders > msz.maxFounders) warnings.push(`${msz.name} map is small for ${cfg.founders} founders; homes will be crowded and rents high.`);
       if (cfg.inflMax > 10) warnings.push('Inflation above 10%/yr erodes savings fast; wages only partly keep up.');
       if (cfg.goalMode === 'nominal' && cfg.inflMin + cfg.inflMax > 4) warnings.push('Nominal goal + inflation: the goal gets much easier in later generations.');
       if (cfg.migration === 'high') warnings.push('High migration changes the population a lot; founders may be outnumbered by newcomers.');

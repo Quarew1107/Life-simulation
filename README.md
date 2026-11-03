@@ -25,13 +25,23 @@ At slow speeds the night (23:00–06:00) fast-forwards automatically. You can to
 
 ## Map sizes
 
-| Map | Suggested for |
-|---|---|
-| Kampung (small) | up to ~80 founders |
-| Bandar (medium) | 80–250 founders (default for 100) |
-| Bandaraya (large) | 250+ founders, long multi-generation runs |
+| Map | Suggested for | Homes for |
+|---|---|---|
+| Kampung | up to ~60 founders | ~340 |
+| Pekan | 60–250 founders (default for 100) | ~1,100 |
+| Bandar | 250–700 founders | ~2,500 |
+| Bandaraya | 700–2,000 founders | ~5,500 |
+| Metropolis | 2,000–5,000+ founders | ~12,400 |
 
-"Auto" picks the size from the founder count. Bigger maps have more homes, shops, facilities, bus lines and empty lots, and the town builds on those lots as it grows.
+"Auto" picks the size from the founder count. **Each seed lays the town out differently**, following rules:
+- the CBD sits near the centre and industry toward the edge
+- the wealthy live around one corner, with kampung on the far side
+- schools, clinics, parks and venues are spread through the housing
+- the train station is always on the west edge
+
+Bigger maps have more of everything, plus empty lots the town builds on as it grows.
+
+**Performance:** small towns run at hundreds of simulated days per second. A 5,000-person Metropolis runs about 9 days/s (roughly 40 seconds per simulated year), and people show as coloured dots when zoomed out.
 
 ## What's simulated
 
@@ -57,6 +67,25 @@ At slow speeds the night (23:00–06:00) fast-forwards automatically. You can to
   - Residents buy an index fund or individual shares. Some panic-sell after crashes, and others take profits.
 - **Businesses:** 7 types with fat-tailed outcomes (rare booms, busts, saturation, corporate tax) and HQ towers for big firms.
 - **Migration:** crowding, high rent and unemployment push households out, while jobs and space pull newcomers in. People who leave keep living off-screen: they may return, and children in town inherit when they die. The rate can be Off, Low (default), Normal or High, with Advanced multipliers. Rent rises when homes are crowded.
+- **Life goals and happiness:** everyone has a personal goal, which can change after achieving it or after a setback:
+  - get rich (RM1M, RM10M or RM100M)
+  - a dream home, or retiring early
+  - running their own business
+  - a big family
+  - a happy, balanced life
+  - being the fittest
+  - top of their profession, or the highest education
+  - helping others
+  - building a dynasty
+  
+  Goals shape everyday choices but never the odds of success. Happiness (0–100) follows health, stress, family, leisure, goal progress and standing against the rest of town.
+- **Scoreboards:** Richest, All-time, Happiest, Biggest family, Fittest and Most goals achieved. The RM100M race stays as the headline.
+- **Leisure venues:** park, futsal, mamak, mall, cinema, bowling, karaoke bar, fine dining, spa, sky lounge and golf club.
+  - Each costs a different amount and gives a different amount of joy, with diminishing returns.
+  - You date and network with whoever is at the same venue, so the rich mostly meet the rich at the golf club and lounge, but everyone mixes at parks and the mamak.
+  - Golf and lounge contacts bring business deals and job referrals.
+- **Train station:** newcomers step off the train and leavers walk to it with suitcases. City commuter jobs pay more but cost a long daily ride.
+- **Movers vs indoors:** riders and drivers loop around town, joggers and labourers move around their site, and indoor workers stay inside. Buildings show how many people are inside.
 - **Families:** dating, couples and break-ups, pregnancy and twins. Each parent decides independently about care, with guardians, a harsh mode or a welfare mode. Upbringing shapes adult ability. Estates are split per parent at death, with trusts for minors.
 - **Report and analysis:** an end-of-run report with a rule-based "why it turned out this way" summary, Hall of Fame, charts and a migrants vs. locals comparison, plus CSV export. In the app: family trees, compare-two-people and Director mode.
 - **Integrity:** a double-entry-style ledger (money is never created or lost), consistency checks every quarter, and deterministic seeds (same seed and settings give the same history).

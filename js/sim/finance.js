@@ -101,7 +101,7 @@
   // ---- Lifestyle tiers (monthly). Impatient people spend more of their income. ----
   F.reviewTiers = function (w, p) {
     const pat = (p.pers.pat - 50) / 50, dis = (p.pers.dis - 50) / 50;
-    const spendRate = U.clamp(1.0 - 0.3 * pat - 0.15 * dis, 0.55, 1.1);
+    const spendRate = U.clamp(1.0 - 0.3 * pat - 0.15 * dis + LES.Goals.spendDelta(p), 0.5, 1.2);
     const budget = p.incomeEMA * spendRate + Math.max(0, p.nw) * 0.004 - F.careShare(w, p);
     const t = { food: 0, housing: p.isHead ? 0 : p.tiers.housing, transport: 0, leisure: 0 };
     let cost = F.tierCost(w, 'food', 0) + F.tierCost(w, 'transport', 0) + F.tierCost(w, 'leisure', 0) + (p.isHead ? F.tierCost(w, 'housing', 0) : 0);
@@ -281,7 +281,8 @@
       if (t.req && !P.hasCred(p, t.req)) continue;
       if (avail < w.px(t.capital) * 0.4) continue;
       const skill = F.bizSkill(p, t);
-      const s = 0.5 * skill + 0.6 * Math.log10(t.capital) * (1 + ctx.risk);
+      const dream = p.goal && p.goal.id === 'OWN_BIZ' && p.goal.bizType === t.id ? 3 : 0; // the business they dream of
+      const s = 0.5 * skill + 0.6 * Math.log10(t.capital) * (1 + ctx.risk) + dream;
       if (s > bestS) { bestS = s; best = { type: t, skill }; }
     }
     return best;
@@ -416,7 +417,8 @@
     const netProfit = profit > 0 ? Math.round(profit * (1 - C.CORP_TAX)) : profit;
 
     // Rare booms (viral hit, big contract, franchise) and busts.
-    const network = C.TIERS.leisure[mgr.tiers.leisure].network ? 1.3 : 1;
+    // Networking: country-club membership and recent golf/lounge visits bring deals.
+    const network = (C.TIERS.leisure[mgr.tiers.leisure].network ? 1.3 : 1) * (1 + 0.1 * Math.min(5, mgr.netMonth));
     if (R.next() < t.boom * U.clamp(skill / 5, 0.3, 2) * network) {
       const mult = R.range(t.boomMin, t.boomMax);
       b.scale *= mult; b.booms++;
@@ -552,6 +554,11 @@
 
   // ---- Monthly personal finance ----
   F.personMonth = function (w, p) {
+    // People whose goal is to help others give part of their income to charity.
+    if (p.goal && p.goal.id === 'HELPER' && p.incomeEMA > 0 && p.cash > p.mcost) {
+      const gift = Math.min(Math.round(p.incomeEMA * 0.06), p.cash - p.mcost);
+      if (gift > 0 && w.ledger.spend(p, 'cash', 'WELFARE', gift)) p.donated += gift;
+    }
     const L = w.ledger, m = w.macro();
     if (p.cash > w.px(1000)) {
       const rate = m.depositRate + 0.9 * w.infl; // nominal deposit rate
