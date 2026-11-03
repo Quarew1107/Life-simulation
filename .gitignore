@@ -12,3 +12,6 @@ desktop.ini
 
 # Office lock files
 ~$*
+
+# Private notes (never read by tools, never pushed)
+Prompt for later.txt

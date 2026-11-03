@@ -39,7 +39,10 @@
         <button data-z="in" title="Zoom in">+</button>
         <button data-z="out" title="Zoom out">−</button>
         <button data-z="fit" title="Fit town">⤢</button>
-        <button data-z="sound" id="btn-sound" title="Music &amp; sound effects (off by default)">🔇</button>
+        <div class="vol-wrap">
+          <button data-z="sound" id="btn-sound" title="Music &amp; sound effects (off by default)">🔇</button>
+          <input type="range" id="vol" class="hidden" min="0" max="100" step="1" title="Volume" aria-label="Volume">
+        </div>
         <select id="overlay" title="Map overlay" aria-label="Map overlay"></select>
         <button data-z="director" id="btn-director" title="Director mode: the camera jumps to the most interesting moments">🎬</button>
       </div>

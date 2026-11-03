@@ -18,16 +18,17 @@
     if (p.children.length) rows.push({ label: 'Children', ids: p.children.slice() });
     const gc = p.children.flatMap(c => w.people[c].children);
     if (gc.length) rows.push({ label: 'Grandchildren', ids: gc });
-    const W = 400, rowH = 64, nodeW = 84, nodeH = 34;
+    // ROW0 = centre of the first row, leaving room above it for the row heading.
+    const W = 400, rowH = 66, nodeW = 84, nodeH = 34, ROW0 = 38;
     const pos = new Map();
     rows.forEach((row, r) => {
       const ids = row.ids.slice(0, 8);
       const gap = Math.min(nodeW + 8, (W - 20) / Math.max(1, ids.length));
       const x0 = W / 2 - gap * (ids.length - 1) / 2;
-      ids.forEach((id, i) => pos.set(id, { x: x0 + i * gap, y: 22 + r * rowH, row: r }));
+      ids.forEach((id, i) => pos.set(id, { x: x0 + i * gap, y: ROW0 + r * rowH, row: r }));
       row.more = row.ids.length - ids.length;
     });
-    const H = rows.length * rowH + 10;
+    const H = ROW0 + (rows.length - 1) * rowH + nodeH / 2 + 8;
     let svg = `<svg viewBox="0 0 ${W} ${H}" class="ftree" role="img" aria-label="Family tree">`;
     // Lines: each child to each parent present in the tree
     for (const [id, a] of pos) {
@@ -37,7 +38,7 @@
       }
     }
     rows.forEach((row, r) => {
-      svg += `<text x="4" y="${22 + r * rowH - nodeH / 2 - 4}" font-size="8" fill="#8c9aab">${row.label}${row.more ? ` (+${row.more})` : ''}</text>`;
+      svg += `<text x="4" y="${ROW0 + r * rowH - nodeH / 2 - 6}" font-size="10" font-weight="600" fill="#8c9aab">${row.label}${row.more ? ` (+${row.more})` : ''}</text>`;
     });
     for (const [id, a] of pos) {
       const q = w.people[id];
@@ -105,7 +106,15 @@
   };
 
   // ---------------- Chiptune music & sound effects ----------------
-  const S = X.sound = { on: false, ctx: null, next: 0, step: 0, master: null };
+  const S = X.sound = { on: false, ctx: null, next: 0, step: 0, master: null, volume: 0.8 };
+  try { const v = Number(localStorage.getItem('les-volume')); if (v >= 0 && v <= 1 && localStorage.getItem('les-volume') !== null) S.volume = v; } catch (e) { /* storage blocked */ }
+  // 0..1 slider value -> master gain. Notes are quiet sine/square blips, so the master
+  // needs real gain; a limiter afterwards stops chords from clipping.
+  X.setVolume = function (v) {
+    S.volume = Math.min(1, Math.max(0, v));
+    try { localStorage.setItem('les-volume', String(S.volume)); } catch (e) { /* storage blocked */ }
+    if (S.master) S.master.gain.value = 2.2 * S.volume * S.volume;
+  };
   const SCALES = { growth: [0, 2, 4, 7, 9, 12, 14], normal: [0, 2, 4, 5, 7, 9, 12], recession: [0, 2, 3, 5, 7, 8, 12] };
   function tone(freq, t, dur, type, vol) {
     const o = S.ctx.createOscillator(), g = S.ctx.createGain();
@@ -122,8 +131,12 @@
       if (!AC) { S.on = false; return false; }
       S.ctx = new AC();
       S.master = S.ctx.createGain();
-      S.master.gain.value = 0.18;
-      S.master.connect(S.ctx.destination);
+      const limiter = S.ctx.createDynamicsCompressor();
+      limiter.threshold.value = -6; limiter.knee.value = 6; limiter.ratio.value = 12;
+      limiter.attack.value = 0.003; limiter.release.value = 0.15;
+      S.master.connect(limiter);
+      limiter.connect(S.ctx.destination);
+      X.setVolume(S.volume);
     }
     if (S.ctx) { if (S.on) S.ctx.resume(); else S.ctx.suspend(); }
     S.next = S.ctx ? S.ctx.currentTime + 0.1 : 0;
