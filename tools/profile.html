@@ -1,0 +1,83 @@
+<!doctype html><html><head><meta charset="utf-8"><title>profile</title></head><body><pre id="out">running</pre>
+<script src="../js/core/rng.js"></script>
+<script src="../js/core/util.js"></script>
+<script src="../js/data/content.js"></script>
+<script src="../js/data/params.js"></script>
+<script src="../js/data/town.js"></script>
+<script src="../js/sim/ledger.js"></script>
+<script src="../js/sim/person.js"></script>
+<script src="../js/sim/market.js"></script>
+<script src="../js/sim/actions.js"></script>
+<script src="../js/sim/labour.js"></script>
+<script src="../js/sim/finance.js"></script>
+<script src="../js/sim/family.js"></script>
+<script src="../js/sim/migration.js"></script>
+<script src="../js/sim/goals.js"></script>
+<script src="../js/sim/world.js"></script>
+<script>
+// Self-time profiler: profile.html?founders=5000&days=60&seed=w-1&wrap=1
+// wrap=0 only times whole days (no per-function overhead).
+(function () {
+  // The simple Python test server occasionally drops a script under load: say so plainly.
+  const missing = ['World', 'Finance', 'Goals', 'Migration', 'Family', 'Labour', 'Market', 'Actions', 'P', 'Ledger', 'buildTown'].filter(k => !LES[k]);
+  if (missing.length) { document.getElementById('out').textContent = 'MISSING SCRIPTS ' + missing.join(','); return; }
+  const q = new URLSearchParams(location.search);
+  if (q.has('manual')) { document.getElementById('out').textContent = 'manual'; return; } // driven from DevTools
+  if (q.has('chunks')) { // long run: ms per day for each stretch of `chunks` days
+    const w = new LES.World({ seed: q.get('seed') || 'w-1', founders: Number(q.get('founders') || 5000) });
+    const size = Number(q.get('chunks')), total = Number(q.get('days') || 1000), rows = [];
+    let t = performance.now();
+    while (w.day < total && !w.ended) {
+      w.step();
+      if (w.day % size === 0) {
+        const now = performance.now();
+        rows.push(`Y${(w.day / 365).toFixed(1)} pop ${w.counts.living} ${((now - t) / size).toFixed(1)} ms/day`);
+        t = now;
+      }
+    }
+    document.getElementById('out').textContent = rows.join('\n');
+    return;
+  }
+  const founders = Number(q.get('founders') || 5000), days = Number(q.get('days') || 60), warm = Number(q.get('warm') || 0);
+  const stats = new Map(), stack = [];
+  const now = () => performance.now();
+  function wrap(obj, name, label) {
+    const f = obj[name];
+    if (typeof f !== 'function' || f.__wrapped) return;
+    const g = function () {
+      const fr = { t: now(), child: 0 };
+      stack.push(fr);
+      try { return f.apply(this, arguments); }
+      finally {
+        const el = now() - fr.t;
+        stack.pop();
+        if (stack.length) stack[stack.length - 1].child += el;
+        let s = stats.get(label); if (!s) stats.set(label, s = { n: 0, self: 0, incl: 0 });
+        s.n++; s.self += el - fr.child; s.incl += el;
+      }
+    };
+    g.__wrapped = true;
+    obj[name] = g;
+  }
+  const t0 = now();
+  const w = new LES.World({ seed: q.get('seed') || 'w-1', founders, mapSize: q.get('map') || 'auto' });
+  const tInit = now() - t0;
+  for (let i = 0; i < warm; i++) w.step();
+  if (q.get('wrap') !== '0') {
+    for (const ns of ['Actions', 'Finance', 'Family', 'Labour', 'Market', 'Migration', 'Goals']) for (const k of Object.keys(LES[ns])) wrap(LES[ns], k, ns + '.' + k);
+    for (const k of Object.getOwnPropertyNames(LES.World.prototype)) if (k !== 'constructor') wrap(LES.World.prototype, k, 'World.' + k);
+    for (const k of ['townNear', 'townPath']) wrap(LES, k, k);
+    for (const k of ['netWorth', 'invValue', 'goalWorth', 'realWorth', 'log']) wrap(LES.P, k, 'P.' + k);
+    for (const k of ['pay', 'spend', 'move']) if (LES.Ledger.prototype[k]) wrap(LES.Ledger.prototype, k, 'Ledger.' + k);
+  }
+  const t1 = now();
+  const per = [];
+  for (let i = 0; i < days && !w.ended; i++) { const a = now(); w.step(); per.push(now() - a); }
+  const total = now() - t1;
+  const rows = [...stats.entries()].sort((a, b) => b[1].self - a[1].self).slice(0, 45)
+    .map(([k, s]) => k.padEnd(34) + (s.self / total * 100).toFixed(1).padStart(6) + '% self ' + (s.incl / total * 100).toFixed(1).padStart(6) + '% incl  n=' + s.n);
+  per.sort((a, b) => a - b);
+  document.getElementById('out').textContent = `founders ${founders} map ${w.mapSize} living ${w.counts.living} init ${tInit.toFixed(0)}ms\n`
+    + `${per.length} days in ${(total / 1000).toFixed(2)}s = ${(per.length / total * 1000).toFixed(1)} days/s; median day ${per[per.length >> 1].toFixed(1)}ms max ${per.at(-1).toFixed(0)}ms\n` + rows.join('\n');
+})();
+</script></body></html>

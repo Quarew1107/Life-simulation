@@ -10,7 +10,7 @@
   const G = LES.Goals = {};
   const n = v => (v - 50) / 50; // personality -1..1
   const bodyAvg = p => (p.att[C.STR] + p.att[C.END] + p.att[C.AGI]) / 3;
-  const liveKids = (w, p) => p.children.filter(id => w.people[id].alive).length;
+  const liveKids = (w, p) => { let k = 0; for (const id of p.children) if (w.people[id].alive) k++; return k; };
   const PRESTIGE_JOBS = ['doctor', 'engineer', 'softdev', 'manager', 'banker', 'citytech'];
 
   // weight: how likely this person picks it; bias: utility added to actions (TRAIN_BODY /
@@ -153,17 +153,6 @@
   };
   G.text = g => G.DEFS[g.id].text(g);
 
-  // Utility bonus a goal adds to an action (TRAIN split by body / mind training).
-  G.bias = function (p, id, data) {
-    const g = p.goal;
-    if (!g) return 0;
-    const b = G.DEFS[g.id].bias;
-    if (id === 'TRAIN') {
-      const body = data && data.attrs && data.attrs.some(a => C.BODY_ATTRS.includes(a));
-      return (body ? b.TRAIN_BODY : b.TRAIN_MIND) || 0;
-    }
-    return b[id] || 0;
-  };
   G.spendDelta = p => (p.goal ? G.DEFS[p.goal.id].spend || 0 : 0);
   G.familyBoost = p => (p.goal ? G.DEFS[p.goal.id].family || 0 : 0);
   G.careBoost = p => (p.goal ? G.DEFS[p.goal.id].care || 0 : 0);
@@ -213,8 +202,17 @@
       sport: tags.includes('sport'), social: tags.includes('social'), outdoor: tags.includes('outdoor'),
     };
   }));
+  // Which venue kinds exist in this town (rechecked whenever buildings are added).
+  const avail = { town: null, nb: -1, ok: [] };
+  const venueAvail = town => {
+    if (avail.town !== town || avail.nb !== town.buildings.length) {
+      avail.town = town; avail.nb = town.buildings.length;
+      avail.ok = venueList().map(e => { const kinds = town.kinds[e.k]; return !!(kinds && kinds.length); });
+    }
+    return avail.ok;
+  };
   G.pickVenue = function (w, p, ctx, slot) {
-    const list = venueList(), lt = p.tiers.leisure;
+    const list = venueList(), lt = p.tiers.leisure, ok = venueAvail(w.town);
     const statusSeek = 0.25 * (n(p.pers.risk) + (P.prestige(p) > 0 ? 1 : 0)) + (lt >= 2 ? 0.25 : 0);
     const sporty = (bodyAvg(p) - 5) * 0.15, social = (p.att[C.CHA] - 5) * 0.1 + (p.partnerId === null ? 0.2 : 0);
     const calm = 0.2 * n(p.pers.pat);
@@ -225,8 +223,7 @@
       if ((e.slot >= 0 && e.slot !== slot) || e.member > lt || e.tier > lt + 1) continue;
       const cost = e.cost * 100 * w.price;
       if (spare < cost) continue;
-      const kinds = w.town.kinds[e.k];
-      if (!kinds || !kinds.length) continue;
+      if (!ok[e.i]) continue;
       const sc = 0.12 * e.joy - 1.2 * cost / budget + statusSeek * e.tier - (e.tier > lt ? 0.4 : 0)
         + (e.sport ? sporty : 0) + (e.social ? social : 0) + (e.outdoor ? calm : 0)
         + ((p.id * 7 + w.day * 13 + e.i * 31) % 17) / 40; // variety from day to day

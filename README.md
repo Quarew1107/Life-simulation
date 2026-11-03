@@ -21,7 +21,9 @@ Double-click **`Start Simulation.bat`**, or open `index.html` in Edge or Chrome.
 
 At slow speeds the night (23:00–06:00) fast-forwards automatically. You can toggle this in the top bar.
 
-**Engine tests:** open `tests.html` and click **Run all tests**. This runs the FSD acceptance cases, a determinism check, and 60-year invariant sweeps. `tools/balance.html?seeds=a,b&years=120` runs a headless balance report.
+**Engine tests:** open `tests.html` and click **Run all tests**. This runs the FSD acceptance cases, a determinism check, and 60-year invariant sweeps. `tools/balance.html?seeds=a,b&years=120` runs a headless balance report. For developers:
+- `tools/hash.html?seeds=a,b&days=1500` prints state fingerprints, to confirm that an optimisation changes nothing.
+- `tools/profile.html?founders=5000&days=60` times the engine and lists the hottest functions.
 
 ## Map sizes
 
@@ -41,7 +43,9 @@ At slow speeds the night (23:00–06:00) fast-forwards automatically. You can to
 
 Bigger maps have more of everything, plus empty lots the town builds on as it grows.
 
-**Performance:** small towns run at hundreds of simulated days per second. A 5,000-person Metropolis runs about 9 days/s (roughly 40 seconds per simulated year), and people show as coloured dots when zoomed out.
+**Performance:** small towns run at hundreds of simulated days per second. A 5,000-person Metropolis runs roughly 15–30 days/s at MAX on a Ryzen 5 laptop (about 12–25 seconds per simulated year), depending on how busy the laptop is. It slows down as the town grows. People show as coloured dots when zoomed out.
+- At 10 days/s and faster, the simulation runs in short slices between screen frames, so big towns keep the map responsive.
+- Speed-ups never change results: the same seed and settings still give exactly the same history.
 
 ## What's simulated
 

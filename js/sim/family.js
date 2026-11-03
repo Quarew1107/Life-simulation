@@ -19,28 +19,35 @@
   // People who socialised at the same place and time can meet and become a couple.
   Fa.matchSocial = function (w) {
     const R = w.rng.family;
-    for (const pool of Object.values(w.socialPools)) {
-      const singles = pool.map(id => w.people[id]).filter(p => p.alive && p.partnerId === null && P.age(w, p) >= 18 && P.age(w, p) <= 55);
+    for (const pool of w.socialPools.values()) {
+      const singles = [], ages = [];
+      for (const id of pool) {
+        const p = w.people[id];
+        if (!p.alive || p.partnerId !== null) continue;
+        const age = P.age(w, p);
+        if (age >= 18 && age <= 55) { singles.push(p); ages.push(age); }
+      }
       for (let i = 0; i < singles.length; i++) {
         const a = singles[i];
         if (a.partnerId !== null) continue;
         a.friends++;
         for (let k = 0; k < 3; k++) {
-          const b = singles[Math.floor(R.next() * singles.length)];
-          if (b === a || b.sex === a.sex || b.partnerId !== null || Fa.related(w, a, b)) continue;
-          const ageGap = Math.abs(P.age(w, a) - P.age(w, b));
-          if (ageGap > 15) continue;
+          const j = Math.floor(R.next() * singles.length), b = singles[j];
+          if (b === a || b.sex === a.sex || b.partnerId !== null) continue;
+          const ageGap = Math.abs(ages[i] - ages[j]);
+          if (ageGap > 15 || Fa.related(w, a, b)) continue;
+          // Strangers need time: chances grow as both have socialised more.
+          const familiarity = Math.min(1, Math.min(a.friends, b.friends) / 20);
+          if (familiarity <= 0) { R.next(); continue; } // the roll still happens (keeps every run identical)
           // Moderate status matching: very different fortunes make a match less likely.
           const gapW = Math.abs(Math.log10(Math.max(U.RM(1e4), a.nw) / Math.max(U.RM(1e4), b.nw)));
           const compat = U.clamp(1.2 - ageGap / 10 + 0.06 * ((a.att[C.CHA] + b.att[C.CHA]) / 2 - 5) + 0.1 * (P.prestige(a) + P.prestige(b)) / 2 - 0.12 * gapW, 0.1, 2);
           const want = (0.5 + a.famDesire / 100) * (0.5 + b.famDesire / 100);
-          // Strangers need time: chances grow as both have socialised more.
-          const familiarity = Math.min(1, Math.min(a.friends, b.friends) / 20);
           if (R.next() < 0.012 * compat * want * familiarity) { Fa.formCouple(w, a, b); break; }
         }
       }
     }
-    w.socialPools = {};
+    w.socialPools.clear();
   };
 
   Fa.formCouple = function (w, a, b) {

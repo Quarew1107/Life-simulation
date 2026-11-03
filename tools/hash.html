@@ -1,0 +1,49 @@
+<!doctype html><html><head><meta charset="utf-8"><title>hash</title></head><body><pre id="out">running</pre>
+<script src="../js/core/rng.js"></script>
+<script src="../js/core/util.js"></script>
+<script src="../js/data/content.js"></script>
+<script src="../js/data/params.js"></script>
+<script src="../js/data/town.js"></script>
+<script src="../js/sim/ledger.js"></script>
+<script src="../js/sim/person.js"></script>
+<script src="../js/sim/market.js"></script>
+<script src="../js/sim/actions.js"></script>
+<script src="../js/sim/labour.js"></script>
+<script src="../js/sim/finance.js"></script>
+<script src="../js/sim/family.js"></script>
+<script src="../js/sim/migration.js"></script>
+<script src="../js/sim/goals.js"></script>
+<script src="../js/sim/world.js"></script>
+<script>
+// Reproducibility check for optimisations: hash.html?seeds=a,b&days=1500&founders=100
+// Prints the world state hash (and a few extra fingerprints) every 250 days, so two
+// versions of the code can be compared run for run.
+(function () {
+  // The simple Python test server occasionally drops a script under load: say so plainly.
+  const missing = ['World', 'Finance', 'Goals', 'Migration', 'Family', 'Labour', 'Market', 'Actions', 'P', 'Ledger', 'buildTown'].filter(k => !LES[k]);
+  if (missing.length) { document.getElementById('out').textContent = 'MISSING SCRIPTS ' + missing.join(','); return; }
+  const q = new URLSearchParams(location.search);
+  const seeds = (q.get('seeds') || 'w-1').split(','), days = Number(q.get('days') || 1500);
+  const extra = JSON.parse(q.get('cfg') || '{}');
+  if (q.get('founders')) extra.founders = Number(q.get('founders'));
+  const out = [];
+  for (const seed of seeds) {
+    const t0 = performance.now();
+    try {
+      const w = new LES.World(Object.assign({ seed }, extra));
+      const marks = [];
+      while (!w.ended && w.day < days) {
+        w.step();
+        if (w.day % 250 === 0 || w.day === days) {
+          const logN = w.people.reduce((s, p) => s + p.log.length, 0);
+          const lastLog = w.feed.length ? w.feed[w.feed.length - 1].text : '';
+          const soft = w.living.reduce((s, p) => s + p.happy + p.stress + p.energy + p.health, 0);
+          marks.push(`d${w.day}:${w.hash().slice(0, 16)}:${w.people.length}:${logN}:${LES.hashString(lastLog)[0].toString(16)}:${soft.toFixed(3)}`);
+        }
+      }
+      out.push(`${seed} ${marks.join(' ')} secs ${((performance.now() - t0) / 1000).toFixed(1)}`);
+    } catch (e) { out.push(seed + ' CRASH ' + (e.stack || e)); }
+  }
+  document.getElementById('out').textContent = out.join('\n');
+})();
+</script></body></html>

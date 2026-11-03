@@ -33,7 +33,9 @@
     if (a >= 1e9) return `${s}RM${(a / 1e9).toFixed(2)}B`;
     if (a >= 1e6) return `${s}RM${(a / 1e6).toFixed(2)}M`;
     if (a >= 1e4) return `${s}RM${(a / 1e3).toFixed(1)}k`;
-    return `${s}RM${Math.round(a).toLocaleString('en-US')}`;
+    // Under RM10k: "RM9,999" (hand-rolled; toLocaleString is slow in hot paths).
+    const r = Math.round(a);
+    return r >= 1000 ? `${s}RM${Math.floor(r / 1000)},${String(r % 1000).padStart(3, '0')}` : `${s}RM${r}`;
   };
   U.fmtPrice = sen => `RM${(sen / 100).toFixed(sen < 1000 ? 3 : 2)}`; // share prices
   U.fmtPct = x => `${Math.round(x * 100)}%`;
