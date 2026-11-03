@@ -277,6 +277,7 @@ ${a.strat ? `<section><h2>Strategies</h2><table><tr><th>Starting strategy</th><t
   };
 
   R.open = function (w, prev) {
+    LES.Audio.setScene('report'); // back to the town's music when you return to this tab
     const blob = new Blob([R.html(w, prev)], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const win = window.open(url, '_blank');

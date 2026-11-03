@@ -514,13 +514,9 @@
   UI.checkToasts = function () {
     const w = UI.app.world;
     for (const e of w.feed) if (e.seq > UI.feedSeqShown && e.imp >= 2 && e.pid >= 0) UI.director.queue.push(e);
-    const fresh = w.feed.filter(e => e.seq > UI.feedSeqShown && e.imp >= 2);
+    const news = w.feed.filter(e => e.seq > UI.feedSeqShown), fresh = news.filter(e => e.imp >= 2);
     if (w.feed.length) UI.feedSeqShown = Math.max(UI.feedSeqShown, w.feed[w.feed.length - 1].seq || 0);
-    for (const e of fresh) {
-      if (/REACHED THE GOAL/.test(e.text)) LES.Extras.sfx('goal');
-      else if (e.cat === 'wealth') LES.Extras.sfx('milestone');
-      else if (/bankrupt|collapsed|went bust/i.test(e.text)) LES.Extras.sfx('bad');
-    }
+    for (const e of news) LES.Audio.onEvent(e, UI.app);
     for (const e of fresh.slice(-3)) {
       const name = e.pid >= 0 ? `<b>${esc(P.name(w.people[e.pid]))}</b> — ` : '';
       UI.toast(`${CAT_ICON[e.cat] || ''} ${name}${esc(e.text)}`, U.fmtDate(e.day), e.pid, e.imp >= 3);

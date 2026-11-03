@@ -40,11 +40,13 @@
         <div class="msgs" id="set-msgs"></div>
         <div class="modal-actions">
           <button class="ghost" id="set-random">Random seed</button>
+          <button class="ghost" id="btn-sound-setup" title="Music &amp; sound effects">${LES.Audio.on ? '🔊 Sound on' : '🔇 Sound off'}</button>
           <span class="spacer"></span>
           ${first ? '' : '<button class="ghost" id="set-cancel">Cancel</button>'}
           <button class="primary" id="set-start">Start simulation</button>
         </div>`;
       $('modal').classList.remove('hidden');
+      LES.Audio.setScene('setup');
 
       const refresh = () => {
         const v = LES.validateConfig(readForm(base));
@@ -57,6 +59,7 @@
       card.oninput = refresh;
       card.onchange = refresh;
       refresh();
+      $('btn-sound-setup').onclick = () => { $('btn-sound-setup').textContent = app.toggleSound() ? '🔊 Sound on' : '🔇 Sound off'; };
       $('set-random').onclick = () => { $('set-seed').value = `world-${Math.floor(Math.random() * 1e6)}`; refresh(); };
       if (!first) $('set-cancel').onclick = () => LES.Setup.close();
       $('set-start').onclick = () => {
@@ -67,7 +70,11 @@
       };
       setTimeout(() => $('set-start').focus(), 0);
     },
-    close() { $('modal').classList.add('hidden'); },
+    close() {
+      $('modal').classList.add('hidden');
+      const w = LES_APP.world;
+      LES.Audio.setScene(w && w.ended ? 'report' : null);
+    },
     isOpen() { return !$('modal').classList.contains('hidden'); },
   };
 })(globalThis.LES = globalThis.LES || {});

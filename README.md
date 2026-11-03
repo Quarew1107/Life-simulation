@@ -17,13 +17,33 @@ Double-click **`Start Simulation.bat`**, or open `index.html` in Edge or Chrome.
 | F | Follow the selected person |
 | Esc | Close the person panel |
 | 📊 Report | The full simulation report in a new tab (downloadable as one HTML file) |
-| 🎬 / 🔇 / overlay | Director mode (camera jumps to interesting moments), chiptune sound (off by default), map overlays (wealth, strategy, stress, family) |
+| 🎬 / 🔇 / overlay | Director mode (camera jumps to interesting moments), music and sound effects (off by default, with separate music and effects volumes), map overlays (wealth, strategy, stress, family) |
 
 At slow speeds the night (23:00–06:00) fast-forwards automatically. You can toggle this in the top bar.
 
 **Engine tests:** open `tests.html` and click **Run all tests**. This runs the FSD acceptance cases, a determinism check, and 60-year invariant sweeps. `tools/balance.html?seeds=a,b&years=120` runs a headless balance report. For developers:
 - `tools/hash.html?seeds=a,b&days=1500` prints state fingerprints, to confirm that an optimisation changes nothing.
 - `tools/profile.html?founders=5000&days=60` times the engine and lists the hottest functions.
+
+## Music and sound
+
+Turn sound on with 🔇 on the map, or with **Sound off** on the setup screen. Your choice and both volumes are remembered. Browsers only start audio after your first click.
+- **Music follows the town:**
+  - a setup theme
+  - calm daytime, or night city at slow speeds after dark
+  - an upbeat track during a boom and a melancholy one in a recession
+  - festival cues when Hari Raya, Chinese New Year, Deepavali or Christmas begins (at most one every 3 minutes)
+  - the end-of-run report theme when the run ends or the report is open
+- **Effects:**
+  - milestones and goals
+  - births, weddings and funerals
+  - graduations, hires and promotions
+  - new businesses, bankruptcies and crashes
+  
+  These play for notable town events and for everything that happens to the person you have selected. At 10 days/s and faster, only the biggest events make a sound.
+- **At slow speeds:** train horns as trains pull in, the odd car horn, and fireworks on New Year and Merdeka nights.
+
+The files live in `Sound effects/`. Keep their names if you swap any of them.
 
 ## Map sizes
 

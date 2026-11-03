@@ -56,6 +56,7 @@
     app.paused = false;
     app.endShown = false;
     UI.director.queue = [];
+    LES.Audio.newWorld();
     renderSpeed();
     UI.update(true);
     return true;
@@ -69,6 +70,7 @@
       <p>Open the full report to see what happened, why, the Hall of Fame and the most notable lives.</p>
       <div class="modal-actions"><button class="ghost" id="end-csv">Export CSV</button><span class="spacer"></span><button class="ghost" id="end-close">Keep exploring</button><button class="ghost" id="end-new">Replay with a change</button><button class="primary" id="end-report">Open report</button></div>`;
     $('modal').classList.remove('hidden');
+    LES.Audio.setScene('report');
     $('end-close').onclick = () => $('modal').classList.add('hidden');
     $('end-report').onclick = () => LES.Report.open(w, app.prevSummary);
     $('end-csv').onclick = () => LES.Report.csv(w);
@@ -221,13 +223,25 @@
       app.renderer.frame(app.dayFrac, app.fast && !app.paused, now);
       UI.update(false);
       UI.directorTick(now);
-      LES.Extras.soundTick(w, app.paused);
     }
+    LES.Audio.tick(app);
     if (pumpAfterFrame) { pumpAfterFrame = false; lastFrameAt = performance.now(); pump.port2.postMessage(0); }
     requestAnimationFrame(frame);
   }
 
   // ---------------- Input ----------------
+  // Sound button state and the music / effects volume sliders next to it.
+  function showSound(on) {
+    const b = $('btn-sound');
+    b.textContent = on ? '🔊' : '🔇';
+    b.classList.toggle('on', on);
+    $('vol-pop').classList.toggle('hidden', !on);
+    $('vol-music').value = Math.round(LES.Audio.music * 100);
+    $('vol-sfx').value = Math.round(LES.Audio.sfx * 100);
+  }
+
+  app.toggleSound = () => { const on = LES.Audio.toggle(); showSound(on); return on; };
+
   function initInput() {
     const cv = $('map'), r = app.renderer, tip = $('tooltip');
     let drag = null;
@@ -284,17 +298,12 @@
       const rect = cv.getBoundingClientRect();
       r.zoomAt(e.clientX - rect.left, e.clientY - rect.top, e.deltaY < 0 ? 1.15 : 1 / 1.15);
     }, { passive: false });
-    $('vol').addEventListener('input', e => LES.Extras.setVolume(Number(e.target.value) / 100));
+    $('vol-music').addEventListener('input', e => LES.Audio.setMusicVolume(Number(e.target.value) / 100));
+    $('vol-sfx').addEventListener('input', e => LES.Audio.setSfxVolume(Number(e.target.value) / 100));
+    $('vol-sfx').addEventListener('change', () => LES.Audio.play('chime', true)); // preview
     $('map-tools').addEventListener('click', e => {
       const b = e.target.closest('button'); if (!b) return;
-      if (b.dataset.z === 'sound') {
-        const on = LES.Extras.toggleSound();
-        b.textContent = on ? '🔊' : '🔇';
-        b.classList.toggle('on', on);
-        $('vol').classList.toggle('hidden', !on);
-        $('vol').value = Math.round(LES.Extras.sound.volume * 100);
-        return;
-      }
+      if (b.dataset.z === 'sound') { app.toggleSound(); return; }
       if (b.dataset.z === 'director') {
         const d = UI.director;
         d.on = !d.on;
@@ -343,6 +352,7 @@
     app.newWorld(Object.assign({}, LES.DEFAULTS));
     app.paused = true;
     renderSpeed();
+    if (LES.Audio.wasOn()) { LES.Audio.setOn(true); showSound(true); } // starts at the first click (browser rule)
     LES.Setup.open(app, true);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { app.renderer.buildStatic(); UI.update(true); });
     requestAnimationFrame(frame);
