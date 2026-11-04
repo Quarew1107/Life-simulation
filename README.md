@@ -15,7 +15,8 @@ Double-click **`Start Simulation.bat`**, or open `index.html` in Edge or Chrome.
 - **Family:** link people in your cast as partners (a man and a woman, as for every couple in town) or as parent and child. A household arrives together: partners share a home, and children under 18 come in their parents' care (the abilities you set are their potential).
 - **Founders:** on the setup screen, *★ My cast as founders* starts the town with the people you tick (their household comes too; with several towns, choose each person's town).
 - **During a run:** *Add to town* brings them by train. Arrivals are recorded, so *Replay with a change* brings them back on the same day with the same history.
-- Saved people stay in your browser (export/import as a file); in town they carry a ★ on the leaderboards. Everyone else gets glasses, beards and headwear too, by a fixed rule from their age, sex and community (looks only, no effect on the simulation).
+- **Following them:** a ★ marks them on the map and the leaderboards; alerts pop up for their life events (Major events by default, or Everything, or Off, in the ★ My cast panel), with a sound if sound is on; the Events tab has a **★ Cast** filter; and the report has a *Your cast* section (how each life went, main income, career, children, goals, happiness and their key moments, against the town's medians).
+- Saved people stay in your browser (export/import as a file). Everyone else gets glasses, beards and headwear too, by a fixed rule from their age, sex and community (looks only, no effect on the simulation).
 
 **Scenery:** varied towns are a little bigger than before, and the extra blocks are lakes, forested hills and forest reserves with waterfalls that nobody builds on. By default people jog, picnic and hike there, and homes next to them are calmer (Advanced → *Lakes, hills and forests* to make them scenery only).
 

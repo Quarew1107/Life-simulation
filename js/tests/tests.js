@@ -694,6 +694,10 @@
     const w2 = new LES.World(cfg);
     for (let d = 0; d < 2 * 365; d++) w2.step();
     check('Two years with a cast: consistency checks clean, and the same seed and cast give the same history', errs.length === 0 && w.hash() === w2.hash(), errs[0] || '');
+    if (LES.Report && LES.Report.html) {
+      const html = LES.Report.html(w, null), sec = (html.match(/<h2>Your cast<\/h2>[\s\S]*?<\/section>/) || [''])[0];
+      check('The report has a "Your cast" section with every cast member', ['Siti', 'Ali', 'Adam', 'Mei', 'Kavitha', 'Arjun'].every(n => sec.includes(n)) && !LES.Report.html(new LES.World({ seed: 'nc', founders: 30 }), null).includes('<h2>Your cast</h2>'));
+    }
     // Someone added during a run is recorded and comes back on the same day in a replay.
     const r1 = new LES.World(Object.assign({}, LES.DEFAULTS, { seed: 'cast-r', founders: 60 }));
     for (let d = 0; d < 100; d++) r1.step();

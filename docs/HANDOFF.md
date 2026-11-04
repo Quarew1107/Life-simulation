@@ -14,7 +14,7 @@ conversation. Branch: `main-4bf9gf` on `Quarew1107/Life-simulation`. Last update
 - **Systems:** optional features are `LES.Systems` plug-ins (`js/sim/systems.js` lists the
   hooks). With all of them off, the Classic preset reproduces the original engine exactly;
   `foundationTests` checks stored fingerprints (`stableHash`). Keep that test green.
-- **Tests:** `node tools/headless.js tests` (131 engine checks, ~4 min; the 3 map-tile checks need a canvas and run only in `tests.html`) or `tests.html` in a browser. Without Node,
+- **Tests:** `node tools/headless.js tests` (engine checks, ~4 min; the map-tile, looks and report checks need a canvas or the UI and run only in `tests.html`, 142 in all) or `tests.html` in a browser. Without Node,
   open `tests.html` (from disk is fine) and click Run all tests: ~2 min in Edge.
   Calibration: `node tools/headless.js calib`. Benchmarks: `node tools/headless.js bench founders=400 years=10`.
 - Docs: `README.md` (features), `docs/ROADMAP.md` (phases, decisions, Malaysian figures).
@@ -55,8 +55,10 @@ economy, comparison card, save/load. Next, in this order:
    older; the consistency check accepts one parent for cast children), recorded arrivals
    (`cfg.castArrivals` = [{ day, town, specs }], on the region's base cfg in a region; `LES.Cast.due` at the
    start of `World.step` replays them), and looks (`look.glasses/beard/hat/hatColour` in sprites.js;
-   residents get them from `LES.Sprites.lookOf`, a fixed rule, presentation only) are DONE. Still open:
-   alerts and the report section (in progress).
+   residents get them from `LES.Sprites.lookOf`, a fixed rule, presentation only), alerts
+   (`UI.castAlerts` in cast-ui.js watches cast members' logs; level in localStorage `les-cast-alerts`:
+   major/all/off; sounds via `LES.Audio.onEvent(e, app, true, true)`), the Events "★ Cast" filter, map stars
+   and the report's "Your cast" section are DONE: section 4.4 is complete.
    FOUND (not fixed, owner to decide): a household head whose affordable housing tier equals the default
    (tier 1) never gets a home (`F.reviewTiers` only moves when the tier changes): ~38 of 100 founders
    have homeId -1 for good. Present since the original engine; fixing it changes every history and the

@@ -222,6 +222,29 @@
 </div></section>`;
   }
 
+  // Your cast: how each life went, their main income, family, goals and happiness, with
+  // their five most important moments, against the town's medians.
+  function castSection(w) {
+    const cast = w.people.filter(p => p.custom);
+    if (!cast.length) return '';
+    const peak = p => Math.max(0, ...p.nwHist.map(([d, v]) => real(w, v, d)), real(w, p.peakNw, p.deathDay || w.day));
+    const SRC = { wages: 'wages', gigs: 'gigs', business: 'business', invest: 'investments', inherit: 'inheritance', gifts: 'family gifts', interest: 'interest', welfare: 'welfare', luck: 'luck' };
+    const main = p => { const e = p.earned, k = Object.keys(SRC).sort((a, b) => e[b] - e[a])[0]; return e[k] > 0 ? SRC[k] : '—'; };
+    const career = p => (p.job ? LES.Labour.title(p.job) : p.manages >= 0 && w.biz[p.manages] ? `runs ${w.biz[p.manages].name}` : w.biz.some(b => b.founderId === p.id) ? 'business founder' : p.retired ? 'retired' : !p.adult ? 'child' : '—');
+    const adults = w.people.filter(p => p.adult || P.age(w, p) >= 30), med = arr => (arr.length ? U.median(arr) : 0);
+    const townPeak = med(adults.map(peak)), townHappy = med(w.living.filter(p => p.adult).map(p => p.happyAvg));
+    const fate = p => (!p.alive ? `died aged ${Math.floor(P.age(w, p))}` : p.away ? 'moved away' : `alive, ${Math.floor(P.age(w, p))}`);
+    const rows = cast.map(p => `<tr><td>★ ${esc(P.name(p))}</td><td>${p.migrant ? `arrived ${U.fmtMonthYear(p.arrivedDay || 0)}` : 'founder'}</td><td>${fate(p)}</td><td>${U.fmtMoney(peak(p))}</td><td>${main(p)}</td><td>${esc(career(p))}</td><td>${p.children.length}</td><td>${p.goalsDone.length}</td><td>${Math.round(p.happyAvg)}</td></tr>`).join('');
+    const stories = cast.map(p => {
+      const major = x => x.imp >= 1 || (['career', 'edu', 'family', 'death', 'goal', 'biz', 'crime', 'migration'].includes(x.cat) && !/^New life goal|^Application|rejected$|^Is expecting/.test(x.text));
+      const top = p.log.filter(major).sort((a, b) => b.imp - a.imp || a.day - b.day).slice(0, 5).sort((a, b) => a.day - b.day);
+      return `<div class="card"><b>★ ${esc(P.name(p))}</b><ul>${top.map(x => `<li><span class="muted">${U.fmtMonthYear(x.day)}</span> ${esc(x.text)}</li>`).join('') || '<li class="muted">A quiet life.</li>'}</ul></div>`;
+    }).join('');
+    return `<section><h2>Your cast</h2><table><tr><th>Person</th><th>Joined</th><th>Life</th><th>Peak wealth (Y1)</th><th>Main income</th><th>Career</th><th>Children</th><th>Goals reached</th><th>Happiness</th></tr>${rows}</table>
+<p class="note">Town medians for comparison: peak wealth ${U.fmtMoney(townPeak)}, happiness ${Math.round(townHappy)}. Your cast lived by the same rules as everyone else.</p>
+<div class="grid">${stories}</div></section>`;
+  }
+
   function regionSection(w) {
     const R = w.region;
     if (!R) return '';
@@ -327,6 +350,7 @@ ${compare}
 <section><h2>Factors and peak wealth</h2><table><tr><th>Factor</th><th>Rank correlation with peak wealth</th></tr>${(a.factors || []).map(f => `<tr><td>${esc(f.name)}</td><td>${f.r.toFixed(2)} (${corrWord(f.r)})</td></tr>`).join('')}</table>
 <p class="note">Spearman rank correlation over adults who reached 30. Correlation is not causation: traits also affect who studies, who starts businesses and who has children.</p></section>
 ${a.strat ? `<section><h2>Strategies</h2><table><tr><th>Starting strategy</th><th>People</th><th>Median peak wealth</th><th>In top 10</th><th>Business failures</th></tr>${a.strat.map(s => `<tr><td>${C.STRATEGY_NAMES[s.s]}</td><td>${s.n}</td><td>${U.fmtMoney(s.med)}</td><td>${s.inTop}</td><td>${s.fail}</td></tr>`).join('')}</table></section>` : ''}
+${castSection(w)}
 ${regionSection(w)}
 ${scenarioSection(w, svgChart)}
 ${societySection(w)}
