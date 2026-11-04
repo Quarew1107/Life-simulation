@@ -65,7 +65,7 @@
     const mk = w.mkt;
     if (w.day % 7 >= 5) return; // weekend: orders wait for Monday
     const R = w.rng.market, m = w.macro(), dt = 1 / C.TRADING_DAYS;
-    const outside = w.cfg.marketOutsideRM * 100 * w.price;
+    const outside = w.cfg.marketOutsideRM * 100 * w.price / LES.Countries.scale(); // typed in real money
     mk.alpha = Math.min(w.cfg.marketInfluenceCap / 100, mk.townHold / (mk.townHold + outside));
     const a = mk.alpha;
     const zm = U.clamp(R.normal(0, 1), -4, 4);

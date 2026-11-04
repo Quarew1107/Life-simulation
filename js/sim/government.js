@@ -28,11 +28,11 @@
   const EDU_MULT = { free: 0, subsidised: 1, expensive: 2.5 };
   GV.MY_POLICE = 4; // police officers per 1,000 people in the country (gov.policePer1000; Malaysia: PDRM 136,503 for ~34.3m)
 
-  const lawDef = k => (GV.LAW_BY_KEY[k] || {}).def;
+  const lawDef = k => (GV.LAW_BY_KEY[k] || {}).def, MS = () => LES.Countries.scale();
   GV.policyOf = function (laws) {
     return {
       incomeTaxMult: { low: 0.6, normal: 1, high: 1.5 }[laws.incomeTax], corpTax: Number(laws.corpTax) / 100,
-      minWage: Number(laws.minWage), cashAid: Number(laws.cashAid), ubi: Number(laws.ubi), estateTax: Number(laws.estateTax),
+      minWage: Number(laws.minWage) / MS(), cashAid: Number(laws.cashAid) / MS(), ubi: Number(laws.ubi) / MS(), estateTax: Number(laws.estateTax), // law amounts are real money
       policePer1000: Number(laws.police), drugPolicy: laws.drugPolicy, uniFees: laws.uniFees,
       recordCheck: laws.recordCheck === 'allowed', affirm: laws.affirm, barBan: laws.barBan === 'ban',
       salesTax: laws.salesTax || lawDef('salesTax'), schools: laws.schools || lawDef('schools'), health: laws.health || lawDef('health'), fuelSubsidy: laws.fuelSubsidy || lawDef('fuelSubsidy'),
@@ -90,15 +90,16 @@
         return -(Number(val) - Number(cur)) / 100 * profit / price / 100 + (Number(val) - Number(cur)) / 7 * 12; // less public money when firms pay less
       }
       case 'minWage': { // direct raises, knock-on raises just above it, a sense of fairness; costs for owners
-        const d = Number(val) - Number(cur), owner = Object.keys(p.shares).length > 0, fair = p.cls === 'T20' ? 0 : 0.04 * d;
-        if (p.job) { const s = p.job.salary / price / 100; return (s < Number(val) ? Math.max(0, Math.min(d, Number(val) - s)) : 0) + (s < 1.5 * Number(val) ? 0.15 * d : 0) + fair - (owner ? 0.15 * d : 0); }
+        const mv = Number(val) / MS(), mc = Number(cur) / MS(); // law amounts are real money
+        const d = mv - mc, owner = Object.keys(p.shares).length > 0, fair = p.cls === 'T20' ? 0 : 0.04 * d;
+        if (p.job) { const s = p.job.salary / price / 100; return (s < mv ? Math.max(0, Math.min(d, mv - s)) : 0) + (s < 1.5 * mv ? 0.15 * d : 0) + fair - (owner ? 0.15 * d : 0); }
         return (owner ? -0.25 * d : -0.02 * d) + fair; // fewer low-paid vacancies
       }
       case 'cashAid': {
-        const d = Number(val) - Number(cur);
+        const d = (Number(val) - Number(cur)) / MS();
         return (p.cls === 'B40' && p.isHead ? d : 0) - d * ts.b40 / ts.adults * costShare(p, ts);
       }
-      case 'ubi': { const d = Number(val) - Number(cur); return d - d * costShare(p, ts) * 0.9; }
+      case 'ubi': { const d = (Number(val) - Number(cur)) / MS(); return d - d * costShare(p, ts) * 0.9; }
       case 'estateTax': {
         const d = Number(val) - Number(cur), EA = LES.Countries.pack.tax.estateAllowance || 1e5, nw = Math.max(0, p.nw / price / 100 - EA);
         let parentNw = 0;
@@ -166,7 +167,7 @@
     const rev = Math.max(2000, w.gov.revHist.length ? w.gov.revHist.slice(-12).reduce((s, x) => s + x, 0) / Math.min(12, w.gov.revHist.length) / w.price / 100 : 3000);
     const SV = LES.Services, hs = v => SV.HEALTH[v] || SV.HEALTH.national;
     const cost = {
-      cashAid: v => Number(v) * ts.b40, ubi: v => Number(v) * ts.adults, police: v => Number(v) * ts.pop / 1000 * 3400, uniFees: v => (v === 'free' ? 650 * ts.adults * 0.03 : 0),
+      cashAid: v => Number(v) / MS() * ts.b40, ubi: v => Number(v) / MS() * ts.adults, police: v => Number(v) * ts.pop / 1000 * 3400, uniFees: v => (v === 'free' ? 650 * ts.adults * 0.03 : 0),
       schools: v => SV.SCHOOLS[v] * ts.pop / 1000 * SP.teacher, health: v => (hs(v)[0] * SP.nurse + hs(v)[1] * SP.doctor) * ts.pop / 1000,
       salesTax: v => (v === LES.Countries.pack.tax.salesTaxRaise ? -0.03 : 0) * rev * 3, // the broader tax brings in more money
       fuelSubsidy: v => LES.Fiscal.FUEL[v].cost * 600 * ts.adults * 0.6,
@@ -421,6 +422,26 @@
       }
       g.flood = { blocks: hit, until: w.day + 10 }; g.floods++;
       w.pushFeed({ day: w.day, pid: -1, text: `${FL.name}: ${homes} household${homes === 1 ? '' : 's'} hit; ${LES.Countries.pack.money.symbol}${FL.relief.toLocaleString('en-US')} relief each from the treasury`, cat: 'economy', imp: 2 });
+    }
+    const TN = EV.tornado; // US: a tornado tears through a few blocks
+    if (TN && doy === TN.doy && R.next() < TN.chance) {
+      const t = w.town, hit = [];
+      while (hit.length < 2) hit.push(Math.floor(R.next() * t.blocks.length));
+      let homes = 0;
+      for (const p of w.living) {
+        if (!p.alive || !p.adult || !p.isHead || p.homeId < 0) continue;
+        const hb = t.buildings[p.homeId], bl = LES.townBlockAt(t, hb.x, hb.y);
+        if (!hit.includes(t.blocks.indexOf(bl))) continue;
+        homes++;
+        const loss = Math.min(p.cash, Math.round(w.px(R.range(TN.damage[0], TN.damage[1]))));
+        w.ledger.spend(p, 'cash', 'MERCHANT', loss);
+        p.stress = Math.min(100, p.stress + 25); p.health = Math.max(1, p.health - 4);
+        const aid = payOut(w, p, 'cash', w.px(FL ? FL.relief : 0), 'disaster relief');
+        p.earned.welfare += aid;
+        P.log(w, p, `A tornado damaged the home (${U.fmtMoney(loss)}${aid ? `, ${U.fmtMoney(aid)} disaster aid` : ''})`, 'luck', 1);
+      }
+      g.tornadoes = (g.tornadoes || 0) + 1;
+      w.pushFeed({ day: w.day, pid: -1, text: `${TN.name}: ${homes} household${homes === 1 ? '' : 's'} hit`, cat: 'economy', imp: 2 });
     }
     if (HZ && doy === HZ.doy && R.next() < HZ.chance) { g.haze = { until: w.day + HZ.days }; g.hazes++; w.pushFeed({ day: w.day, pid: -1, text: HZ.text, cat: 'economy', imp: 2 }); }
     if (g.haze && w.day < g.haze.until) for (const p of w.living) if (p.alive) p.health = Math.max(1, p.health - (P.age(w, p) > 60 || P.age(w, p) < 5 ? 0.12 : 0.05));

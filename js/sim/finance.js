@@ -552,8 +552,26 @@
   // ---- Personal debt ----
   F.debtMonth = function (w, p) {
     const L = w.ledger, d = p.debt;
+    if (d.medical > 0) { // US medical debt: monthly payments; behind for months -> collections (no loans), then bankruptcy
+      const inst = Math.min(d.medical, Math.max(w.px(25), Math.round(d.medical * 0.04)));
+      if (p.cash - inst > p.mcost && L.spend(p, 'cash', 'HEALTH', inst)) { d.medical -= inst; p.medArrears = 0; if (d.medical <= 0) p.medCollect = false; }
+      else {
+        p.medArrears = (p.medArrears || 0) + 1; p.stress = Math.min(100, p.stress + 2);
+        if (p.medArrears === 4 && !p.medCollect) { p.medCollect = true; P.log(w, p, `Medical debt of ${U.fmtMoney(d.medical)} sent to collections`, 'money', 1); }
+        if (p.medArrears >= 12 && d.medical > 3 * Math.max(w.px(500), p.incomeEMA)) F.personalBankrupt(w, p);
+      }
+    }
     if (d.study <= 0) return;
     const SL = LES.Countries.pack.education && LES.Countries.pack.education.loans;
+    if (SL && SL.model === 'fixed') { // US federal loans: a fixed 10-year plan; bankruptcy does not clear them
+      d.study += Math.round(d.study * SL.interest / 12);
+      if (p.enrol) return;
+      const r = SL.interest / 12, n = SL.years * 12, inst = Math.min(d.study, Math.max(w.px(50), Math.round(d.studyOrig * r / (1 - Math.pow(1 + r, -n)))));
+      if (p.cash < inst) F.raiseCash(w, p, inst - p.cash);
+      if (L.spend(p, 'cash', 'BANK', inst)) { d.study -= inst; p.arrears = 0; }
+      else { p.arrears++; p.stress = Math.min(100, p.stress + 5); if (p.arrears === 9) P.log(w, p, 'Defaulted on student loans', 'money', 1); }
+      return;
+    }
     if (SL) { // UK Plan 5: 9% of pay above the threshold, never in arrears, written off after 40 years
       d.study += Math.round(d.study * SL.interest / 12);
       if (d.slStart !== undefined && w.day - d.slStart > SL.years * 365) {
@@ -577,10 +595,14 @@
   F.personalBankrupt = function (w, p) {
     const L = w.ledger;
     F.raiseCash(w, p, P.invValue(w, p) + 1, 'bankruptcy');
-    const pay = Math.min(p.cash, p.debt.study);
-    L.spend(p, 'cash', 'BANK', pay);
-    L.writeOffs += p.debt.study - pay;
-    p.debt.study = 0; p.debt.studyOrig = 0; p.arrears = 0;
+    const SLb = LES.Countries.pack.education && LES.Countries.pack.education.loans, keepStudy = SLb && SLb.model === 'fixed'; // US: student loans survive bankruptcy
+    if (p.debt.medical) { p.debt.medical = 0; p.medCollect = false; p.medArrears = 0; } // medical debt is discharged (nothing was lent)
+    if (!keepStudy) {
+      const pay = Math.min(p.cash, p.debt.study);
+      L.spend(p, 'cash', 'BANK', pay);
+      L.writeOffs += p.debt.study - pay;
+      p.debt.study = 0; p.debt.studyOrig = 0; p.arrears = 0;
+    }
     p.bankruptUntil = w.day + 5 * 365;
     p.stress = Math.min(100, p.stress + 30);
     p.pendingReview = 'personal bankruptcy';
@@ -634,7 +656,7 @@
     if (r < pIll) {
       const hp = R.range(20, 45);
       p.health = Math.max(1, p.health - hp);
-      const bill = LES.Services.medicalBill(w, p, Math.min(p.cash, w.px(R.range(2000, 30000))));
+      const sick = w.px(R.range(2000, 30000)), bill = LES.Services.medicalBill(w, p, Math.min(p.cash, sick), false, sick);
       P.log(w, p, `Fell seriously ill (-${Math.round(hp)} health, ${U.fmtMoney(bill)} medical bills)`, 'luck', 1);
       w.stats.illnesses++;
     } else if (r < pIll + pScam) {

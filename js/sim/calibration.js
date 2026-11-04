@@ -9,7 +9,7 @@
   // Each target: label, format, and from the country pack's `calibration`: target, warning band
   // (absolute) and source. Filled by the applier at the end of this file.
   Cal.TARGETS = {};
-  const money = x => `${LES.Countries.pack.money.symbol}${Math.round(x)}`;
+  const money = x => `${LES.Countries.pack.money.symbol}${Math.round(x * LES.Countries.scale())}`; // engine units -> real money
   const DEFS = {
     tfr: { label: 'Children per woman', fmt: x => x.toFixed(2) },
     e0: { label: 'Life expectancy at birth (yrs)', fmt: x => x.toFixed(1) },

@@ -65,7 +65,7 @@
     if (C.STRATEGIES.includes(spec.strategy)) { p.strategy = spec.strategy; p.stratHist = [{ day: w.day, strategy: p.strategy, reason: 'your choice' }]; }
     p.quals = spec.qual ? [spec.qual] : [];
     if (p.job && !P.hasCred(p, C.JOB_BY_ID[p.job.jobId].req)) LES.Labour.endJob(w, p, 'moved town', true);
-    const want = w.px(U.clamp(Number(spec.cash) || 0, 0, 1e9)), src = founder ? 'GENESIS' : 'ABROAD';
+    const want = w.px(U.clamp(Number(spec.cash) || 0, 0, 1e9) / LES.Countries.scale()), src = founder ? 'GENESIS' : 'ABROAD'; // cash is typed in real money
     if (p.cash > want) w.ledger.spend(p, 'cash', src, p.cash - want); else if (p.cash < want) w.ledger.pay(src, p, 'cash', want - p.cash);
     p.isHead = true;
     LES.Goals.pick(w, p, null);

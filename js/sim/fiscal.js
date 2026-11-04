@@ -95,12 +95,25 @@
     if (b && b.cash >= eis) FS.collect(w, b, 'cash', eis, 'EIS contributions');
     else FS.collect(w, L.sec.EMPLOYER, 'bal', eis, 'EIS contributions');
     let ni = 0, erNi = 0;
-    if (TX.ni) { // National Insurance (UK): the worker's on pay between the thresholds (and a little above), the employer's above its own
+    if (TX.ni) { // payroll tax on pay between thresholds (UK National Insurance, US FICA), and the employer's share
       const a = gross / 100 / w.price * 12, E = TX.ni.employee, R = TX.ni.employer;
-      ni = FS.collect(w, p, 'cash', Math.round(U.RM((Math.max(0, Math.min(a, E.to) - E.from) * E.rate + Math.max(0, a - E.to) * E.above) / 12) * w.price), 'National Insurance');
+      ni = FS.collect(w, p, 'cash', Math.round(U.RM((Math.max(0, Math.min(a, E.to) - E.from) * E.rate + Math.max(0, a - E.to) * E.above) / 12) * w.price), TX.ni.name || 'National Insurance');
       erNi = Math.round(U.RM(Math.max(0, a - R.from) * R.rate / 12) * w.price);
-      if (b && b.cash >= erNi) FS.collect(w, b, 'cash', erNi, 'National Insurance (employers)');
-      else FS.collect(w, L.sec.EMPLOYER, 'bal', erNi, 'National Insurance (employers)');
+      if (b && b.cash >= erNi) FS.collect(w, b, 'cash', erNi, TX.ni.employerName || 'National Insurance (employers)');
+      else FS.collect(w, L.sec.EMPLOYER, 'bal', erNi, TX.ni.employerName || 'National Insurance (employers)');
+    }
+    if (TX.stateBands) { // US: state income tax on the year's pay (Ohio: flat above an exempt amount) and city income tax
+      const a = gross / 100 / w.price * 12;
+      let st = 0, lo = 0;
+      for (const [hi, r] of TX.stateBands) { if (a > lo) st += (Math.min(a, hi) - lo) * r; lo = hi; }
+      ni += FS.collect(w, p, 'cash', Math.round(U.RM(st / 12) * w.price), TX.stateName || 'state income tax');
+      if (TX.localIncome) ni += FS.collect(w, p, 'cash', Math.round(gross * TX.localIncome), TX.localName || 'city income tax');
+    }
+    if (LES.Countries.pack.welfare && LES.Countries.pack.welfare.model === 'usa') { // for tax credits and Social Security
+      p.earnYr = (p.earnYr || 0) + gross;
+      const SS = LES.Countries.pack.welfare.socialSecurity;
+      if (p.ssEarn === undefined) ssInit(w, p, SS);
+      p.ssEarn += Math.min(gross / w.price / 100, SS.cap / 12); p.ssMonths = (p.ssMonths || 0) + 1;
     }
     const line = LES.Services.lineOf(job);
     if (line) g.month.wages[line] = (g.month.wages[line] || 0) + gross + er + eis + erNi;
@@ -172,6 +185,74 @@
     if (p.ucTake) p.ucLast = pay(award, 'Universal Credit');
   }
 
+  // US benefits each month: Social Security (from the earnings record), SNAP food stamps (with the work
+  // rule for adults without children), TANF cash for families, and the health cover everyone holds.
+  // The Social Security record of someone who worked before joining the town: a typical wage from 22.
+  function ssInit(w, p, SS) {
+    const yrs = p.gen === 0 || p.migrant ? Math.max(0, P.age(w, p) - 22) : 0; // people born in town start at zero
+    p.ssEarn = yrs * 12 * Math.min(Math.max(p.incomeEMA, p.job ? p.job.salary : 0, w.px(SS.typical)) / w.price / 100, SS.cap / 12) * 0.85; p.ssMonths = yrs * 12;
+  }
+  const FPL = (H, n) => H.fpl.base + H.fpl.perPerson * (n - 1); // federal poverty line for a household of n (a year)
+  function usBenefits(w, p, cc, R) {
+    const pack = LES.Countries.pack, WF = pack.welfare, age = P.age(w, p), pay = (amt, line) => {
+      if (!(amt > 0)) return 0;
+      const a = LES.Gov.payOut(w, p, 'cash', amt, line); p.earned.welfare += a; p.monthIncome += a; return a;
+    };
+    const SS = WF.socialSecurity;
+    if (age >= SS.early && (p.retired || age >= SS.age)) {
+      if (p.ssPIA === undefined) { // claims now: 90/32/15% of average indexed monthly earnings (35 years)
+        if (p.ssEarn === undefined) ssInit(w, p, SS);
+        const aime = p.ssEarn / 420, [b1, b2] = SS.bends, [r1, r2, r3] = SS.rates;
+        const pia = Math.min(SS.max, r1 * Math.min(aime, b1) + r2 * U.clamp(aime - b1, 0, b2 - b1) + r3 * Math.max(0, aime - b2));
+        p.ssPIA = pia * (age < SS.age ? SS.earlyFactor : 1);
+      }
+      pay(w.px(p.ssPIA), 'Social Security');
+    }
+    usHealth(w, p);
+    if (!p.isHead) return;
+    const q = p.partnerId !== null ? w.people[p.partnerId] : null, couple = !!(q && q.alive && !q.away);
+    let kids = 0;
+    for (const id of p.careOf) { const c = w.people[id]; if (c.alive && !c.adult) kids++; }
+    const n = 1 + (couple ? 1 : 0) + kids, H = pack.health, earned = ((p.job ? p.job.salary : 0) + (couple && q.job ? q.job.salary : 0)) / w.price / 100;
+    const SN = WF.snap;
+    if (earned * 12 < FPL(H, n) * SN.grossFpl && p.cash + (couple ? q.cash : 0) < w.px(SN.assets)) {
+      const able = !kids && age < 65 && !p.job && !(couple && q.job);
+      p.snapMonths = able ? (p.snapMonths || 0) + 1 : 0;
+      if (!able || p.snapMonths <= SN.ablebodiedMonths) {
+        const net = Math.max(0, earned * (1 - SN.earnedDeduction) - SN.stdDeduction);
+        if (p.snapTake === undefined) p.snapTake = R.next() < SN.takeUp;
+        if (p.snapTake) pay(w.px(SN.max + SN.perPerson * (n - 1) - SN.benefitRate * net), 'SNAP (food stamps)');
+      }
+    }
+    if (kids && earned < 1 && WF.tanf) { p.tanfMonths = (p.tanfMonths || 0) + 1; if (p.tanfMonths <= WF.tanf.months) pay(w.px(WF.tanf.amount), 'TANF'); }
+  }
+  // Health cover (US): Medicare from 65, Medicaid for low incomes (children up to a higher line), employer
+  // cover for most jobs (and the family), a marketplace plan for some of the rest, otherwise none.
+  // The premium is paid each month; a missed premium means no cover.
+  function usHealth(w, p) {
+    const H = LES.Countries.pack.health, age = P.age(w, p), head = p.isHead || !p.adult ? p : (p.partnerId !== null ? w.people[p.partnerId] : p);
+    const q = head.partnerId !== null ? w.people[head.partnerId] : null, couple = !!(q && q.alive && !q.away);
+    let kids = 0;
+    for (const id of head.careOf) { const c = w.people[id]; if (c.alive && !c.adult) kids++; }
+    const n = 1 + (couple ? 1 : 0) + kids, inc = ((head.job ? head.job.salary : 0) + (couple && q.job ? q.job.salary : 0)) / w.price / 100 * 12;
+    const fpl = FPL(H, n), hash = k => ((p.id * 2654435761 + k * 40503) >>> 0) % 1000 / 1000; // fixed per person, no dice roll
+    const offered = pp => pp && pp.job && (LES.Services.lineOf(pp.job) || hash(1) < H.offerRate);
+    let cover = 'none';
+    if (age >= 65) cover = 'medicare';
+    else if (inc < fpl * H.medicaidFpl) cover = 'medicaid';
+    else if (offered(p) || (couple && offered(p === head ? q : head))) cover = 'employer';
+    else if (inc < fpl * H.subsidyFpl || hash(2) < H.buyRate) cover = 'market';
+    const plan = H.plans[cover];
+    if (plan && plan.premium > 0 && p.adult) {
+      let prem = w.px(cover === 'employer' && (couple || kids) ? plan.familyPremium / (couple ? 2 : 1) : plan.premium);
+      if (cover === 'market' && inc < fpl * H.subsidyFpl) prem = Math.min(prem, w.px(inc * H.subsidyCap / 12)); // premium tax credit
+      if (cover === 'market' && hash(3) > H.buyRate && inc >= fpl * H.subsidyFpl) cover = 'none';
+      else if (!w.ledger.spend(p, 'cash', 'MERCHANT', prem)) cover = 'none'; // could not pay the premium
+    }
+    p.cover = cover;
+    if (p.isHead) for (const id of p.careOf) { const c = w.people[id]; if (c.alive && !c.adult) c.cover = inc < fpl * H.childFpl ? 'medicaid' : cover === 'medicare' ? 'none' : cover; } // children: CHIP, or the parent's plan
+  }
+
   // Sales tax, assessment tax and employers' company tax for the month.
   function collectMonth(w) {
     const g = w.gov, L = w.ledger, F = LES.Finance, law = FS.RATES[w.policy.salesTax] ? w.policy.salesTax : Object.keys(FS.RATES)[0], R = FS.RATES[law];
@@ -190,7 +271,7 @@
     for (const b of w.biz) if (b.open) { assess += U.RM(b.typeDef.fixed) * w.price * FS.ASSESSMENT; if (TX.businessRates) FS.collect(w, b, 'cash', U.RM(b.typeDef.fixed) * w.price * TX.businessRates, 'business rates'); }
     const k = FS.compliance(w);
     FS.collect(w, L.sec.MERCHANT, 'bal', sales * k, TX.salesTaxNames[law]);
-    FS.collect(w, L.sec.MERCHANT, 'bal', assess * (0.5 + 0.5 * k), 'assessment tax');
+    FS.collect(w, L.sec.MERCHANT, 'bal', assess * (0.5 + 0.5 * k), TX.assessmentName || 'assessment tax');
     FS.collect(w, L.sec.EMPLOYER, 'bal', g.month.privWages * FS.EMPLOYER_CORP * (w.policy.corpTax / TX.companyRefRate) * k, 'company tax (employers)');
     g.lastMerchant = L.sec.MERCHANT.bal;
     if (fuel > 0) LES.Gov.payOut(w, L.sec.MERCHANT, 'bal', fuel, 'fuel subsidies');
@@ -268,10 +349,11 @@
     // Programmes (cash aid reaches B40 households through the community office: a weak
     // office misses some families and pays some who do not qualify).
     const cc = comp(w, 'community');
-    const meansTested = (LES.Countries.pack.welfare || {}).model === 'meansTested';
+    const meansTested = (LES.Countries.pack.welfare || {}).model === 'meansTested', usa = (LES.Countries.pack.welfare || {}).model === 'usa';
     for (const p of w.living) {
       if (!p.alive || !p.adult || p.away) continue;
       let amt = 0, line = 'cash aid';
+      if (usa) usBenefits(w, p, cc, R); // (US towns also keep the city's cash-aid law below)
       if (meansTested) ukBenefits(w, p, pol, cc, R);
       else if (pol.cashAid && p.isHead && (p.cls === 'B40' ? R.next() < 1 - 0.3 * (1 - cc) : p.cls === 'M40' && R.next() < 0.12 * (1 - cc))) amt += w.px(pol.cashAid);
       if (pol.ubi) { amt += w.px(pol.ubi); line = 'basic income & aid'; }
@@ -338,7 +420,7 @@
     g.oprHist.push({ day: w.day, opr: next });
     w.infl = U.clamp(w.infl - 0.2 * (next - FS.MY_OPR), w.cfg.inflMin / 100, w.cfg.inflMax / 100); // tighter money cools prices
     // EPF dividend on retirement savings (KWSP: ~5.5-6.3% in recent years).
-    const div = RT.dividend[w.regime] || RT.dividend.normal;
+    const div = w.regime in RT.dividend ? RT.dividend[w.regime] : RT.dividend.normal; // (0 is a real return)
     for (const p of w.living) if (p.alive && !p.away && p.epf > 0) L.pay('MARKET', p, 'epf', Math.round(p.epf * div));
     // The fund pays 4% of its value to the treasury each year.
     const fv = FS.fundValue(w);
@@ -349,7 +431,20 @@
     // Mature public finances: government-linked companies list on Bursa Rezeki.
     const years = w.day / 365, listed = w.mkt.stocks.filter(s => s.def.glc).length;
     if (!w.follower && years >= 8 && g.revHist.length >= 24 && g.debt < FS.avgRevenue(w) * 6 && listed < C.GLC_STOCKS.length && R.next() < 0.35) FS.listGlc(w, C.GLC_STOCKS[listed]);
-    for (const p of w.living) { p.taxYr = 0; p.divYr = 0; if (p.pension > 0) p.pension = Math.round(p.pension * 1.02); } // pensions rise 2% a year
+    if (TX.credits) for (const p of w.living) { // US: Earned Income Tax Credit and Child Tax Credit with the tax return
+      if (!p.alive || !p.isHead || p.away) continue;
+      const q = p.partnerId !== null ? w.people[p.partnerId] : null, couple = !!(q && q.alive);
+      let kids = 0;
+      for (const id of p.careOf) { const c = w.people[id]; if (c.alive && P.age(w, c) < TX.credits.ctc.under) kids++; }
+      const earn = ((p.earnYr || 0) + (couple ? q.earnYr || 0 : 0)) / 100 / w.price, liab = ((p.taxYr || 0) + (couple ? q.taxYr || 0 : 0)) / 100 / w.price;
+      const E = TX.credits.eitc[Math.min(3, kids)], from = E.outFrom + (couple ? TX.credits.marriedExtra : 0);
+      const eitc = Math.max(0, Math.min(E.max, earn * E.inRate, E.max - (earn - from) * E.outRate));
+      const C2 = TX.credits.ctc, full = Math.max(0, kids * C2.amount - Math.max(0, earn - C2.phaseFrom * (couple ? 2 : 1)) * 0.05);
+      const ctc = Math.min(full, liab + Math.min(kids * C2.refundable, 0.15 * Math.max(0, earn - 2500)));
+      const amt = w.px(eitc + ctc);
+      if (amt > 0) { const a = LES.Gov.payOut(w, p, 'cash', amt, 'tax credits (EITC, CTC)'); p.earned.welfare += a; if (a >= w.px(1000)) P.log(w, p, `Tax refund: ${U.fmtMoney(a)} in credits (EITC and Child Tax Credit)`, 'money', 0); }
+    }
+    for (const p of w.living) { p.taxYr = 0; p.divYr = 0; if (p.earnYr) p.earnYr = 0; if (p.pension > 0) p.pension = Math.round(p.pension * 1.02); } // pensions rise 2% a year
     g.devStock = Math.round(g.devStock * 0.94); // infrastructure wears out
   };
 
