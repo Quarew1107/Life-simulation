@@ -172,16 +172,36 @@ The map is drawn in a 3/4 top-down pixel style: you see each building's roof and
   - devotion raises the wish for children and lowers break-ups
   - under the Malaysian interfaith rule, a non-Muslim converts to marry a Muslim (a setting)
 - **Crime & justice (Crime & vice: Lively, Realistic, Lawless or Off):**
-  - **Temptation:** each month every adult gets a temptation score made of need (little cash, no job, cravings), low self-control, age (offending peaks at 18–25), peers and record, minus deterrence (police), devotion, children and a good job. A few people get a crime opportunity. It shows up as a choice in "Why did they do that?", and they may still say no.
+  - **Temptation:** each month every adult gets a temptation score made of need (little cash, no job, cravings), low self-control, age (offending peaks at 18–25), peers and record, education, upbringing and the town's economy (unemployment, inequality, few job openings, recessions). Deterrence (the share of recent crimes the police actually solved), devotion, children, a good job and funded training pull it down. A few people get a crime opportunity. It shows up as a choice in "Why did they do that?", and they may still say no.
+  - **Police against crime:** each officer can investigate only so many cases a month. When crime outruns the force, fewer cases are solved, deterrence weakens and crime climbs. More officers (the police law and the budget) or a capable district police chief turn it around. About 65% of crimes are solved, as in Malaysia.
   - **Crimes:** snatch theft, house-breaking, vehicle theft, scams, robbery and assault. About 2% of violent crimes end in a killing.
   - **Justice:** police solve some cases. Courts convict about 7 in 10 people arrested, less often if they can afford a lawyer. Sentences range from fines to prison. Prisoners lose their jobs, partners may leave and children go to family or welfare. A criminal record lowers hiring chances.
   - **Drugs:** users start through stress, peers and age. Addiction costs money (to dealers) and health, and some people overdose. People recover by quitting or in rehab, and many relapse. The drug-policy setting picks Malaysian mix, punitive, treatment or decriminalised.
   - **Gangs:** gangs form around a bold, charismatic offender. They deal drugs, take a share of members' crimes and collect protection money from shops on their turf. They recruit young unemployed people, fight rival gangs and get raided by the police.
-  - **Calibration:** at **Realistic**, rates land near Malaysia's: about 170 index crimes, 590 drug users and 260 prisoners per 100k. **Lively** (the default) multiplies them by 10, so a small town shows something.
+  - **Calibration:** at **Realistic**, rates land near Malaysia's: about 170 index crimes, 590 drug users and 260 prisoners per 100k. **Lively** (the default) multiplies them by 10, so a small town shows something. People in prison or rehab are left out of the unemployment rate, as in the DOSM survey.
   - **On the map and in the UI:** a justice district (police, court, prison with an exercise yard, rehab), patrol cars, gang graffiti, crime and gang-turf overlays, a Crime tab and a report section.
 - **Government & elections (on in the Malaysia preset):**
-  - **Treasury:** taxes go into a real town treasury (income tax, corporate tax, fines, inheritance tax). It pays for police wages, the leader's salary, cash aid, basic income, welfare, free university places, flood relief, interest and public services. When it runs short it borrows, and deep debt forces austerity.
-  - **Twelve laws the engine really uses:**
+  - **Malaysian taxes** (all moving with prices):
+    - LHDN income tax bands (0–30%) with the RM9,000 personal relief, EPF and child reliefs and the RM400 rebate, deducted monthly from pay. Most residents earn too little to pay it, as in Malaysia. Zakat is rebated against it.
+    - SME company tax (15% / 17% / 24%). Most company tax from the town's own firms goes on to the federal government.
+    - Company tax from the outside firms that employ residents.
+    - SST inside prices (basic food and hawker meals exempt), or GST 6% if the law changes: more revenue, slightly dearer everyday spending.
+    - Assessment tax on homes and premises, the 2% dividend tax above RM100k a year, EIS contributions, fines and any inheritance tax.
+    - The Gov't tab shows revenue and spending by source each month. Revenue lands near Malaysia's ~RM800 per person a month.
+  - **Budget and public services:**
+    - Teachers, nurses, doctors and police are public servants paid by the treasury; laws set how many posts there are.
+    - Staffing against Malaysian norms gives a school quality (children learn more by adulthood) and a healthcare quality (lower mortality). Public clinics charge RM1 and public hospitals a small share of the bill.
+    - Fuel subsidies (targeted RON95 by default) keep vehicle costs down at a real cost to the treasury.
+    - EIS job-loss benefit, funded skills courses for people out of work, civil-service pensions, cash aid, welfare and flood relief.
+    - A surplus builds a three-month reserve, then development projects (roads, drains, parks: better business, more jobs, less flood damage), training places and Khazanah Rezeki. A deficit draws on the fund, then borrows. Deep debt brings a hiring freeze and austerity; a large surplus lets the leader cut taxes or expand services.
+  - **City council:** the leader appoints three officials, each a resident with a real job and a competence score:
+    - **Bendahari Bandaraya** (City Treasurer): how much tax is actually collected, how well development money is spent, and the yearly budget split.
+    - **Ketua Polis Daerah** (District Police Chief): how many cases get solved and how hard gangs are pushed. A corrupt chief takes gang money.
+    - **Pengarah Pembangunan Masyarakat** (Community Development Director): whether cash aid reaches the right families, job-loss benefit and training places.
+    - Leaders who care less about merit appoint relatives. The anti-corruption commission (MACC) can catch officials who take kickbacks. Every appointment and budget goes into a council log.
+  - **Private schools and hospitals:** a doctor can open a private clinic in a shoplot. A rich resident can build a private school or a private hospital on an empty lot (it appears on the map). Owners pay their own teachers, doctors and nurses. Richer families pay fees to send their children there, and richer patients pay more for quicker care.
+  - **Bank Negara and Khazanah Rezeki:** Bank Negara sets the OPR (2.75% to start) each year from inflation and the business cycle. It sets savings and loan rates, cools or warms business and hiring, and nudges inflation. EPF savings earn a yearly dividend. Khazanah Rezeki, the town's sovereign fund, invests surpluses and returns 4% a year. Once public finances mature, three government-linked companies list on Bursa Rezeki (Tenaga Rezeki, Petroliam Rezeki, Bank Pembangunan Rezeki) and pay dividends to residents and to the fund.
+  - **Sixteen laws the engine really uses:**
     - income tax and corporate tax rates
     - minimum wage (RM1,700 by default)
     - B40 cash aid and universal basic income
@@ -191,8 +211,10 @@ The map is drawn in a 3/4 top-down pixel style: you see each building's roof and
     - criminal-record checks in hiring
     - affirmative action
     - whether bars are allowed
+    - fuel subsidy, SST or GST
+    - public-school and public-healthcare staffing
   - **Elections** every 5 years (a setting):
-    - Candidates stand on platforms of law changes, and responsible ones avoid promises the town can't pay for.
+    - Candidates stand on platforms of law changes. They read the polls (what a sample of voters would gain), and responsible ones avoid promises the town can't pay for.
     - Each voter weighs what every promise would mean for them. They see the true effect plus noise, so better-educated people judge laws more accurately.
     - Voters also weigh their left-right and conservative-liberal leanings, the leader's record and approval, shared ethnicity or religion (a setting), charisma and campaign spending, then decide whether to vote.
     - Polling happens at the schools. Turnout lands around Malaysia's 74%.
@@ -202,7 +224,7 @@ The map is drawn in a 3/4 top-down pixel style: you see each building's roof and
     - They drive the patrol cars, and their number sets how often crimes are solved.
     - Arrested suspects wait on remand in the police lock-up (Lokap) until court. Time on remand counts toward the sentence, and long remand can cost people their jobs.
   - **Events:** monsoon floods hit low-lying and riverside homes, with RM1,000 relief per household. Haze harms health.
-  - **On the map and in the UI:** the town hall (Dewan Bandaraya) and padang, campaign flags, flood water, a Government tab (laws, treasury, elections and how each class, religion and ethnic group voted), a politics card on each person and a report section.
+  - **On the map and in the UI:** the town hall (Dewan Bandaraya) and padang, private schools and hospitals, campaign flags, flood water, a Government tab, a politics card on each person and a report section. The tab shows the council, laws, the treasury by source, public services, Bank Negara and the fund, elections, and how each class, religion and ethnic group voted.
 - **Map overlays:** class, religion, ethnicity, crime and gang turf.
 - **Report and analysis:** an end-of-run report with a rule-based "why it turned out this way" summary, Hall of Fame, charts and a migrants vs. locals comparison, plus CSV export. In the app: family trees, compare-two-people and Director mode.
 - **Integrity:** a double-entry-style ledger (money is never created or lost), consistency checks every quarter, and deterministic seeds (same seed and settings give the same history).
@@ -210,10 +232,8 @@ The map is drawn in a 3/4 top-down pixel style: you see each building's roof and
 ## Planned next
 
 The roadmap is in `docs/ROADMAP.md`:
-- social class, religion and an ethnicity update
-- crime, justice, drugs and gangs
-- elections, laws and a town treasury
-- what-if scenarios: Born Equal, Great Reset, Eternal Life, Education Ban and more
+- what-if scenarios on the setup screen: Born Equal, Great Reset, Eternal Life, Education Ban, Pandemic, Robot Age and more
+- a calibration pass (household income inequality and the share of graduates are still above Malaysia's), a town newspaper and compare-with-normal-world runs
 
 Each new system can be switched off, and with all of them off the Classic preset reproduces the original engine exactly.
 

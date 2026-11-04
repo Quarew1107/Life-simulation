@@ -34,7 +34,11 @@
     { key: 'uniFees', name: 'University fees', def: 'subsidised', options: [['free', 'Free'], ['subsidised', 'Subsidised'], ['expensive', 'Full fees (x2.5)']], econ: { free: -0.8, subsidised: 0, expensive: 0.8 } },
     { key: 'recordCheck', name: 'Criminal record checks in hiring', def: 'allowed', options: [['allowed', 'Allowed'], ['banned', 'Banned (fair chance)']], soc: { allowed: -0.3, banned: 0.7 } },
     { key: 'affirm', name: 'Affirmative action', def: 'group', options: [['none', 'None'], ['need', 'Need-based (B40)'], ['group', 'Bumiputera preference']], econ: { none: 0.4, need: -0.4, group: 0 }, soc: { none: 0.3, need: 0.2, group: -0.4 } },
-    { key: 'barBan', name: 'Bars and alcohol', def: 'open', options: [['open', 'Allowed (taxed)'], ['ban', 'Banned']], soc: { open: 0.4, ban: -1 } },
+    { key: 'barBan', name: 'Bars and alcohol', def: 'open', options: [['open', 'Allowed (taxed)'], ['ban', 'Banned']], soc: { open: 0.3, ban: -0.6 } },
+    { key: 'fuelSubsidy', name: 'Fuel subsidy', def: 'targeted', options: [['none', 'None (market prices)'], ['targeted', 'Targeted RON95 subsidy (Malaysia)'], ['blanket', 'Blanket subsidy for everyone']], econ: { none: 0.7, targeted: 0, blanket: -0.6 } },
+    { key: 'salesTax', name: 'Sales tax', def: 'sst', options: [['sst', 'SST (sales 5-10%, service 8%)'], ['gst6', 'GST 6% on most goods and services']], econ: { sst: 0.2, gst6: -0.3 } },
+    { key: 'schools', name: 'Public schools', def: 'malaysia', options: [['lean', '9 teachers per 1,000'], ['malaysia', '12 per 1,000 (Malaysia)'], ['generous', '16 per 1,000']], econ: { lean: 0.5, malaysia: 0, generous: -0.5 } },
+    { key: 'health', name: 'Public healthcare', def: 'malaysia', options: [['lean', 'Lean (2.5 nurses, 1 doctor per 1,000)'], ['malaysia', 'Malaysia (3.5 nurses, 1.5 doctors)'], ['generous', 'Generous (5 nurses, 2.2 doctors)']], econ: { lean: 0.5, malaysia: 0, generous: -0.5 } },
   ];
   GV.LAW_BY_KEY = {};
   for (const l of GV.LAWS) GV.LAW_BY_KEY[l.key] = l;
@@ -48,16 +52,21 @@
       minWage: Number(laws.minWage), cashAid: Number(laws.cashAid), ubi: Number(laws.ubi), estateTax: Number(laws.estateTax),
       policePer1000: Number(laws.police), drugPolicy: laws.drugPolicy, uniFees: laws.uniFees,
       recordCheck: laws.recordCheck === 'allowed', affirm: laws.affirm, barBan: laws.barBan === 'ban',
+      salesTax: laws.salesTax || 'sst', schools: laws.schools || 'malaysia', health: laws.health || 'malaysia', fuelSubsidy: laws.fuelSubsidy || 'targeted',
     };
   };
   function applyLaws(w) {
     w.policy = GV.policyOf(w.gov.laws);
     w.derived.eduMult = EDU_MULT[w.gov.laws.uniFees];
+    w.taxPx = LES.Fiscal.priceMult(w.policy.salesTax, w.policy.fuelSubsidy); // GST and fuel subsidies change some prices
+    for (const p of w.living) if (p.alive && p.adult) p.mcost = LES.Finance.monthlyCost(w, p);
   }
 
   // ---- Treasury ----
   const T = w => w.gov.treasury;
   function borrow(w, amt) {
+    if (amt <= 0) return;
+    amt -= LES.Fiscal.drawFund(w, amt); // the sovereign fund is the rainy-day buffer
     if (amt <= 0) return;
     w.ledger.move(w.ledger.sec.BANK, 'bal', T(w), 'cash', amt);
     w.gov.debt += amt;
@@ -93,12 +102,12 @@
       case 'corpTax': {
         let profit = 0;
         for (const id in p.shares) { const b = w.biz[id]; if (b && b.open) profit += Math.max(0, b.lastProfit || 0) * p.shares[id]; }
-        return -(Number(val) - Number(cur)) / 100 * profit / price / 100;
+        return -(Number(val) - Number(cur)) / 100 * profit / price / 100 + (Number(val) - Number(cur)) / 7 * 12; // less public money when firms pay less
       }
-      case 'minWage': {
-        const d = Number(val) - Number(cur);
-        if (p.job) { const s = p.job.salary / price / 100; return Math.max(0, Math.min(d, Number(val) - s)) * (s < Number(val) ? 1 : 0) - (Object.keys(p.shares).length ? 0.15 * d : 0); }
-        return Object.keys(p.shares).length ? -0.25 * d : -0.05 * d; // fewer low-paid vacancies, higher costs for owners
+      case 'minWage': { // direct raises, knock-on raises just above it, a sense of fairness; costs for owners
+        const d = Number(val) - Number(cur), owner = Object.keys(p.shares).length > 0, fair = p.cls === 'T20' ? 0 : 0.04 * d;
+        if (p.job) { const s = p.job.salary / price / 100; return (s < Number(val) ? Math.max(0, Math.min(d, Number(val) - s)) : 0) + (s < 1.5 * Number(val) ? 0.15 * d : 0) + fair - (owner ? 0.15 * d : 0); }
+        return (owner ? -0.25 * d : -0.02 * d) + fair; // fewer low-paid vacancies
       }
       case 'cashAid': {
         const d = Number(val) - Number(cur);
@@ -115,7 +124,7 @@
         const d = Number(val) - Number(cur), cr = p.cr;
         const safety = 8 + (cr ? 60 * cr.fear + (cr.victim ? 25 : 0) : 0);
         const offender = cr && (cr.gang >= 0 || cr.offences > 0 || cr.user) ? 40 : 0;
-        return d * (safety - offender) - d * 3 * costShare(p, ts);
+        return d * (safety - offender) - d * 3.4 * ts.pop / ts.adults * costShare(p, ts);
       }
       case 'drugPolicy': {
         const user = p.cr && (p.cr.user || p.cr.addict > 0);
@@ -135,9 +144,30 @@
         const v = o => (o === 'group' ? (bumi ? 60 : -60) : o === 'need' ? (p.cls === 'B40' ? 50 : p.cls === 'T20' ? -20 : 0) : 0);
         return v(val) - v(cur);
       }
-      case 'barBan': {
-        const v = o => (o === 'ban' ? (p.rel === 'islam' && p.relig > 50 ? 35 : p.rel !== 'islam' && age < 50 ? -40 : 0) : 0);
+      case 'barBan': { // devout Muslims favour a ban; non-Muslims and bar-goers lose out; owners lose trade
+        const v = o => (o === 'ban' ? (p.rel === 'islam' ? (p.relig > 70 ? 25 : p.relig > 50 ? 8 : -5) : -40) - (p.tiers.leisure >= 2 ? 15 : 0) - (Object.keys(p.shares).length ? 10 : 0) : 0);
         return v(val) - v(cur);
+      }
+      case 'salesTax': { // prices of taxed spending, against more public money
+        const FS = LES.Fiscal, d = FS.salesTaxCost(w, p, val) - FS.salesTaxCost(w, p, cur);
+        return -d + (val === 'gst6' ? -12 : 12); // more public money, but a broad new tax is deeply unpopular
+      }
+      case 'fuelSubsidy': { // what fuel costs this person, against the subsidy bill everyone shares
+        const FS = LES.Fiscal, tr = LES.Finance.tierCost(w, 'transport', p.tiers.transport) / (w.taxPx ? w.taxPx.transport[p.tiers.transport] : 1) / price / 100;
+        const px = o => (p.tiers.transport >= 1 ? FS.FUEL[o].px : 1), cost = o => FS.FUEL[o].cost;
+        return -tr * (px(val) - px(cur)) - (cost(val) - cost(cur)) * 600 * costShare(p, ts) * 0.5;
+      }
+      case 'schools': {
+        const lvl = { lean: -1, malaysia: 0, generous: 1 }, d = lvl[val] - lvl[cur];
+        let kids = 0;
+        for (const id of p.careOf) { const c = w.people[id]; if (c.alive && !c.adult && !(c.school >= 0)) kids++; }
+        const teacher = p.job && p.job.jobId === 'teacher' ? 120 : 0;
+        return d * (70 * kids + teacher + (P.hasCred(p, 'BACH') && !p.job ? 40 : 0)) - d * 3.5 * 3800 / 1000 * ts.pop / ts.adults * costShare(p, ts);
+      }
+      case 'health': {
+        const lvl = { lean: -1, malaysia: 0, generous: 1 }, d = lvl[val] - lvl[cur];
+        const need = 25 + (age > 55 ? 60 : 0) + (p.health < 60 ? 50 : 0) + p.careOf.length * 10;
+        return d * need - d * (1.3 * 3400 + 0.65 * 11000) / 1000 * ts.pop / ts.adults * costShare(p, ts);
       }
       default: return 0;
     }
@@ -148,7 +178,13 @@
   // voters who follow the news, worry about promises the town cannot afford.
   GV.burden = function (w, key, val, ts) {
     const rev = Math.max(2000, w.gov.revHist.length ? w.gov.revHist.slice(-12).reduce((s, x) => s + x, 0) / Math.min(12, w.gov.revHist.length) / w.price / 100 : 3000);
-    const cost = { cashAid: v => Number(v) * ts.b40, ubi: v => Number(v) * ts.adults, police: v => Number(v) * ts.pop / 1000 * 3000, uniFees: v => (v === 'free' ? 650 * ts.adults * 0.03 : 0) }[key];
+    const SV = LES.Services, hs = v => SV.HEALTH[v] || SV.HEALTH.malaysia;
+    const cost = {
+      cashAid: v => Number(v) * ts.b40, ubi: v => Number(v) * ts.adults, police: v => Number(v) * ts.pop / 1000 * 3400, uniFees: v => (v === 'free' ? 650 * ts.adults * 0.03 : 0),
+      schools: v => SV.SCHOOLS[v] * ts.pop / 1000 * 4300, health: v => (hs(v)[0] * 3800 + hs(v)[1] * 12400) * ts.pop / 1000,
+      salesTax: v => (v === 'gst6' ? -0.03 : 0) * rev * 3, // GST brings in more money
+      fuelSubsidy: v => LES.Fiscal.FUEL[v].cost * 600 * ts.adults * 0.6,
+    }[key];
     if (!cost) return 0;
     return Math.max(0, (cost(val) - cost(w.gov.laws[key])) / rev);
   };
@@ -182,7 +218,23 @@
     return out;
   }
   // A candidate's platform: the few laws they most want to change (leanings + self-interest).
-  function platform(w, c, ts, R) {
+  // What a sample of voters would make of each law option (candidates read the polls).
+  function polls(w, ts, R) {
+    const g = w.gov, sample = [], out = {};
+    for (let k = 0; k < 60 && w.living.length; k++) { const p = w.living[Math.floor(R.next() * w.living.length)]; if (eligible(w, p) && p.pol) sample.push(p); }
+    if (!sample.length) return out;
+    for (const law of GV.LAWS) for (const [v] of law.options) {
+      if (v === g.laws[law.key]) continue;
+      let s = 0;
+      for (const p of sample) {
+        const scale = Math.max(300, Math.max(0, p.incomeEMA) / w.price / 100 * 0.15);
+        s += GV.benefit(w, p, law.key, v, ts) / scale + 0.6 * ((axis(law, v, 'econ') - axis(law, g.laws[law.key], 'econ')) * p.pol.econ + (axis(law, v, 'soc') - axis(law, g.laws[law.key], 'soc')) * p.pol.soc);
+      }
+      out[`${law.key}|${v}`] = s / sample.length;
+    }
+    return out;
+  }
+  function platform(w, c, ts, R, poll) {
     const pl = {}, wants = [];
     for (const law of GV.LAWS) {
       let best = w.gov.laws[law.key], bestS = 0;
@@ -190,6 +242,7 @@
         if (v === w.gov.laws[law.key]) continue;
         const s = 0.9 * (axis(law, v, 'econ') - axis(law, w.gov.laws[law.key], 'econ')) * c.pol.econ + 0.9 * (axis(law, v, 'soc') - axis(law, w.gov.laws[law.key], 'soc')) * c.pol.soc
           + GV.benefit(w, c, law.key, v, ts) / 400 + R.normal(0, 0.25)
+          + 1.5 * (poll[`${law.key}|${v}`] || 0) // what wins votes
           - 2.5 * Math.max(0, GV.burden(w, law.key, v, ts) - 0.15) * (0.4 + c.pers.resp / 100); // can the town pay for it?
         if (s > bestS) { bestS = s; best = v; }
       }
@@ -204,12 +257,13 @@
     const g = w.gov, R = w.rng.gov, ts = townStats(w);
     const cands = pickCandidates(w, R);
     if (!cands.length) { g.electionDay += 365; return; }
+    const poll = polls(w, ts, R);
     g.campaign = cands.map((c, i) => {
       c.pol = c.pol || leanings(w, c, R);
       const spend = Math.min(Math.round(c.cash * 0.08), w.px(60000));
       if (spend > 0) w.ledger.spend(c, 'cash', 'MERCHANT', spend);
       P.log(w, c, `Is standing for ${GV.title(w)}${spend ? ` (campaign spending ${U.fmtMoney(spend)})` : ''}`, 'politics', 1);
-      return { id: c.id, colour: COLOURS[i % COLOURS.length], platform: platform(w, c, ts, R), spend, incumbent: c.id === g.president, votes: 0 };
+      return { id: c.id, colour: COLOURS[i % COLOURS.length], platform: platform(w, c, ts, R, poll), spend, incumbent: c.id === g.president, votes: 0 };
     });
     w.pushFeed({ day: w.day, pid: -1, text: `Election campaign: ${g.campaign.map(c => P.name(w.people[c.id])).join(' vs ')} - polling day ${U.fmtDate(g.electionDay)}`, cat: 'politics', imp: 2 });
   }
@@ -276,6 +330,7 @@
     P.log(w, winner, `${prev === win.id ? 'Re-elected' : 'Elected'} ${GV.title(w)} of ${C.TOWN_NAME} with ${win.votes} votes`, 'politics', 3);
     w.pushFeed({ day: w.day, pid: win.id, text: `${P.name(winner)} ${prev === win.id ? 'was re-elected' : 'won the election'} as ${GV.title(w)} (${res.cands.map(c => `${c.name.split(' ')[0]} ${c.votes}`).join(', ')}; turnout ${turnout}%)`, cat: 'politics', imp: 3 });
     w.townVersion++; // banners come down
+    if (LES.Council && w.gov.officials) LES.Council.reshuffle(w);
   }
 
   function enactNext(w) {
@@ -295,82 +350,12 @@
     g.lawLog.push({ day: w.day, key, from: old, to: v, by: g.president, why });
     if (g.lawLog.length > 200) g.lawLog.shift();
     const pres = g.president >= 0 ? w.people[g.president] : null;
-    w.pushFeed({ day: w.day, pid: pres ? pres.id : -1, text: `${pres ? `${GV.title(w)} ${P.name(pres)}` : 'The town council'} changed the law: ${GV.LAW_BY_KEY[key].name} → ${GV.optName(key, v)}${why === 'austerity' ? ' (the treasury is deep in debt)' : why === 'emergency' ? ' (emergency)' : ''}`, cat: 'politics', imp: 2 });
+    w.pushFeed({ day: w.day, pid: pres ? pres.id : -1, text: `${pres ? `${GV.title(w)} ${P.name(pres)}` : 'The town council'} changed the law: ${GV.LAW_BY_KEY[key].name} → ${GV.optName(key, v)}${why === 'austerity' ? ' (the treasury is deep in debt)' : why === 'emergency' ? ' (emergency)' : why === 'surplus' ? ' (the treasury has money to spare)' : ''}`, cat: 'politics', imp: 2 });
   }
 
-  // ---- Monthly finances ----
-  function financeMonth(w, R, ts) {
-    const g = w.gov, L = w.ledger, m = g.month;
-    // Taxes collected this month (they were paid to the TAX sector): move them into the treasury.
-    const taxIn = L.sec.TAX.bal - g.lastTax;
-    if (taxIn > 0) { L.move(L.sec.TAX, 'bal', T(w), 'cash', taxIn); m.rev.tax = (m.rev.tax || 0) + taxIn; }
-    g.lastTax = L.sec.TAX.bal;
-    // Welfare (food and child guardians) paid out by the welfare office is the treasury's cost.
-    const welfareOut = g.lastWelfare - L.sec.WELFARE.bal;
-    if (welfareOut > 0) payOut(w, L.sec.WELFARE, 'bal', welfareOut, 'welfare');
-    g.lastWelfare = L.sec.WELFARE.bal;
-    // Public-sector wages (police) were paid through the employer sector: reimburse it.
-    if (m.wages > 0) payOut(w, L.sec.EMPLOYER, 'bal', m.wages, 'police');
-    const pres = g.president >= 0 ? w.people[g.president] : null;
-    if (pres && pres.alive && !pres.away) { // the leader's salary scales with the town's revenue
-      const avgRev = g.revHist.length ? g.revHist.slice(-12).reduce((s, x) => s + x, 0) / Math.min(12, g.revHist.length) : 0;
-      const s = payOut(w, pres, 'cash', U.clamp(avgRev * 0.08, w.px(2000), w.px(15000)), 'leader'); pres.earned.wages += s; pres.monthIncome += s;
-    }
-    // Programmes.
-    const pol = w.policy;
-    for (const p of w.living) {
-      if (!p.alive || !p.adult || p.away) continue;
-      let amt = 0;
-      if (pol.cashAid && p.isHead && p.cls === 'B40') amt += w.px(pol.cashAid);
-      if (pol.ubi) amt += w.px(pol.ubi);
-      if (amt) { const a = payOut(w, p, 'cash', amt, pol.ubi ? 'basic income & aid' : 'cash aid'); p.earned.welfare += a; p.monthIncome += a; }
-    }
-    if (pol.uniFees === 'free') { // the fees students no longer pay
-      let fees = 0;
-      for (const p of w.living) if (p.alive && p.enrol) { const c = C.COURSE_BY_ID[p.enrol.course]; fees += w.px(c.fee) / c.months; }
-      if (fees) payOut(w, L.sec.EDUCATION, 'bal', fees, 'universities');
-    }
-    // Interest, repayments and the debt limit.
-    if (g.debt > 0) {
-      const interest = Math.round(g.debt * (w.macro().depositRate + 0.01) / 12);
-      payOut(w, L.sec.BANK, 'bal', interest, 'interest');
-      const spare = T(w).cash - w.px(20000);
-      if (spare > 0) { const rep = Math.min(spare, g.debt); L.move(T(w), 'cash', L.sec.BANK, 'bal', rep); g.debt -= rep; }
-    }
-    const annualRev = g.revHist.slice(-12).reduce((s, x) => s + x, 0);
-    if (g.debt > Math.max(w.px(5e4), 2 * annualRev) && R.next() < 0.5) { // austerity: cut the most expensive programme
-      if (g.laws.ubi !== '0') setLaw(w, 'ubi', '0', 'austerity');
-      else if (g.laws.cashAid === '300') setLaw(w, 'cashAid', '100', 'austerity');
-      else if (g.laws.incomeTax !== 'high') setLaw(w, 'incomeTax', g.laws.incomeTax === 'low' ? 'normal' : 'high', 'austerity');
-    }
-    // Public services (schools, clinics, roads, civil servants): the treasury spends what it
-    // does not need to keep, so taxes go back into the town rather than piling up.
-    const reserve = 3 * Math.max(w.px(5000), Object.values(m.spend).reduce((a, b) => a + b, 0));
-    if (T(w).cash > reserve) payOut(w, L.sec.EMPLOYER, 'bal', (T(w).cash - reserve) * 0.6, 'public services');
-    const rev = Object.values(m.rev).reduce((a, b) => a + b, 0), spend = Object.values(m.spend).reduce((a, b) => a + b, 0);
-    g.revHist.push(rev); if (g.revHist.length > 24) g.revHist.shift();
-    g.last = { rev: m.rev, spend: m.spend, revTotal: rev, spendTotal: spend };
-    g.month = { rev: {}, spend: {}, wages: 0 };
-  }
-
-  // Police headcount follows the law (officers per 1,000 residents).
-  function policeMonth(w, ts) {
-    const g = w.gov, t = w.town;
-    const officers = w.living.filter(p => p.alive && p.job && p.job.jobId === 'police');
-    const target = Math.max(1, Math.round(w.policy.policePer1000 * ts.pop / 1000));
-    const open = w.vacancies.filter(v => v.job.id === 'police').length;
-    const station = t.kinds.police && t.kinds.police.length ? t.kinds.police[0] : t.byKind.depot !== undefined ? t.byKind.depot : t.byKind.hall;
-    let posted = 0;
-    for (let k = officers.length + open; k < target; k++, posted++) {
-      const j = C.GOV_JOBS.police;
-      w.vacancies.push({ id: w.nextVacId++, job: j, salary: Math.round(w.px(j.salary) / 1000) * 1000, openDay: w.day, closeDay: w.day + 20, applicants: [], appSet: new Set(), place: station });
-    }
-    if (officers.length > target) { // budget cut: the newest officers go
-      officers.sort((a, b) => b.job.startDay - a.job.startDay);
-      for (const p of officers.slice(0, officers.length - target)) LES.Labour.endJob(w, p, 'laid off');
-    }
-    if (posted) w.vacancies.sort((a, b) => (b.salary - a.salary) || (a.id - b.id)); // listings stay best-paid first
-    const active = officers.filter(p => !p.inst).length;
+  // ---- Monthly finances: js/sim/fiscal.js; staffing: js/sim/services.js ----
+  function policeFactorOf(w, ts) {
+    const g = w.gov, active = w.living.filter(p => p.alive && !p.inst && p.job && p.job.jobId === 'police' && !(p.job.biz >= 0)).length;
     g.officers = active;
     g.policeFactor = U.clamp(Math.max(0.3, active) / (ts.pop / 1000) / GV.MY_POLICE, 0.15, 2.5);
   }
@@ -439,7 +424,7 @@
         const hb = t.buildings[p.homeId], bl = LES.townBlockAt(t, hb.x, hb.y);
         if (!hit.includes(t.blocks.indexOf(bl))) continue;
         homes++;
-        const loss = Math.min(p.cash, w.px(R.range(300, 6000)));
+        const loss = Math.min(p.cash, Math.round(w.px(R.range(300, 6000)) * (w.boost ? w.boost.flood : 1))); // drains and flood barriers help
         w.ledger.spend(p, 'cash', 'MERCHANT', loss);
         p.stress = Math.min(100, p.stress + 20); p.health = Math.max(1, p.health - 3);
         const aid = payOut(w, p, 'cash', w.px(1000), 'flood relief'); // Bantuan Wang Ihsan: RM1,000 per household
@@ -463,28 +448,44 @@
       w.gov = {
         treasury: { cash: 0 }, debt: 0, laws, lawLog: [], president: -1, terms: {}, termStart: 0, approval: 55, scandal: 0, scandals: 0, skimmed: 0, skimNow: 0,
         elections: [], campaign: null, electionDay: Math.round(w.cfg.termYears * 365), agenda: [], misinfo: -1,
-        month: { rev: {}, spend: {}, wages: 0 }, last: null, revHist: [], estateTaxTotal: 0,
+        month: LES.Fiscal.newMonth(), last: null, revHist: [], estateTaxTotal: 0,
+        opr: LES.Fiscal.MY_OPR, oprHist: [], fund: { units: 0, glc: {}, invested: 0, drawn: 0 }, devStock: 0, devIdx: 0, afford: 1,
+        budget: { dev: 0.5, train: 0.15, fund: 0.35 }, officials: { treasurer: null, police: null, community: null }, offLog: [], trainPool: 0,
+        staff: {}, eduQ: 1, healthQ: 1, lastMerchant: w.ledger.sec.MERCHANT.bal,
         lastTax: w.ledger.sec.TAX.bal, lastWelfare: w.ledger.sec.WELFARE.bal,
         officers: 0, policeFactor: 1, flood: null, haze: null, floods: 0, hazes: 0,
         frozen: w.cfg.freezeLaws === 'yes',
       };
-      applyLaws(w);
+      w.bizTypes = C.BIZ.concat(C.BIZ_SERVICES); // private clinics, schools and hospitals
       w.refreshLiving(); // founders exist, but the living list is built after the systems start
+      applyLaws(w);
       const R = w.rng.gov;
       for (const p of w.people) p.pol = leanings(w, p, R);
       // The founders choose the first leader straight away.
       startCampaign(w);
       if (w.gov.campaign) tally(w, true);
       const ts = townStats(w);
-      policeMonth(w, ts);
+      LES.Services.staffMonth(w, ts);
+      policeFactorOf(w, ts);
+      LES.Fiscal.updateBoost(w, ts);
+      if (w.gov.president >= 0) LES.Council.reshuffle(w);
     },
     personCreated(w, p) { if (w.gov && p.adult) p.pol = leanings(w, p, w.rng.gov); },
+    death(w, p) { // the office falls vacant at once; officials are replaced next month
+      const g = w.gov;
+      if (g.president === p.id) {
+        w.pushFeed({ day: w.day, pid: p.id, text: `${GV.title(w)} ${P.name(p)} died in office; a by-election is called`, cat: 'politics', imp: 2 });
+        g.president = -1; g.agenda = [];
+        if (!g.campaign) { g.electionDay = w.day + 60; startCampaign(w); }
+      }
+      for (const r in g.officials) if (g.officials[r] && g.officials[r].id === p.id) { g.officials[r] = null; LES.Council.log(w, r, p.id, `${P.name(p)} died in office`); }
+    },
     money: w => w.gov.treasury.cash,
     hireWeight(w, p) {
-      const a = w.policy.affirm;
-      if (a === 'group' && (p.eth === 'malay' || p.eth === 'bumi')) return 1.08;
-      if (a === 'need' && p.cls === 'B40') return 1.08;
-      return 1;
+      const a = w.policy.affirm, t = p.trainUntil > 0 ? LES.Council.hireBoost(w, p) : 1;
+      if (a === 'group' && (p.eth === 'malay' || p.eth === 'bumi')) return 1.08 * t;
+      if (a === 'need' && p.cls === 'B40') return 1.08 * t;
+      return t;
     },
     venueBias: (w, p, k) => (k === 'karaoke' && w.policy.barBan ? -20 : 0),
 
@@ -532,21 +533,30 @@
         if (!p.pol) p.pol = leanings(w, p, R);
         if (p.job && p.job.salary < w.px(w.policy.minWage)) p.job.salary = w.px(w.policy.minWage); // the minimum wage applies to everyone
       }
-      financeMonth(w, R, ts);
-      policeMonth(w, ts);
+      LES.Services.staffMonth(w, ts);
+      policeFactorOf(w, ts);
+      LES.Services.schoolMonth(w);
+      if (w.date.month % 3 === 2) LES.Fiscal.quarter(w);
+      LES.Fiscal.month(w, R, ts);
+      LES.Council.month(w, R);
+      LES.Fiscal.updateBoost(w, ts);
       approvalMonth(w, R);
       corruptionMonth(w, R);
       respond(w, R, ts);
       if (w.date.month % 2 === 0) enactNext(w);
     },
-    year(w) { // leanings drift slowly with class and age
+    year(w) { // leanings drift slowly with class and age; the budget, Bank Negara, schools
       const R = w.rng.gov;
+      LES.Services.childYear(w);
+      LES.Council.year(w, R);
+      LES.Fiscal.year(w, R);
       for (const p of w.living) if (p.alive && p.adult && p.pol) { const fresh = leanings(w, p, R); p.pol.econ = 0.85 * p.pol.econ + 0.15 * fresh.econ; p.pol.soc = 0.85 * p.pol.soc + 0.15 * fresh.soc; }
     },
 
     snapshot(w, row) {
       const g = w.gov;
-      row.gov = { treasury: g.treasury.cash / w.price, debt: g.debt / w.price, approval: g.approval, officers: g.officers, police: g.policeFactor, rev: g.last ? g.last.revTotal / w.price : 0, spend: g.last ? g.last.spendTotal / w.price : 0, president: g.president };
+      row.gov = { treasury: g.treasury.cash / w.price, debt: g.debt / w.price, approval: g.approval, officers: g.officers, police: g.policeFactor, rev: g.last ? g.last.revTotal / w.price : 0, spend: g.last ? g.last.spendTotal / w.price : 0, president: g.president,
+        opr: g.opr, fund: LES.Fiscal.fundValue(w) / w.price, eduQ: g.eduQ, healthQ: g.healthQ, dev: g.devIdx, teachers: g.staff.teacher ? g.staff.teacher.have : 0, nurses: g.staff.nurse ? g.staff.nurse.have : 0, doctors: g.staff.doctor ? g.staff.doctor.have : 0 };
     },
     invariants(w, errs) {
       const g = w.gov;
@@ -555,6 +565,8 @@
       for (const l of GV.LAWS) if (!l.options.some(o => o[0] === g.laws[l.key])) errs.push(`law ${l.key}=${g.laws[l.key]}`);
       for (const e of g.elections) if (e.cands.reduce((s, c) => s + c.votes, 0) !== e.voted || e.voted > e.eligible) errs.push(`election ${e.day} votes do not add up`);
       if (g.president >= 0 && !w.people[g.president].alive) errs.push('dead president in office');
+      if (!(g.fund.units >= 0)) errs.push(`fund units ${g.fund.units}`);
+      for (const r in g.officials) { const o = g.officials[r]; if (o && o.id >= 0 && !w.people[o.id].alive) errs.push(`dead official ${r}`); }
     },
     hash(w, parts) { const g = w.gov; parts.push(g.treasury.cash, Math.round(g.debt), g.president, ...GV.LAWS.map(l => g.laws[l.key])); },
   };
@@ -562,4 +574,16 @@
   LES.Systems.register(sys);
   LES.Actions.ICONS.VOTE = '🗳️'; LES.Actions.LABELS.VOTE = 'Vote';
   GV.townStats = townStats;
+  GV.payOut = payOut; GV.borrow = borrow; GV.setLaw = setLaw; GV.applyLaws = applyLaws;
+  // Fill in what older saves lack (taxes by source, council, services, fund).
+  GV.upgrade = function (w) {
+    const g = w.gov, FS = LES.Fiscal;
+    for (const l of GV.LAWS) if (g.laws[l.key] === undefined) g.laws[l.key] = l.def;
+    if (!g.month || !g.month.tags) g.month = FS.newMonth();
+    const d = { opr: FS.MY_OPR, oprHist: [], fund: { units: 0, glc: {}, invested: 0, drawn: 0 }, devStock: 0, devIdx: 0, afford: 1, budget: { dev: 0.5, train: 0.15, fund: 0.35 },
+      officials: { treasurer: null, police: null, community: null }, offLog: [], trainPool: 0, staff: {}, eduQ: 1, healthQ: 1, lastMerchant: w.ledger.sec.MERCHANT.bal };
+    for (const k in d) if (g[k] === undefined) g[k] = d[k];
+    if (!w.bizTypes) w.bizTypes = C.BIZ.concat(C.BIZ_SERVICES);
+    applyLaws(w);
+  };
 })(globalThis.LES = globalThis.LES || {});

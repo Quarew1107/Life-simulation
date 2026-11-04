@@ -230,6 +230,9 @@
 <div class="card"><b>Elections</b><table><tr><th>Year</th><th>Winner</th><th>Votes</th><th>Turnout</th></tr>${rows}</table></div>
 <div class="card"><b>Laws at the end</b><table>${GV.LAWS.map(l => `<tr><td>${esc(l.name)}</td><td>${esc(GV.optName(l.key, g.laws[l.key]))}</td></tr>`).join('')}</table>
 <p class="note">${g.lawLog.length} law changes · ${g.scandals} corruption scandals · treasury ${U.fmtMoney(g.treasury.cash)}, debt ${U.fmtMoney(g.debt)} · ${g.floods} floods, ${g.hazes} haze episodes.</p></div>
+${g.last ? `<div class="card"><b>Public money (last month)</b><table><tr><th>In</th><th></th><th>Out</th><th></th></tr>${(() => { const a = Object.entries(g.last.rev).sort((x, y) => y[1] - x[1]), b = Object.entries(g.last.spend).sort((x, y) => y[1] - x[1]); let t = ''; for (let i = 0; i < Math.max(a.length, b.length); i++) t += `<tr><td>${a[i] ? esc(a[i][0]) : ''}</td><td>${a[i] ? U.fmtMoney(a[i][1]) : ''}</td><td>${b[i] ? esc(b[i][0]) : ''}</td><td>${b[i] ? U.fmtMoney(b[i][1]) : ''}</td></tr>`; return t; })()}</table>
+<p class="note">Khazanah Rezeki ${U.fmtMoney(LES.Fiscal.fundValue(w))} · OPR ${(g.opr * 100).toFixed(2)}% · ${g.projects || 0} development projects · ${g.trained || 0} people trained · school quality ${Math.round((g.eduQ || 1) * 100)}, healthcare ${Math.round((g.healthQ || 1) * 100)}.</p></div>` : ''}
+${g.officials ? `<div class="card"><b>City council at the end</b><table>${LES.Council.ORDER.map(r => { const o = g.officials[r]; return `<tr><td>${esc(LES.Council.ROLES[r].title)}</td><td>${o ? esc(LES.Council.name(w, o)) + ` (competence ${Math.round(o.comp * 100)})` : 'vacant'}</td></tr>`; }).join('')}</table></div>` : ''}
 </div></section>`;
   }
 
@@ -246,7 +249,7 @@
 <tr><td>Started using drugs / rehab / overdoses</td><td>${st.startedUsing} / ${st.rehabAdmissions} / ${st.overdoses}</td></tr>
 <tr><td>Gangs formed / police raids / turf fights</td><td>${st.gangs.length} / ${st.crackdowns} / ${st.gangFights}</td></tr>
 <tr><td>Protection money taken from shops</td><td>${U.fmtMoney(st.protection)}</td></tr></table>
-<p class="note">Drug policy: ${esc(w.cfg.drugPolicy)} · police: ${esc(w.cfg.police)}. Try the same seed with another drug policy or police strength and compare.</p></div>
+<p class="note">Drug policy: ${esc(w.policy ? w.policy.drugPolicy : w.cfg.drugPolicy)} · police: ${w.gov ? `${w.gov.officers} officers` : esc(w.cfg.police)} · ${st.crimesTotal ? Math.round(st.solvedTotal / st.crimesTotal * 100) : 0}% of crimes solved. Try the same seed with another drug policy or police strength and compare.</p></div>
 </div></section>`;
   }
 

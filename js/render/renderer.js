@@ -614,7 +614,7 @@
         if (biz.scale > U.RM(biz.typeDef.scale0) * 3) rect(g, X + 58, Y + 2, 4, 4, '#f2c14e');
       }
       const counts = {};
-      for (const b of w.biz) if (b.open && w.town.buildings[b.place].kind !== 'shoplot') counts[b.place] = (counts[b.place] || 0) + 1;
+      for (const b of w.biz) if (b.open && !['shoplot', 'privschool', 'privhosp', 'hq'].includes(w.town.buildings[b.place].kind)) counts[b.place] = (counts[b.place] || 0) + 1; // own buildings carry their own sign
       g.font = `8px ${FONT}`;
       for (const k of Object.keys(counts)) {
         const b = this.town.buildings[k];

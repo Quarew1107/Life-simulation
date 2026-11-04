@@ -15,6 +15,10 @@ The improvement plan agreed in November 2026. Each phase is one tested push.
 - **Crime intensity:** a setting with three levels: Realistic ×1, Lively ×10 (default) and Lawless ×30. Charts always show per‑100k rates next to Malaysia's. At real rates, a 300-person town would see about one crime every two years and one murder every 480 years.
 - **Leader title:** a setting, defaulting to President (Mayor and Datuk Bandar are options).
 - **First scenarios:** Born Equal, Great Reset, Eternal Life, Education Ban. Pandemic and Robot Age come next.
+- **Government level:** the town government uses city positions (Datuk Bandar or another leader title, Bendahari Bandaraya, Ketua Polis Daerah, Pengarah Pembangunan Masyarakat), not national ministers. It still runs taxes, schools, hospitals and police for the town; most company tax from local firms goes on to the federal government.
+- **Public and private services:** the treasury pays public teachers, nurses, doctors and police. Private clinics, schools and hospitals are residents' businesses that pay their own staff.
+- **Sales tax:** SST by default; GST 6% is a law option.
+- **GitHub resources (checked Nov 2026):** no maintained, licensed Malaysian tax library or reusable simulation component would replace our own engine, so taxes follow LHDN and SST figures directly and the app stays dependency-free.
 
 ## Phases
 | Phase | Contents | Status |
@@ -25,8 +29,9 @@ The improvement plan agreed in November 2026. Each phase is one tested push.
 | 2. Society | Social class (B40/M40/T20 from household income, T1 elite, hardship), mobility matrix, ethnicity update (DOSM 2025 shares, Other Bumiputera), religion (census shares, religiosity, worship, zakat/charity funds, Ramadan, Shariah-compliant investing), worship districts, Society tab, overlays, report section | Done |
 | 3. Crime and justice | Temptation score, crime types, police, courts, prison, records and reoffending, drugs and rehab, gangs and turf, crime overlays and charts | Done (police officers as real jobs, loan sharks and corruption come with Phase 4) |
 | 4. Government | Town treasury (taxes fund services, police budget sets police strength), law catalogue, elections every 5 years, voters who partly misunderstand laws, approval, corruption, events (floods, haze, scandals), Government tab, police officers as public servants, remand in the lock-up | Done |
+| 4b. Public finance & council | Malaysian taxes (LHDN bands and reliefs, SME company tax, SST or GST, assessment tax, dividend tax, EIS, zakat rebate, federal share of company tax); revenue and spending by source; teachers, nurses, doctors and police paid by the treasury with staffing laws and service quality; fuel subsidies, EIS benefit, training, pensions, development projects; city council (Bendahari Bandaraya, Ketua Polis Daerah, Pengarah Pembangunan Masyarakat) with competence, cronyism and MACC; private clinics, schools and hospitals built on empty lots; Bank Negara OPR, EPF dividends, Khazanah Rezeki and three GLC listings; crime-police feedback (case capacity, felt certainty, town economy in temptation); polls in platforms | Done |
 | 5. Scenarios (next) | Scenario framework on the setup screen, then Born Equal, Great Reset, Eternal Life, Education Ban, Pandemic, Robot Age; later Lawless Town, Aristocracy vs Meritocracy, Five Clans, Isolated Island | |
-| 6. Polish | Calibration pass (median wage is still about RM3.5k vs Malaysia's RM3k), report sections, "Berita Rezeki" newspaper, compare-with-normal-world runs | |
+| 6. Polish | Calibration pass: household income Gini (~0.50 vs 0.39) because about one adult in five runs a business; graduate share (~40% vs ~30%); median wage (~RM3.6k vs RM3k); class mobility (too fluid). Report sections, "Berita Rezeki" newspaper, compare-with-normal-world runs | |
 
 ## Malaysian reference figures
 | Measure | Value | Source |
@@ -43,5 +48,15 @@ The improvement plan agreed in November 2026. Each phase is one tested push.
 | Prison population | 87,419 (256 per 100k), about 70–75% drug-linked | World Prison Brief, Home Ministry |
 | Commercial crime losses | RM3.1 billion (2024) | PDRM CCID |
 | GE15 voter turnout | 73.89% | Election Commission |
+| Income tax bands | 0% to RM5k, then 1, 3, 6, 11, 19, 25, 26, 28, 30%; RM9,000 relief, RM400 rebate up to RM35k | LHDN, YA2025 |
+| Company tax | 15% first RM150k, 17% to RM600k, 24% above (SMEs); 24% otherwise | LHDN |
+| SST | sales tax 5% / 10%, service tax 8% (6% for F&B and telecoms) | RMCD, 2025 |
+| GST (2015–2018) | 6% standard rate, basic food zero-rated | RMCD |
+| Dividend tax | 2% on dividends above RM100k a year (from YA2025) | Budget 2025 |
+| OPR | 2.75% (from July 2025) | Bank Negara Malaysia |
+| EPF dividend | 6.3% (2024), ~5.5–6% recent average | KWSP |
+| Federal revenue | RM324bn (2024), about RM790 per person a month | Ministry of Finance |
+| Teachers / police | ~420k teachers; 136,503 police (~4 per 1,000) | MOE, PDRM |
+| Index crime solved | ~65% | PDRM |
 
 Results describe outcomes of this simulation under its assumptions. The Malaysian figures anchor the defaults; they do not make it a forecast.

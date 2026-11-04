@@ -8,10 +8,11 @@
   const F = LES.Finance = {};
 
   F.tierCost = function (w, cat, t) {
-    const base = U.RM(C.TIERS[cat][t].cost) * w.price;
+    let base = U.RM(C.TIERS[cat][t].cost) * w.price;
+    if (w.taxPx) base *= w.taxPx[cat][t]; // sales-tax law (GST vs SST)
     return Math.round(cat === 'housing' ? base * w.rentMult[t] : base);
   };
-  F.childCost = (w, p) => Math.round(U.RM(C.CHILD_COST + C.CHILD_COST_PER_HOUSING * p.tiers.housing) * w.price);
+  F.childCost = (w, p) => Math.round(U.RM(C.CHILD_COST + C.CHILD_COST_PER_HOUSING * p.tiers.housing) * w.price * (w.taxPx ? w.taxPx.child : 1));
 
   F.careShare = function (w, p) {
     let total = 0;
@@ -280,9 +281,10 @@
   F.bestBizType = function (w, p, ctx) {
     const avail = p.cash + P.invValue(w, p) * 0.9 - ctx.mc * 2;
     let best = null, bestS = -Infinity;
-    for (const t of C.BIZ) {
+    for (const t of (w.bizTypes || C.BIZ)) {
       if (t.req && !P.hasCred(p, t.req)) continue;
       if (avail < w.px(t.capital) * 0.4) continue;
+      if (t.maxPer && !LES.Services.canStart(w, t)) continue; // room in town (and an empty lot) for it?
       const skill = F.bizSkill(p, t);
       const dream = p.goal && p.goal.id === 'OWN_BIZ' && p.goal.bizType === t.id ? 3 : 0; // the business they dream of
       const s = 0.5 * skill + 0.6 * Math.log10(t.capital) * (1 + ctx.risk) + dream;
@@ -298,6 +300,7 @@
 
   F.assignBizPlace = function (w, b) {
     const t = b.typeDef;
+    if (t.build) return LES.Services.buildFor(w, b); // a private school or hospital on an empty lot
     if (t.place === 'shoplot') {
       for (const id of w.town.shoplots) {
         if (w.shoplotOwner[id] === undefined) { w.shoplotOwner[id] = b.id; return id; }
@@ -358,6 +361,7 @@
       const part = Math.floor(amount * b.shares[id]);
       L.move(b, 'cash', p, P.isAdult(w, p) ? 'cash' : 'trust', part);
       p.earned.business += part;
+      if (kind === 'dividend' && w.gov) LES.Fiscal.dividendTax(w, p, part, P.isAdult(w, p) ? 'cash' : 'trust');
       if (kind === 'dividend') p.monthIncome += part;
       paid += part;
     }
@@ -397,16 +401,22 @@
     const sizeF = 1 + Math.log10(Math.max(1, b.scale / U.RM(t.scale0)));
     const mgmtF = 0.8 + 0.2 * Math.min(1, b.mgmt / 12);
     const skillF = (1 + t.skillSpread * (skill - 5) / 5 / sizeF) * mgmtF;
-    const demand = Math.pow(m.bizDemand, t.cyclical);
+    const demand = Math.pow(m.bizDemand, t.cyclical) * (w.boost ? w.boost.biz : 1);
     const shock = Math.exp(U.clamp(R.normal(0, t.sigma), -3, 3));
     const revenue = Math.max(0, Math.round(b.scale * price * demand * skillF * shock));
-    const interest = Math.round(b.debt * 0.06 / 12);
-    const opCost = Math.round((b.scale * t.costRatio + U.RM(t.fixed)) * price);
+    const interest = Math.round(b.debt * (w.gov ? LES.Fiscal.loanRate(w) : 0.06) / 12);
+    let opCost = Math.round((b.scale * t.costRatio + U.RM(t.fixed)) * price);
+    let townRev = 0;
+    if (t.staff) { // private services: staff wages were paid directly; fees from residents already arrived
+      opCost = Math.max(Math.round(opCost * 0.3), opCost - (b.payrollNow || 0));
+      b.payrollLast = b.payrollNow || 0; b.payrollNow = 0;
+      townRev = b.townRev || 0; b.townRev = 0;
+    }
     const principal = b.debt > 0 ? Math.min(b.debt, Math.max(w.px(100), Math.round(b.debtOrig / 60))) : 0;
-    const profit = revenue - opCost - interest;
+    const profit = revenue + townRev - opCost - interest;
     b.mgmt = 0;
     L.pay('CUSTOMER', b, 'cash', revenue);
-    b.lastRevenue = revenue;
+    b.lastRevenue = revenue + townRev;
     b.lastProfit = profit;
     b.profitHist.push(profit);
     if (b.profitHist.length > 12) b.profitHist.shift();
@@ -416,9 +426,15 @@
     L.spend(b, 'cash', 'SUPPLIER', opCost);
     L.spend(b, 'cash', 'BANK', interest + principal);
     b.debt -= principal;
-    const corp = w.policy ? w.policy.corpTax : C.CORP_TAX;
-    if (profit > 0) L.spend(b, 'cash', 'TAX', Math.min(b.cash, Math.round(profit * corp)));
-    const netProfit = profit > 0 ? Math.round(profit * (1 - corp)) : profit;
+    let netProfit;
+    if (w.gov) { // SME rates; some is evaded under a weak treasurer
+      const tax = profit > 0 ? LES.Fiscal.collect(w, b, 'cash', LES.Fiscal.corpTax(w, b, profit) * LES.Fiscal.compliance(w), 'company tax (town firms)') : 0;
+      netProfit = profit > 0 ? profit - tax : profit;
+    } else {
+      const corp = w.policy ? w.policy.corpTax : C.CORP_TAX;
+      if (profit > 0) L.spend(b, 'cash', 'TAX', Math.min(b.cash, Math.round(profit * corp)));
+      netProfit = profit > 0 ? Math.round(profit * (1 - corp)) : profit;
+    }
 
     // Rare booms (viral hit, big contract, franchise) and busts.
     // Networking: country-club membership and recent golf/lounge visits bring deals.
@@ -483,6 +499,7 @@
     b.open = false; b.closedDay = w.day; b.equity = 0;
     if (w.shoplotOwner[b.place] === b.id) delete w.shoplotOwner[b.place];
     if (b.hq !== undefined) { w.town.buildings[b.hq].label = 'Menara (vacant)'; w.townVersion++; }
+    if (b.typeDef.staff) LES.Services.onClose(w, b);
     for (const k of Object.keys(b.shares)) {
       const p = w.people[Number(k)];
       delete p.shares[b.id];
@@ -565,7 +582,7 @@
     }
     const L = w.ledger, m = w.macro();
     if (p.cash > w.px(1000)) {
-      const rate = m.depositRate + 0.9 * w.infl; // nominal deposit rate
+      const rate = w.gov ? LES.Fiscal.depositRate(w) : m.depositRate + 0.9 * w.infl; // nominal deposit rate (Bank Negara's OPR sets it)
       const i = Math.max(0, Math.round(p.cash * rate / 12));
       L.pay('BANK', p, 'cash', i);
       p.earned.interest += i;
@@ -602,8 +619,7 @@
     if (r < pIll) {
       const hp = R.range(20, 45);
       p.health = Math.max(1, p.health - hp);
-      const bill = Math.min(p.cash, w.px(R.range(2000, 30000)));
-      L.spend(p, 'cash', 'HEALTH', bill);
+      const bill = LES.Services.medicalBill(w, p, Math.min(p.cash, w.px(R.range(2000, 30000))));
       P.log(w, p, `Fell seriously ill (-${Math.round(hp)} health, ${U.fmtMoney(bill)} medical bills)`, 'luck', 1);
       w.stats.illnesses++;
     } else if (r < pIll + pScam) {

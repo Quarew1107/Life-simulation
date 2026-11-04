@@ -5,6 +5,18 @@
   const $ = id => document.getElementById(id);
   const esc = U.esc, f0 = x => (x >= 100 ? Math.round(x).toLocaleString() : x.toFixed(1));
 
+  // Police against crime: capacity, clearance and the deterrence people feel.
+  function policeCard(w, st) {
+    const g = w.gov, solved = st.crimesTotal ? st.solvedTotal / st.crimesTotal : 0, kpd = g && g.officials ? g.officials.police : null, tc = st.town || {};
+    return `<div class="card"><h3>Police and crime</h3>
+      <div class="grid2"><div><span class="muted">Crimes solved (all time)</span><span>${Math.round(solved * 100)}% (Malaysia ~65%)</span></div><div><span class="muted">Felt chance of being caught</span><span>${Math.round((st.certainty === undefined ? 0.5 : st.certainty) * 100)}%</span></div>
+        <div><span class="muted">Officers on duty</span><span>${g ? g.officers : '–'}</span></div><div><span class="muted">Force capacity</span><span>${Math.round(LES.Crime.capacity(w) * 100)}%</span></div>
+        ${g ? `<div><span class="muted">Ketua Polis Daerah</span><span>${kpd ? (kpd.id >= 0 ? UI.plink(w, kpd.id) : esc(kpd.name)) + ` · competence ${Math.round(kpd.comp * 100)}` : 'vacant'}</span></div>` : ''}
+        <div><span class="muted">Town unemployment / inequality</span><span>${Math.round((tc.unemp || 0) * 1000) / 10}% / ${(tc.gini || 0).toFixed(2)}</span></div></div>
+      <canvas class="chart" id="cr-pol"></canvas>
+      <div class="note">Each officer can investigate only so many cases a month. When crime outruns the force, capacity falls, fewer cases are solved, people feel safer offending and crime climbs. More officers (the police law and the budget) or a capable police chief turn it around. Unemployment, inequality, few job openings and recessions push temptation up; degrees, funded training and youth programmes pull it down.</div></div>`;
+  }
+
   UI.renderCrime = function () {
     const w = UI.app.world, el = $('tab-crime');
     if (!w.crime) {
@@ -33,6 +45,7 @@
           ${row('Murder', rates.murder, CR.MY.murder)}${row('Drug users (now)', last ? last.cr.users : 0, CR.MY.users)}${row('Prisoners (now)', last ? last.cr.prison : 0, CR.MY.prison)}</table>
         <div class="note">A town of a few hundred people is tiny: at real Malaysian rates it would see about one crime every two years. "Lively" multiplies the rates by 10 so the system is visible; "Realistic" uses them as they are.</div></div>
       <div class="card"><h3>Crime over time <small class="muted">per 100k a year</small></h3><canvas class="chart" id="cr-rate"></canvas></div>
+      ${policeCard(w, st)}
       <div class="card"><h3>Prison and drugs</h3><canvas class="chart" id="cr-pris"></canvas>
         <div class="grid2">
           <div><span class="muted">Arrests / convictions</span><span>${st.arrests} / ${st.convictions}</span></div>
@@ -42,7 +55,7 @@
           <div><span class="muted">Started using drugs</span><span>${st.startedUsing}</span></div>
           <div><span class="muted">Drug arrests / overdoses</span><span>${st.drugArrests} / ${st.overdoses}</span></div>
           <div><span class="muted">Rehab (of which voluntary)</span><span>${st.rehabAdmissions} (${st.voluntaryRehab})</span></div>
-          <div><span class="muted">Drug policy</span><span>${esc((LES.SETTINGS_META.find(m => m.key === 'drugPolicy').options.find(o => o[0] === w.cfg.drugPolicy) || [, w.cfg.drugPolicy])[1])}</span></div>
+          <div><span class="muted">Drug policy</span><span>${esc((LES.SETTINGS_META.find(m => m.key === 'drugPolicy').options.find(o => o[0] === (w.policy ? w.policy.drugPolicy : w.cfg.drugPolicy)) || [, w.cfg.drugPolicy])[1])}</span></div>
         </div></div>
       <div class="card"><h3>Who are the victims? <small class="muted">by household class</small></h3>
         <div class="grid2">${['B40', 'M40', 'T20'].map(c => `<div><span class="muted">${c}</span><span>${Math.round((vic[c] || 0) / vicTotal * 100)}%</span></div>`).join('')}</div>
@@ -52,6 +65,7 @@
         <div class="note">Gangs earn from dealing drugs, from a share of members' crimes and from protection money (${U.fmtMoney(st.protection)} taken from shops on their turf so far). Choose the <b>Gang turf</b> overlay to see their blocks.</div></div>
       <p class="note">Why people offend here: need (little cash, no job, cravings), low self-control, age (peaks at 18-25), peers and records, minus deterrence (police strength), devotion, children and a good job. Open anyone's "Why did they do that?" on the day they are tempted to see the odds.</p>`;
     if (h.length) {
+      if (h.length && $('cr-pol')) { const hp = h.filter(r => r.day > 365); LES.Charts.line($('cr-pol'), { series: [{ label: 'Share of crimes solved (felt)', color: '#5aa9e6', data: hp.map(r => [r.day / 365, (r.cr.cert === undefined ? 0.5 : r.cr.cert) * 100]) }, { label: 'Police capacity', color: '#57d38c', data: hp.map(r => [r.day / 365, (r.cr.cap === undefined ? 1 : r.cr.cap) * 100]) }, { label: 'Unemployment ×10', color: '#e76f51', data: hp.map(r => [r.day / 365, (r.cr.unemp || 0) * 1000]) }], xFmt: xs, yMin: 0 }); }
       LES.Charts.line($('cr-rate'), { series: [{ label: 'Index crime', color: '#e63946', data: h.map(r => [r.day / 365, r.cr.index]) }, { label: 'Scams', color: '#f4a261', data: h.map(r => [r.day / 365, r.cr.scam]) }], xFmt: xs, yMin: 0, yFmt: v => Math.round(v).toLocaleString() });
       LES.Charts.line($('cr-pris'), { series: [{ label: 'Prisoners', color: '#8d99ae', data: h.map(r => [r.day / 365, r.cr.prisoners]) }, { label: 'In rehab', color: '#57d38c', data: h.map(r => [r.day / 365, r.cr.rehab]) }, { label: 'Gang members', color: '#b892ff', data: h.map(r => [r.day / 365, r.cr.gangMembers]) }], xFmt: xs, yMin: 0 });
     }

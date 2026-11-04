@@ -69,6 +69,7 @@
     }
     afterLoad() {
       this.attachSystems();
+      if (this.gov && LES.Gov.upgrade) LES.Gov.upgrade(this); // saves from before the fiscal update
     }
     // Product of a multiplier hook over the active systems (1 when none are on).
     sysMul(hook, a, b) {
@@ -249,7 +250,7 @@
           Fa.comeOfAge(this, p);
         }
         // Poor health raises mortality; long unhappiness a little too.
-        const pYear = Math.min(0.95, mortalityYear(age, this.cfg.mortMult) * (1 + Math.max(0, 60 - p.health) / 15) * (p.adult ? 1 + Math.max(0, 40 - p.happy) / 80 : 1));
+        const pYear = Math.min(0.95, mortalityYear(age, this.cfg.mortMult * (this.mortAdj || 1)) * (1 + Math.max(0, 60 - p.health) / 15) * (p.adult ? 1 + Math.max(0, 40 - p.happy) / 80 : 1));
         if (R.next() < 1 - Math.pow(1 - pYear, 1 / 365)) {
           this.die(p, age >= 60 ? 'old age' : age < 1 ? 'infant illness' : 'illness');
         }
@@ -266,9 +267,10 @@
 
     childDay(c) {
       const age = P.age(this, c);
-      const school = LES.townNear(this.town, 'school', c.homeId);
+      const priv = c.school >= 0 && this.biz[c.school] && this.biz[c.school].open ? this.biz[c.school] : null; // private school pupil
+      const school = priv ? priv.place : LES.townNear(this.town, 'school', c.homeId);
       c.plan = age >= 7
-        ? [{ act: 'SCHOOL', label: 'At school', loc: school }, { act: 'HOME', label: 'Playing at home', loc: c.homeId }]
+        ? [{ act: 'SCHOOL', label: priv ? `At ${priv.name}` : 'At school', loc: school }, { act: 'HOME', label: 'Playing at home', loc: c.homeId }]
         : [{ act: 'HOME', label: 'At home', loc: c.homeId }, { act: 'HOME', label: 'At home', loc: c.homeId }];
       c.why = null;
     }
@@ -505,7 +507,7 @@
         if (p.enrol) students++;
         if (p.retired) retired++;
         if (p.manages >= 0) owners++;
-        if (!p.job && !p.enrol && !p.retired && p.manages < 0 && P.age(this, p) < 64) unemployed++;
+        if (!p.job && !p.enrol && !p.retired && p.manages < 0 && !p.inst && P.age(this, p) < 64) unemployed++; // people in prison or rehab are outside the labour force (as in the DOSM survey)
       }
       const stratMedian = {};
       for (const s of C.STRATEGIES) {

@@ -285,7 +285,7 @@
     if (w.policy && w.policy.estateTax > 0 && p.cash > w.px(1e5)) { // inheritance tax above RM100k
       const tax = Math.round((p.cash - w.px(1e5)) * w.policy.estateTax);
       L.spend(p, 'cash', 'TAX', tax);
-      if (w.gov) w.gov.estateTaxTotal += tax;
+      if (w.gov) { w.gov.estateTaxTotal += tax; LES.Fiscal.tag(w, 'inheritance tax', tax); }
     }
     const heirs = p.children.map(id => w.people[id]).filter(c => c.alive).sort((a, b) => a.id - b.id);
     const total = p.cash;

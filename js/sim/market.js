@@ -76,7 +76,7 @@
       const sigTot = Math.sqrt(d.beta * d.beta * m.idxSig * m.idxSig + d.idio * d.idio);
       const sd = sigTot * Math.sqrt(dt);
       // Trend grows at inflation + real trend; the fundamental is pulled back toward it.
-      const g = infl + C.MARKET_TREND_REAL + d.drift;
+      const g = infl + C.MARKET_TREND_REAL + d.drift - (d.div || 0); // dividend payers grow slower in price
       if (!s.trend) s.trend = Math.log(s.fund);
       s.trend += g * dt;
       const pull = C.MARKET_REVERSION * (s.trend - Math.log(s.fund));
