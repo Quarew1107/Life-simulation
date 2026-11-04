@@ -6,20 +6,23 @@
   const U = LES.U, P = LES.P;
   const Cal = LES.Calibration = {};
 
-  // [label, target, warn band (abs), unit, source]
-  Cal.TARGETS = {
-    tfr: { label: 'Children per woman', target: 1.6, band: 0.35, fmt: x => x.toFixed(2), src: 'DOSM Vital Statistics 2025 (TFR 2024 = 1.6; 2025 = 1.5)' },
-    e0: { label: 'Life expectancy at birth (yrs)', target: 75.3, band: 3, fmt: x => x.toFixed(1), src: 'DOSM Abridged Life Tables 2023-2025' },
-    unemp: { label: 'Unemployment rate', target: 0.03, band: 0.015, fmt: U.fmtPct, src: 'DOSM Labour Force Survey, Aug 2026 (2.9%)' },
-    medWage: { label: 'Median monthly wage (Year-1 RM)', target: 3000, band: 600, fmt: x => `RM${Math.round(x)}`, src: 'DOSM formal-sector median wage, Q2 2026' },
-    hhGini: { label: 'Household income Gini', target: 0.39, band: 0.06, fmt: x => x.toFixed(2), src: 'DOSM Household Income Survey 2024' },
-    starve: { label: 'Deaths from starvation (share)', target: 0, band: 0.01, fmt: U.fmtPct, src: 'Hardcore poverty nearly eradicated (DOSM HIES 2024)' },
+  // Each target: label, format, and from the country pack's `calibration`: target, warning band
+  // (absolute) and source. Filled by the applier at the end of this file.
+  Cal.TARGETS = {};
+  const money = x => `${LES.Countries.pack.money.symbol}${Math.round(x)}`;
+  const DEFS = {
+    tfr: { label: 'Children per woman', fmt: x => x.toFixed(2) },
+    e0: { label: 'Life expectancy at birth (yrs)', fmt: x => x.toFixed(1) },
+    unemp: { label: 'Unemployment rate', fmt: U.fmtPct },
+    medWage: { label: 'Median monthly wage (Year-1 $)', fmt: money },
+    hhGini: { label: 'Household income Gini', fmt: x => x.toFixed(2) },
+    starve: { label: 'Deaths from starvation (share)', fmt: U.fmtPct },
     // Crime rates are compared at the "Realistic" scale (the town's rate divided by the intensity).
-    crimeIdx: { label: 'Index crime per 100k (realistic scale)', target: 170, band: 70, fmt: x => x.toFixed(0), src: 'DOSM Crime Statistics 2025 (58,255 cases in 2024)' },
-    drugUsers: { label: 'Drug users per 100k (realistic scale)', target: 586, band: 250, fmt: x => x.toFixed(0), src: 'AADK 2024 (192,857 users)' },
-    prison: { label: 'Prisoners per 100k (realistic scale)', target: 256, band: 110, fmt: x => x.toFixed(0), src: 'World Prison Brief, Nov 2024 (87,419)' },
-    clearance: { label: 'Share of crimes solved', target: 0.65, band: 0.1, fmt: U.fmtPct, src: 'PDRM index-crime solving rate (~65%)' },
-    revenue: { label: 'Public revenue per person / month (Year-1 RM)', target: 815, band: 250, fmt: x => `RM${Math.round(x)}`, src: 'MOF: federal revenue RM324bn (2024) / 34.1m people' },
+    crimeIdx: { label: 'Index crime per 100k (realistic scale)', fmt: x => x.toFixed(0) },
+    drugUsers: { label: 'Drug users per 100k (realistic scale)', fmt: x => x.toFixed(0) },
+    prison: { label: 'Prisoners per 100k (realistic scale)', fmt: x => x.toFixed(0) },
+    clearance: { label: 'Share of crimes solved', fmt: U.fmtPct },
+    revenue: { label: 'Public revenue per person / month (Year-1 $)', fmt: money },
   };
 
   // Period life expectancy from deaths and person-years lived in the last `years` years
@@ -99,4 +102,13 @@
     if (rows[0] && rows[0].years < 60) lines.push('Note: fewer than 60 years simulated, so life expectancy and children per woman are not meaningful yet.');
     return lines.join('\n');
   };
+  LES.Countries.require(...Object.keys(DEFS).map(k => 'calibration.' + k));
+  LES.Countries.on('calibration', pack => {
+    for (const k of Object.keys(Cal.TARGETS)) delete Cal.TARGETS[k];
+    const sym = pack.money.symbol;
+    for (const k of Object.keys(DEFS)) {
+      const d = DEFS[k], t = pack.calibration[k];
+      Cal.TARGETS[k] = { label: d.label.replace('$', sym), target: t.target, band: t.band, fmt: d.fmt, src: t.src };
+    }
+  });
 })(globalThis.LES = globalThis.LES || {});

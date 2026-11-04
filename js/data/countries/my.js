@@ -677,6 +677,7 @@
       federalShare: { 'company tax (town firms)': 0.7, 'dividend tax': 0.5 },
       fuel: { none: { px: 1.075, cost: 0 }, targeted: { px: 1, cost: 0.06 }, blanket: { px: 0.98, cost: 0.085 } },
       dividend: { above: 100000, rate: 0.02 },
+      zakatRebate: true, // zakat paid is rebated against income tax
     },
     // Central bank: Bank Negara OPR 2.75% (July 2025); the yearly rule keeps it between floor and ceiling.
     bank: { policyRate: 0.0275, floor: 0.0175, ceiling: 0.0375 },
@@ -838,11 +839,80 @@
       },
       trainCost: 500,
       officialGroups: ['malay', 'chinese', 'indian', 'bumi'],
+      preferredGroups: ['malay', 'bumi'], // the 'group' hiring/aid preference (Bumiputera)
     },
     // Public servants per 1,000 residents for each law option: teachers; nurses and doctors.
     services: {
       schools: { lean: 9, malaysia: 12, generous: 16 },
       health: { lean: [2.5, 1], malaysia: [3.5, 1.5], generous: [5, 2.2] },
+    },
+    // Class, religion and community life (js/sim/society.js). Religion ids and their practices
+    // (zakat, fasting, Friday prayers) belong to the engine; the pack says which faiths the
+    // country has, what they are called, who follows them and what the national rules are.
+    society: {
+      // place = building where they worship; day = weekday (0 Mon .. 6 Sun), -1 = a personal weekly day.
+      religions: {
+        islam: { name: 'Islam', icon: '☪️', colour: '#2a9d8f', place: 'masjid', day: 4, slot: 0, mean: 66, fund: 'Zakat & infaq fund', festival: 'raya', worship: 'Prayers at the masjid' },
+        buddhism: { name: 'Buddhism', icon: '☸️', colour: '#f4a261', place: 'tokong', day: -1, slot: 1, mean: 45, fund: 'Temple welfare fund', festival: null, worship: 'Temple visit' },
+        christianity: { name: 'Christianity', icon: '✝️', colour: '#5aa9e6', place: 'gereja', day: 6, slot: 0, mean: 55, fund: 'Church welfare fund', festival: 'christmas', worship: 'Church service' },
+        hinduism: { name: 'Hinduism', icon: '🕉️', colour: '#e76f51', place: 'kuil', day: -1, slot: 1, mean: 58, fund: 'Temple welfare fund', festival: 'deepavali', worship: 'Temple prayers' },
+        other: { name: 'Other (Taoist, Sikh, folk)', icon: '☯️', colour: '#b892ff', place: 'tokong', day: -1, slot: 1, mean: 45, fund: 'Community fund', festival: null, worship: 'Temple visit' },
+        none: { name: 'No religion', icon: '○', colour: '#9aa5b1', place: null, mean: 8 },
+      },
+      // Religion by ethnicity, approximating the 2020 census cross-table (national totals come
+      // out near Islam 63.5%, Buddhism 18.7%, Christianity 9.1%, Hinduism 6.1%).
+      relByEth: {
+        malay: { islam: 1 },
+        chinese: { buddhism: 0.76, christianity: 0.11, other: 0.06, none: 0.06, islam: 0.01 },
+        indian: { hinduism: 0.86, christianity: 0.07, islam: 0.04, buddhism: 0.02, other: 0.01 },
+        bumi: { christianity: 0.53, islam: 0.37, other: 0.05, none: 0.03, buddhism: 0.02 },
+        other: { christianity: 0.4, islam: 0.2, buddhism: 0.2, none: 0.2 },
+      },
+      // Who celebrates each festival (spending, joy): by religion (rel) or by ethnicity (eth).
+      celebrates: { raya: { rel: 'islam' }, deepavali: { rel: 'hinduism' }, christmas: { rel: 'christianity' }, cny: { eth: 'chinese' }, gawai: { eth: 'bumi' } },
+      classNames: { B40: 'B40 · working class', M40: 'M40 · middle class', T20: 'T20 · upper class' },
+      // DOSM 2024 national household-income cut-offs (gross, per month) and the hardship line.
+      bottom40Max: 5250, top20Min: 11820, hardship: 1500,
+      nisab: 25000, // zakat threshold: value of 85 g of gold, roughly RM25k-30k recently
+      nonShariah: ['RZBANK', 'INSAN'], // conventional bank and insurer
+      // Under the national interfaith rule a partner converts to this religion to marry, the
+      // children follow it, and its members may not leave it (null: no such rule).
+      lawReligion: 'islam',
+    },
+    // Festivals in order of priority; lunar ones drift ~11 days earlier each year.
+    // doy = day of the year in Year 1, span = days it lasts. fast = the fasting month before it.
+    calendar: {
+      festivals: [
+        { id: 'newyear', name: 'New Year', doy: 0, span: 2 },
+        { id: 'raya', name: 'Hari Raya Aidilfitri', doy: 100, span: 3, lunar: true },
+        { id: 'cny', name: 'Chinese New Year', doy: 40, span: 3, lunar: true },
+        { id: 'deepavali', name: 'Deepavali', doy: 300, span: 3, lunar: true },
+        { id: 'gawai', name: 'Gawai & Kaamatan', doy: 150, span: 2 },
+        { id: 'merdeka', name: 'Hari Merdeka', doy: 242, span: 2 },
+        { id: 'christmas', name: 'Christmas', doy: 358, span: 2 },
+      ],
+      fast: { before: 'raya', days: 30 }, // Ramadan
+    },
+    // Reference crime rates per 100k a year (DOSM Crime Statistics 2025, AADK 2024, World Prison Brief).
+    crime: { index: 170, violent: 32, property: 138, murder: 0.7, users: 586, prison: 256 },
+    // Town events: north-east monsoon floods (relief like Bantuan Wang Ihsan) and haze.
+    events: {
+      flood: { doy: 325, chance: 0.35, relief: 1000, name: 'Monsoon floods' },
+      haze: { doy: 190, chance: 0.3, days: 25, text: 'Haze from regional fires: the air is unhealthy for weeks' },
+    },
+    // Calibration targets (js/sim/calibration.js): target, warning band, source.
+    calibration: {
+      tfr: { target: 1.6, band: 0.35, src: 'DOSM Vital Statistics 2025 (TFR 2024 = 1.6; 2025 = 1.5)' },
+      e0: { target: 75.3, band: 3, src: 'DOSM Abridged Life Tables 2023-2025' },
+      unemp: { target: 0.03, band: 0.015, src: 'DOSM Labour Force Survey, Aug 2026 (2.9%)' },
+      medWage: { target: 3000, band: 600, src: 'DOSM formal-sector median wage, Q2 2026' },
+      hhGini: { target: 0.39, band: 0.06, src: 'DOSM Household Income Survey 2024' },
+      starve: { target: 0, band: 0.01, src: 'Hardcore poverty nearly eradicated (DOSM HIES 2024)' },
+      crimeIdx: { target: 170, band: 70, src: 'DOSM Crime Statistics 2025 (58,255 cases in 2024)' },
+      drugUsers: { target: 586, band: 250, src: 'AADK 2024 (192,857 users)' },
+      prison: { target: 256, band: 110, src: 'World Prison Brief, Nov 2024 (87,419)' },
+      clearance: { target: 0.65, band: 0.1, src: 'PDRM index-crime solving rate (~65%)' },
+      revenue: { target: 815, band: 250, src: 'MOF: federal revenue RM324bn (2024) / 34.1m people' },
     },
     // Longer explanations shown in the Government tab.
     notes: {

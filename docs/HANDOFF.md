@@ -218,7 +218,7 @@ Cast members follow the normal rules; flagged with a star on leaderboards.
   'flat' or 'meansTested'); new mechanics only run when a pack switches them on. `cfg.country`
   defaults to 'my'; option values like 'malaysia' become 'national' with a save upgrade.
 - 4a steps: (1) Malaysia fingerprints + pre-move save fixture [DONE: `countryTests` in tests.js,
-  `js/tests/fixtures.js`]; (2) registry, cfg.country, guard [DONE]; (3) people and content [DONE: content.js keeps engine data, my.js `content` and `town` hold titles, pay, prices, names, ethnic mixes, stocks, building names and descriptions]; (4) taxes, finance, government [DONE: my.js `names`, `tax`, `bank`, `retirement`, `fund`, `gov` (laws, leader titles, council, police per 1,000, service pay), `services`, `notes`; fiscal/labour/finance/government/council/services read them through appliers]; (5) society, festivals, events, calibration; (6) art, every RM literal, benchmark.
+  `js/tests/fixtures.js`]; (2) registry, cfg.country, guard [DONE]; (3) people and content [DONE: content.js keeps engine data, my.js `content` and `town` hold titles, pay, prices, names, ethnic mixes, stocks, building names and descriptions]; (4) taxes, finance, government [DONE: my.js `names`, `tax`, `bank`, `retirement`, `fund`, `gov` (laws, leader titles, council, police per 1,000, service pay), `services`, `notes`; fiscal/labour/finance/government/council/services read them through appliers]; (5) society, festivals, events, calibration [DONE: my.js `society` (religions, religion by ethnicity, who celebrates what, class names, DOSM cut-offs, hardship, nisab, non-Shariah shares, `lawReligion` for the interfaith rule), `calendar` (festivals, fasting month; set up from countries.js), `crime` (reference rates, now `LES.Crime.REF`), `events` (flood, haze), `calibration` (targets; labels and formats stay in calibration.js), `gov.preferredGroups`, `tax.zakatRebate`]; (6) art, every RM literal, benchmark.
 - 4b UK: England's rules with UK statistics; Universal Credit (taper), Child Benefit, State Pension,
   Pension Credit floor, workplace pension (5% + 3%, market returns, access at 57), student loans (Plan 5),
   council tax bands and business rates, VAT, NI, corporation tax marginal relief, dividend allowance, IHT
@@ -242,9 +242,8 @@ Cast members follow the normal rules; flagged with a star on leaderboards.
   (headless Edge via the DevTools protocol; full suite: `LES_TESTS.runAll()` with a 600 s timeout).
   The runner turns off Edge's timer throttling for hidden windows (without it, tests that pause with
   setTimeout stall for minutes after heavy work), closes Edge completely with Browser.close, dismisses
-  dialogs, and on a timeout prints the page's call stack and last console lines. Full suite: 154 tests, ~155 s.
-- NEXT: 4a.5 (society, festivals, crime reference rates, monsoon/haze events, calibration targets), then
-  4a.6 (remaining RM/Malaysia text in the UI and settings, 'malaysia' option keys -> 'national' with a save
+  dialogs, and on a timeout prints the page's call stack and last console lines. Full suite: 155 tests, ~170 s.
+- NEXT: 4a.6 (remaining RM/Malaysia text in the UI and settings, 'malaysia' option keys -> 'national' with a save
   upgrade, benchmark, full suite, push).
 
 Original notes:

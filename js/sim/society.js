@@ -23,37 +23,20 @@
   const U = LES.U, C = LES.C, P = LES.P;
   const S = LES.Society = {};
 
-  // ---- Reference data ----
-  // place = building where they worship; day = weekday (0 Mon .. 6 Sun), -1 = a personal weekly day.
-  S.RELIGIONS = {
-    islam: { name: 'Islam', icon: '☪️', colour: '#2a9d8f', place: 'masjid', day: 4, slot: 0, mean: 66, fund: 'Zakat & infaq fund', festival: 'raya' },
-    buddhism: { name: 'Buddhism', icon: '☸️', colour: '#f4a261', place: 'tokong', day: -1, slot: 1, mean: 45, fund: 'Temple welfare fund', festival: null },
-    christianity: { name: 'Christianity', icon: '✝️', colour: '#5aa9e6', place: 'gereja', day: 6, slot: 0, mean: 55, fund: 'Church welfare fund', festival: 'christmas' },
-    hinduism: { name: 'Hinduism', icon: '🕉️', colour: '#e76f51', place: 'kuil', day: -1, slot: 1, mean: 58, fund: 'Temple welfare fund', festival: 'deepavali' },
-    other: { name: 'Other (Taoist, Sikh, folk)', icon: '☯️', colour: '#b892ff', place: 'tokong', day: -1, slot: 1, mean: 45, fund: 'Community fund', festival: null },
-    none: { name: 'No religion', icon: '○', colour: '#9aa5b1', place: null, mean: 8 },
-  };
-  S.REL_KEYS = Object.keys(S.RELIGIONS);
-  // Religion by ethnicity, approximating the 2020 census cross-table (national totals come
-  // out near Islam 63.5%, Buddhism 18.7%, Christianity 9.1%, Hinduism 6.1%).
-  S.REL_BY_ETH = {
-    malay: { islam: 1 },
-    chinese: { buddhism: 0.76, christianity: 0.11, other: 0.06, none: 0.06, islam: 0.01 },
-    indian: { hinduism: 0.86, christianity: 0.07, islam: 0.04, buddhism: 0.02, other: 0.01 },
-    bumi: { christianity: 0.53, islam: 0.37, other: 0.05, none: 0.03, buddhism: 0.02 },
-    other: { christianity: 0.4, islam: 0.2, buddhism: 0.2, none: 0.2 },
-  };
-  // Festivals each group celebrates (spending, joy) - by religion or by ethnicity.
-  const CELEBRATES = (p, f) => f === 'raya' ? p.rel === 'islam' : f === 'deepavali' ? p.rel === 'hinduism' : f === 'christmas' ? p.rel === 'christianity'
-    : f === 'cny' ? p.eth === 'chinese' : f === 'gawai' ? p.eth === 'bumi' : false;
+  // ---- Reference data (filled from the country pack's `society`, see the end of this file) ----
+  // S.RELIGIONS: place = building where they worship; day = weekday (0 Mon .. 6 Sun), -1 = a personal weekly day.
+  S.RELIGIONS = {};
+  S.REL_KEYS = [];
+  S.REL_BY_ETH = {}; // religion by ethnicity
+  // Class ids are the engine's (bottom 40%, middle 40%, top 20% of households); names come from the pack.
   S.CLASSES = ['B40', 'M40', 'T20'];
-  S.CLASS_NAMES = { B40: 'B40 · working class', M40: 'M40 · middle class', T20: 'T20 · upper class' };
+  S.CLASS_NAMES = {};
   S.CLASS_COLOURS = { B40: '#f4a261', M40: '#5aa9e6', T20: '#f2c14e' };
-  // DOSM 2024 national household-income cut-offs (gross, per month) and the poverty line.
-  S.DOSM_B40_MAX = 5250; S.DOSM_T20_MIN = 11820;
-  S.HARDSHIP_RM = 1500;
-  S.NISAB_RM = 25000; // zakat threshold: value of 85 g of gold, roughly RM25k-30k recently
-  const NON_SHARIAH = new Set(['RZBANK', 'INSAN']); // conventional bank and insurer
+  // National household-income cut-offs (gross, per month), hardship line and zakat threshold.
+  S.DOSM_B40_MAX = 0; S.DOSM_T20_MIN = 0; S.HARDSHIP_RM = 0; S.NISAB_RM = 0;
+  let NON_SHARIAH = new Set(), CEL = {}, LAW_REL = null;
+  // Festivals each group celebrates (spending, joy) - by religion or by ethnicity.
+  const CELEBRATES = (p, f) => { const c = CEL[f]; return !!c && (c.rel ? p.rel === c.rel : p.eth === c.eth); };
 
   const pick = (R, table) => { const ks = Object.keys(table); return ks[Math.max(0, R.weighted(ks.map(k => table[k])))]; };
   const relOf = p => S.RELIGIONS[p.rel] || S.RELIGIONS.none;
@@ -65,7 +48,7 @@
     if (how === 'child' && p.parents.length === 2) {
       const [f, m] = p.parents.map(id => w.people[id]);
       if (f.rel === m.rel) p.rel = f.rel;
-      else if (w.cfg.interfaith === 'malaysia' && (f.rel === 'islam' || m.rel === 'islam')) p.rel = 'islam';
+      else if (w.cfg.interfaith === 'malaysia' && LAW_REL && (f.rel === LAW_REL || m.rel === LAW_REL)) p.rel = LAW_REL;
       else p.rel = R.next() < 0.5 ? f.rel : m.rel;
       p.relig = Math.round(U.clamp(0.5 * ((f.relig || 0) + (m.relig || 0)) / 2 + 0.5 * R.normal(relOf(p).mean, 20), 0, 100));
     } else {
@@ -188,14 +171,14 @@
     coupled(w, a, b) {
       if (a.rel === b.rel) return;
       w.society.interfaith++;
-      if (w.cfg.interfaith !== 'malaysia') return;
-      const muslim = a.rel === 'islam' ? a : b.rel === 'islam' ? b : null;
+      if (w.cfg.interfaith !== 'malaysia' || !LAW_REL) return;
+      const muslim = a.rel === LAW_REL ? a : b.rel === LAW_REL ? b : null;
       if (!muslim) return;
       const other = muslim === a ? b : a, from = S.RELIGIONS[other.rel].name;
-      other.rel = 'islam';
+      other.rel = LAW_REL;
       other.relig = Math.round(U.clamp(other.relig * 0.5 + 25, 0, 100));
       w.society.conversions++;
-      P.log(w, other, `Converted from ${from} to Islam to marry ${P.name(muslim)}`, 'family', 1);
+      P.log(w, other, `Converted from ${from} to ${S.RELIGIONS[LAW_REL].name} to marry ${P.name(muslim)}`, 'family', 1);
     },
     breakupWeight: (w, a, b) => 1 - 0.4 * (devout(a) + devout(b)) / 2,
     venueBias(w, p, k) {
@@ -219,7 +202,7 @@
       if (p.rel === 'islam' && def.day === dow) u += p.sex === 'M' ? 0.9 : -0.8; // Friday prayers are for men
       add(0, 'WORSHIP', u, loc, p.rel);
     },
-    label: (id, data) => (id === 'WORSHIP' ? `${{ islam: 'Prayers at the masjid', buddhism: 'Temple visit', christianity: 'Church service', hinduism: 'Temple prayers', other: 'Temple visit' }[data] || 'Worship'}` : undefined),
+    label: (id, data) => (id === 'WORSHIP' ? (S.RELIGIONS[data] && S.RELIGIONS[data].worship) || 'Worship' : undefined),
     resolve(w, p, c, ctx, slot) {
       if (c.id !== 'WORSHIP') return false;
       const r = devout(p);
@@ -281,7 +264,7 @@
         // Devotion drifts a little with age and practice; a few drift away from religion.
         const age = P.age(w, p);
         p.relig = Math.round(U.clamp(p.relig + R.normal(0, 3) + (age > 50 ? 0.6 : 0) - (age < 30 ? 0.3 : 0), 0, 100));
-        const canLeave = p.rel !== 'islam' || w.cfg.interfaith === 'free';
+        const canLeave = p.rel !== LAW_REL || w.cfg.interfaith === 'free';
         if (canLeave && p.rel !== 'none' && p.relig < 12 && R.next() < 0.03) {
           P.log(w, p, `Stopped practising ${S.RELIGIONS[p.rel].name}`, 'life', 0);
           p.rel = 'none'; w.society.conversions++;
@@ -342,4 +325,17 @@
     for (const k in g) { g[k].medNw = U.median(g[k].nw); g[k].medInc = U.median(g[k].inc); delete g[k].nw; delete g[k].inc; }
     return g;
   };
+  // The active country's faiths, class names, cut-offs and interfaith rule.
+  LES.Countries.require('society.religions', 'society.relByEth', 'society.classNames', 'society.bottom40Max', 'society.top20Min', 'society.hardship', 'society.nisab');
+  LES.Countries.on('society', pack => {
+    const so = pack.society, put = (o, src) => { for (const k of Object.keys(o)) delete o[k]; Object.assign(o, src); };
+    put(S.RELIGIONS, so.religions);
+    S.REL_KEYS.length = 0; S.REL_KEYS.push(...Object.keys(so.religions));
+    put(S.REL_BY_ETH, so.relByEth);
+    put(S.CLASS_NAMES, so.classNames);
+    S.DOSM_B40_MAX = so.bottom40Max; S.DOSM_T20_MIN = so.top20Min; S.HARDSHIP_RM = so.hardship; S.NISAB_RM = so.nisab;
+    NON_SHARIAH = new Set(so.nonShariah || []);
+    CEL = so.celebrates || {};
+    LAW_REL = so.lawReligion || null;
+  });
 })(globalThis.LES = globalThis.LES || {});

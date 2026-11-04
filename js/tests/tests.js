@@ -807,6 +807,19 @@
     check('An unknown country is refused with a clear message', LES.validateConfig(Object.assign({}, D, { country: 'zz' })).blockers.some(b => b.includes('Country')));
     const sv = JSON.parse(LES.Save.toJSON(new LES.World(Object.assign({}, D, { seed: 'cty', founders: 20 }))));
     check('A save records its country; older saves load as Malaysia', sv.country === 'my' && !('country' in JSON.parse(LES_FIXTURES.mySave)));
+
+    // Society, festivals, crime rates, events and calibration targets come from the pack.
+    const MYp = LES.Countries.get('my'), Cl = LES.Calendar;
+    let raya = null;
+    for (let d = 0; d < 365 && !raya; d++) { const f = Cl.festivalStarts(d); if (f && f.id === 'raya') raya = f; }
+    const fromPack = LES.Society.RELIGIONS.islam.name === MYp.society.religions.islam.name && LES.Society.DOSM_B40_MAX === MYp.society.bottom40Max
+      && LES.Crime.REF.index === MYp.crime.index && LES.Calibration.TARGETS.medWage.label.includes(MYp.money.symbol)
+      && LES.Calibration.TARGETS.tfr.target === MYp.calibration.tfr.target && raya && raya.name === 'Hari Raya Aidilfitri';
+    Cl.setup({ festivals: [{ id: 'x', name: 'Test day', doy: 10, span: 1 }] }); // a country with one fixed holiday, no fasting month
+    let fx = 0, fast = 0;
+    for (let d = 0; d < 730; d++) { if (Cl.festival(d)) fx++; if (Cl.ramadan(d)) fast++; }
+    Cl.setup(MYp.calendar);
+    check('Religions, festivals, crime rates and calibration targets come from the country pack', fromPack && fx === 2 && fast === 0, `${fx} holidays, ${fast} fasting days`);
   }
 
   async function runAll() {
