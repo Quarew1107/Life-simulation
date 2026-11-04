@@ -286,7 +286,7 @@ ${g.officials ? `<div class="card"><b>City council at the end</b><table>${LES.Co
     const r = CR.rates(w), k = CR.INTENSITY[w.cfg.crime], tot = Object.values(st.total).reduce((a, b) => a + b, 0);
     return `<section><h2>Crime and justice</h2><div class="grid">
 <div class="card"><b>Crimes</b> <span class="note">intensity “${esc(w.cfg.crime)}” (Malaysian rates ×${k})</span><table>${Object.keys(CR.TYPES).map(t => `<tr><td>${CR.TYPES[t].icon} ${esc(CR.TYPES[t].name)}</td><td>${st.total[t] || 0}</td></tr>`).join('')}<tr><td><b>Total</b></td><td><b>${tot}</b></td></tr></table>
-<p class="note">Index crime in the last year: ${r.index.toFixed(0)} per 100k (Malaysia ${CR.MY.index}${k !== 1 ? ' ×' + k : ''}).</p></div>
+<p class="note">Index crime in the last year: ${r.index.toFixed(0)} per 100k (${LES.Countries.pack.name} ${CR.REF.index}${k !== 1 ? ' ×' + k : ''}).</p></div>
 <div class="card"><b>Justice, drugs and gangs</b><table>
 <tr><td>Arrests / convictions / acquittals</td><td>${st.arrests} / ${st.convictions} / ${st.acquitted}</td></tr>
 <tr><td>Prison admissions / released / reoffended in 3 yrs</td><td>${st.admissions} / ${st.released} / ${st.reoffended}</td></tr>

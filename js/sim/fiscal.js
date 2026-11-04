@@ -110,7 +110,7 @@
 
   // Zakat paid to the religious council is rebated against income tax paid that year.
   FS.zakatRebate = function (w, p, zakat) {
-    if (!w.gov || !(p.taxYr > 0) || zakat <= 0) return 0;
+    if (!w.gov || !TX.zakatRebate || !(p.taxYr > 0) || zakat <= 0) return 0;
     const amt = Math.min(zakat, p.taxYr);
     p.taxYr -= amt;
     const paid = LES.Gov.payOut(w, p, 'cash', amt, 'zakat rebates');

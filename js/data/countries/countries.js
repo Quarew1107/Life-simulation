@@ -47,4 +47,8 @@
     }
     return missing;
   };
+
+  // The festival calendar (core/util.js loads before this registry).
+  K.require('calendar.festivals');
+  K.on('calendar', pack => LES.Calendar.setup(pack.calendar));
 })(globalThis.LES = globalThis.LES || {});

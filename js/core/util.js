@@ -31,23 +31,25 @@
   U.dow = day => ((day % 7) + 7) % 7;
   const lunar = (day, baseDoy) => { const y = Math.floor(day / 365); return ((baseDoy - 11 * y) % 365 + 365) % 365; };
   const near = (doy, d, span) => ((doy - d + 365) % 365) < span;
-  // Festivals: lunar ones drift ~11 days earlier each year. Returns the festival on this day (or null).
+  // Festivals: lunar ones drift ~11 days earlier each year. The list comes from the country
+  // pack's `calendar` (set up by js/data/countries/countries.js); first match wins.
+  let FEST = [], FAST = null;
   LES.Calendar = {
+    setup(cal) {
+      FEST = (cal && cal.festivals) || [];
+      const f = cal && cal.fast && FEST.find(x => x.id === cal.fast.before);
+      FAST = f ? { doy: f.doy, lunar: !!f.lunar, days: cal.fast.days } : null;
+    },
+    // Returns the festival on this day ({ id, name }) or null.
     festival(day) {
       const doy = ((day % 365) + 365) % 365;
-      if (near(doy, 0, 2)) return { id: 'newyear', name: 'New Year' };
-      if (near(doy, lunar(day, 100), 3)) return { id: 'raya', name: 'Hari Raya Aidilfitri' };
-      if (near(doy, lunar(day, 40), 3)) return { id: 'cny', name: 'Chinese New Year' };
-      if (near(doy, lunar(day, 300), 3)) return { id: 'deepavali', name: 'Deepavali' };
-      if (near(doy, 150, 2)) return { id: 'gawai', name: 'Gawai & Kaamatan' };
-      if (near(doy, 242, 2)) return { id: 'merdeka', name: 'Hari Merdeka' };
-      if (near(doy, 358, 2)) return { id: 'christmas', name: 'Christmas' };
+      for (const f of FEST) if (near(doy, f.lunar ? lunar(day, f.doy) : f.doy, f.span)) return { id: f.id, name: f.name };
       return null;
     },
     // First day of a festival (when people spend and celebrate).
     festivalStarts(day) { const f = LES.Calendar.festival(day), y = LES.Calendar.festival(day - 1); return f && (!y || y.id !== f.id) ? f : null; },
-    // The 30 days of fasting before Hari Raya.
-    ramadan(day) { const doy = ((day % 365) + 365) % 365, r = lunar(day, 100); const d = (r - doy + 365) % 365; return d >= 1 && d <= 30; },
+    // The fasting days before a festival (Ramadan before Hari Raya), if the country has one.
+    ramadan(day) { if (!FAST) return false; const doy = ((day % 365) + 365) % 365, r = FAST.lunar ? lunar(day, FAST.doy) : FAST.doy; const d = (r - doy + 365) % 365; return d >= 1 && d <= FAST.days; },
   };
 
   // ---- Money ----

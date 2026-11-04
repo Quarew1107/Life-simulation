@@ -124,7 +124,7 @@
       }
       case 'recordCheck': return p.cr && p.cr.rec ? (val === 'banned' ? 250 : -250) : (val === 'banned' ? -8 : 8);
       case 'affirm': {
-        const bumi = p.eth === 'malay' || p.eth === 'bumi';
+        const bumi = PREF.includes(p.eth);
         const v = o => (o === 'group' ? (bumi ? 60 : -60) : o === 'need' ? (p.cls === 'B40' ? 50 : p.cls === 'T20' ? -20 : 0) : 0);
         return v(val) - v(cur);
       }
@@ -389,14 +389,15 @@
     const g = w.gov, pres = g.president >= 0 ? w.people[g.president] : null;
     if (!pres || R.next() > 0.25) return;
     if (w.regime === 'recession' && g.laws.cashAid === '0' && pres.pol.econ < 0.4) setLaw(w, 'cashAid', '100', 'emergency');
-    if (w.crime && LES.Crime.rates(w).index > 1.6 * LES.Crime.MY.index * (LES.Crime.INTENSITY[w.cfg.crime] || 1) && g.laws.police !== '7') setLaw(w, 'police', g.laws.police === '2' ? '4' : '7', 'emergency');
+    if (w.crime && LES.Crime.rates(w).index > 1.6 * LES.Crime.REF.index * (LES.Crime.INTENSITY[w.cfg.crime] || 1) && g.laws.police !== '7') setLaw(w, 'police', g.laws.police === '2' ? '4' : '7', 'emergency');
     void ts;
   }
 
   // ---- Events: monsoon floods and haze ----
   function eventsDay(w, R) {
     const g = w.gov, doy = w.date.doy;
-    if (doy === 325 && (w.region ? w.region.monsoon(w.day) : R.next() < 0.35)) { // one monsoon for the whole region // north-east monsoon floods
+    const EV = LES.Countries.pack.events || {}, FL = EV.flood, HZ = EV.haze;
+    if (FL && doy === FL.doy && (w.region ? w.region.monsoon(w.day) : R.next() < FL.chance)) { // one monsoon for the whole region // north-east monsoon floods
       const t = w.town;
       const low = t.blocks.map((b, i) => ({ b, i })).filter(({ b }) => 'KAFTR'.includes(b.code) && (b.code === 'K' || b.code === 'A' || (t.layout && t.layout.river >= 0 && Math.abs(b.c - t.layout.river) <= 1) || R.next() < 0.15));
       const hit = [];
@@ -411,14 +412,14 @@
         const loss = Math.min(p.cash, Math.round(w.px(R.range(300, 6000)) * (w.boost ? w.boost.flood : 1))); // drains and flood barriers help
         w.ledger.spend(p, 'cash', 'MERCHANT', loss);
         p.stress = Math.min(100, p.stress + 20); p.health = Math.max(1, p.health - 3);
-        const aid = payOut(w, p, 'cash', w.px(1000), 'flood relief'); // Bantuan Wang Ihsan: RM1,000 per household
+        const aid = payOut(w, p, 'cash', w.px(FL.relief), 'flood relief'); // Malaysia: Bantuan Wang Ihsan, RM1,000 per household
         p.earned.welfare += aid;
         P.log(w, p, `Home was flooded (${U.fmtMoney(loss)} of damage, ${U.fmtMoney(aid)} government aid)`, 'luck', 1);
       }
       g.flood = { blocks: hit, until: w.day + 10 }; g.floods++;
-      w.pushFeed({ day: w.day, pid: -1, text: `Monsoon floods: ${homes} household${homes === 1 ? '' : 's'} hit; RM1,000 relief each from the treasury`, cat: 'economy', imp: 2 });
+      w.pushFeed({ day: w.day, pid: -1, text: `${FL.name}: ${homes} household${homes === 1 ? '' : 's'} hit; ${LES.Countries.pack.money.symbol}${FL.relief.toLocaleString('en-US')} relief each from the treasury`, cat: 'economy', imp: 2 });
     }
-    if (doy === 190 && R.next() < 0.3) { g.haze = { until: w.day + 25 }; g.hazes++; w.pushFeed({ day: w.day, pid: -1, text: 'Haze from regional fires: the air is unhealthy for weeks', cat: 'economy', imp: 2 }); }
+    if (HZ && doy === HZ.doy && R.next() < HZ.chance) { g.haze = { until: w.day + HZ.days }; g.hazes++; w.pushFeed({ day: w.day, pid: -1, text: HZ.text, cat: 'economy', imp: 2 }); }
     if (g.haze && w.day < g.haze.until) for (const p of w.living) if (p.alive) p.health = Math.max(1, p.health - (P.age(w, p) > 60 || P.age(w, p) < 5 ? 0.12 : 0.05));
   }
 
@@ -467,7 +468,7 @@
     money: w => w.gov.treasury.cash,
     hireWeight(w, p) {
       const a = w.policy.affirm, t = p.trainUntil > 0 ? LES.Council.hireBoost(w, p) : 1;
-      if (a === 'group' && (p.eth === 'malay' || p.eth === 'bumi')) return 1.08 * t;
+      if (a === 'group' && PREF.includes(p.eth)) return 1.08 * t;
       if (a === 'need' && p.cls === 'B40') return 1.08 * t;
       return t;
     },
@@ -573,6 +574,7 @@
 
   // ---- Laws, leader titles and police strength from the country pack ----
   let SP = null; // monthly cost of a teacher, nurse and doctor (pay + employer contributions), for voters' sense of the bill
+  let PREF = []; // groups the 'group' preference favours (pack gov.preferredGroups)
   LES.Countries.require('gov.laws', 'gov.leaderTitles', 'gov.policePer1000', 'gov.servicePay');
   LES.Countries.on('government', K => {
     GV.LAWS.length = 0; for (const l of K.gov.laws) GV.LAWS.push(l);
@@ -580,5 +582,6 @@
     for (const l of GV.LAWS) GV.LAW_BY_KEY[l.key] = l;
     for (const k of Object.keys(TITLES)) delete TITLES[k]; Object.assign(TITLES, K.gov.leaderTitles);
     GV.MY_POLICE = K.gov.policePer1000; SP = K.gov.servicePay;
+    PREF = K.gov.preferredGroups || [];
   });
 })(globalThis.LES = globalThis.LES || {});

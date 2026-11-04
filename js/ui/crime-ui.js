@@ -32,7 +32,7 @@
     const vic = st.victimsByClass, vicTotal = Object.values(vic).reduce((a, b) => a + b, 0) || 1;
     el.innerHTML = `
       <div class="stat-grid">
-        <div class="stat"><div class="v">${f0(rates.index)}</div><div class="l">index crimes per 100k a year (Malaysia ${CR.MY.index}${k !== 1 ? ` ×${k}` : ''})</div></div>
+        <div class="stat"><div class="v">${f0(rates.index)}</div><div class="l">index crimes per 100k a year (${LES.Countries.pack.name} ${CR.REF.index}${k !== 1 ? ` ×${k}` : ''})</div></div>
         <div class="stat"><div class="v">${prisoners.length}</div><div class="l">in prison · ${inRehab.length} in rehab</div></div>
         <div class="stat"><div class="v">${users}</div><div class="l">drug users now</div></div>
         <div class="stat"><div class="v">${st.total.murder || 0}</div><div class="l">murders so far</div></div>
@@ -41,8 +41,8 @@
       </div>
       <div class="card"><h3>Rates per 100,000 <small class="muted">last 12 months · intensity “${esc(w.cfg.crime)}”</small></h3>
         <table class="cmp"><tr><th></th><th>This town</th><th>Malaysia${k !== 1 ? ' ×' + k : ''}</th></tr>
-          ${row('Index crime', rates.index, CR.MY.index)}${row('· property', rates.property, CR.MY.property)}${row('· violent', rates.violent, CR.MY.violent)}
-          ${row('Murder', rates.murder, CR.MY.murder)}${row('Drug users (now)', last ? last.cr.users : 0, CR.MY.users)}${row('Prisoners (now)', last ? last.cr.prison : 0, CR.MY.prison)}</table>
+          ${row('Index crime', rates.index, CR.REF.index)}${row('· property', rates.property, CR.REF.property)}${row('· violent', rates.violent, CR.REF.violent)}
+          ${row('Murder', rates.murder, CR.REF.murder)}${row('Drug users (now)', last ? last.cr.users : 0, CR.REF.users)}${row('Prisoners (now)', last ? last.cr.prison : 0, CR.REF.prison)}</table>
         <div class="note">A town of a few hundred people is tiny: at real Malaysian rates it would see about one crime every two years. "Lively" multiplies the rates by 10 so the system is visible; "Realistic" uses them as they are.</div></div>
       <div class="card"><h3>Crime over time <small class="muted">per 100k a year</small></h3><canvas class="chart" id="cr-rate"></canvas></div>
       ${policeCard(w, st)}

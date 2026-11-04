@@ -26,8 +26,9 @@
 
   CR.INTENSITY = { realistic: 1, lively: 10, lawless: 30 };
   CR.POLICE = { weak: 0.5, normal: 1, strong: 1.6 };
-  // Malaysian reference rates per 100,000 people per year (stock for users and prisoners).
-  CR.MY = { index: 170, violent: 32, property: 138, murder: 0.7, users: 586, prison: 256 };
+  // The country's reference rates per 100,000 people per year (stock for users and prisoners),
+  // from the pack's `crime`.
+  CR.REF = {};
   // Crime types. w = attribute weights for the success roll, diff = difficulty,
   // clear = chance police solve it, months = typical sentence, violent = index violent crime.
   CR.TYPES = {
@@ -51,7 +52,7 @@
   const officers = w => (w.gov ? w.gov.officers : w.counts.living / 1000 * 4 * (CR.POLICE[w.cfg.police] || 1));
   // Share of cases the force has time for (1 at Malaysian staffing and crime rates).
   CR.capacity = function (w) {
-    const st = state(w), load = Math.max(w.counts.living / 1e5 * CR.MY.index / 12 * K(w) * 0.5, st.lastCrimes || 0); // at least half the Malaysian monthly rate
+    const st = state(w), load = Math.max(w.counts.living / 1e5 * CR.REF.index / 12 * K(w) * 0.5, st.lastCrimes || 0); // at least half the national monthly rate
     const r = Math.max(0.3, officers(w)) * CR.CASES_PER_OFFICER * K(w) / load;
     return U.clamp(1.2 * r / (r + 0.6), 0.1, 1.15);
   };
@@ -583,4 +584,6 @@
     out.property = out.index - out.violent;
     return out;
   };
+  LES.Countries.require('crime.index', 'crime.violent', 'crime.property', 'crime.murder', 'crime.users', 'crime.prison');
+  LES.Countries.on('crime', pack => { for (const k of Object.keys(CR.REF)) delete CR.REF[k]; Object.assign(CR.REF, pack.crime); });
 })(globalThis.LES = globalThis.LES || {});
