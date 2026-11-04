@@ -24,6 +24,11 @@
       this.mapSize = LES.MAP_ALIASES[ms] || ms;
       const type = this.cfg.townType || this.cfg.town1Type || 'mixed';
       this.town = LES.buildTown(this.mapSize, this.cfg.seed, this.cfg.layout, type === 'mixed' ? undefined : type);
+      if (this.cfg.scenery !== 'decor') { // scenery is also somewhere to go, and a view calms the nerves
+        const t = this.town, sc = ['lake', 'hill', 'forest'].flatMap(k => t.kinds[k] || []);
+        if (sc.length) { t.kinds.park = (t.kinds.park || []).concat(sc); }
+        for (const id of sc) { const s = t.buildings[id]; for (const b of t.buildings) if (b.home && Math.abs(b.x + b.w / 2 - (s.x + s.w / 2)) < s.w / 2 + 12 && Math.abs(b.y + b.h / 2 - (s.y + s.h / 2)) < s.h / 2 + 10) b.view = true; }
+      }
       const tt = LES.TOWN_TYPES[type];
       if (tt && tt.jobs) this.jobFreq = C.JOBS.map(j => j.freq * (tt.jobs[j.id] || 1)); // the job mix of this kind of town
       this.townVersion = 0;
@@ -296,6 +301,7 @@
             - (p.hunger > 50 ? 0.6 : 0) - 0.00015 * Math.pow(Math.max(0, age - 45), 1.5);
           const home = this.town.buildings[p.homeId];
           if (home && home.cap && (this.occupancy[p.homeId] || 0) > home.cap) p.stress += 0.4; // overcrowded home
+          if (home && home.view) p.stress -= 0.15; // a home with a view of the lake or hills
           p.yr.stress += p.stress; p.yr.days++;
           LES.Goals.daily(this, p);
         } else {

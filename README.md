@@ -11,6 +11,8 @@ Double-click **`Start Simulation.bat`**, or open `index.html` in Edge or Chrome.
 2. **Your town.** The six settings people change most: founding population (the map size follows), years to simulate, starting wealth, economic cycles, crime and the world seed (🎲 picks a random one).
 3. **Advanced settings** (folded away): everything else, in groups for base rules, town and map, goal, economy and prices, people and families, society and religion, crime and justice, and government. Changing a base rule switches the rules to Custom.
 
+**Scenery:** varied towns are a little bigger than before, and the extra blocks are lakes, forested hills and forest reserves with waterfalls that nobody builds on. By default people jog, picnic and hike there, and homes next to them are calmer (Advanced → *Lakes, hills and forests* to make them scenery only).
+
 **Several towns:** Advanced settings → *Towns in the region* (one by default, up to three). The towns share one economy and stock exchange, and households move between them, keeping links to family left behind. Each town has a type (mixed, business city, industrial, university, coastal resort or farming kampung) that sets its districts and jobs. Job openings nobody applies for at home are advertised in the other towns, so people commute; the biggest town draws shoppers; one monsoon floods the whole region; in the Pandemic scenario the virus travels between towns. The Stats tab compares the towns and the report has a region section. Switch the town shown with the buttons in the top bar; saving a region saves all its towns.
 
 **Scenarios:**

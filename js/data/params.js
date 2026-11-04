@@ -38,6 +38,7 @@
     towns: '1',               // 1-3 towns in one region (js/sim/region.js)
     town1Type: 'mixed', town2Type: 'industrial', town3Type: 'resort', // LES.TOWN_TYPES
     removeLimits: 'no',       // yes = allow bigger populations (slower)
+    scenery: 'both',          // both = lakes and hills are places to go and give calmer homes | decor = looks only
     // Scenario (js/sim/scenarios.js) and its options
     scenario: 'none',         // none | equal | reset | eternal | eduban | pandemic | robots | lawless | island | clans
     eqKids: 'yes',            // Born Equal: children are born equal too
@@ -118,6 +119,7 @@
     { group: 'Town & map', key: 'town1Type', label: 'Main town type', type: 'select', options: [['mixed', 'Mixed town'], ['capital', 'Business city'], ['industrial', 'Industrial town'], ['university', 'University town'], ['resort', 'Coastal resort'], ['farming', 'Farming kampung']], help: 'Changes the mix of districts and the jobs on offer.' },
     { group: 'Town & map', key: 'town2Type', label: 'Second town type', type: 'select', options: [['mixed', 'Mixed town'], ['capital', 'Business city'], ['industrial', 'Industrial town'], ['university', 'University town'], ['resort', 'Coastal resort'], ['farming', 'Farming kampung']] },
     { group: 'Town & map', key: 'town3Type', label: 'Third town type', type: 'select', options: [['mixed', 'Mixed town'], ['capital', 'Business city'], ['industrial', 'Industrial town'], ['university', 'University town'], ['resort', 'Coastal resort'], ['farming', 'Farming kampung']] },
+    { group: 'Town & map', key: 'scenery', label: 'Lakes, hills and forests', type: 'select', options: [['both', 'Scenery and places to go (default)'], ['decor', 'Scenery only']], help: 'Varied towns have a few scenery blocks that are never built on. By default people jog, picnic and hike there, and homes next to them are calmer.' },
     { group: 'Town & map', key: 'removeLimits', label: 'Remove population limits', type: 'select', options: [['no', 'No (keeps the simulation smooth)'], ['yes', 'Yes (big worlds run slowly)']], help: 'Normally all towns together may start with at most 1,500 people.' },
     { group: 'Town & map', key: 'layout', label: 'Street layout', type: 'select', options: [['varied', 'Varied (avenues, a river, superblocks)'], ['grid', 'Grid (original equal blocks)']], help: 'Varied layouts change with the seed.' },
     { group: 'Goal', key: 'goalRM', label: 'Wealth goal (RM)', type: 'int', min: 10000, max: 1e12 },
