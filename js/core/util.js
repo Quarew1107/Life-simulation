@@ -53,17 +53,23 @@
   };
 
   // ---- Money ----
+  // The currency sign comes from the country pack (U.setCurrency, called by js/data/countries/countries.js).
+  let SYM = 'RM';
+  U.setCurrency = sym => { SYM = sym; };
+  U.sym = () => SYM;
   U.fmtMoney = function (sen) {
-    if (!Number.isFinite(sen)) return 'RM?';
+    if (!Number.isFinite(sen)) return `${SYM}?`;
     const v = sen / 100, a = Math.abs(v), s = v < 0 ? '-' : '';
-    if (a >= 1e9) return `${s}RM${(a / 1e9).toFixed(2)}B`;
-    if (a >= 1e6) return `${s}RM${(a / 1e6).toFixed(2)}M`;
-    if (a >= 1e4) return `${s}RM${(a / 1e3).toFixed(1)}k`;
-    // Under RM10k: "RM9,999" (hand-rolled; toLocaleString is slow in hot paths).
+    if (a >= 1e9) return `${s}${SYM}${(a / 1e9).toFixed(2)}B`;
+    if (a >= 1e6) return `${s}${SYM}${(a / 1e6).toFixed(2)}M`;
+    if (a >= 1e4) return `${s}${SYM}${(a / 1e3).toFixed(1)}k`;
+    // Under 10k: "RM9,999" (hand-rolled; toLocaleString is slow in hot paths).
     const r = Math.round(a);
-    return r >= 1000 ? `${s}RM${Math.floor(r / 1000)},${String(r % 1000).padStart(3, '0')}` : `${s}RM${r}`;
+    return r >= 1000 ? `${s}${SYM}${Math.floor(r / 1000)},${String(r % 1000).padStart(3, '0')}` : `${s}${SYM}${r}`;
   };
-  U.fmtPrice = sen => `RM${(sen / 100).toFixed(sen < 1000 ? 3 : 2)}`; // share prices
+  // A whole amount in full, for fixed figures in texts: U.cur(11820) = "RM11,820".
+  U.cur = amount => `${amount < 0 ? '-' : ''}${SYM}${Math.round(Math.abs(amount)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+  U.fmtPrice = sen => `${SYM}${(sen / 100).toFixed(sen < 1000 ? 3 : 2)}`; // share prices
   U.fmtPct = x => `${Math.round(x * 100)}%`;
 
   U.esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

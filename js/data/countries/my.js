@@ -6,16 +6,16 @@
     code: 'my',
     name: 'Malaysia',
     adj: 'Malaysian',
-    money: { symbol: 'RM', code: 'MYR' },
+    money: { symbol: 'RM', code: 'MYR', name: 'ringgit' },
     content: {
       // Default town name (fictional).
       townName: 'Bandar Rezeki',
-      // People. Mixes: malaysia = DOSM Q4 2025 shares (Malay 58.2%, Chinese 22.2%, other Bumiputera 12.3%, Indian 6.5%, others 0.8%); classic = the original engine.
+      // People. Mixes: national = DOSM Q4 2025 shares (Malay 58.2%, Chinese 22.2%, other Bumiputera 12.3%, Indian 6.5%, others 0.8%); classic = the original engine.
       ethnicities: ['malay', 'chinese', 'indian', 'bumi', 'other'],
       ethnicNames: { malay: 'Malay', chinese: 'Chinese', indian: 'Indian', bumi: 'Other Bumiputera', other: 'Others' },
       ethnicMixes: {
         classic: { keys: ['malay', 'chinese', 'indian'], w: [0.6, 0.27, 0.13] },
-        malaysia: { keys: ['malay', 'chinese', 'bumi', 'indian', 'other'], w: [0.582, 0.222, 0.123, 0.065, 0.008] },
+        national: { keys: ['malay', 'chinese', 'bumi', 'indian', 'other'], w: [0.582, 0.222, 0.123, 0.065, 0.008] },
       },
       names: {
         malay: {
@@ -632,6 +632,7 @@
       exchangeShort: 'Bursa',
       retirement: 'EPF',
       antiCorruption: 'MACC',
+      lockdown: 'Lockdown (MCO)',
     },
     // Taxes (Year-1 RM a year unless noted). LHDN YA2025 resident bands, RM9,000 personal relief, EPF relief (11% up to RM4,000), RM2,000 per child, RM400 rebate up to RM35,000 chargeable income; SME company tax 15/17/24% (24% flat above RM50M revenue); SST or GST 6% by spending category; assessment tax 3% of rent; EIS 0.2% + 0.2%; 2% dividend tax above RM100k; fuel subsidy: px = price multiplier on vehicle costs, cost = treasury bill as a share of vehicle spending (RON95 RM1.99 against ~RM2.60).
     tax: {
@@ -741,14 +742,14 @@
         {
           key: 'drugPolicy',
           name: 'Drug policy',
-          def: 'malaysia',
+          def: 'national',
           options: [
-            ['malaysia', 'Rehab first, prison for repeat'],
+            ['national', 'Rehab first, prison for repeat'],
             ['punitive', 'Punitive (prison)'],
             ['treatment', 'Treatment first'],
             ['decriminalised', 'Decriminalised use'],
           ],
-          soc: { malaysia: -0.2, punitive: -1, treatment: 0.5, decriminalised: 1 },
+          soc: { national: -0.2, punitive: -1, treatment: 0.5, decriminalised: 1 },
         },
         {
           key: 'uniFees',
@@ -800,20 +801,20 @@
         {
           key: 'schools',
           name: 'Public schools',
-          def: 'malaysia',
-          options: [['lean', '9 teachers per 1,000'], ['malaysia', '12 per 1,000 (Malaysia)'], ['generous', '16 per 1,000']],
-          econ: { lean: 0.5, malaysia: 0, generous: -0.5 },
+          def: 'national',
+          options: [['lean', '9 teachers per 1,000'], ['national', '12 per 1,000 (Malaysia)'], ['generous', '16 per 1,000']],
+          econ: { lean: 0.5, national: 0, generous: -0.5 },
         },
         {
           key: 'health',
           name: 'Public healthcare',
-          def: 'malaysia',
+          def: 'national',
           options: [
             ['lean', 'Lean (2.5 nurses, 1 doctor per 1,000)'],
-            ['malaysia', 'Malaysia (3.5 nurses, 1.5 doctors)'],
+            ['national', 'Malaysia (3.5 nurses, 1.5 doctors)'],
             ['generous', 'Generous (5 nurses, 2.2 doctors)'],
           ],
-          econ: { lean: 0.5, malaysia: 0, generous: -0.5 },
+          econ: { lean: 0.5, national: 0, generous: -0.5 },
         },
       ],
       leaderTitles: { president: 'President', mayor: 'Mayor', datuk: 'Datuk Bandar' },
@@ -840,11 +841,30 @@
       trainCost: 500,
       officialGroups: ['malay', 'chinese', 'indian', 'bumi'],
       preferredGroups: ['malay', 'bumi'], // the 'group' hiring/aid preference (Bumiputera)
+      // Money to spare: the leader takes the first step that applies (law, { current: new }).
+      surplus: {
+        cuts: [['incomeTax', { high: 'normal', normal: 'low' }], ['salesTax', { gst6: 'sst' }], ['corpTax', { 30: '24', 24: '17' }]],
+        spends: [['health', { lean: 'national', national: 'generous' }], ['schools', { lean: 'national', national: 'generous' }], ['cashAid', { 0: '100', 100: '300' }], ['fuelSubsidy', { none: 'targeted' }]],
+      },
     },
     // Public servants per 1,000 residents for each law option: teachers; nurses and doctors.
     services: {
-      schools: { lean: 9, malaysia: 12, generous: 16 },
-      health: { lean: [2.5, 1], malaysia: [3.5, 1.5], generous: [5, 2.2] },
+      schools: { lean: 9, national: 12, generous: 16 },
+      health: { lean: [2.5, 1], national: [3.5, 1.5], generous: [5, 2.2] },
+    },
+    // Setup-screen texts that name the country (js/data/params.js; the rest use {cur}/{adj} words).
+    settings: {
+      presets: { national: 'Malaysia today' },
+      preset: { options: { national: 'Malaysia today (calibrated to DOSM data)' }, help: 'Fills the settings below. Malaysia: welfare on, ~1.6 children per woman, ~75-year life expectancy.' },
+      founders: { help: 'Strangers who found the town. The map size follows (100 = a small pekan).' },
+      inflMin: { help: 'Malaysia: 2020 was -1.1%.' },
+      inflMax: { help: 'Malaysia: 2010s ranged 0.7-3.9%, ~2% average.' },
+      fertility: { options: { national: 'Malaysia today (~1.6 children per woman)' } },
+      mortMult: { help: '1 = original engine (~80-year lives), 1.9 = Malaysia (75.3 years). 0 = nobody dies of old age.' },
+      society: { options: { on: 'On (B40/M40/T20, religion, festivals)' } },
+      ethnicMix: { options: { national: 'Malaysia 2025 (Malay, Chinese, other Bumiputera, Indian, others)' } },
+      interfaith: { options: { national: 'Malaysian rule (convert to marry a Muslim)' } },
+      drugPolicy: { options: { national: 'Malaysian mix (rehab first, prison for repeat)' } },
     },
     // Class, religion and community life (js/sim/society.js). Religion ids and their practices
     // (zakat, fasting, Friday prayers) belong to the engine; the pack says which faiths the
@@ -871,6 +891,8 @@
       // Who celebrates each festival (spending, joy): by religion (rel) or by ethnicity (eth).
       celebrates: { raya: { rel: 'islam' }, deepavali: { rel: 'hinduism' }, christmas: { rel: 'christianity' }, cny: { eth: 'chinese' }, gawai: { eth: 'bumi' } },
       classNames: { B40: 'B40 · working class', M40: 'M40 · middle class', T20: 'T20 · upper class' },
+      classShort: { B40: 'B40', M40: 'M40', T20: 'T20' }, // bottom 40%, middle 40%, top 20% of households
+      statsOffice: 'DOSM', cutsYear: 2024,
       // DOSM 2024 national household-income cut-offs (gross, per month) and the hardship line.
       bottom40Max: 5250, top20Min: 11820, hardship: 1500,
       nisab: 25000, // zakat threshold: value of 85 g of gold, roughly RM25k-30k recently
@@ -916,6 +938,8 @@
     },
     // Longer explanations shown in the Government tab.
     notes: {
+      revenue: 'Malaysia ~RM800 incl. oil',
+      events: 'Floods hit low-lying and riverside homes in the north-east monsoon; the treasury pays RM1,000 relief per household (like Bantuan Wang Ihsan). Haze hurts health, most of all for the old and very young.',
       laws: 'Each law is a real lever in the engine: tax rates, the minimum wage on every job, cash aid and basic income paid each month, how many police officers, teachers, nurses and doctors the town employs, how drug users are treated, university fees, whether employers may check records, a hiring preference, whether the bar is open, fuel subsidies and SST or GST.',
       taxes: "Taxes follow Malaysia: LHDN income tax bands (0-30%, RM9,000 relief, RM400 rebate, zakat rebated), SME company tax (15/17/24%), SST inside prices (or GST 6% if the law changes), assessment tax on homes and premises, the 2% dividend tax above RM100k, and EIS contributions. Most residents earn too little to pay income tax, as in Malaysia, so sales and company taxes matter more. Money goes out on public servants' pay, public hospitals, fuel subsidies, welfare, aid, pensions, training, development and interest. A surplus builds a three-month reserve, then development projects, training places and Khazanah Rezeki; a deficit draws on the fund, then borrows. Deep debt brings a hiring freeze and austerity.",
       bank: "Bank Negara sets the Overnight Policy Rate each year (2.75% in 2026): up when inflation runs hot or the economy booms, down in recessions. It sets savings and loan rates, cools or warms business and hiring, and nudges inflation. EPF savings earn a yearly dividend (about 5.5%). Khazanah Rezeki invests the treasury's surplus in the Bursa index and the GLCs, returns 4% of its value each year, and is drawn on before the town borrows.",

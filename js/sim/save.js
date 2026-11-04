@@ -84,7 +84,7 @@
     const val = (x, owner, key) => {
       if (x === null || typeof x !== 'object') return x;
       if ('$r' in x) return out[x.$r];
-      if ('$c' in x) { const o = ci.byPath.get(x.$c); if (!o) throw new Error(`Save: missing content ${x.$c}`); return o; }
+      if ('$c' in x) { const o = ci.byPath.get(x.$c) || ci.byPath.get(x.$c.replace(/\.malaysia/g, '.national')); if (!o) throw new Error(`Save: missing content ${x.$c}`); return o; }
       if ('$u' in x) return undefined;
       if ('$n' in x) return Number(x.$n);
       if ('$fn' in x) { fns.push({ owner, key, name: x.$fn }); return null; }
@@ -105,6 +105,7 @@
     }
     const w = val(data.root);
     if (LES.Region && w instanceof LES.Region) { // a region of towns: reconnect each town to it
+      LES.upgradeConfig(w.base);
       w.towns.forEach((t, i) => { t.afterLoad(); LES.Region.attach(t, w, i, t.townName); });
       return w;
     }

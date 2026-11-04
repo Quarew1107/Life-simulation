@@ -93,7 +93,7 @@
 
   // Plain-text table (Node) of the mean over seeds.
   Cal.table = function (rows) {
-    const lines = [`Calibration over ${rows.length} seed(s), ${rows[0] ? rows[0].years : 0} years (Malaysia targets)`];
+    const lines = [`Calibration over ${rows.length} seed(s), ${rows[0] ? rows[0].years : 0} years (${LES.Countries.pack.name} targets)`];
     for (const k of Object.keys(Cal.TARGETS)) {
       const t = Cal.TARGETS[k], vals = rows.map(r => r[k]).filter(Number.isFinite);
       const v = vals.length ? U.sum(vals) / vals.length : NaN;

@@ -236,8 +236,7 @@
     // Money to spare: the leader cuts a tax or expands a service, as their politics lean.
     const annual = LES.Fiscal.avgRevenue(w) * 12, fund = LES.Fiscal.fundValue(w);
     if (pres && g.debt <= 0 && fund > 2.5 * annual && !g.frozen) {
-      const cuts = [['incomeTax', { high: 'normal', normal: 'low' }], ['salesTax', { gst6: 'sst' }], ['corpTax', { 30: '24', 24: '17' }]];
-      const spends = [['health', { lean: 'malaysia', malaysia: 'generous' }], ['schools', { lean: 'malaysia', malaysia: 'generous' }], ['cashAid', { 0: '100', 100: '300' }], ['fuelSubsidy', { none: 'targeted' }]];
+      const { cuts, spends } = LES.Countries.pack.gov.surplus; // [law, { from: to }] steps
       const order = econ > 0.15 ? cuts.concat(spends) : econ < -0.15 ? spends.concat(cuts) : (R.next() < 0.5 ? cuts : spends).concat(R.next() < 0.5 ? spends : cuts);
       for (const [key, map] of order) {
         const to = map[g.laws[key]];
@@ -262,7 +261,7 @@
     }
   };
 
-  LES.Countries.require('gov.council', 'gov.trainCost', 'gov.officialGroups', 'names.fund', 'names.antiCorruption');
+  LES.Countries.require('gov.council', 'gov.trainCost', 'gov.officialGroups', 'gov.surplus', 'names.fund', 'names.antiCorruption');
   LES.Countries.on('council', K => {
     for (const k of Object.keys(CO.ROLES)) delete CO.ROLES[k];
     Object.assign(CO.ROLES, K.gov.council); CO.TRAIN_COST = K.gov.trainCost;

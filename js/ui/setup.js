@@ -13,13 +13,13 @@
 
   // The cards: two base worlds, then the scenarios (built on Malaysia today).
   function cards() {
-    const SC = LES.Scenarios;
+    const SC = LES.Scenarios, F = LES.Countries.fill;
     return [
-      { key: 'malaysia', scenario: 'none', preset: 'malaysia', name: 'Malaysia today', icon: 'flag', short: 'A town of strangers in today\'s Malaysia, calibrated to official data.',
-        desc: 'Malaysian prices, wages, taxes, family life, religion, crime and an elected town government. Start here if this is your first world.', watch: ['Who reaches RM100 million, and why', 'How class, education and luck shape lives across generations', 'Elections, laws and what they change'] },
-      ...SC.LIST.map(s => ({ key: s.id, scenario: s.id, preset: 'malaysia', name: s.name, icon: s.icon, short: s.short, desc: s.desc, watch: s.watch, cfg: s.cfg })),
+      { key: 'national', scenario: 'none', preset: 'national', name: LES.PRESETS.national.name, icon: 'flag', short: F('A town of strangers in today\'s {country}, calibrated to official data.'),
+        desc: F('{adj} prices, wages, taxes, family life, religion, crime and an elected town government. Start here if this is your first world.'), watch: [F('Who reaches {goal}, and why'), 'How class, education and luck shape lives across generations', 'Elections, laws and what they change'] },
+      ...SC.LIST.map(s => ({ key: s.id, scenario: s.id, preset: 'national', name: s.name, icon: s.icon, short: s.short, desc: s.desc, watch: s.watch, cfg: s.cfg })),
       { key: 'classic', scenario: 'none', preset: 'classic', name: 'Classic rules', icon: 'book-open', short: 'The original engine: harsh rules, no society, crime or government.',
-        desc: 'No welfare, a higher birth rate and longer lives, a grid town, three ethnic groups, and none of the newer systems. For comparing with the original design.', watch: ['Survival without a safety net', 'The original RM100 million race'] },
+        desc: 'No welfare, a higher birth rate and longer lives, a grid town, three ethnic groups, and none of the newer systems. For comparing with the original design.', watch: ['Survival without a safety net', F('The original {goal} race')] },
     ];
   }
 
@@ -78,12 +78,13 @@
       card.classList.remove('wide');
       card.classList.add('setup');
       LES.UI.bursaOpen = false;
-      let chosen = base.scenario && base.scenario !== 'none' ? base.scenario : (LES.presetOf(base) === 'classic' ? 'classic' : 'malaysia');
+      const F = LES.Countries.fill;
+      let chosen = base.scenario && base.scenario !== 'none' ? base.scenario : (LES.presetOf(base) === 'classic' ? 'classic' : 'national');
       const adv = META.filter(m => !m.essential && m.group !== 'Scenario');
       card.innerHTML = `
         <h1>${first ? 'Life Evolution Simulator' : 'Create a new world'}</h1>
         <p class="lead">${first
-          ? 'A town of strangers, each born different, each chasing RM100 million. Pick a world, set up your town, then watch who makes it, and why.'
+          ? F('A town of strangers, each born different, each chasing {goal}. Pick a world, set up your town, then watch who makes it, and why.')
           : 'Pick a world and set up the town. The current world will be replaced.'}</p>
         <h2 class="set-step"><span>1</span> Choose a world</h2>
         <div class="scn-grid" role="radiogroup" aria-label="World">${CARDS.map(c => `<button type="button" class="scn-card${c.key === 'classic' ? ' mini' : ''}" role="radio" data-card="${c.key}">${LES.icon(c.icon, 22)}<b>${esc(c.name)}</b><small>${esc(c.short)}</small></button>`).join('')}</div>

@@ -31,6 +31,8 @@
   // Class ids are the engine's (bottom 40%, middle 40%, top 20% of households); names come from the pack.
   S.CLASSES = ['B40', 'M40', 'T20'];
   S.CLASS_NAMES = {};
+  S.CLASS_SHORT = {}; // 'B40' etc. as the country says it
+  S.short = c => S.CLASS_SHORT[c] || c;
   S.CLASS_COLOURS = { B40: '#f4a261', M40: '#5aa9e6', T20: '#f2c14e' };
   // National household-income cut-offs (gross, per month), hardship line and zakat threshold.
   S.DOSM_B40_MAX = 0; S.DOSM_T20_MIN = 0; S.HARDSHIP_RM = 0; S.NISAB_RM = 0;
@@ -48,7 +50,7 @@
     if (how === 'child' && p.parents.length === 2) {
       const [f, m] = p.parents.map(id => w.people[id]);
       if (f.rel === m.rel) p.rel = f.rel;
-      else if (w.cfg.interfaith === 'malaysia' && LAW_REL && (f.rel === LAW_REL || m.rel === LAW_REL)) p.rel = LAW_REL;
+      else if (w.cfg.interfaith === 'national' && LAW_REL && (f.rel === LAW_REL || m.rel === LAW_REL)) p.rel = LAW_REL;
       else p.rel = R.next() < 0.5 ? f.rel : m.rel;
       p.relig = Math.round(U.clamp(0.5 * ((f.relig || 0) + (m.relig || 0)) / 2 + 0.5 * R.normal(relOf(p).mean, 20), 0, 100));
     } else {
@@ -171,7 +173,7 @@
     coupled(w, a, b) {
       if (a.rel === b.rel) return;
       w.society.interfaith++;
-      if (w.cfg.interfaith !== 'malaysia' || !LAW_REL) return;
+      if (w.cfg.interfaith !== 'national' || !LAW_REL) return;
       const muslim = a.rel === LAW_REL ? a : b.rel === LAW_REL ? b : null;
       if (!muslim) return;
       const other = muslim === a ? b : a, from = S.RELIGIONS[other.rel].name;
@@ -333,6 +335,7 @@
     S.REL_KEYS.length = 0; S.REL_KEYS.push(...Object.keys(so.religions));
     put(S.REL_BY_ETH, so.relByEth);
     put(S.CLASS_NAMES, so.classNames);
+    put(S.CLASS_SHORT, so.classShort || {});
     S.DOSM_B40_MAX = so.bottom40Max; S.DOSM_T20_MIN = so.top20Min; S.HARDSHIP_RM = so.hardship; S.NISAB_RM = so.nisab;
     NON_SHARIAH = new Set(so.nonShariah || []);
     CEL = so.celebrates || {};

@@ -25,20 +25,20 @@
     };
     el.innerHTML = `
       <div class="stat-grid">
-        <div class="stat"><div class="v">${U.fmtMoney(st.cut40)}</div><div class="l">B40 ceiling (household/mo, Y1 RM) · DOSM RM5,250</div></div>
-        <div class="stat"><div class="v">${U.fmtMoney(st.cut80)}</div><div class="l">T20 floor · DOSM RM11,820</div></div>
-        <div class="stat"><div class="v">${pct(st.t20share)}</div><div class="l">of all income goes to the T20</div></div>
-        <div class="stat"><div class="v">${pct(st.belowB40)}</div><div class="l">households below RM5,250 (Malaysia: 40%)</div></div>
-        <div class="stat"><div class="v">${w.living.filter(p => p.alive && p.elite).length}</div><div class="l">T1 elite (top 1%, RM1M+)</div></div>
+        <div class="stat"><div class="v">${U.fmtMoney(st.cut40)}</div><div class="l">${S.short('B40')} ceiling (household/mo, Y1 ${U.sym()}) · ${LES.Countries.pack.society.statsOffice} ${U.cur(S.DOSM_B40_MAX)}</div></div>
+        <div class="stat"><div class="v">${U.fmtMoney(st.cut80)}</div><div class="l">${S.short('T20')} floor · ${LES.Countries.pack.society.statsOffice} ${U.cur(S.DOSM_T20_MIN)}</div></div>
+        <div class="stat"><div class="v">${pct(st.t20share)}</div><div class="l">of all income goes to the ${S.short('T20')}</div></div>
+        <div class="stat"><div class="v">${pct(st.belowB40)}</div><div class="l">households below ${U.cur(S.DOSM_B40_MAX)} (${LES.Countries.pack.name}: 40%)</div></div>
+        <div class="stat"><div class="v">${w.living.filter(p => p.alive && p.elite).length}</div><div class="l">T1 elite (top 1%, ${U.sym()}1M+)</div></div>
         <div class="stat"><div class="v">${w.living.filter(p => p.alive && p.adult && p.hardship).length}</div><div class="l">adults in hardship</div></div>
       </div>
       <div class="card"><h3>Class lines <small class="muted">household income, Year-1 RM · dashed = DOSM 2024</small></h3><canvas class="chart" id="so-cut"></canvas>
-        <div class="note">Class is calculated every month from household income (head + partner), the way DOSM defines B40, M40 and T20, so people move between classes as their lives change.</div></div>
+        <div class="note">Class is calculated every month from household income (head + partner), the way ${LES.Countries.pack.society.statsOffice} defines ${S.short('B40')}, ${S.short('M40')} and ${S.short('T20')}, so people move between classes as their lives change.</div></div>
       <div class="card"><h3>Social mobility <small class="muted">household class at 12 → own class at 35</small></h3>
         <table class="cmp"><tr><th>Grew up</th>${S.CLASSES.map(c => `<th>${c}</th>`).join('')}<th>n</th></tr>${S.CLASSES.map(mobRow).join('')}</table>
         <div class="note">${mob.n ? `Each row adds up to 100%. Bold = stayed in the class they grew up in. ${mob.n} people so far.` : 'Fills in once children born here reach 35.'} Mobility is one of the most telling results: compare it across seeds and settings.</div></div>
       <div class="card"><h3>Ethnic groups <small class="muted">adults alive now</small></h3>
-        <table class="cmp"><tr><th>Group</th><th>Adults</th><th>Median NW</th><th>Median income</th><th>B40</th><th>T20</th><th>Degree</th></tr>
+        <table class="cmp"><tr><th>Group</th><th>Adults</th><th>Median NW</th><th>Median income</th><th>${S.short('B40')}</th><th>${S.short('T20')}</th><th>Degree</th></tr>
         ${C.ETHNICITIES.filter(k => eth[k]).map(k => { const g = eth[k]; return `<tr><td>${esc(C.ETHNIC_NAMES[k])}</td><td>${g.n}</td><td>${U.fmtMoney(g.medNw)}</td><td>${U.fmtMoney(g.medInc)}</td><td>${pct(g.b40 / g.n)}</td><td>${pct(g.t20 / g.n)}</td><td>${pct(g.uni / g.n)}</td></tr>`; }).join('')}</table>
         <div class="note">Every group starts from the same ability distributions; groups differ only in names, festivals and religion mix. Gaps that appear come from luck, family history and small samples, so check them across many seeds before reading anything into them.</div></div>
       <div class="card"><h3>Religion <small class="muted">${fest ? `🎉 ${esc(fest.name)} now · ` : ''}${ram ? '🌙 Ramadan · ' : ''}${h.length ? '' : ''}members and community funds</small></h3>
@@ -58,10 +58,10 @@
     if (h.length) {
       LES.Charts.line($('so-cut'), {
         series: [
-          { label: 'B40 ceiling', color: '#f4a261', data: h.map(r => [r.day / 365, r.soc.cut40]) },
-          { label: 'T20 floor', color: '#f2c14e', data: h.map(r => [r.day / 365, r.soc.cut80]) },
-          { label: 'DOSM B40', color: '#f4a261', dash: [4, 3], data: [[h[0].day / 365, U.RM(S.DOSM_B40_MAX)], [last.day / 365, U.RM(S.DOSM_B40_MAX)]] },
-          { label: 'DOSM T20', color: '#f2c14e', dash: [4, 3], data: [[h[0].day / 365, U.RM(S.DOSM_T20_MIN)], [last.day / 365, U.RM(S.DOSM_T20_MIN)]] },
+          { label: `${S.short('B40')} ceiling`, color: '#f4a261', data: h.map(r => [r.day / 365, r.soc.cut40]) },
+          { label: `${S.short('T20')} floor`, color: '#f2c14e', data: h.map(r => [r.day / 365, r.soc.cut80]) },
+          { label: `${LES.Countries.pack.society.statsOffice} ${S.short('B40')}`, color: '#f4a261', dash: [4, 3], data: [[h[0].day / 365, U.RM(S.DOSM_B40_MAX)], [last.day / 365, U.RM(S.DOSM_B40_MAX)]] },
+          { label: `${LES.Countries.pack.society.statsOffice} ${S.short('T20')}`, color: '#f2c14e', dash: [4, 3], data: [[h[0].day / 365, U.RM(S.DOSM_T20_MIN)], [last.day / 365, U.RM(S.DOSM_T20_MIN)]] },
         ], yFmt: LES.Charts.fmtAxisMoney, xFmt: xs, yMin: 0,
       });
       LES.Charts.line($('so-rel'), { series: S.REL_KEYS.filter(k => relCount[k]).map(k => ({ label: S.RELIGIONS[k].name, color: S.RELIGIONS[k].colour, data: h.map(r => [r.day / 365, r.soc.rel[k] || 0]) })), xFmt: xs, yMin: 0 });

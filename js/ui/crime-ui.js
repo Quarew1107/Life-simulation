@@ -9,7 +9,7 @@
   function policeCard(w, st) {
     const g = w.gov, solved = st.crimesTotal ? st.solvedTotal / st.crimesTotal : 0, kpd = g && g.officials ? g.officials.police : null, tc = st.town || {};
     return `<div class="card"><h3>Police and crime</h3>
-      <div class="grid2"><div><span class="muted">Crimes solved (all time)</span><span>${Math.round(solved * 100)}% (Malaysia ~65%)</span></div><div><span class="muted">Felt chance of being caught</span><span>${Math.round((st.certainty === undefined ? 0.5 : st.certainty) * 100)}%</span></div>
+      <div class="grid2"><div><span class="muted">Crimes solved (all time)</span><span>${Math.round(solved * 100)}% (${LES.Countries.pack.name} ~${Math.round(LES.Countries.pack.calibration.clearance.target * 100)}%)</span></div><div><span class="muted">Felt chance of being caught</span><span>${Math.round((st.certainty === undefined ? 0.5 : st.certainty) * 100)}%</span></div>
         <div><span class="muted">Officers on duty</span><span>${g ? g.officers : '–'}</span></div><div><span class="muted">Force capacity</span><span>${Math.round(LES.Crime.capacity(w) * 100)}%</span></div>
         ${g ? `<div><span class="muted">Ketua Polis Daerah</span><span>${kpd ? (kpd.id >= 0 ? UI.plink(w, kpd.id) : esc(kpd.name)) + ` · competence ${Math.round(kpd.comp * 100)}` : 'vacant'}</span></div>` : ''}
         <div><span class="muted">Town unemployment / inequality</span><span>${Math.round((tc.unemp || 0) * 1000) / 10}% / ${(tc.gini || 0).toFixed(2)}</span></div></div>
@@ -40,10 +40,10 @@
         <div class="stat"><div class="v">${live.length}</div><div class="l">gangs active</div></div>
       </div>
       <div class="card"><h3>Rates per 100,000 <small class="muted">last 12 months · intensity “${esc(w.cfg.crime)}”</small></h3>
-        <table class="cmp"><tr><th></th><th>This town</th><th>Malaysia${k !== 1 ? ' ×' + k : ''}</th></tr>
+        <table class="cmp"><tr><th></th><th>This town</th><th>${LES.Countries.pack.name}${k !== 1 ? ' ×' + k : ''}</th></tr>
           ${row('Index crime', rates.index, CR.REF.index)}${row('· property', rates.property, CR.REF.property)}${row('· violent', rates.violent, CR.REF.violent)}
           ${row('Murder', rates.murder, CR.REF.murder)}${row('Drug users (now)', last ? last.cr.users : 0, CR.REF.users)}${row('Prisoners (now)', last ? last.cr.prison : 0, CR.REF.prison)}</table>
-        <div class="note">A town of a few hundred people is tiny: at real Malaysian rates it would see about one crime every two years. "Lively" multiplies the rates by 10 so the system is visible; "Realistic" uses them as they are.</div></div>
+        <div class="note">A town of a few hundred people is tiny: at real ${LES.Countries.pack.adj} rates it would see about one crime every two years. "Lively" multiplies the rates by 10 so the system is visible; "Realistic" uses them as they are.</div></div>
       <div class="card"><h3>Crime over time <small class="muted">per 100k a year</small></h3><canvas class="chart" id="cr-rate"></canvas></div>
       ${policeCard(w, st)}
       <div class="card"><h3>Prison and drugs</h3><canvas class="chart" id="cr-pris"></canvas>
@@ -58,7 +58,7 @@
           <div><span class="muted">Drug policy</span><span>${esc((LES.SETTINGS_META.find(m => m.key === 'drugPolicy').options.find(o => o[0] === (w.policy ? w.policy.drugPolicy : w.cfg.drugPolicy)) || [, w.cfg.drugPolicy])[1])}</span></div>
         </div></div>
       <div class="card"><h3>Who are the victims? <small class="muted">by household class</small></h3>
-        <div class="grid2">${['B40', 'M40', 'T20'].map(c => `<div><span class="muted">${c}</span><span>${Math.round((vic[c] || 0) / vicTotal * 100)}%</span></div>`).join('')}</div>
+        <div class="grid2">${['B40', 'M40', 'T20'].map(c => `<div><span class="muted">${LES.Society ? LES.Society.short(c) : c}</span><span>${Math.round((vic[c] || 0) / vicTotal * 100)}%</span></div>`).join('')}</div>
         <div class="note">Thieves look for cash and burglars for bigger homes, so the better-off are targeted more; scammers go for older, risk-tolerant people.</div></div>
       <div class="card"><h3>Gangs <small class="muted">${st.gangs.length} formed so far · ${st.crackdowns} police raids · ${st.gangFights} turf fights</small></h3>
         ${live.length ? `<table class="cmp"><tr><th>Gang</th><th>Leader</th><th>Members</th><th>Turf</th><th>Funds</th></tr>${live.map(g => `<tr><td><span style="color:${g.colour}">■</span> ${esc(g.name)}${LES.Crime.linkText(w, g) ? `<br><small class="muted">${esc(LES.Crime.linkText(w, g))}</small>` : ''}</td><td>${UI.plink(w, g.leader)}</td><td>${g.members.length}</td><td>${g.turf.length} block${g.turf.length > 1 ? 's' : ''}</td><td>${U.fmtMoney(g.cash)}</td></tr>`).join('')}</table>` : '<p class="note">No gang is active right now.</p>'}

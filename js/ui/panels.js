@@ -120,7 +120,7 @@
       [w.counts.living, 'people', `${w.counts.living} people in town (${w.counts.children} children)`],
       [adults ? U.fmtPct(employed / adults) : '–', 'employed', 'Share of adults with a job'],
       [w.biz.filter(b => b.open).length, 'firms', 'Open businesses'],
-      [millionaires, 'millionaires', `Adults worth RM1M+${w.cfg.goalMode === 'real' ? ' in Year-1 money' : ''}`],
+      [millionaires, 'millionaires', `Adults worth ${U.sym()}1M+${w.cfg.goalMode === 'real' ? ' in Year-1 money' : ''}`],
       [h ? h.gini.toFixed(2) : '–', 'Gini', 'Wealth inequality: 0 = everyone equal, 1 = one person owns everything'],
       [`${(w.infl * 100).toFixed(1)}%`, 'inflation', `This year's inflation; prices are ×${w.price.toFixed(2)} Year-1 levels`],
       [`${(w.mkt.idx).toFixed(0)}`, LES.Countries.pack.names.exchangeShort, `${LES.Countries.pack.names.exchange} index (started at 100); residents drive ${(w.mkt.alpha * 100).toFixed(0)}% of price moves`],
@@ -490,7 +490,7 @@
       <div class="card"><h3>Population</h3><canvas class="chart" id="st-pop"></canvas></div>
       <div class="card"><h3>Work</h3><canvas class="chart" id="st-work"></canvas></div>
       <div class="card"><h3>${LES.Countries.pack.names.exchange} <small class="muted">index (log) · town influence now ${(w.mkt.alpha * 100).toFixed(1)}%</small></h3><canvas class="chart" id="st-mkt"></canvas>
-        <div class="note">${st.panicSells} panic sell-offs so far. Town influence = residents' holdings ÷ (holdings + RM${(w.cfg.marketOutsideRM / 1e6).toFixed(0)}M outside market), capped at ${w.cfg.marketInfluenceCap}%.</div></div>
+        <div class="note">${st.panicSells} panic sell-offs so far. Town influence = residents' holdings ÷ (holdings + ${U.sym()}${(w.cfg.marketOutsideRM / 1e6).toFixed(0)}M outside market), capped at ${w.cfg.marketInfluenceCap}%.</div></div>
       <div class="card"><h3>Prices & inflation <small class="muted">prices ×${w.price.toFixed(2)} since Year 1</small></h3><canvas class="chart" id="st-infl"></canvas></div>
       <div class="card"><h3>Migration <small class="muted">pressure ${w.townMood.pressure.toFixed(2)} · opportunity ${w.townMood.opportunity.toFixed(2)} · homes ${(w.crowding * 100).toFixed(0)}% full</small></h3><canvas class="chart" id="st-mig"></canvas>
         <div class="grid2"><div><span class="muted">Moved in</span><span>${st.immigrants}</span></div><div><span class="muted">Moved out</span><span>${st.emigrants}</span></div><div><span class="muted">Came back</span><span>${st.returns}</span></div><div><span class="muted">Living away now</span><span>${w.counts.away || 0}</span></div></div></div>

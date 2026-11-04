@@ -10,7 +10,7 @@
 
   class World {
     constructor(cfgIn) {
-      this.cfg = Object.assign({}, LES.DEFAULTS, cfgIn || {});
+      this.cfg = LES.upgradeConfig(Object.assign({}, LES.DEFAULTS, cfgIn || {}));
       const v = LES.validateConfig(this.cfg);
       if (!v.blockers.length) LES.Countries.ensure(this.cfg); // national tables before anything reads them
       if (v.blockers.length) throw new Error('Invalid settings: ' + v.blockers.join(' '));
@@ -78,6 +78,7 @@
       Object.defineProperty(this, 'sys', { value: LES.Systems.active(this.cfg), enumerable: false, writable: true, configurable: true });
     }
     afterLoad() {
+      LES.upgradeConfig(this.cfg); // 'malaysia' -> 'national' (saves from before country packs)
       this.attachSystems();
       if (this.gov && LES.Gov.upgrade) LES.Gov.upgrade(this); // saves from before the fiscal update
     }

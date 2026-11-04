@@ -48,6 +48,16 @@
     return missing;
   };
 
+  // Country words in texts: {cur} money sign, {currency} its name, {adj} 'Malaysian', {country} 'Malaysia',
+  // {goal} the default wealth goal ('RM100 million').
+  K.fill = text => {
+    const p = K.pack;
+    return text == null || !p ? text : String(text).replace(/\{cur\}/g, p.money.symbol).replace(/\{currency\}/g, p.money.name || p.money.code)
+      .replace(/\{adj\}/g, p.adj).replace(/\{country\}/g, p.name)
+      .replace(/\{goal\}/g, () => `${p.money.symbol}${Math.round((LES.DEFAULTS ? LES.DEFAULTS.goalRM : 1e8) / 1e6)} million`);
+  };
+  // Money sign for the formatters (core/util.js).
+  K.on('money', pack => LES.U.setCurrency(pack.money.symbol));
   // The festival calendar (core/util.js loads before this registry).
   K.require('calendar.festivals');
   K.on('calendar', pack => LES.Calendar.setup(pack.calendar));

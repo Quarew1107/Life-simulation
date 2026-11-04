@@ -34,7 +34,7 @@
         <div class="note">${LES.Countries.pack.notes.laws}</div></div>
       <div class="card"><h3>Treasury <small class="muted">Year-1 money</small></h3>
         <div class="stat-grid"><div class="stat"><div class="v">${U.fmtMoney(g.treasury.cash)}</div><div class="l">in the treasury</div></div><div class="stat"><div class="v ${g.debt ? 'neg' : ''}">${U.fmtMoney(g.debt)}</div><div class="l">public debt</div></div><div class="stat"><div class="v">${U.fmtMoney(LES.Fiscal.fundValue(w))}</div><div class="l">${LES.Countries.pack.names.fund} (sovereign fund)</div></div>
-          <div class="stat"><div class="v">${g.last ? U.fmtMoney(g.last.revTotal / Math.max(1, w.counts.living)) : '–'}</div><div class="l">revenue per resident / month (Malaysia ~RM800 incl. oil)</div></div>
+          <div class="stat"><div class="v">${g.last ? U.fmtMoney(g.last.revTotal / Math.max(1, w.counts.living)) : '–'}</div><div class="l">revenue per resident / month (${LES.Countries.pack.notes.revenue})</div></div>
           <div class="stat"><div class="v">${g.last ? U.fmtMoney(g.last.federal || 0) : '–'}</div><div class="l">sent to the federal government last month (70% of local company tax)</div></div></div>
         <canvas class="chart" id="gv-tre"></canvas>
         ${g.last ? `<table class="cmp"><tr><th>Last month in</th><th>${U.fmtMoney(g.last.revTotal)}</th><th>Last month out</th><th>${U.fmtMoney(g.last.spendTotal)}</th></tr>
@@ -49,7 +49,7 @@
         <div class="note">Voters weigh what each promise would mean for them (people with more education judge this better), their left-right and conservative-liberal leanings, the leader's record, shared identity, charisma and campaign spending, and then decide whether to vote at all.</div></div>` : ''}
       ${g.elections.length > 1 ? `<div class="card"><h3>Past elections</h3><ul class="list-plain">${g.elections.slice().reverse().slice(1, 12).map(e => { const win = e.cands.find(c => c.id === e.winner); return `<li><span>${U.fmtMonthYear(e.day)} · ${UI.plink(w, e.winner)}${win && win.incumbent ? ' (re-elected)' : ''}</span><span class="muted">${win ? win.votes : 0}/${e.voted} votes · turnout ${e.eligible ? pct(e.voted / e.eligible) : '–'}</span></li>`; }).join('')}</ul></div>` : ''}
       <div class="card"><h3>Town events</h3><div class="grid2"><div><span class="muted">Monsoon floods</span><span>${g.floods}</span></div><div><span class="muted">Haze episodes</span><span>${g.hazes}</span></div><div><span class="muted">Inheritance tax collected</span><span>${U.fmtMoney(g.estateTaxTotal)}</span></div><div><span class="muted">Public money stolen</span><span>${U.fmtMoney(g.skimmed)}</span></div></div>
-        <div class="note">Floods hit low-lying and riverside homes in the north-east monsoon; the treasury pays RM1,000 relief per household (like Bantuan Wang Ihsan). Haze hurts health, most of all for the old and very young.</div></div>`;
+        <div class="note">${LES.Countries.pack.notes.events}</div></div>`;
     if (h.length) {
       LES.Charts.line($('gv-appr'), { series: [{ label: 'Approval %', color: '#3ec7b5', data: h.map(r => [r.day / 365, r.gov.approval]) }], xFmt: xs, yMin: 0 });
       LES.Charts.line($('gv-q'), { series: [{ label: 'Schools', color: '#b892ff', data: h.map(r => [r.day / 365, (r.gov.eduQ || 1) * 100]) }, { label: 'Healthcare', color: '#3ec7b5', data: h.map(r => [r.day / 365, (r.gov.healthQ || 1) * 100]) }, { label: 'Infrastructure', color: '#f4a261', data: h.map(r => [r.day / 365, (r.gov.dev || 0) * 100]) }], xFmt: xs, yMin: 0 });
@@ -92,7 +92,7 @@
       <canvas class="chart" id="gv-q"></canvas>
       <h3 style="margin-top:8px">Private providers</h3>
       ${priv.length ? `<ul class="list-plain">${priv.map(b => `<li><span><b>${esc(b.name)}</b> <span class="muted">${esc(b.typeDef.name)} · owner ${UI.plink(w, b.founderId)} · ${w.living.filter(p => p.alive && p.job && p.job.biz === b.id).length} staff${b.type === 'privschool' ? ` · ${w.living.filter(p => p.alive && p.school === b.id).length} pupils from town` : ''}</span></span><span>${U.fmtMoney(b.lastRevenue)}/mo</span></li>`).join('')}</ul>` : '<p class="note">None yet. A doctor can open a clinic in a shoplot; a rich resident can build a private school (one per ~700 residents) or a private hospital (one per ~1,200) on an empty lot.</p>'}
-      <div class="note">Teachers, nurses, doctors and police are paid by the treasury; the laws set how many posts there are. Quality compares staffing with Malaysian norms: better schools raise children's abilities by adulthood, better healthcare lowers mortality. Private schools and hospitals pay their own staff. ${pupils} children attend private school; families pay the fees, and richer patients may pay for private care.</div></div>`;
+      <div class="note">Teachers, nurses, doctors and police are paid by the treasury; the laws set how many posts there are. Quality compares staffing with ${LES.Countries.pack.adj} norms: better schools raise children's abilities by adulthood, better healthcare lowers mortality. Private schools and hospitals pay their own staff. ${pupils} children attend private school; families pay the fees, and richer patients may pay for private care.</div></div>`;
   }
 
   // Bank Negara, the sovereign fund and government-linked companies.
