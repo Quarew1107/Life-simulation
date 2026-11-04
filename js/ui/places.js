@@ -13,7 +13,7 @@
     const app = UI.app, w = app.world, el = $('tab-place');
     const id = app.renderer.selectedBuilding;
     const b = id >= 0 ? w.town.buildings[id] : null;
-    if (!b) { el.innerHTML = '<div class="card"><h3>Places</h3><p class="muted" style="margin:0">Click any building on the map to see who owns it, who lives or works there, and who is there right now. Click the Bursa to open the stock market.</p></div>'; return; }
+    if (!b) { el.innerHTML = '<div class="card"><h3>Places</h3><p class="muted" style="margin:0">Click any building on the map to see who owns it, who lives or works there, and who is there right now. Click the ' + LES.Countries.pack.names.exchangeShort + ' to open the stock market.</p></div>'; return; }
     const title = b.label || KIND_NAMES[b.kind] || b.kind;
     const t = app.dayFrac * 1440, slot = t < LES.SLOT_B ? 0 : 1;
     const here = w.living.filter(p => p.alive && p.plan && p.plan[slot] && p.plan[slot].loc === b.id && !(p.plan[slot].act === 'REST' && t > LES.SLOT_END));
@@ -97,9 +97,9 @@
     const trades = mk.trades.slice(-14).reverse();
     const ranges = [[21, '1M'], [261, '1Y'], [261 * 10, '10Y'], [1e9, 'All']];
     card.innerHTML = `
-      <div class="bursa-head"><h1>Bursa Rezeki</h1><button class="ghost" id="bursa-close">Close</button></div>
+      <div class="bursa-head"><h1>${LES.Countries.pack.names.exchange}</h1><button class="ghost" id="bursa-close">Close</button></div>
       <div class="stat-grid">
-        <div class="stat"><div class="v">${mk.idx.toFixed(1)}</div><div class="l">Bursa index (equal-weighted)</div></div>
+        <div class="stat"><div class="v">${mk.idx.toFixed(1)}</div><div class="l">${LES.Countries.pack.names.exchangeShort} index (equal-weighted)</div></div>
         <div class="stat"><div class="v">${pct(chg(21))} / ${pct(chg(261))}</div><div class="l">1 month / 1 year</div></div>
         <div class="stat"><div class="v">${(mk.alpha * 100).toFixed(1)}%</div><div class="l">town influence on prices</div></div>
       </div>
@@ -123,7 +123,7 @@
     } else {
       const data = [];
       for (let i = from; i < len; i += step) data.push([days[i] / 365, mk.idxHist[i]]);
-      series.push({ label: 'Bursa index', color: '#57d38c', data });
+      series.push({ label: `${LES.Countries.pack.names.exchangeShort} index`, color: '#57d38c', data });
     }
     LES.Charts.line($('bursa-chart'), { series, xFmt: x => (UI.bursa.range <= 261 ? U.fmtMonthYear(Math.round(x * 365)) : `Y${Math.floor(x) + 1}`), yFmt: v => (v >= 100 ? v.toFixed(0) : v.toFixed(2)), bands: UI.regimeBands(w) });
     $('bursa-close').onclick = UI.closeBursa;

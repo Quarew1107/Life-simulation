@@ -18,13 +18,9 @@
   const U = LES.U, C = LES.C, P = LES.P;
   const CO = LES.Council = {};
 
-  CO.ROLES = {
-    treasurer: { title: 'Bendahari Bandaraya', en: 'City Treasurer', does: 'Collects taxes and splits the budget. A weak or corrupt treasurer loses revenue to evasion and development money to waste.' },
-    police: { title: 'Ketua Polis Daerah', en: 'District Police Chief', does: 'Leads the police: how many cases get solved and how hard gangs are pushed.' },
-    community: { title: 'Pengarah Pembangunan Masyarakat', en: 'Community Development Director', does: 'Runs cash aid, job-loss benefit and training places for people out of work.' },
-  };
+  CO.ROLES = {}; // gov.council of the country pack: title, English title, what the post does
   CO.ORDER = ['treasurer', 'police', 'community'];
-  CO.TRAIN_COST = 500;   // Year-1 RM per trainee per month (HRD Corp-style courses)
+  CO.TRAIN_COST = 500;   // per trainee per month, Year-1 money (gov.trainCost; Malaysia: HRD Corp-style courses)
   CO.TRAIN_MONTHS = 4;
   const PROJECTS = ['road resurfacing', 'drainage and flood mitigation', 'street lighting', 'a new bus route', 'park upgrades', 'covered walkways', 'a market hall renovation', 'public Wi-Fi', 'a community library corner', 'river clean-up'];
 
@@ -97,7 +93,7 @@
     const pres = g.president >= 0 ? w.people[g.president] : null;
     if (!pick) {
       if (role === 'police') { // no senior officer in town: one is posted in from outside
-        const eth = R.pick(['malay', 'chinese', 'indian', 'bumi']), N = C.NAMES[eth];
+        const eth = R.pick(LES.Countries.pack.gov.officialGroups), N = C.NAMES[eth];
         g.officials.police = { id: -1, name: `Supt. ${R.pick(N.M)} ${R.pick(N.last)}`, comp: U.clamp(R.normal(0.5, 0.1), 0.25, 0.8), integrity: U.clamp(R.normal(0.65, 0.15), 0.2, 1), since: w.day, crony: false };
         CO.log(w, 'police', -1, `${g.officials.police.name} was posted in from outside as ${CO.ROLES.police.title}`);
       }
@@ -236,7 +232,7 @@
     dev = U.clamp(dev, 0.25, 0.7); train = U.clamp(train, 0.05, 0.3);
     g.budget = { dev, train, fund: Math.max(0.05, 1 - dev - train) };
     const yr = U.dayToDate(w.day).year + 1;
-    CO.log(w, 'treasurer', o ? o.id : -1, `Budget ${yr}: surplus to development ${Math.round(dev * 100)}%, training ${Math.round(train * 100)}%, Khazanah Rezeki ${Math.round(g.budget.fund * 100)}%`);
+    CO.log(w, 'treasurer', o ? o.id : -1, `Budget ${yr}: surplus to development ${Math.round(dev * 100)}%, training ${Math.round(train * 100)}%, ${LES.Countries.pack.names.fund} ${Math.round(g.budget.fund * 100)}%`);
     // Money to spare: the leader cuts a tax or expands a service, as their politics lean.
     const annual = LES.Fiscal.avgRevenue(w) * 12, fund = LES.Fiscal.fundValue(w);
     if (pres && g.debt <= 0 && fund > 2.5 * annual && !g.frozen) {
@@ -257,12 +253,18 @@
         const p = w.people[x.id], back = Math.min(p.cash, taken);
         if (back > 0) w.ledger.move(p, 'cash', g.treasury, 'cash', back);
         P.log(w, p, `Caught by the anti-corruption commission (${U.fmtMoney(taken)} in kickbacks and bribes)`, 'politics', 3);
-        w.pushFeed({ day: w.day, pid: p.id, text: `MACC arrests ${CO.ROLES[role].title} ${P.name(p)} over ${U.fmtMoney(taken)} in bribes`, cat: 'politics', imp: 2 });
-        CO.log(w, role, p.id, `${P.name(p)} arrested by the MACC (${U.fmtMoney(taken)})`);
+        w.pushFeed({ day: w.day, pid: p.id, text: `${LES.Countries.pack.names.antiCorruption} arrests ${CO.ROLES[role].title} ${P.name(p)} over ${U.fmtMoney(taken)} in bribes`, cat: 'politics', imp: 2 });
+        CO.log(w, role, p.id, `${P.name(p)} arrested by the ${LES.Countries.pack.names.antiCorruption} (${U.fmtMoney(taken)})`);
         g.scandal = Math.max(g.scandal, 20); g.scandals++;
         remove(w, role, 'arrested for corruption');
         if (w.crime) LES.Crime.admit(w, p, 'prison', Math.round(R.range(12, 48)), 'corruption');
       }
     }
   };
+
+  LES.Countries.require('gov.council', 'gov.trainCost', 'gov.officialGroups', 'names.fund', 'names.antiCorruption');
+  LES.Countries.on('council', K => {
+    for (const k of Object.keys(CO.ROLES)) delete CO.ROLES[k];
+    Object.assign(CO.ROLES, K.gov.council); CO.TRAIN_COST = K.gov.trainCost;
+  });
 })(globalThis.LES = globalThis.LES || {});

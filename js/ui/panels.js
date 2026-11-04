@@ -123,7 +123,7 @@
       [millionaires, 'millionaires', `Adults worth RM1M+${w.cfg.goalMode === 'real' ? ' in Year-1 money' : ''}`],
       [h ? h.gini.toFixed(2) : '–', 'Gini', 'Wealth inequality: 0 = everyone equal, 1 = one person owns everything'],
       [`${(w.infl * 100).toFixed(1)}%`, 'inflation', `This year's inflation; prices are ×${w.price.toFixed(2)} Year-1 levels`],
-      [`${(w.mkt.idx).toFixed(0)}`, 'Bursa', `Bursa Rezeki index (started at 100); residents drive ${(w.mkt.alpha * 100).toFixed(0)}% of price moves`],
+      [`${(w.mkt.idx).toFixed(0)}`, LES.Countries.pack.names.exchangeShort, `${LES.Countries.pack.names.exchange} index (started at 100); residents drive ${(w.mkt.alpha * 100).toFixed(0)}% of price moves`],
     ].map(([v, l, t]) => `<div class="kpi" title="${U.esc(t)}"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
     const rich = app.richest();
     const goalEl = $('goal');
@@ -202,7 +202,7 @@
         <div class="progress"><i style="width:${(prog * 100).toFixed(1)}%"></i></div>
         <div class="grid2">
           <div><span class="muted">Cash</span><span>${U.fmtMoney(p.cash)}</span></div>
-          <div><span class="muted">EPF</span><span>${U.fmtMoney(p.epf)}</span></div>
+          <div><span class="muted">${LES.Countries.pack.names.retirement}</span><span>${U.fmtMoney(p.epf)}</span></div>
           <div><span class="muted">Index fund</span><span>${U.fmtMoney(invIdx)}</span></div>
           <div title="${esc(holdings)}"><span class="muted">Shares</span><span>${U.fmtMoney(invStk)}</span></div>
           <div><span class="muted">Business equity</span><span>${U.fmtMoney(P.bizValue(w, p))}</span></div>
@@ -212,7 +212,7 @@
         </div>
         <canvas class="chart" id="chart-nw"></canvas>
         <div class="grid2" title="Lifetime earnings by source">
-          <div><span class="muted">Wages + EPF</span><span>${U.fmtMoney(e.wages)}</span></div>
+          <div><span class="muted">Wages + ${LES.Countries.pack.names.retirement}</span><span>${U.fmtMoney(e.wages)}</span></div>
           <div><span class="muted">Gigs</span><span>${U.fmtMoney(e.gigs)}</span></div>
           <div><span class="muted">Business payouts</span><span>${U.fmtMoney(e.business)}</span></div>
           <div><span class="muted">Investment gains</span><span class="${e.invest < 0 ? 'neg' : ''}">${U.fmtMoney(e.invest + e.interest)}</span></div>
@@ -489,7 +489,7 @@
         <div class="note">Exploratory only: one world, people also differ in age, ability and luck. Research Mode (later) will compare thousands of seeds.</div></div>
       <div class="card"><h3>Population</h3><canvas class="chart" id="st-pop"></canvas></div>
       <div class="card"><h3>Work</h3><canvas class="chart" id="st-work"></canvas></div>
-      <div class="card"><h3>Bursa Rezeki <small class="muted">index (log) · town influence now ${(w.mkt.alpha * 100).toFixed(1)}%</small></h3><canvas class="chart" id="st-mkt"></canvas>
+      <div class="card"><h3>${LES.Countries.pack.names.exchange} <small class="muted">index (log) · town influence now ${(w.mkt.alpha * 100).toFixed(1)}%</small></h3><canvas class="chart" id="st-mkt"></canvas>
         <div class="note">${st.panicSells} panic sell-offs so far. Town influence = residents' holdings ÷ (holdings + RM${(w.cfg.marketOutsideRM / 1e6).toFixed(0)}M outside market), capped at ${w.cfg.marketInfluenceCap}%.</div></div>
       <div class="card"><h3>Prices & inflation <small class="muted">prices ×${w.price.toFixed(2)} since Year 1</small></h3><canvas class="chart" id="st-infl"></canvas></div>
       <div class="card"><h3>Migration <small class="muted">pressure ${w.townMood.pressure.toFixed(2)} · opportunity ${w.townMood.opportunity.toFixed(2)} · homes ${(w.crowding * 100).toFixed(0)}% full</small></h3><canvas class="chart" id="st-mig"></canvas>
@@ -518,7 +518,7 @@
     const mk = w.mkt, step = Math.max(1, Math.floor(mk.idxHist.length / 600));
     const idxData = [];
     for (let i = 0; i < mk.idxHist.length; i += step) idxData.push([mk.dayHist[i] / 365, mk.idxHist[i]]);
-    LES.Charts.line($('st-mkt'), { series: [{ label: 'Bursa index', color: '#57d38c', data: idxData }], logY: true, yFmt: v => v.toFixed(0), xFmt: xs, bands: UI.regimeBands(w) });
+    LES.Charts.line($('st-mkt'), { series: [{ label: `${LES.Countries.pack.names.exchangeShort} index`, color: '#57d38c', data: idxData }], logY: true, yFmt: v => v.toFixed(0), xFmt: xs, bands: UI.regimeBands(w) });
     LES.Charts.line($('st-infl'), { series: [{ label: 'Inflation %/yr', color: '#f4a261', data: h.map(r => [r.day / 365, (r.infl || 0) * 100]) }, { label: 'Price level ×', color: '#e8edf2', data: h.map(r => [r.day / 365, r.price || 1]) }], xFmt: xs, yFmt: v => v.toFixed(1) });
     LES.Charts.line($('st-mig'), { series: [series('migrants', 'Migrant adults in town', '#5aa9e6'), series('away', 'Living away', '#ff8c42')], xFmt: xs, yMin: 0 });
     LES.Charts.line($('st-work'), { series: [series('employed', 'Employed', '#57d38c'), series('unemployed', 'Unemployed', '#ff6b6b'), series('owners', 'Business owners', '#ff8c42'), series('students', 'Students', '#b892ff')], xFmt: xs, yMin: 0 });

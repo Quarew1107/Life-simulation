@@ -31,15 +31,15 @@
       ${councilCard(w)}
       <div class="card"><h3>Laws in force</h3><table class="cmp"><tr><th>Law</th><th>Now</th><th>Since</th></tr>
         ${GV.LAWS.map(l => { const c = changed(l.key); return `<tr><td>${esc(l.name)}</td><td>${esc(GV.optName(l.key, g.laws[l.key]))}</td><td class="muted">${c ? `${U.fmtMonthYear(c.day)}${c.why === 'emergency' ? ' (emergency)' : c.why === 'austerity' ? ' (austerity)' : ''}` : 'start'}</td></tr>`; }).join('')}</table>
-        <div class="note">Each law is a real lever in the engine: tax rates, the minimum wage on every job, cash aid and basic income paid each month, how many police officers, teachers, nurses and doctors the town employs, how drug users are treated, university fees, whether employers may check records, a hiring preference, whether the bar is open, fuel subsidies and SST or GST.</div></div>
+        <div class="note">${LES.Countries.pack.notes.laws}</div></div>
       <div class="card"><h3>Treasury <small class="muted">Year-1 money</small></h3>
-        <div class="stat-grid"><div class="stat"><div class="v">${U.fmtMoney(g.treasury.cash)}</div><div class="l">in the treasury</div></div><div class="stat"><div class="v ${g.debt ? 'neg' : ''}">${U.fmtMoney(g.debt)}</div><div class="l">public debt</div></div><div class="stat"><div class="v">${U.fmtMoney(LES.Fiscal.fundValue(w))}</div><div class="l">Khazanah Rezeki (sovereign fund)</div></div>
+        <div class="stat-grid"><div class="stat"><div class="v">${U.fmtMoney(g.treasury.cash)}</div><div class="l">in the treasury</div></div><div class="stat"><div class="v ${g.debt ? 'neg' : ''}">${U.fmtMoney(g.debt)}</div><div class="l">public debt</div></div><div class="stat"><div class="v">${U.fmtMoney(LES.Fiscal.fundValue(w))}</div><div class="l">${LES.Countries.pack.names.fund} (sovereign fund)</div></div>
           <div class="stat"><div class="v">${g.last ? U.fmtMoney(g.last.revTotal / Math.max(1, w.counts.living)) : '–'}</div><div class="l">revenue per resident / month (Malaysia ~RM800 incl. oil)</div></div>
           <div class="stat"><div class="v">${g.last ? U.fmtMoney(g.last.federal || 0) : '–'}</div><div class="l">sent to the federal government last month (70% of local company tax)</div></div></div>
         <canvas class="chart" id="gv-tre"></canvas>
         ${g.last ? `<table class="cmp"><tr><th>Last month in</th><th>${U.fmtMoney(g.last.revTotal)}</th><th>Last month out</th><th>${U.fmtMoney(g.last.spendTotal)}</th></tr>
           ${(() => { const a = Object.entries(g.last.rev).sort((x, y) => y[1] - x[1]), b = Object.entries(g.last.spend).sort((x, y) => y[1] - x[1]); const n = Math.max(a.length, b.length); let s = ''; for (let i = 0; i < n; i++) s += `<tr><td class="muted">${a[i] ? esc(a[i][0]) : ''}</td><td>${a[i] ? U.fmtMoney(a[i][1]) : ''}</td><td class="muted">${b[i] ? esc(b[i][0]) : ''}</td><td>${b[i] ? U.fmtMoney(b[i][1]) : ''}</td></tr>`; return s; })()}</table>` : ''}
-        <div class="note">Taxes follow Malaysia: LHDN income tax bands (0-30%, RM9,000 relief, RM400 rebate, zakat rebated), SME company tax (15/17/24%), SST inside prices (or GST 6% if the law changes), assessment tax on homes and premises, the 2% dividend tax above RM100k, and EIS contributions. Most residents earn too little to pay income tax, as in Malaysia, so sales and company taxes matter more. Money goes out on public servants' pay, public hospitals, fuel subsidies, welfare, aid, pensions, training, development and interest. A surplus builds a three-month reserve, then development projects, training places and Khazanah Rezeki; a deficit draws on the fund, then borrows. Deep debt brings a hiring freeze and austerity.</div></div>
+        <div class="note">${LES.Countries.pack.notes.taxes}</div></div>
       ${servicesCard(w)}
       ${moneyCard(w)}
       ${last ? `<div class="card"><h3>Last election <small class="muted">${U.fmtDate(last.day)} · turnout ${last.eligible ? pct(last.voted / last.eligible) : '–'} (GE15: 73.9%)</small></h3>
@@ -53,8 +53,8 @@
     if (h.length) {
       LES.Charts.line($('gv-appr'), { series: [{ label: 'Approval %', color: '#3ec7b5', data: h.map(r => [r.day / 365, r.gov.approval]) }], xFmt: xs, yMin: 0 });
       LES.Charts.line($('gv-q'), { series: [{ label: 'Schools', color: '#b892ff', data: h.map(r => [r.day / 365, (r.gov.eduQ || 1) * 100]) }, { label: 'Healthcare', color: '#3ec7b5', data: h.map(r => [r.day / 365, (r.gov.healthQ || 1) * 100]) }, { label: 'Infrastructure', color: '#f4a261', data: h.map(r => [r.day / 365, (r.gov.dev || 0) * 100]) }], xFmt: xs, yMin: 0 });
-      LES.Charts.line($('gv-opr'), { series: [{ label: 'OPR %', color: '#5aa9e6', data: h.map(r => [r.day / 365, (r.gov.opr || LES.Fiscal.MY_OPR) * 100]) }, { label: 'Inflation %', color: '#e76f51', data: (w.inflHist || []).map(x => [x.year - 1, x.rate * 100]) }], xFmt: xs, yMin: 0 });
-      LES.Charts.line($('gv-fund'), { series: [{ label: 'Khazanah Rezeki', color: '#f2c14e', data: h.map(r => [r.day / 365, r.gov.fund || 0]) }, { label: 'Treasury', color: '#57d38c', data: h.map(r => [r.day / 365, r.gov.treasury]) }], xFmt: xs, yMin: 0, yFmt: LES.Charts.fmtAxisMoney });
+      LES.Charts.line($('gv-opr'), { series: [{ label: `${LES.Countries.pack.names.policyRate} %`, color: '#5aa9e6', data: h.map(r => [r.day / 365, (r.gov.opr || LES.Fiscal.MY_OPR) * 100]) }, { label: 'Inflation %', color: '#e76f51', data: (w.inflHist || []).map(x => [x.year - 1, x.rate * 100]) }], xFmt: xs, yMin: 0 });
+      LES.Charts.line($('gv-fund'), { series: [{ label: LES.Countries.pack.names.fund, color: '#f2c14e', data: h.map(r => [r.day / 365, r.gov.fund || 0]) }, { label: 'Treasury', color: '#57d38c', data: h.map(r => [r.day / 365, r.gov.treasury]) }], xFmt: xs, yMin: 0, yFmt: LES.Charts.fmtAxisMoney });
       LES.Charts.line($('gv-tre'), { series: [{ label: 'Revenue / month', color: '#57d38c', data: h.map(r => [r.day / 365, r.gov.rev]) }, { label: 'Spending / month', color: '#ff8c42', data: h.map(r => [r.day / 365, r.gov.spend]) }, { label: 'Debt', color: '#e63946', data: h.map(r => [r.day / 365, r.gov.debt]) }], xFmt: xs, yMin: 0, yFmt: LES.Charts.fmtAxisMoney });
     }
   };
@@ -72,7 +72,7 @@
     const log = g.offLog.slice(-8).reverse().map(e => `<li><span>${esc(e.text)}</span><span class="muted">${U.fmtMonthYear(e.day)}</span></li>`).join('');
     return `<div class="card"><h3>City council <small class="muted">appointed by the ${esc(GV.title(w))}</small></h3>
       <table class="cmp"><tr><th>Post</th><th>Holder</th><th>Competence</th></tr>${rows}</table>
-      <div class="note">${CO.ORDER.map(r => `<b>${esc(CO.ROLES[r].title)}</b>: ${esc(CO.ROLES[r].does)}`).join('<br>')}<br>Leaders who care less about merit may appoint relatives over abler people. The anti-corruption commission (MACC) can catch officials who take kickbacks or bribes.</div>
+      <div class="note">${CO.ORDER.map(r => `<b>${esc(CO.ROLES[r].title)}</b>: ${esc(CO.ROLES[r].does)}`).join('<br>')}<br>${LES.Countries.pack.notes.council}</div>
       ${log ? `<h3 style="margin-top:8px">Council log</h3><ul class="list-plain">${log}</ul>` : ''}</div>`;
   }
 
@@ -98,13 +98,13 @@
   // Bank Negara, the sovereign fund and government-linked companies.
   function moneyCard(w) {
     const g = w.gov, glc = w.mkt.stocks.filter(s => s.def.glc), f = g.fund;
-    return `<div class="card"><h3>Bank Negara &amp; Khazanah Rezeki</h3>
-      <div class="grid2"><div><span class="muted">OPR (policy rate)</span><span>${(g.opr * 100).toFixed(2)}%</span></div><div><span class="muted">Savings rate / business loans</span><span>${(LES.Fiscal.depositRate(w) * 100).toFixed(2)}% / ${(LES.Fiscal.loanRate(w) * 100).toFixed(2)}%</span></div>
+    return `<div class="card"><h3>${LES.Countries.pack.names.centralBank} &amp; ${LES.Countries.pack.names.fund}</h3>
+      <div class="grid2"><div><span class="muted">${LES.Countries.pack.names.policyRate} (policy rate)</span><span>${(g.opr * 100).toFixed(2)}%</span></div><div><span class="muted">Savings rate / business loans</span><span>${(LES.Fiscal.depositRate(w) * 100).toFixed(2)}% / ${(LES.Fiscal.loanRate(w) * 100).toFixed(2)}%</span></div>
         <div><span class="muted">Fund value</span><span>${U.fmtMoney(LES.Fiscal.fundValue(w))}</span></div><div><span class="muted">Put in / drawn</span><span>${U.fmtMoney(f.invested)} / ${U.fmtMoney(f.drawn)}</span></div></div>
       <canvas class="chart" id="gv-opr"></canvas>
       <canvas class="chart" id="gv-fund"></canvas>
-      ${glc.length ? `<table class="cmp"><tr><th>Government-linked company</th><th>Price</th><th>Dividend</th><th>Fund holds</th></tr>${glc.map(s => `<tr><td>${esc(s.def.name)} <span class="muted">${esc(s.tk)}</span></td><td>${U.fmtPrice(s.price)}</td><td>${Math.round(s.def.div * 100)}%</td><td>${U.fmtMoney((f.glc[s.tk] || 0) * s.price)}</td></tr>`).join('')}</table>` : '<p class="note">Government-linked companies (Tenaga Rezeki, Petroliam Rezeki, Bank Pembangunan Rezeki) list on Bursa Rezeki once the town\'s finances have matured (after about 8 years without heavy debt).</p>'}
-      <div class="note">Bank Negara sets the Overnight Policy Rate each year (2.75% in 2026): up when inflation runs hot or the economy booms, down in recessions. It sets savings and loan rates, cools or warms business and hiring, and nudges inflation. EPF savings earn a yearly dividend (about 5.5%). Khazanah Rezeki invests the treasury's surplus in the Bursa index and the GLCs, returns 4% of its value each year, and is drawn on before the town borrows.</div></div>`;
+      ${glc.length ? `<table class="cmp"><tr><th>Government-linked company</th><th>Price</th><th>Dividend</th><th>Fund holds</th></tr>${glc.map(s => `<tr><td>${esc(s.def.name)} <span class="muted">${esc(s.tk)}</span></td><td>${U.fmtPrice(s.price)}</td><td>${Math.round(s.def.div * 100)}%</td><td>${U.fmtMoney((f.glc[s.tk] || 0) * s.price)}</td></tr>`).join('')}</table>` : `<p class="note">${LES.Countries.pack.notes.glcLater}</p>`}
+      <div class="note">${LES.Countries.pack.notes.bank}</div></div>`;
   }
 
   UI.politicsCard = function (w, p) {

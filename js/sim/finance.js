@@ -207,7 +207,7 @@
     const picks = inStocks > w.px(2000) ? F.pickStocks(w, p, ctx, ctx.risk > 0.4 ? 1 : 2) : [];
     for (const tk of picks) F.buy(w, p, tk, Math.round(inStocks / picks.length), 'investing');
     if (!picks.length && inStocks > 0) F.buy(w, p, 'idx', inStocks, 'saving');
-    P.log(w, p, `Invested ${U.fmtMoney(amt)}${picks.length ? ` (shares: ${picks.join(', ')})` : ' in the Bursa index fund'}`, 'money', amt >= w.px(1e6) ? 1 : 0);
+    P.log(w, p, `Invested ${U.fmtMoney(amt)}${picks.length ? ` (shares: ${picks.join(', ')})` : ` in the ${FNM.exchangeShort} index fund`}`, 'money', amt >= w.px(1e6) ? 1 : 0);
   };
 
   F.buy = function (w, p, kind, amt, why) {
@@ -590,10 +590,10 @@
       L.pay('BANK', p, 'cash', i);
       p.earned.interest += i;
     }
-    if (P.age(w, p) >= 55 && p.epf > 0) {
+    if (P.age(w, p) >= FRT.accessAge && p.epf > 0) {
       const amt = p.epf;
       L.move(p, 'epf', p, 'cash', amt);
-      P.log(w, p, `Withdrew ${U.fmtMoney(amt)} of EPF retirement savings`, 'money', 0);
+      P.log(w, p, `Withdrew ${U.fmtMoney(amt)} of ${FNM.retirement} retirement savings`, 'money', 0);
     }
     if (p.isHead) F.payBill(w, p, 'housing');
     F.payBill(w, p, 'transport');
@@ -669,4 +669,9 @@
     w.infl = U.clamp(target, lo, hi);
     w.inflHist.push({ year: U.dayToDate(w.day).year + 1, rate: w.infl });
   };
+
+  // National names and the retirement scheme's access age from the country pack.
+  let FNM = null, FRT = null;
+  LES.Countries.require('names.exchangeShort', 'names.retirement');
+  LES.Countries.on('finance', K => { FNM = K.names; FRT = K.retirement; });
 })(globalThis.LES = globalThis.LES || {});

@@ -25,14 +25,20 @@ async def run(page, expr, timeout):
     path, _, query = page.partition("?")
     url = (ROOT / path).as_uri() + ("?" + query if query else "")
     proc = subprocess.Popen([EDGE, "--headless=new", f"--remote-debugging-port={port}", f"--user-data-dir={prof}",
-                             "--no-first-run", "--disable-gpu", "--allow-file-access-from-files", url],
+                             "--no-first-run", "--disable-gpu", "--allow-file-access-from-files",
+                             # a hidden window must not have its timers slowed down (tests pause with setTimeout)
+                             "--disable-background-timer-throttling", "--disable-renderer-backgrounding",
+                             "--disable-backgrounding-occluded-windows", "--disable-features=IntensiveWakeUpThrottling", "about:blank"],
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         ws_url = None
         for _ in range(100):
             try:
                 tabs = json.load(urllib.request.urlopen(f"http://127.0.0.1:{port}/json"))
-                ws_url = next((t["webSocketDebuggerUrl"] for t in tabs if t.get("type") == "page" and t.get("url", "").startswith("file:")), None)
+                pages = [t for t in tabs if t.get("type") == "page"]
+                ws_url = next((t["webSocketDebuggerUrl"] for t in pages if t.get("url", "") == "about:blank"), None)
+                if not ws_url and _ > 25 and pages:
+                    ws_url = pages[0]["webSocketDebuggerUrl"]  # navigated below anyway
                 if ws_url:
                     break
             except Exception:
@@ -43,23 +49,67 @@ async def run(page, expr, timeout):
         async with websockets.connect(ws_url, max_size=None) as ws:
             n = 0
 
+            errors, console = [], []
+
             async def call(method, params):
                 nonlocal n
                 n += 1
-                await ws.send(json.dumps({"id": n, "method": method, "params": params}))
+                my = n
+                await ws.send(json.dumps({"id": my, "method": method, "params": params}))
                 while True:
                     msg = json.loads(await ws.recv())
-                    if msg.get("id") == n:
+                    if msg.get("id") == my:
                         return msg
-            # wait for the page's scripts
-            for _ in range(100):
-                r = await call("Runtime.evaluate", {"expression": "document.readyState", "returnByValue": True})
-                if r.get("result", {}).get("result", {}).get("value") == "complete":
+                    m = msg.get("method")
+                    if m == "Page.javascriptDialogOpening":  # never let alert/confirm block the page
+                        errors.append("dialog: " + msg["params"].get("message", ""))
+                        n += 1
+                        await ws.send(json.dumps({"id": n, "method": "Page.handleJavaScriptDialog", "params": {"accept": True}}))
+                    elif m == "Runtime.consoleAPICalled":
+                        args = msg["params"].get("args", [])
+                        console.append(" ".join(str(a.get("value", a.get("description", ""))) for a in args)[:300])
+                        del console[:-20]
+                    elif m == "Runtime.exceptionThrown":
+                        ex = msg["params"]["exceptionDetails"]
+                        errors.append("page error: " + (ex.get("exception", {}).get("description") or ex.get("text", ""))[:500])
+            await call("Page.enable", {})
+            await call("Runtime.enable", {})
+            await call("Debugger.enable", {})  # so a stuck page can be paused and its stack shown
+            await call("Page.navigate", {"url": url})  # with the handlers on, so load-time errors are seen
+            for _ in range(150):  # wait for the page's scripts
+                r = await call("Runtime.evaluate", {"expression": "location.href + '|' + document.readyState", "returnByValue": True})
+                v = r.get("result", {}).get("result", {}).get("value") or ""
+                if v.startswith("file:") and v.endswith("|complete"):
                     break
                 await asyncio.sleep(0.2)
-            r = await asyncio.wait_for(call("Runtime.evaluate", {
-                "expression": f"(async () => {{ return ({expr}); }})()",
-                "awaitPromise": True, "returnByValue": True}), timeout)
+            try:
+                r = await asyncio.wait_for(call("Runtime.evaluate", {
+                    "expression": f"(async () => {{ return ({expr}); }})()",
+                    "awaitPromise": True, "returnByValue": True}), timeout)
+            except asyncio.TimeoutError:
+                # Still running: pause the page and show where it is (an endless loop shows up here).
+                print(f"TIMEOUT after {timeout:.0f}s; page stack:")
+                n += 1
+                await ws.send(json.dumps({"id": n, "method": "Debugger.pause", "params": {}}))
+                try:
+                    while True:
+                        msg = json.loads(await asyncio.wait_for(ws.recv(), 20))
+                        if msg.get("method") == "Debugger.paused":
+                            for f in msg["params"]["callFrames"][:15]:
+                                loc = f["location"]
+                                print(f"  {f['functionName'] or '(anonymous)'}  {f['url'].split('/')[-1]}:{loc['lineNumber'] + 1}")
+                            break
+                except asyncio.TimeoutError:
+                    print("  (the page is idle: it is waiting, not looping)")
+                if console:
+                    print("last console lines:")
+                    for line in console:
+                        print("  " + line)
+                for e in errors:
+                    print(e)
+                return 3
+            for e in errors:
+                print(e)
             res = r.get("result", {})
             if "exceptionDetails" in res:
                 ex = res["exceptionDetails"]
@@ -69,6 +119,17 @@ async def run(page, expr, timeout):
             print(v if isinstance(v, str) else json.dumps(v, indent=1))
             return 0
     finally:
+        try:  # close the whole browser (all its child processes), not just the launcher
+            ver = json.load(urllib.request.urlopen(f"http://127.0.0.1:{port}/json/version", timeout=3))
+            async with websockets.connect(ver["webSocketDebuggerUrl"], max_size=None) as bws:
+                await bws.send(json.dumps({"id": 1, "method": "Browser.close"}))
+                await asyncio.wait_for(bws.recv(), 5)
+        except Exception:
+            pass
+        try:
+            proc.wait(10)
+        except Exception:
+            pass
         proc.terminate()
         try:
             proc.wait(5)

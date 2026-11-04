@@ -77,7 +77,7 @@
     const paid = Math.min(job.shiftsMonth, target);
     const gross = Math.round(job.salary * paid / target);
     if (gross > 0) {
-      const ee = Math.round(gross * 0.11), er = Math.round(gross * 0.13);
+      const ee = Math.round(gross * RET.employee), er = Math.round(gross * RET.employer);
       const b = job.biz >= 0 ? w.biz[job.biz] : null; // private clinic, school or hospital
       if (b && b.open && b.cash >= gross + er) {
         w.ledger.move(b, 'cash', p, 'cash', gross - ee);
@@ -242,4 +242,9 @@
       }
     }
   };
+
+  // Retirement contributions (Malaysia: EPF 11% from the worker, 13% from the employer) from the country pack.
+  let RET = null;
+  LES.Countries.require('retirement.employee', 'retirement.employer', 'retirement.accessAge');
+  LES.Countries.on('labour', K => { RET = K.retirement; });
 })(globalThis.LES = globalThis.LES || {});
