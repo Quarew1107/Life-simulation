@@ -8,7 +8,7 @@
 // editing a base rule afterwards switches the rules to Custom.
 (function (LES) {
   'use strict';
-  const U = LES.U, esc = U.esc;
+  const U = LES.U, C = LES.C, esc = U.esc;
   const $ = id => document.getElementById(id);
 
   // The cards: two base worlds, then the scenarios (built on Malaysia today).
@@ -31,7 +31,33 @@
       if (m.type === 'int' || m.type === 'num') cfg[m.key] = el.value.trim() === '' ? NaN : Number(el.value);
       else cfg[m.key] = el.value;
     }
+    // My cast as founders (ticked people, each with a town in a region).
+    if ($('set-cast')) {
+      const towns = Math.max(1, Number(cfg.towns) || 1), roster = LES.UI.castRoster();
+      cfg.cast = [...document.querySelectorAll('#set-cast input[type=checkbox]:checked')].map(el => {
+        const s = roster.find(o => o.id === el.dataset.id), t = $(`set-cast-town-${el.dataset.id}`);
+        return s && Object.assign(JSON.parse(JSON.stringify(s)), { town: Math.min(towns - 1, t ? Number(t.value) : 0) });
+      }).filter(Boolean);
+    }
+    if ($('set-cast-again') && !$('set-cast-again').checked) cfg.castArrivals = [];
     return cfg;
+  }
+
+  // "★ My cast as founders" (only when you have saved people): tick people to start the
+  // town with them; ticking someone ticks their whole household.
+  function castPicker(base) {
+    const roster = LES.UI.castRoster ? LES.UI.castRoster() : [], again = (base.castArrivals || []).reduce((n, a) => n + a.specs.length, 0);
+    if (!roster.length && !again) return '';
+    const on = new Set((base.cast || []).map(s => s.id)), town = id => ((base.cast || []).find(s => s.id === id) || {}).town || 0;
+    const rows = roster.map(s => {
+      const fam = LES.Cast.householdOf(roster, s).filter(o => o !== s).map(o => o.first);
+      return `<label class="cast-pick"><input type="checkbox" data-id="${esc(s.id)}" ${on.has(s.id) ? 'checked' : ''}> <b>${esc(s.first)} ${esc(s.last)}</b> <span class="muted">${s.age} · ${esc(C.ETHNIC_NAMES[s.eth] || s.eth)}${fam.length ? ` · with ${esc(fam.join(', '))}` : ''}</span>
+        <select id="set-cast-town-${esc(s.id)}" class="cast-town" title="Which town (when there are several)">${[0, 1, 2].map(i => `<option value="${i}" ${town(s.id) === i ? 'selected' : ''}>Town ${i + 1}</option>`).join('')}</select></label>`;
+    }).join('');
+    return `<details class="set-cast" ${on.size ? 'open' : ''}><summary>★ My cast as founders: <b id="set-cast-sum">${on.size ? `${on.size} chosen` : 'none chosen'}</b></summary>
+      <div id="set-cast">${rows || '<p class="note">No saved people.</p>'}</div>
+      ${again ? `<label class="cast-pick"><input type="checkbox" id="set-cast-again" checked> Also bring back the ${again} ${again > 1 ? 'people' : 'person'} you added during the last run (on the same days)</label>` : ''}
+      <p class="note">Your cast lives by the same rules as everyone else. Create people in the Leaders tab → ★ My cast.</p></details>`;
   }
 
   function field(m, v) {
@@ -65,6 +91,7 @@
         ${META.filter(m => m.hidden).map(m => field(m, base[m.key])).join('')}
         <h2 class="set-step"><span>2</span> Your town</h2>
         <div class="form-grid">${META.filter(m => m.essential).map(m => field(m, base[m.key])).join('')}</div>
+        ${castPicker(base)}
         <details class="set-adv"><summary>${LES.icon('sliders', 16)} Advanced settings <span class="muted">· ${adv.length} more: map, goal, prices, families, society, justice, government</span></summary>
           ${LES.SETTINGS_GROUPS.map(g => { const ms = adv.filter(m => m.group === g); return ms.length ? `<h3 class="set-group">${esc(g)}</h3><div class="form-grid">${ms.map(m => field(m, base[m.key])).join('')}</div>` : ''; }).join('')}
           <p class="note">The engine's deeper constants (decision randomness, success curves, hiring weights) stay at the values from the design documents.</p>
@@ -124,8 +151,22 @@
           if (pr) for (const [k, v] of Object.entries(pr.values)) { const el = $(`set-${k}`); if (el) el.value = v; }
         } else if (sel) sel.value = LES.presetOf(readForm(base));
       };
+      // Ticking a cast member ticks their household; town choices show only with several towns.
+      const castSync = e => {
+        const box = e && e.target && e.target.closest && e.target.closest('#set-cast input[type=checkbox]');
+        if (box) {
+          const roster = LES.UI.castRoster(), s = roster.find(o => o.id === box.dataset.id);
+          for (const m of LES.Cast.householdOf(roster, s)) { const el = card.querySelector(`#set-cast input[data-id="${m.id}"]`); if (el) el.checked = box.checked; }
+        }
+        if ($('set-cast')) {
+          const n = card.querySelectorAll('#set-cast input[type=checkbox]:checked').length, many = (Number(($('set-towns') || {}).value) || 1) > 1;
+          $('set-cast-sum').textContent = n ? `${n} chosen` : 'none chosen';
+          for (const el of card.querySelectorAll('.cast-town')) el.hidden = !many;
+        }
+      };
+      castSync();
       card.oninput = e => { syncPreset(e); refresh(); };
-      card.onchange = e => { syncPreset(e); refresh(); };
+      card.onchange = e => { castSync(e); syncPreset(e); refresh(); };
       for (const el of card.querySelectorAll('.scn-card')) el.onclick = () => choose(el.dataset.card);
       $('set-load').onclick = () => $('set-load-file').click();
       $('set-load-file').onchange = e => { const f = e.target.files[0]; if (f) app.loadWorld(f); e.target.value = ''; };

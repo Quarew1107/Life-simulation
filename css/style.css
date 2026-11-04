@@ -336,3 +336,9 @@ button.primary { border-radius: 6px; box-shadow: 3px 3px 0 #7d5f17; }
 .cast-looks label { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
 #c-preview { display: block; margin: 10px auto 0; border-radius: 6px; image-rendering: pixelated; }
 @media (max-width: 900px) { .cast-grid { grid-template-columns: 1fr; } }
+
+/* My cast as founders (setup screen) */
+.set-cast { margin: 8px 0 4px; border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
+.set-cast summary { cursor: pointer; }
+.cast-pick { display: flex; align-items: center; gap: 6px; margin: 4px 0; font-size: 13px; flex-wrap: wrap; }
+.cast-pick .cast-town { margin-left: auto; font-size: 12px; }

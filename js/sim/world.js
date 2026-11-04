@@ -110,6 +110,7 @@
         F.reviewTiers(this, p);
         p.mcost = F.monthlyCost(this, p);
       }
+      if (cfg.cast && cfg.cast.length) LES.Cast.founders(this); // your cast, chosen on the setup screen
     }
 
     // A random adult drawn from the founder distributions (founders and newcomers).
@@ -210,6 +211,7 @@
     // ---------------- Daily tick (fixed stage order, FSD 4.1) ----------------
     step() {
       if (this.ended) return;
+      if ((this.region ? this.region.base : this.cfg).castArrivals) LES.Cast.due(this); // replays: cast added on this day
       this.date = U.dayToDate(this.day);
       this.refreshLiving();
       this.startOfDay();
@@ -557,7 +559,7 @@
         for (const k of ['health', 'energy', 'stress', 'hunger']) if (!(p[k] >= 0 && p[k] <= 100)) errs.push(`P${p.id} ${k}=${p[k]}`);
         for (let i = 0; i < 6; i++) if (!(p.att[i] >= 0 && p.att[i] <= 10)) errs.push(`P${p.id} att${i}=${p.att[i]}`);
         // One parent here is fine when the other stayed in a sister town (linked in xlinks).
-        const crossParent = p.parents.length === 1 && p.xlinks && p.xlinks.some(x => x.rel === 'parent');
+        const crossParent = p.parents.length === 1 && ((p.xlinks && p.xlinks.some(x => x.rel === 'parent')) || p.custom); // or a cast child with one parent in the cast
         if (p.parents.length !== 0 && p.parents.length !== 2 && !crossParent) errs.push(`P${p.id} has ${p.parents.length} parents`);
         for (const pid of p.parents) {
           const q = this.people[pid];

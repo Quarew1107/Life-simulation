@@ -672,6 +672,51 @@
     check('A gang member who moves keeps a tie to the old gang in the new town', !!tied && tied.cr.tie && tied.cr.tie.town === 0 && tied.cr.tie.gang === tg.id && T.G.checkInvariants().length === 0, T.G.checkInvariants()[0] || '');
   }
 
+  // ---- My Cast: founders, households and replays ----
+  async function castTests() {
+    print('--- My Cast ---', 'info');
+    const spec = o => Object.assign(LES.Cast.blank(), o);
+    const mum = spec({ id: 'm', first: 'Siti', sex: 'F', age: 34, partner: 'd', cash: 20000 }), dad = spec({ id: 'd', first: 'Ali', sex: 'M', age: 36, partner: 'm', att: [8, 5, 5, 5, 5, 5] });
+    const kid = spec({ id: 'k', first: 'Adam', sex: 'M', age: 6, parents: ['m', 'd'], att: [9, 9, 9, 9, 9, 9] });
+    const solo = spec({ id: 's', first: 'Mei', last: 'Tan', eth: 'chinese', sex: 'F', age: 22, att: [2, 3, 4, 5, 6, 7] });
+    const ma = spec({ id: 'ma', first: 'Kavitha', eth: 'indian', sex: 'F', age: 30 }), baby = spec({ id: 'b', first: 'Arjun', eth: 'indian', sex: 'M', age: 1, parents: ['ma'] });
+    const cfg = Object.assign({}, LES.DEFAULTS, { seed: 'cast-f', founders: 60, cast: [mum, dad, kid, solo, ma, baby] });
+    const w = new LES.World(cfg), by = n => w.people.find(p => p.custom && p.first === n);
+    const [M, D, K, S] = ['Siti', 'Ali', 'Adam', 'Mei'].map(by);
+    check('My Cast founders join the town on day 1 as founders, with the abilities you chose',
+      w.people.filter(p => p.custom).length === 6 && [M, D, K, S].every(p => p && !p.migrant) && S.att.join() === '2,3,4,5,6,7' && w.checkInvariants().length === 0, w.checkInvariants()[0] || '');
+    check('A cast couple shares one home, and their child has both parents and lives with them (abilities chosen = potential)',
+      M.partnerId === D.id && D.partnerId === M.id && M.homeId >= 0 && M.homeId === D.homeId && S.homeId >= 0 && K.parents.includes(M.id) && K.parents.includes(D.id) && K.caregivers.length === 2 && K.homeId === M.homeId && !K.adult && K.pot[0] === 9 && K.att[0] < 9);
+    const B = by('Arjun');
+    check('A cast child can have one parent in the cast', B && B.parents.length === 1 && B.caregivers[0] === by('Kavitha').id);
+    let errs = [];
+    for (let d = 0; d < 2 * 365; d++) { w.step(); if (!errs.length && w.date.lastOfMonth) errs = w.checkInvariants(); }
+    const w2 = new LES.World(cfg);
+    for (let d = 0; d < 2 * 365; d++) w2.step();
+    check('Two years with a cast: consistency checks clean, and the same seed and cast give the same history', errs.length === 0 && w.hash() === w2.hash(), errs[0] || '');
+    // Someone added during a run is recorded and comes back on the same day in a replay.
+    const r1 = new LES.World(Object.assign({}, LES.DEFAULTS, { seed: 'cast-r', founders: 60 }));
+    for (let d = 0; d < 100; d++) r1.step();
+    LES.Cast.arrive(r1, [spec({ id: 'x', first: 'Farah', age: 28, cash: 50000 })]);
+    for (let d = 0; d < 300; d++) r1.step();
+    const r2 = new LES.World(Object.assign({}, r1.cfg));
+    for (let d = 0; d < 400; d++) r2.step();
+    const f2 = r2.people.find(p => p.custom);
+    check('A person added during a run is recorded, and a replay adds them on the same day with the same history',
+      r1.cfg.castArrivals.length === 1 && f2 && f2.first === 'Farah' && f2.arrivedDay === 100 && r1.hash() === r2.hash());
+
+    // Looks (browser only: needs a canvas).
+    if (typeof document === 'undefined' || !LES.Sprites || !document.createElement('canvas').getContext) return;
+    const base = { skin: '#c68642', hair: '#1b1b1b', shirt: '#2a9d8f', pants: '#1d3557', style: 0, scarf: '#c9184a' };
+    const px = (look, view) => { const c = LES.Sprites.person(look, 'adult', 0, null, view); return c.getContext('2d').getImageData(0, 0, c.width, c.height).data.join(); };
+    const extras = [{ glasses: 1 }, { glasses: 2 }, { beard: 1 }, { beard: 2 }, { beard: 3 }, { hat: 1 }, { hat: 2 }, { hat: 3, hatColour: '#e63946' }, { hat: 4, hatColour: '#f2c14e' }];
+    const shows = extras.every(x => ['front', 'side'].every(v => px(Object.assign({}, base, x), v) !== px(base, v))) && [{ hat: 1 }, { hat: 4 }].every(x => px(Object.assign({}, base, x), 'back') !== px(base, 'back'));
+    check('New looks (glasses, beards, songkok, kopiah, cap, turban) change the sprite in every view they should', shows);
+    const lw = new LES.World(Object.assign({}, LES.DEFAULTS, { seed: 'look-t', founders: 80 })), h0 = lw.hash();
+    const looks = lw.people.map(p => LES.Sprites.lookOf(p, P.age(lw, p)));
+    check('Residents get looks by a fixed rule, without touching the simulation', lw.hash() === h0 && looks.some(l => l.glasses || l.beard || l.hat) && lw.people.every(p => p.look.glasses === undefined));
+  }
+
   // ---- Map tiles (browser only: needs a canvas) ----
   async function tileTests() {
     print('--- Map tiles ---', 'info');
@@ -725,6 +770,7 @@
       await fiscalTests();
       await scenarioTests();
       await regionTests();
+      await castTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -736,6 +782,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, tileTests };
+  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

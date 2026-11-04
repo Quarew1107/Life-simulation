@@ -79,7 +79,7 @@
   app.useWorld = function (w) {
     app.view = 'town';
     app.world = w;
-    app.lastCfg = w.cfg;
+    app.lastCfg = app.region ? app.region.base : w.cfg; // a region's shared settings hold its cast arrivals
     app.selected = -1;
     app.dayFrac = 0;
     app._rich.t = 0;
