@@ -107,7 +107,7 @@
       <canvas class="chart tall" id="bursa-chart"></canvas>
       <div class="bursa-grid">
         <div><table class="bursa-table"><thead><tr><th>Ticker</th><th>Company</th><th>Price</th><th>Day</th><th>1Y</th><th>Town net this month</th><th>Holders</th></tr></thead><tbody>${rows}</tbody></table>
-          <p class="note">Click a company to chart it. Prices = outside market (random walk with booms/recessions + inflation) × a town deviation pushed by residents' unexpected buying and selling (square-root impact law), which fades over ~2 months. Town influence = residents' holdings ÷ (holdings + RM${(w.cfg.marketOutsideRM / 1e6).toFixed(0)}M outside market), capped at ${w.cfg.marketInfluenceCap}%. Companies that collapse are delisted and replaced by an IPO.</p></div>
+          <p class="note">Click a company to chart it. Prices = outside market (random walk with booms/recessions + inflation) × a town deviation pushed by residents' unexpected buying and selling (square-root impact law), which fades over ~2 months. Town influence = residents' holdings ÷ (holdings + ${U.sym()}${(w.cfg.marketOutsideRM / 1e6).toFixed(0)}M outside market), capped at ${w.cfg.marketInfluenceCap}%. Companies that collapse are delisted and replaced by an IPO.</p></div>
         <div>
           ${sel ? `<div class="card"><h3>Top holders of ${sel.tk}</h3><ul class="list-plain">${topHolders.map(p => `<li><span>${UI.plink(w, p.id)}</span><span>${U.fmtMoney(p.inv.st[sel.tk] * sel.price)}</span></li>`).join('') || '<li class="muted">No residents own it</li>'}</ul></div>` : ''}
           <div class="card"><h3>Recent resident trades</h3><ul class="list-plain">${trades.map(tr => `<li><span>${UI.plink(w, tr.pid)} <span class="${tr.side > 0 ? 'pos' : 'neg'}">${tr.side > 0 ? 'bought' : 'sold'}</span> ${tr.tk}${tr.why === 'panic' ? ' <span class="neg">(panic)</span>' : ''}</span><span>${U.fmtMoney(tr.sen)} <span class="muted">${U.fmtMonthYear(tr.day)}</span></span></li>`).join('') || '<li class="muted">No trades yet</li>'}</ul></div>
@@ -119,7 +119,7 @@
     if (sel) {
       const sh = sel.hist, off = len - sh.length, data = [];
       for (let i = Math.max(from, off); i < len; i += step) data.push([days[i] / 365, sh[i - off] / 100]);
-      series.push({ label: `${sel.tk} price (RM)`, color: sel.def.colour, data });
+      series.push({ label: `${sel.tk} price (${U.sym()})`, color: sel.def.colour, data });
     } else {
       const data = [];
       for (let i = from; i < len; i += step) data.push([days[i] / 365, mk.idxHist[i]]);

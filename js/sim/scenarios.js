@@ -36,7 +36,7 @@
   define({
     id: 'equal', name: 'Born Equal', icon: 'users',
     short: 'Everyone starts with the same money, the same abilities and no degrees.',
-    desc: 'All founders get RM10,000, identical abilities (5 in every attribute), identical ageing genes and no qualifications; jobs at the start are handed out by lottery. Only personality and luck differ. Optionally, every child is born equal too.',
+    desc: 'All founders get {cur}10,000, identical abilities (5 in every attribute), identical ageing genes and no qualifications; jobs at the start are handed out by lottery. Only personality and luck differ. Optionally, every child is born equal too.',
     watch: ['How fast wealth inequality appears (Gini starts at 0)', 'Which traits the richest share: discipline, patience, risk-taking?', 'How much is plain luck: windfalls, booms, illness'],
     cfg: { wealthDist: 'equal' },
     hooks: {
@@ -257,7 +257,7 @@
       flags(w).noSchool = true;
       let aid = 0;
       if (w.gov) for (const p of w.living) if (p.alive && p.adult && p.isHead && p.cls === 'B40' && !p.away) { const a = LES.Gov.payOut(w, p, 'cash', w.px(500), 'pandemic aid'); p.earned.welfare += a; aid += a; }
-      w.pushFeed({ day, pid: -1, text: `Lockdown (MCO): shops, venues and schools close${aid ? `; RM500 aid to each B40 household (${U.fmtMoney(aid)})` : ''}`, cat: 'economy', imp: 3 });
+      w.pushFeed({ day, pid: -1, text: `${LES.Countries.pack.names.lockdown}: shops, venues and schools close${aid ? `; ${U.cur(500)} aid to each ${LES.Society ? LES.Society.short('B40') : 'B40'} household (${U.fmtMoney(aid)})` : ''}`, cat: 'economy', imp: 3 });
     } else if (s.lock && (prev < 0.004 || s.over) && day - s.lockStart > 30) {
       s.lock = false; w.shock = null; flags(w).noSchool = false;
       w.pushFeed({ day, pid: -1, text: 'The lockdown is lifted', cat: 'economy', imp: 2 });
@@ -318,7 +318,7 @@
   // =====================================================================
   define({
     id: 'lawless', name: 'Lawless Town', icon: 'skull',
-    short: 'Crime at 30× Malaysian rates, a thin and crooked police force.',
+    short: 'Crime at 30× {adj} rates, a thin and crooked police force.',
     desc: 'Crime runs at the Lawless setting, the town starts with only 2 police officers per 1,000 people, and its first police chief takes gang money. Can elections, budgets and a new police chief bring order?',
     watch: ['Whether voters elect a tough-on-crime leader and more police', 'Gangs, turf and protection money', 'Businesses, migration and unemployment under high crime'],
     cfg: { crime: 'lawless' },
@@ -329,7 +329,7 @@
     snap: w => ({ idx: w.crime ? LES.Crime.rates(w).index : 0 }),
     status(w) {
       const r = w.crime ? LES.Crime.rates(w) : null;
-      return r ? `Index crime <b>${Math.round(r.index)}</b> per 100k (Malaysia 170) · gangs active ${w.crime.gangs.filter(g => g.alive).length} · police ${w.gov ? `${w.gov.laws.police} per 1,000 by law, ${w.gov.officers} on duty` : 'notional'}` : '';
+      return r ? `Index crime <b>${Math.round(r.index)}</b> per 100k (${LES.Countries.pack.name} ${LES.Crime.REF.index}) · gangs active ${w.crime.gangs.filter(g => g.alive).length} · police ${w.gov ? `${w.gov.laws.police} per 1,000 by law, ${w.gov.officers} on duty` : 'notional'}` : '';
     },
     series: h => [{ label: 'Index crime per 100k', color: '#e63946', data: h.map(r => [r.day / 365, r.scn ? r.scn.idx : 0]) }, { label: 'Officers ×500', color: '#5aa9e6', data: h.map(r => [r.day / 365, r.gov ? r.gov.officers * 500 : 0]) }],
     report(w) { return w.gov ? `<p>Police law at the end: ${w.gov.laws.police} officers per 1,000. ${w.crime.crackdowns} gang raids.</p>` : ''; },
@@ -400,4 +400,14 @@
     const ad = adults(w);
     return `<table class="cmp"><tr><th>Clan (gift)</th><th>Adults</th><th>Median net worth</th><th>Median income</th><th>Millionaires</th></tr>${SC.CLANS.map(c => { const g = ad.filter(p => p.clan === c.id); return `<tr><td><span style="color:${c.colour}">■</span> ${c.name} <span class="muted">(${C.ATTR_NAMES[c.attr].toLowerCase()})</span></td><td>${g.length}</td><td>${U.fmtMoney(median(g.map(p => p.nw)))}</td><td>${U.fmtMoney(median(g.map(p => p.incomeEMA)))}</td><td>${g.filter(p => p.nw >= w.px(1e6)).length}</td></tr>`; }).join('')}</table>`;
   }
+  // Scenario texts may name the country ({cur}, {adj}...): filled from the active pack.
+  const TEXT_BASE = new Map();
+  LES.Countries.on('scenario texts', () => {
+    const F = LES.Countries.fill;
+    for (const s of SC.LIST) {
+      if (!TEXT_BASE.has(s)) TEXT_BASE.set(s, { short: s.short, desc: s.desc, watch: s.watch && s.watch.slice() });
+      const b = TEXT_BASE.get(s);
+      s.short = F(b.short); s.desc = F(b.desc); if (b.watch) s.watch = b.watch.map(F);
+    }
+  });
 })(globalThis.LES = globalThis.LES || {});

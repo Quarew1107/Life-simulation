@@ -49,7 +49,7 @@
 
   SV.targets = function (w, pop) {
     const pol = w.policy, af = w.gov.afford || 1, k = pop / 1000;
-    const hs = SV.HEALTH[pol.health] || SV.HEALTH.malaysia;
+    const hs = SV.HEALTH[pol.health] || SV.HEALTH.national;
     const n = (per, min) => Math.max(min, Math.round(per * k * af));
     const banned = w.flags && w.flags.noCourses; // Education Ban scenario: no schools to staff
     return { police: n(pol.policePer1000, 1), teacher: banned ? 0 : n(SV.SCHOOLS[pol.schools] || 12, 1), nurse: n(hs[0], 1), doctor: n(hs[1], pop >= 150 ? 1 : 0) };

@@ -209,15 +209,15 @@
 
   // Class mobility and religion (only when the society system is on).
   function societySection(w) {
-    const S = LES.Society;
+    const S = LES.Society, SO = LES.Countries.pack.society;
     if (!w.society || !S) return '';
     const mob = S.mobility(w), st = w.society, pc = x => `${Math.round(x * 100)}%`;
     const rows = S.CLASSES.map(a => { const r = mob.m[a], n = S.CLASSES.reduce((t, b) => t + r[b], 0); return `<tr><td>${a}</td>${S.CLASSES.map(b => `<td>${n ? pc(r[b] / n) : '–'}</td>`).join('')}<td>${n}</td></tr>`; }).join('');
     const rel = S.groupStats(w, 'rel');
     return `<section><h2>Class and community</h2><div class="grid">
 <div class="card"><b>Social mobility</b> <span class="note">household class at 12 → own class at 35</span><table><tr><th>Grew up</th>${S.CLASSES.map(c => `<th>${c}</th>`).join('')}<th>n</th></tr>${rows}</table>
-<p class="note">B40 ceiling now ${U.fmtMoney(st.cut40)}, T20 floor ${U.fmtMoney(st.cut80)} (household income per month, Year-1 money; DOSM 2024: RM5,250 and RM11,820). The T20 earn ${pc(st.t20share)} of all income.</p></div>
-<div class="card"><b>Religion</b><table><tr><th></th><th>Adults</th><th>Median wealth</th><th>B40</th></tr>${S.REL_KEYS.filter(k => rel[k]).map(k => `<tr><td>${esc(S.RELIGIONS[k].name)}</td><td>${rel[k].n}</td><td>${U.fmtMoney(rel[k].medNw)}</td><td>${pc(rel[k].b40 / rel[k].n)}</td></tr>`).join('')}</table>
+<p class="note">${S.short('B40')} ceiling now ${U.fmtMoney(st.cut40)}, ${S.short('T20')} floor ${U.fmtMoney(st.cut80)} (household income per month, Year-1 money; ${SO.statsOffice} ${SO.cutsYear}: ${U.cur(S.DOSM_B40_MAX)} and ${U.cur(S.DOSM_T20_MIN)}). The ${S.short('T20')} earn ${pc(st.t20share)} of all income.</p></div>
+<div class="card"><b>Religion</b><table><tr><th></th><th>Adults</th><th>Median wealth</th><th>${S.short('B40')}</th></tr>${S.REL_KEYS.filter(k => rel[k]).map(k => `<tr><td>${esc(S.RELIGIONS[k].name)}</td><td>${rel[k].n}</td><td>${U.fmtMoney(rel[k].medNw)}</td><td>${pc(rel[k].b40 / rel[k].n)}</td></tr>`).join('')}</table>
 <p class="note">Zakat paid ${U.fmtMoney(st.zakatTotal)} · aid from community funds ${U.fmtMoney(st.aidTotal)} · festival spending ${U.fmtMoney(st.festivalSpend)} · ${st.conversions} conversions. Groups differ in practices, not ability; differences here are outcomes of the model and of small samples.</p></div>
 </div></section>`;
   }
@@ -263,7 +263,7 @@
     if (!s) return '';
     const h = w.history, chart = svgChart(s.series(h).map(x => ({ label: x.label, color: x.color, data: x.data.map(([d, v]) => [d, v]) })), { log: !!s.logY });
     return `<section><h2>Scenario: ${esc(s.name)}</h2><p>${esc(s.desc)}</p><div class="grid"><div class="card"><b>What happened</b><p>${s.status(w)}</p>${s.report ? s.report(w) : ''}</div><div class="card"><b>Over time</b>${chart}</div></div>
-<p class="note">To see what the scenario changed, run the same seed without it (Malaysia today) and compare the two reports.</p></section>`;
+<p class="note">To see what the scenario changed, run the same seed without it (${esc(LES.PRESETS.national.name)}) and compare the two reports.</p></section>`;
   }
 
   function govSection(w) {
@@ -285,7 +285,7 @@ ${g.officials ? `<div class="card"><b>City council at the end</b><table>${LES.Co
     if (!st || !CR) return '';
     const r = CR.rates(w), k = CR.INTENSITY[w.cfg.crime], tot = Object.values(st.total).reduce((a, b) => a + b, 0);
     return `<section><h2>Crime and justice</h2><div class="grid">
-<div class="card"><b>Crimes</b> <span class="note">intensity “${esc(w.cfg.crime)}” (Malaysian rates ×${k})</span><table>${Object.keys(CR.TYPES).map(t => `<tr><td>${CR.TYPES[t].icon} ${esc(CR.TYPES[t].name)}</td><td>${st.total[t] || 0}</td></tr>`).join('')}<tr><td><b>Total</b></td><td><b>${tot}</b></td></tr></table>
+<div class="card"><b>Crimes</b> <span class="note">intensity “${esc(w.cfg.crime)}” (${LES.Countries.pack.adj} rates ×${k})</span><table>${Object.keys(CR.TYPES).map(t => `<tr><td>${CR.TYPES[t].icon} ${esc(CR.TYPES[t].name)}</td><td>${st.total[t] || 0}</td></tr>`).join('')}<tr><td><b>Total</b></td><td><b>${tot}</b></td></tr></table>
 <p class="note">Index crime in the last year: ${r.index.toFixed(0)} per 100k (${LES.Countries.pack.name} ${CR.REF.index}${k !== 1 ? ' ×' + k : ''}).</p></div>
 <div class="card"><b>Justice, drugs and gangs</b><table>
 <tr><td>Arrests / convictions / acquittals</td><td>${st.arrests} / ${st.convictions} / ${st.acquitted}</td></tr>
@@ -293,14 +293,14 @@ ${g.officials ? `<div class="card"><b>City council at the end</b><table>${LES.Co
 <tr><td>Started using drugs / rehab / overdoses</td><td>${st.startedUsing} / ${st.rehabAdmissions} / ${st.overdoses}</td></tr>
 <tr><td>Gangs formed / police raids / turf fights</td><td>${st.gangs.length} / ${st.crackdowns} / ${st.gangFights}</td></tr>
 <tr><td>Protection money taken from shops</td><td>${U.fmtMoney(st.protection)}</td></tr></table>
-<p class="note">Drug policy: ${esc(w.policy ? w.policy.drugPolicy : w.cfg.drugPolicy)} · police: ${w.gov ? `${w.gov.officers} officers` : esc(w.cfg.police)} · ${st.crimesTotal ? Math.round(st.solvedTotal / st.crimesTotal * 100) : 0}% of crimes solved. Try the same seed with another drug policy or police strength and compare.</p></div>
+<p class="note">Drug policy: ${esc(w.policy && LES.Gov ? LES.Gov.optName('drugPolicy', w.policy.drugPolicy) : (LES.SETTINGS_META.find(m => m.key === 'drugPolicy').options.find(o => o[0] === w.cfg.drugPolicy) || [, w.cfg.drugPolicy])[1])} · police: ${w.gov ? `${w.gov.officers} officers` : esc(w.cfg.police)} · ${st.crimesTotal ? Math.round(st.solvedTotal / st.crimesTotal * 100) : 0}% of crimes solved. Try the same seed with another drug policy or police strength and compare.</p></div>
 </div></section>`;
   }
 
   R.html = function (w, prev) {
     const a = R.analyse(w), h = w.history, cfg = w.cfg;
     const yr = r => r.day / 365;
-    const money = v => U.fmtMoney(v).replace('RM', '');
+    const money = v => U.fmtMoney(v).replace(U.sym(), '');
     const charts = [
       ['Wealth (Year-1 money, log)', svgChart([{ label: 'Richest', color: '#c9971c', data: h.map(r => [yr(r), Math.max(1, r.top)]) }, { label: 'Top 10%', color: '#2a9d8f', data: h.map(r => [yr(r), Math.max(1, r.p90)]) }, { label: 'Median', color: '#3a86ff', data: h.map(r => [yr(r), Math.max(1, r.median)]) }], { log: true, fmt: money })],
       ['Population', svgChart([{ label: 'People', color: '#555', data: h.map(r => [yr(r), r.pop]) }, { label: 'Children', color: '#e76f51', data: h.map(r => [yr(r), r.children]) }], {})],

@@ -311,7 +311,7 @@
       await runDays(w, 1500);
       check(`Classic preset reproduces the original engine exactly (${seed})`, w.stableHash() === ORIGINAL[seed], w.stableHash());
     }
-    check('Defaults are the Malaysia preset', LES.presetOf(LES.DEFAULTS) === 'malaysia');
+    check('Defaults are the Malaysia preset', LES.presetOf(LES.DEFAULTS) === 'national');
 
     // Save -> load -> continue gives the same history as never saving.
     const a = new LES.World({ seed: 'save-rt', founders: 120, migration: 'high' });
@@ -771,7 +771,8 @@
       'my-region': 'b495fc0cc72406b997b9263068ac1d7b/1446da57|df40270e95862a096fbcf18074fe4e2a/b4341cfb|bec63c796b6fbe7b2f66ede517369097/40cf5843',
       'my-save': '93a0eff009e13bbf0631071fc098447a',
     };
-    const REPORT = { 'my-default': '9208d902', 'my-pandemic-lawless': '814397fa', 'my-region': 'adaf99d2' };
+    // 4a.6: the report names the drug policy instead of printing its key.
+    const REPORT = { 'my-default': 'afe5f291', 'my-pandemic-lawless': '170436d6', 'my-region': '30bbe498' };
     const D = LES.DEFAULTS, base = { founders: 80, migration: 'normal' };
     const cases = {
       'my-default': () => new LES.World(Object.assign({}, D, base, { seed: 'my-1' })),
@@ -799,11 +800,18 @@
       const w = LES.Save.fromJSON(LES_FIXTURES.mySave);
       await runDays(w, 365);
       check('A Malaysia save from before the move loads and continues identically', w.stableHash() === MY['my-save'], w.stableHash());
+      const old = JSON.stringify([w.cfg, w.gov ? w.gov.laws : {}, w.gov ? w.gov.lawLog : []]);
+      check("Its old 'malaysia' setting and law values now read 'national'", !old.includes('"malaysia"') && w.cfg.drugPolicy === 'national' && LES.presetOf(w.cfg) === 'national');
     } else check('The pre-move save fixture is present', false);
 
     // The pack registry.
     const KC = LES.Countries;
     check('Every country pack has all its required parts', KC.order.every(c => !KC.validate(KC.get(c)).length), KC.order.map(c => `${c}: ${KC.validate(KC.get(c)).join(', ') || 'ok'}`).join('; '));
+    const oldCfg = Object.assign({}, D, { seed: 'cty-old', founders: 30, fertility: 'malaysia', ethnicMix: 'malaysia', interfaith: 'malaysia', drugPolicy: 'malaysia', preset: 'malaysia' });
+    const wa = new LES.World(oldCfg), wb = new LES.World(Object.assign({}, oldCfg, { fertility: 'national', ethnicMix: 'national', interfaith: 'national', drugPolicy: 'national', preset: 'national' }));
+    for (let d = 0; d < 400; d++) { wa.step(); wb.step(); }
+    check("Settings stored with the old 'malaysia' values run the same as 'national'", wa.stableHash() === wb.stableHash() && wa.cfg.fertility === 'national');
+    check("Money is shown with the pack's currency sign", LES.U.cur(11820) === 'RM11,820' && LES.U.fmtMoney(1234500) === 'RM12.3k' && LES.Countries.fill('{adj} {cur}5 {goal}') === 'Malaysian RM5 RM100 million');
     check('An unknown country is refused with a clear message', LES.validateConfig(Object.assign({}, D, { country: 'zz' })).blockers.some(b => b.includes('Country')));
     const sv = JSON.parse(LES.Save.toJSON(new LES.World(Object.assign({}, D, { seed: 'cty', founders: 20 }))));
     check('A save records its country; older saves load as Malaysia', sv.country === 'my' && !('country' in JSON.parse(LES_FIXTURES.mySave)));

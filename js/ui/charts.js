@@ -118,5 +118,5 @@
     },
   };
   LES.Charts.niceTicks = niceTicks;
-  LES.Charts.fmtAxisMoney = v => U.fmtMoney(v).replace('RM', '');
+  LES.Charts.fmtAxisMoney = v => U.fmtMoney(v).replace(U.sym(), '');
 })(globalThis.LES = globalThis.LES || {});

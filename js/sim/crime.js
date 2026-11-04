@@ -291,7 +291,7 @@
     // Police: possession arrests (Malaysia arrests ~40% of users a year).
     if (policy !== 'decriminalised' && R.next() < 0.03 * police(w)) {
       cr.drugArrests++; st.drugArrests++;
-      const prison = policy === 'punitive' || (policy === 'malaysia' && cr.drugArrests > 1);
+      const prison = policy === 'punitive' || (policy === 'national' && cr.drugArrests > 1);
       if (prison) CR.admit(w, p, 'prison', Math.round(R.range(12, 30)), 'drug possession');
       else CR.admit(w, p, 'rehab', policy === 'treatment' ? 6 : 12, 'drug use');
     }

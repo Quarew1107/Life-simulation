@@ -5,7 +5,7 @@
 
   LES.DEFAULTS = {
     // Normal settings (defaults = the Malaysia preset; see LES.PRESETS)
-    preset: 'malaysia',       // malaysia | classic | custom (setup-screen shortcut, recorded in reports)
+    preset: 'national',       // national | classic | custom (setup-screen shortcut, recorded in reports)
     country: 'my',            // country pack (js/data/countries/): my
     seed: 'rezeki-1',
     founders: 100,
@@ -17,17 +17,17 @@
     safetyNet: 'on',          // on = welfare/guardians (Malaysia has JKM welfare), off = Original harsh rules
     genetics: 'evolution',    // original (floor of parents' average) | evolution
     strategyMode: 'adaptive', // adaptive | fixed
-    fertility: 'malaysia',    // malaysia | low | normal | high
+    fertility: 'national',    // national | low | normal | high
     horizonYears: 120,
     goalRM: 100000000,
     goalMode: 'real',         // real (Year-1 money) | nominal
     mapSize: 'auto',          // auto | kampung | pekan | bandar | bandaraya | metropolis
     layout: 'varied',         // varied (seeded avenues, river, superblocks) | grid (original equal blocks)
     society: 'on',            // social class + religion systems (off = original engine)
-    ethnicMix: 'malaysia',    // malaysia (DOSM 2025 shares, 5 groups) | classic (original 3 groups)
-    interfaith: 'malaysia',   // malaysia (a non-Muslim converts to marry a Muslim) | free
+    ethnicMix: 'national',    // national (DOSM 2025 shares, 5 groups) | classic (original 3 groups)
+    interfaith: 'national',   // national (a non-Muslim converts to marry a Muslim) | free
     crime: 'lively',          // lively (Malaysian rates x10) | realistic (x1) | lawless (x30) | off
-    drugPolicy: 'malaysia',   // malaysia (rehab first, prison for repeat) | punitive | treatment | decriminalised
+    drugPolicy: 'national',   // national (rehab first, prison for repeat) | punitive | treatment | decriminalised
     police: 'normal',         // weak | normal | strong (arrest chances; with a government the police budget decides)
     government: 'on',         // town treasury, laws, elections (off = original engine)
     leaderTitle: 'president', // president | mayor | datuk
@@ -79,8 +79,14 @@
   // Presets fill the setup form. Classic reproduces the original engine (harsher, more
   // children, longer lives); Malaysia is calibrated to DOSM figures (tools/calibration.html).
   LES.PRESETS = {
-    malaysia: { name: 'Malaysia today', values: { safetyNet: 'on', fertility: 'malaysia', mortMult: 1.9, layout: 'varied', society: 'on', ethnicMix: 'malaysia', crime: 'lively', government: 'on', vacancyRate: 2.2 } },
+    national: { name: "Today's rules", values: { safetyNet: 'on', fertility: 'national', mortMult: 1.9, layout: 'varied', society: 'on', ethnicMix: 'national', crime: 'lively', government: 'on', vacancyRate: 2.2 } },
     classic: { name: 'Classic (original rules)', values: { safetyNet: 'off', fertility: 'normal', mortMult: 1, layout: 'grid', society: 'off', ethnicMix: 'classic', crime: 'off', government: 'off', vacancyRate: 2.5 } },
+  };
+  // Older saves and stored settings called the national option 'malaysia'.
+  LES.RENAMED_KEYS = ['preset', 'fertility', 'ethnicMix', 'interfaith', 'drugPolicy'];
+  LES.upgradeConfig = function (cfg) {
+    if (cfg) for (const k of LES.RENAMED_KEYS) if (cfg[k] === 'malaysia') cfg[k] = 'national';
+    return cfg;
   };
   LES.presetOf = function (cfg) {
     for (const k of Object.keys(LES.PRESETS)) {
@@ -106,56 +112,77 @@
     { group: 'Scenario', scenario: 'robots', key: 'robotSpeed', label: 'Speed', type: 'select', options: [['slow', 'Slow (40 years to the peak)'], ['normal', 'Normal (25 years)'], ['fast', 'Fast (12 years)']] },
 
     // ---- Your town (main page) ----
-    { group: 'Town & map', essential: true, key: 'founders', label: 'Founding population', type: 'int', min: 20, max: 6000, help: 'Strangers who found the town. The map size follows (100 = a small pekan).' },
+    { group: 'Town & map', essential: true, key: 'founders', label: 'Founding population', type: 'int', min: 20, max: 6000, help: 'Strangers who found the town. The map size follows (100 = a small town).' },
     { group: 'Goal', essential: true, key: 'horizonYears', label: 'Years to simulate', type: 'int', min: 5, max: 300, help: '120 years is about four generations.' },
-    { group: 'Economy & prices', essential: true, key: 'wealthDist', label: 'Starting wealth', type: 'select', options: [['equal', 'Equal (RM10k each)'], ['moderate', 'Moderate inequality'], ['unequal', 'High inequality (some born rich)']] },
+    { group: 'Economy & prices', essential: true, key: 'wealthDist', label: 'Starting wealth', type: 'select', options: [['equal', 'Equal ({cur}10k each)'], ['moderate', 'Moderate inequality'], ['unequal', 'High inequality (some born rich)']] },
     { group: 'Economy & prices', essential: true, key: 'economy', label: 'Economic cycles', type: 'select', options: [['stable', 'Stable'], ['normal', 'Normal cycles'], ['volatile', 'Volatile (frequent recessions)']] },
-    { group: 'Crime & justice', essential: true, key: 'crime', label: 'Crime & vice', type: 'select', options: [['lively', 'Lively (Malaysian rates x10)'], ['realistic', 'Realistic (rare in a small town)'], ['lawless', 'Lawless (x30)'], ['off', 'Off']], help: 'Lively makes crime visible in a small town.' },
+    { group: 'Crime & justice', essential: true, key: 'crime', label: 'Crime & vice', type: 'select', options: [['lively', 'Lively ({adj} rates x10)'], ['realistic', 'Realistic (rare in a small town)'], ['lawless', 'Lawless (x30)'], ['off', 'Off']], help: 'Lively makes crime visible in a small town.' },
     { group: 'Town & map', essential: true, key: 'seed', label: 'World seed', type: 'text', help: 'Same seed + same settings = the same history.' },
 
     // ---- Advanced ----
-    { group: 'Base rules', key: 'preset', label: 'Rules', type: 'select', options: [['malaysia', 'Malaysia today (calibrated to DOSM data)'], ['classic', 'Classic (original harsh rules)'], ['custom', 'Custom']], help: 'Fills the settings below. Malaysia: welfare on, ~1.6 children per woman, ~75-year life expectancy.' },
-    { group: 'Town & map', key: 'mapSize', label: 'Map size', type: 'select', options: [['auto', 'Auto (suggested from population)'], ['kampung', 'Kampung - up to ~60 founders'], ['pekan', 'Pekan - 60-250 founders'], ['bandar', 'Bandar - 250-700 founders'], ['bandaraya', 'Bandaraya - 700-2,000 founders'], ['metropolis', 'Metropolis - 2,000-5,000+ founders']], help: 'Bigger maps have more homes, shops, venues, bus lines and land to grow on.' },
+    { group: 'Base rules', key: 'preset', label: 'Rules', type: 'select', options: [['national', "Today's rules (calibrated to official data)"], ['classic', 'Classic (original harsh rules)'], ['custom', 'Custom']], help: 'Fills the settings below.' },
+    { group: 'Town & map', key: 'mapSize', label: 'Map size', type: 'select', options: [['auto', 'Auto (suggested from population)'], ['kampung', '{name} - up to ~60 founders'], ['pekan', '{name} - 60-250 founders'], ['bandar', '{name} - 250-700 founders'], ['bandaraya', '{name} - 700-2,000 founders'], ['metropolis', '{name} - 2,000-5,000+ founders']], help: 'Bigger maps have more homes, shops, venues, bus lines and land to grow on.' },
     { group: 'Town & map', key: 'towns', label: 'Towns in the region', type: 'select', options: [['1', 'One town'], ['2', 'Two towns'], ['3', 'Three towns']], help: 'Extra towns get about 60% and 40% of the founding population. They share one economy and stock exchange, and people move between them.' },
-    { group: 'Town & map', key: 'town1Type', label: 'Main town type', type: 'select', options: [['mixed', 'Mixed town'], ['capital', 'Business city'], ['industrial', 'Industrial town'], ['university', 'University town'], ['resort', 'Coastal resort'], ['farming', 'Farming kampung']], help: 'Changes the mix of districts and the jobs on offer.' },
-    { group: 'Town & map', key: 'town2Type', label: 'Second town type', type: 'select', options: [['mixed', 'Mixed town'], ['capital', 'Business city'], ['industrial', 'Industrial town'], ['university', 'University town'], ['resort', 'Coastal resort'], ['farming', 'Farming kampung']] },
-    { group: 'Town & map', key: 'town3Type', label: 'Third town type', type: 'select', options: [['mixed', 'Mixed town'], ['capital', 'Business city'], ['industrial', 'Industrial town'], ['university', 'University town'], ['resort', 'Coastal resort'], ['farming', 'Farming kampung']] },
+    { group: 'Town & map', key: 'town1Type', label: 'Main town type', type: 'select', options: [['mixed', '{name}'], ['capital', '{name}'], ['industrial', '{name}'], ['university', '{name}'], ['resort', '{name}'], ['farming', '{name}']], help: 'Changes the mix of districts and the jobs on offer.' },
+    { group: 'Town & map', key: 'town2Type', label: 'Second town type', type: 'select', options: [['mixed', '{name}'], ['capital', '{name}'], ['industrial', '{name}'], ['university', '{name}'], ['resort', '{name}'], ['farming', '{name}']] },
+    { group: 'Town & map', key: 'town3Type', label: 'Third town type', type: 'select', options: [['mixed', '{name}'], ['capital', '{name}'], ['industrial', '{name}'], ['university', '{name}'], ['resort', '{name}'], ['farming', '{name}']] },
     { group: 'Town & map', key: 'scenery', label: 'Lakes, hills and forests', type: 'select', options: [['both', 'Scenery and places to go (default)'], ['decor', 'Scenery only']], help: 'Varied towns have a few scenery blocks that are never built on. By default people jog, picnic and hike there, and homes next to them are calmer.' },
     { group: 'Town & map', key: 'removeLimits', label: 'Remove population limits', type: 'select', options: [['no', 'No (keeps the simulation smooth)'], ['yes', 'Yes (big worlds run slowly)']], help: 'Normally all towns together may start with at most 1,500 people.' },
     { group: 'Town & map', key: 'layout', label: 'Street layout', type: 'select', options: [['varied', 'Varied (avenues, a river, superblocks)'], ['grid', 'Grid (original equal blocks)']], help: 'Varied layouts change with the seed.' },
-    { group: 'Goal', key: 'goalRM', label: 'Wealth goal (RM)', type: 'int', min: 10000, max: 1e12 },
-    { group: 'Goal', key: 'goalMode', label: 'Goal measured in', type: 'select', options: [['real', 'Year-1 money (adjusted for inflation)'], ['nominal', "That year's ringgit (nominal)"]], help: 'Real keeps the goal equally hard across generations.' },
+    { group: 'Goal', key: 'goalRM', label: 'Wealth goal ({cur})', type: 'int', min: 10000, max: 1e12 },
+    { group: 'Goal', key: 'goalMode', label: 'Goal measured in', type: 'select', options: [['real', 'Year-1 money (adjusted for inflation)'], ['nominal', "That year's {currency} (nominal)"]], help: 'Real keeps the goal equally hard across generations.' },
     { group: 'Goal', key: 'stopOnWinner', label: 'Pause when goal is reached', type: 'select', options: [['no', 'No, keep going'], ['yes', 'Yes']] },
-    { group: 'Economy & prices', key: 'inflMin', label: 'Inflation min (%/yr)', type: 'num', min: -10, max: 30, step: 0.1, help: 'Malaysia: 2020 was -1.1%.' },
-    { group: 'Economy & prices', key: 'inflMax', label: 'Inflation max (%/yr)', type: 'num', min: -10, max: 30, step: 0.1, help: 'Malaysia: 2010s ranged 0.7-3.9%, ~2% average.' },
+    { group: 'Economy & prices', key: 'inflMin', label: 'Inflation min (%/yr)', type: 'num', min: -10, max: 30, step: 0.1 },
+    { group: 'Economy & prices', key: 'inflMax', label: 'Inflation max (%/yr)', type: 'num', min: -10, max: 30, step: 0.1 },
     { group: 'Economy & prices', key: 'education', label: 'University fees', type: 'select', options: [['free', 'Free'], ['subsidised', 'Subsidised'], ['expensive', 'Expensive (x2.5)']], help: 'With a government this is the starting law.' },
-    { group: 'Economy & prices', key: 'marketOutsideRM', label: 'Outside stock market size (RM)', type: 'int', min: 1000000, max: 1e13, help: 'Town influence = town holdings / (town + this). Smaller = residents move prices more.' },
+    { group: 'Economy & prices', key: 'marketOutsideRM', label: 'Outside stock market size ({cur})', type: 'int', min: 1000000, max: 1e13, help: 'Town influence = town holdings / (town + this). Smaller = residents move prices more.' },
     { group: 'Economy & prices', key: 'marketInfluenceCap', label: 'Max town influence on prices (%)', type: 'int', min: 0, max: 100 },
     { group: 'People & families', key: 'safetyNet', label: 'Social safety net', type: 'select', options: [['off', 'Off - original harsh rules'], ['on', 'On - welfare food & child guardians']] },
-    { group: 'People & families', key: 'fertility', label: 'Birth rate', type: 'select', options: [['malaysia', 'Malaysia today (~1.6 children per woman)'], ['low', 'Low'], ['normal', 'Normal (original, ~2.5)'], ['high', 'High']] },
-    { group: 'People & families', key: 'mortMult', label: 'Old-age mortality multiplier', type: 'num', min: 0, max: 5, step: 0.1, help: '1 = original engine (~80-year lives), 1.9 = Malaysia (75.3 years). 0 = nobody dies of old age.' },
+    { group: 'People & families', key: 'fertility', label: 'Birth rate', type: 'select', options: [['national', 'National rate today'], ['low', 'Low'], ['normal', 'Normal (original, ~2.5)'], ['high', 'High']] },
+    { group: 'People & families', key: 'mortMult', label: 'Old-age mortality multiplier', type: 'num', min: 0, max: 5, step: 0.1, help: '1 = original engine (~80-year lives). 0 = nobody dies of old age.' },
     { group: 'People & families', key: 'migration', label: 'Migration in/out of town', type: 'select', options: [['off', 'Off'], ['low', 'Low (default)'], ['normal', 'Normal'], ['high', 'High']], help: 'Crowding and rent push people out; jobs pull newcomers in.' },
     { group: 'People & families', key: 'migInMult', label: 'Move-in rate multiplier', type: 'num', min: 0, max: 20, step: 0.1 },
     { group: 'People & families', key: 'migOutMult', label: 'Move-out rate multiplier', type: 'num', min: 0, max: 20, step: 0.1 },
     { group: 'People & families', key: 'genetics', label: 'Child attributes', type: 'select', options: [['evolution', 'Evolution (potential + mutation)'], ['original', 'Original (average of parents, rounded down)']] },
     { group: 'People & families', key: 'strategyMode', label: 'Life strategies', type: 'select', options: [['adaptive', 'Adaptive (can change after setbacks)'], ['fixed', 'Fixed for life']] },
-    { group: 'Society & religion', key: 'society', label: 'Social class & religion', type: 'select', options: [['on', 'On (B40/M40/T20, religion, festivals)'], ['off', 'Off (original engine)']], help: 'Religion works through worship, zakat, fasting and festivals - never as a success bonus.' },
-    { group: 'Society & religion', key: 'ethnicMix', label: 'Population mix', type: 'select', options: [['malaysia', 'Malaysia 2025 (Malay, Chinese, other Bumiputera, Indian, others)'], ['classic', 'Classic (Malay, Chinese, Indian)']], help: 'Groups differ in names, looks, festivals and religion mix - not in ability.' },
-    { group: 'Society & religion', key: 'interfaith', label: 'Interfaith marriage', type: 'select', options: [['malaysia', 'Malaysian rule (convert to marry a Muslim)'], ['free', 'Free choice']] },
-    { group: 'Crime & justice', key: 'drugPolicy', label: 'Drug policy', type: 'select', options: [['malaysia', 'Malaysian mix (rehab first, prison for repeat)'], ['punitive', 'Punitive (prison)'], ['treatment', 'Treatment first (short rehab, voluntary help)'], ['decriminalised', 'Decriminalised use']], help: 'With a government this is the starting law.' },
+    { group: 'Society & religion', key: 'society', label: 'Social class & religion', type: 'select', options: [['on', 'On (class, religion, festivals)'], ['off', 'Off (original engine)']], help: 'Religion works through worship, zakat, fasting and festivals - never as a success bonus.' },
+    { group: 'Society & religion', key: 'ethnicMix', label: 'Population mix', type: 'select', options: [['national', 'National mix today'], ['classic', 'Classic (Malay, Chinese, Indian)']], help: 'Groups differ in names, looks, festivals and religion mix - not in ability.' },
+    { group: 'Society & religion', key: 'interfaith', label: 'Interfaith marriage', type: 'select', options: [['national', 'National rule'], ['free', 'Free choice']] },
+    { group: 'Crime & justice', key: 'drugPolicy', label: 'Drug policy', type: 'select', options: [['national', 'National mix'], ['punitive', 'Punitive (prison)'], ['treatment', 'Treatment first (short rehab, voluntary help)'], ['decriminalised', 'Decriminalised use']], help: 'With a government this is the starting law.' },
     { group: 'Crime & justice', key: 'police', label: 'Police strength (no government)', type: 'select', options: [['normal', 'Normal'], ['strong', 'Strong (more arrests)'], ['weak', 'Weak']], help: 'Only used when there is no government; otherwise the budget pays for officers.' },
     { group: 'Government', key: 'government', label: 'Government & elections', type: 'select', options: [['on', 'On (taxes, council, laws, elections)'], ['off', 'Off (original engine)']], help: 'Taxes fund public services; an elected leader changes the laws.' },
-    { group: 'Government', key: 'leaderTitle', label: 'Leader title', type: 'select', options: [['president', 'President'], ['mayor', 'Mayor'], ['datuk', 'Datuk Bandar']] },
+    { group: 'Government', key: 'leaderTitle', label: 'Leader title', type: 'select', options: [['president', '{name}'], ['mayor', '{name}'], ['datuk', '{name}']] },
     { group: 'Government', key: 'termYears', label: 'Years between elections', type: 'int', min: 2, max: 10 },
-    { group: 'Government', key: 'termLimit', label: 'Term limit', type: 'select', options: [['none', 'None (like Malaysia)'], ['2', 'Two terms']] },
+    { group: 'Government', key: 'termLimit', label: 'Term limit', type: 'select', options: [['none', 'None (like {country})'], ['2', 'Two terms']] },
     { group: 'Government', key: 'identityVoting', label: 'Identity in voting', type: 'select', options: [['moderate', 'Moderate'], ['none', 'None'], ['strong', 'Strong']], help: 'How much voters favour candidates of their own ethnicity or religion.' },
     { group: 'Government', key: 'freezeLaws', label: 'Laws fixed at the starting values', type: 'select', options: [['no', 'No: elected leaders change them'], ['yes', 'Yes (for controlled experiments)']] },
   ];
 
+  // Country wording. Texts above may hold {cur}, {currency}, {adj} and {country} (LES.Countries.fill);
+  // an option's {name} comes from the pack table for that setting; a pack's `settings` replaces whole
+  // texts: { key: { label, help, options: { value: text } }, presets: { key: name } }.
+  const BASE = LES.SETTINGS_META.map(m => ({ label: m.label, help: m.help, options: m.options && m.options.map(o => o[1]) }));
+  const PRESET_BASE = Object.fromEntries(Object.keys(LES.PRESETS).map(k => [k, LES.PRESETS[k].name]));
+  LES.Countries.on('settings', pack => {
+    const F = LES.Countries.fill, ov = pack.settings || {};
+    const names = { mapSize: pack.town.mapSizeNames, town1Type: pack.town.townTypeNames, town2Type: pack.town.townTypeNames, town3Type: pack.town.townTypeNames, leaderTitle: pack.gov.leaderTitles };
+    LES.SETTINGS_META.forEach((m, i) => {
+      const b = BASE[i], o = ov[m.key] || {};
+      m.label = F(o.label || b.label);
+      const help = o.help || b.help;
+      if (help === undefined) delete m.help; else m.help = F(help);
+      if (m.options) m.options.forEach((opt, j) => {
+        const t = (o.options && o.options[opt[0]]) || b.options[j];
+        opt[1] = F(t).replace('{name}', (names[m.key] && names[m.key][opt[0]]) || opt[0]);
+      });
+    });
+    for (const k of Object.keys(LES.PRESETS)) LES.PRESETS[k].name = (ov.presets && ov.presets[k]) || PRESET_BASE[k];
+  });
+
   LES.derive = function (cfg) {
     return {
       eduMult: { free: 0, subsidised: 1, expensive: 2.5 }[cfg.education],
-      fertMult: { malaysia: 0.42, low: 0.6, normal: 1, high: 1.6 }[cfg.fertility],
+      fertMult: { national: 0.42, low: 0.6, normal: 1, high: 1.6 }[cfg.fertility],
       goal: Math.round(cfg.goalRM * 100),
       horizonDays: cfg.horizonYears * 365,
       welfare: cfg.safetyNet === 'on',

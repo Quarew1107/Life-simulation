@@ -28,13 +28,14 @@
   const EDU_MULT = { free: 0, subsidised: 1, expensive: 2.5 };
   GV.MY_POLICE = 4; // police officers per 1,000 people in the country (gov.policePer1000; Malaysia: PDRM 136,503 for ~34.3m)
 
+  const lawDef = k => (GV.LAW_BY_KEY[k] || {}).def;
   GV.policyOf = function (laws) {
     return {
       incomeTaxMult: { low: 0.6, normal: 1, high: 1.5 }[laws.incomeTax], corpTax: Number(laws.corpTax) / 100,
       minWage: Number(laws.minWage), cashAid: Number(laws.cashAid), ubi: Number(laws.ubi), estateTax: Number(laws.estateTax),
       policePer1000: Number(laws.police), drugPolicy: laws.drugPolicy, uniFees: laws.uniFees,
       recordCheck: laws.recordCheck === 'allowed', affirm: laws.affirm, barBan: laws.barBan === 'ban',
-      salesTax: laws.salesTax || 'sst', schools: laws.schools || 'malaysia', health: laws.health || 'malaysia', fuelSubsidy: laws.fuelSubsidy || 'targeted',
+      salesTax: laws.salesTax || lawDef('salesTax'), schools: laws.schools || lawDef('schools'), health: laws.health || lawDef('health'), fuelSubsidy: laws.fuelSubsidy || lawDef('fuelSubsidy'),
     };
   };
   // recost: also refresh everyone's monthly costs (not when a save is loaded: loading must not
@@ -112,7 +113,7 @@
       }
       case 'drugPolicy': {
         const user = p.cr && (p.cr.user || p.cr.addict > 0);
-        const forUser = { malaysia: 0, punitive: -200, treatment: 120, decriminalised: 260 }, moral = { malaysia: 0, punitive: 30, treatment: -10, decriminalised: -70 };
+        const forUser = { national: 0, punitive: -200, treatment: 120, decriminalised: 260 }, moral = { national: 0, punitive: 30, treatment: -10, decriminalised: -70 };
         return (user ? forUser[val] - forUser[cur] : 0) + (p.relig > 60 ? moral[val] - moral[cur] : 0);
       }
       case 'uniFees': {
@@ -142,14 +143,14 @@
         return -tr * (px(val) - px(cur)) - (cost(val) - cost(cur)) * 600 * costShare(p, ts) * 0.5;
       }
       case 'schools': {
-        const lvl = { lean: -1, malaysia: 0, generous: 1 }, d = lvl[val] - lvl[cur];
+        const lvl = { lean: -1, national: 0, generous: 1 }, d = lvl[val] - lvl[cur];
         let kids = 0;
         for (const id of p.careOf) { const c = w.people[id]; if (c.alive && !c.adult && !(c.school >= 0)) kids++; }
         const teacher = p.job && p.job.jobId === 'teacher' ? 120 : 0;
         return d * (70 * kids + teacher + (P.hasCred(p, 'BACH') && !p.job ? 40 : 0)) - d * 3.5 * 3800 / 1000 * ts.pop / ts.adults * costShare(p, ts);
       }
       case 'health': {
-        const lvl = { lean: -1, malaysia: 0, generous: 1 }, d = lvl[val] - lvl[cur];
+        const lvl = { lean: -1, national: 0, generous: 1 }, d = lvl[val] - lvl[cur];
         const need = 25 + (age > 55 ? 60 : 0) + (p.health < 60 ? 50 : 0) + p.careOf.length * 10;
         return d * need - d * (1.3 * 3400 + 0.65 * 11000) / 1000 * ts.pop / ts.adults * costShare(p, ts);
       }
@@ -162,7 +163,7 @@
   // voters who follow the news, worry about promises the town cannot afford.
   GV.burden = function (w, key, val, ts) {
     const rev = Math.max(2000, w.gov.revHist.length ? w.gov.revHist.slice(-12).reduce((s, x) => s + x, 0) / Math.min(12, w.gov.revHist.length) / w.price / 100 : 3000);
-    const SV = LES.Services, hs = v => SV.HEALTH[v] || SV.HEALTH.malaysia;
+    const SV = LES.Services, hs = v => SV.HEALTH[v] || SV.HEALTH.national;
     const cost = {
       cashAid: v => Number(v) * ts.b40, ubi: v => Number(v) * ts.adults, police: v => Number(v) * ts.pop / 1000 * 3400, uniFees: v => (v === 'free' ? 650 * ts.adults * 0.03 : 0),
       schools: v => SV.SCHOOLS[v] * ts.pop / 1000 * SP.teacher, health: v => (hs(v)[0] * SP.nurse + hs(v)[1] * SP.doctor) * ts.pop / 1000,
@@ -429,7 +430,7 @@
     init(w) {
       const laws = {};
       for (const l of GV.LAWS) laws[l.key] = l.def;
-      laws.drugPolicy = w.cfg.drugPolicy || 'malaysia'; laws.uniFees = w.cfg.education;
+      laws.drugPolicy = w.cfg.drugPolicy || 'national'; laws.uniFees = w.cfg.education;
       w.gov = {
         treasury: { cash: 0 }, debt: 0, laws, lawLog: [], president: -1, terms: {}, termStart: 0, approval: 55, scandal: 0, scandals: 0, skimmed: 0, skimNow: 0,
         elections: [], campaign: null, electionDay: Math.round(w.cfg.termYears * 365), agenda: [], misinfo: -1,
@@ -563,6 +564,13 @@
   // Fill in what older saves lack (taxes by source, council, services, fund).
   GV.upgrade = function (w) {
     const g = w.gov, FS = LES.Fiscal;
+    // Law values: 'malaysia' became 'national' with country packs.
+    const nat = v => (v === 'malaysia' ? 'national' : v), natAll = o => { if (o) for (const k in o) o[k] = nat(o[k]); };
+    natAll(g.laws);
+    for (const e of g.lawLog || []) { e.from = nat(e.from); e.to = nat(e.to); }
+    for (const a of g.agenda || []) a.v = nat(a.v);
+    for (const c of g.campaign || []) natAll(c.platform);
+    for (const r of g.elections || []) for (const c of r.cands || []) natAll(c.platform);
     for (const l of GV.LAWS) if (g.laws[l.key] === undefined) g.laws[l.key] = l.def;
     if (!g.month || !g.month.tags) g.month = FS.newMonth();
     const d = { opr: FS.MY_OPR, oprHist: [], fund: { units: 0, glc: {}, invested: 0, drawn: 0 }, devStock: 0, devIdx: 0, afford: 1, budget: { dev: 0.5, train: 0.15, fund: 0.35 },
