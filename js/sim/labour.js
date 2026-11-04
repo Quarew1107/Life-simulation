@@ -77,7 +77,8 @@
     const paid = Math.min(job.shiftsMonth, target);
     const gross = Math.round(job.salary * paid / target);
     if (gross > 0) {
-      const ee = Math.round(gross * RET.employee), er = Math.round(gross * RET.employer);
+      const inPlan = RET.participation === undefined || ((p.id * 2654435761 >>> 0) % 1000) / 1000 < RET.participation; // US: about half of workers save in a 401(k)
+      const ee = inPlan ? Math.round(gross * RET.employee) : 0, er = inPlan ? Math.round(gross * RET.employer) : 0;
       const b = job.biz >= 0 ? w.biz[job.biz] : null; // private clinic, school or hospital
       if (b && b.open && b.cash >= gross + er) {
         w.ledger.move(b, 'cash', p, 'cash', gross - ee);
@@ -154,7 +155,10 @@
       return;
     }
     const scholar = w.derived.eduMult > 0 && R.next() < U.clamp(0.04 + 0.05 * (p.att[C.INT] - 6), 0, 0.4);
-    const fee = scholar ? 0 : Math.round(w.px(course.fee) * w.derived.eduMult / course.months);
+    let fee = scholar ? 0 : Math.round(w.px(course.fee) * w.derived.eduMult / course.months);
+    const PG = LES.Countries.pack.education && LES.Countries.pack.education.pell; // US: Pell grants for low-income students
+    if (PG && fee > 0 && course.id !== 'MASTER') { let inc = Math.max(0, p.incomeEMA); for (const id of p.parents) { const q = w.people[id]; if (q && q.alive) inc += Math.max(0, q.incomeEMA); }
+      if (inc / w.price / 100 * 12 < PG.incomeLimit) fee = Math.max(0, fee - w.px(PG.max / 12)); }
     p.enrol = { course: course.id, startDay: w.day, progress: 0, scholarship: scholar, feeMonthly: fee, monthsPaid: 0 };
     P.log(w, p, `Enrolled in ${course.name}${scholar ? ' with a full scholarship!' : ''}`, 'edu', scholar ? 1 : 0);
     if (scholar) w.stats.scholarships++;

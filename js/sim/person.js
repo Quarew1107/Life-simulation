@@ -93,7 +93,7 @@
   };
 
   // Real net worth (sen). Business cash is counted once, inside business equity.
-  P.netWorth = (w, p) => p.cash + p.trust + p.epf + P.invValue(w, p) + P.bizValue(w, p) - p.debt.study;
+  P.netWorth = (w, p) => p.cash + p.trust + p.epf + P.invValue(w, p) + P.bizValue(w, p) - p.debt.study - (p.debt.medical || 0);
 
   // imp: 0 = personal history only, 1 = also town feed, 2 = notable, 3 = headline
   P.log = function (w, p, text, cat, imp) {

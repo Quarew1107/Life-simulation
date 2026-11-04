@@ -186,11 +186,33 @@
     }
   };
 
+  // US bills: the plan pays after the deductible, the patient pays coinsurance up to the yearly
+  // out-of-pocket limit; Medicaid and Medicare are paid by the treasury; the uninsured pay a discounted
+  // price. What a patient cannot pay becomes medical debt (finance.js collects it).
+  function usBill(w, p, bill, H) {
+    const plan = H.plans[p.cover || 'none'], yr = U.dayToDate(w.day).year, L = w.ledger;
+    if (!p.med || p.med.yr !== yr) p.med = { yr, ded: 0, oop: 0 };
+    let own;
+    if (!plan) own = Math.round(bill * H.selfPay);
+    else {
+      const ded = Math.min(bill, Math.max(0, w.px(plan.deductible) - p.med.ded));
+      own = Math.min(ded + Math.round((bill - ded) * plan.coins), Math.max(0, w.px(plan.oopMax) - p.med.oop));
+      p.med.ded += ded; p.med.oop += own;
+      if (p.cover === 'medicaid' || p.cover === 'medicare') w.gov.month.healthSub = (w.gov.month.healthSub || 0) + Math.max(0, bill - own);
+    }
+    const paid = Math.min(Math.max(0, p.cash), own);
+    if (paid > 0) L.spend(p, 'cash', 'HEALTH', paid);
+    if (own > paid) { p.debt.medical = (p.debt.medical || 0) + own - paid; if (own - paid >= w.px(1000)) P.log(w, p, `Could not pay ${U.fmtMoney(own - paid)} of medical bills (${p.cover && p.cover !== 'none' ? 'after insurance' : 'uninsured'}): now medical debt`, 'money', 1); }
+    return own;
+  }
+
   // ---- Medical bills: public care is subsidised by the treasury; richer patients may go
   // private (dearer, quicker). Classic engine: the patient pays the whole bill.
-  SV.medicalBill = function (w, p, bill, minor) {
+  SV.medicalBill = function (w, p, bill, minor, full) {
     const L = w.ledger;
     if (!w.gov) { L.spend(p, 'cash', 'HEALTH', bill); return bill; }
+    const H = LES.Countries.pack.health;
+    if (H) return usBill(w, p, Math.round((full || bill) * H.priceMult), H); // US: insurance, deductibles, medical debt
     const priv = w.biz.filter(b => b.open && b.typeDef.service === 'health' && (minor ? true : b.type === 'privhosp'));
     const rich = p.cls === 'T20' || p.cash > 12 * bill;
     if (priv.length && rich && bill > 0) {

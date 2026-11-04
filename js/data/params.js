@@ -116,7 +116,7 @@
     { group: 'Town & map', essential: true, key: 'country', label: 'Country', type: 'select', options: [['my', 'Malaysia']], help: 'Prices, wages, taxes, laws, people and festivals of this country. Classic rules are Malaysia only.' },
     { group: 'Town & map', essential: true, key: 'founders', label: 'Founding population', type: 'int', min: 20, max: 6000, help: 'Strangers who found the town. The map size follows (100 = a small town).' },
     { group: 'Goal', essential: true, key: 'horizonYears', label: 'Years to simulate', type: 'int', min: 5, max: 300, help: '120 years is about four generations.' },
-    { group: 'Economy & prices', essential: true, key: 'wealthDist', label: 'Starting wealth', type: 'select', options: [['equal', 'Equal ({cur}10k each)'], ['moderate', 'Moderate inequality'], ['unequal', 'High inequality (some born rich)']] },
+    { group: 'Economy & prices', essential: true, key: 'wealthDist', label: 'Starting wealth', type: 'select', options: [['equal', 'Equal ({k:10} each)'], ['moderate', 'Moderate inequality'], ['unequal', 'High inequality (some born rich)']] },
     { group: 'Economy & prices', key: 'groupWealth', label: 'Starting wealth by group', type: 'select', options: [['realistic', 'Realistic (history: some groups start with less)'], ['equal', 'Equal start for every group']], help: 'Used where the country has official figures (UK: ONS Wealth and Assets Survey; Malaysia: no gap). Groups never differ in ability.' },
     { group: 'Economy & prices', essential: true, key: 'economy', label: 'Economic cycles', type: 'select', options: [['stable', 'Stable'], ['normal', 'Normal cycles'], ['volatile', 'Volatile (frequent recessions)']] },
     { group: 'Crime & justice', essential: true, key: 'crime', label: 'Crime & vice', type: 'select', options: [['lively', 'Lively ({adj} rates x10)'], ['realistic', 'Realistic (rare in a small town)'], ['lawless', 'Lawless (x30)'], ['off', 'Off']], help: 'Lively makes crime visible in a small town.' },
@@ -189,7 +189,7 @@
     return {
       eduMult: { free: 0, subsidised: 1, expensive: 2.5 }[cfg.education],
       fertMult: { national: LES.Countries.pack.demography.fertMult, low: 0.6, normal: 1, high: 1.6 }[cfg.fertility],
-      goal: Math.round(cfg.goalRM * 100),
+      goal: Math.round(cfg.goalRM * 100 / LES.Countries.scale()), // the goal is typed in real money
       horizonDays: cfg.horizonYears * 365,
       welfare: cfg.safetyNet === 'on',
       migMult: LES.C.MIGRATION_LEVELS[cfg.migration],
@@ -226,7 +226,7 @@
     if (cfg.towns !== '1' && cfg.removeLimits !== 'yes' && totalFounders > 1500) blockers.push(`All towns together would start with ${totalFounders} people; the limit is 1,500 (lower the population or turn on "Remove population limits").`);
 
     if (!blockers.length) {
-      if (cfg.goalRM > 1e9) warnings.push('A goal above RM1 billion will very likely never be reached.');
+      if (cfg.goalRM > 1e9) warnings.push(`A goal above ${LES.U.sym()}1 billion will very likely never be reached.`);
       if (cfg.towns !== '1' && totalFounders > 800) warnings.push(`Several towns with ${totalFounders} founders in all will run noticeably slower.`);
       if (cfg.founders > 1500) warnings.push('Very large populations run slower (120 years can take 10-15 minutes at MAX); people are drawn as dots when zoomed out.');
       else if (cfg.founders > 300) warnings.push('Large populations can grow past 1,000 people and slow down the visual mode.');

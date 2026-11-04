@@ -45,7 +45,7 @@
   const DRUG_BASE = 0.00024;
   // Country tuning (pack crimeTuning): how often chances to offend come up, how often police solve
   // a case and how long sentences are, against the Malaysian calibration (1 = unchanged).
-  const TUNE0 = { opportunity: 1, clear: 1, murderClear: 1, sentence: 1, community: 0, drugRepeat: 1 };
+  const TUNE0 = { opportunity: 1, clear: 1, murderClear: 1, sentence: 1, community: 0, drugRepeat: 1, lethal: 1 }; // lethal: guns make fights and robberies deadlier (US)
   let TUNE = TUNE0;
   const GANG_COLOURS = ['#e63946', '#8338ec', '#ff8c42', '#06d6a0', '#3a86ff', '#ffbe0b', '#d62828', '#8d99ae'];
 
@@ -158,7 +158,7 @@
     count(w, type);
     // Robberies and fights sometimes end in a killing (about 2% of violent crimes).
     let killed = false;
-    if ((type === 'robbery' || type === 'assault') && roll.ok && R.next() < 0.022 * (p.pers.risk > 80 ? 1.6 : 1)) killed = murder(w, p, v, type === 'robbery' ? 'robbery' : 'a fight');
+    if ((type === 'robbery' || type === 'assault') && roll.ok && R.next() < 0.022 * TUNE.lethal * (p.pers.risk > 80 ? 1.6 : 1)) killed = murder(w, p, v, type === 'robbery' ? 'robbery' : 'a fight');
     if (!killed && roll.ok) {
       P.log(w, v, `${text}${def.violent ? '' : ''}`, 'crime', 1);
       P.log(w, p, `Committed ${def.name.toLowerCase()}${gain ? ` (${U.fmtMoney(gain)})` : ''}`, 'crime', 0);
@@ -385,7 +385,7 @@
       st.gangFights++;
       pb.health = Math.max(1, pb.health - R.range(10, 40));
       w.pushFeed({ day: w.day, pid: pa.id, text: `Turf fight between ${a.name} and ${b.name}`, cat: 'crime', imp: 1 });
-      if (R.next() < 0.12) murder(w, pa, pb, 'a gang fight');
+      if (R.next() < Math.min(0.9, 0.12 * TUNE.lethal)) murder(w, pa, pb, 'a gang fight');
     }
   }
   const dist = (t, p, b) => { const h = t.buildings[p.homeId]; return h ? Math.abs(h.x - b.x) + Math.abs(h.y - b.y) : 1e9; };

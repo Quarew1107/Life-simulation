@@ -30,6 +30,9 @@
   // Country look (pack.art.style: 'uk' draws brick houses and seasonal trees; none = Malaysia) and
   // the season the trees show (set by the renderer from the date; null = evergreen tropics).
   const UKSTYLE = () => (LES.Countries.pack.art || {}).style === 'uk';
+  const USSTYLE = () => (LES.Countries.pack.art || {}).style === 'us';
+  const TEMPERATE = () => UKSTYLE() || USSTYLE(); // no palms, lawns instead of sandy yards, fields instead of paddies
+  const SIDING = ['#f4f1e8', '#cfe0e8', '#e8d9b5', '#d8e2cf', '#e9c9c0', '#d6d0e4'];
   let SEASON = null;
   // Map sign words: Malaysia's by default, a pack's town.signs replaces them (keyed by the Malay text).
   const SG = text => { const t = LES.Countries.pack.town.signs; return (t && t[text]) || text; };
@@ -251,7 +254,7 @@
     for (let r = 0; r < 5; r++) rect(g, x + 6 - r, y + 2 + r * 2, 2 + 2 * r, 2, r % 2 ? '#2f5d3a' : '#3b6e45');
   }
   function palm(g, x, y) {
-    if (UKSTYLE()) { conifer(g, x, y); return; }
+    if (TEMPERATE()) { conifer(g, x, y); return; }
     if (!vis(x - 4, y - 2, 22, 20)) return;
     g.fillStyle = PAL.shadow; g.beginPath(); g.ellipse(x + 7, y + 15, 6, 2, 0, 0, Math.PI * 2); g.fill();
     for (let i = 0; i < 10; i++) rect(g, x + 4 + Math.round(Math.sin(i / 3) * 1), y + 5 + i, 2, 1, i % 2 ? '#8a6a43' : '#9c7a4f');
@@ -261,7 +264,7 @@
     rect(g, x + 4, y + 5, 2, 2, '#6b4f2a'); // coconuts
   }
   function banana(g, x, y) {
-    if (UKSTYLE()) { shrub(g, x + 2, y + 4, SEASON === 'winter' ? '#6d7f55' : '#4f8a41'); return; }
+    if (TEMPERATE()) { shrub(g, x + 2, y + 4, SEASON === 'winter' ? '#6d7f55' : '#4f8a41'); return; }
     if (!vis(x - 2, y, 16, 14)) return;
     rect(g, x + 4, y + 6, 2, 6, '#7b8f3a');
     for (const [dx, dy, w] of [[-3, 2, 6], [3, 1, 6], [0, -1, 4], [-2, 5, 4], [4, 5, 4]]) rect(g, x + 3 + dx, y + 3 + dy, w, 2, '#6fb342');
@@ -331,9 +334,9 @@
       else if (INDUSTRIAL.has(bl.code)) { g.fillStyle = grav; g.fillRect(X + 2, Y + 2, BW - 4, BH - 4); }
       else if (bl.code === 'K' || bl.code === 'A') { // kampung: sandy yards and footpaths
         const R = prng('yard', bi);
-        if (UKSTYLE()) { rect(g, X + 4, Y + 4, BW - 8, BH - 8, PAL.lawn); rect(g, X + BW / 2 - 2, Y, 4, BH, PAL.pave); } // UK: back gardens and a paved path
+        if (TEMPERATE()) { rect(g, X + 4, Y + 4, BW - 8, BH - 8, PAL.lawn); rect(g, X + BW / 2 - 2, Y, 4, BH, PAL.pave); } // UK and US: gardens and a paved path
         else for (let i = 0; i < 14; i++) { g.fillStyle = dirt; g.beginPath(); g.ellipse(X + R.int(10, BW - 10), Y + R.int(10, BH - 10), R.int(10, 22), R.int(6, 12), 0, 0, Math.PI * 2); g.fill(); }
-        if (!UKSTYLE()) rect(g, X + BW / 2 - 3, Y, 6, BH, PAL.dirt);
+        if (!TEMPERATE()) rect(g, X + BW / 2 - 3, Y, 6, BH, PAL.dirt);
       } else if (bl.code === 'T' || bl.code === 'B' || bl.code === 'C') { // tidy lawns
         rect(g, X + 4, Y + 4, BW - 8, BH - 8, PAL.lawn);
         for (let y = Y + 4; y < Y + BH - 4; y += 8) rect(g, X + 4, y, BW - 8, 4, PAL.lawnStripe);
@@ -569,7 +572,18 @@
   function drawBuilding(g, b) {
     const T = 16, X = b.x * T, Y = b.y * T, W = b.w * T, H = b.h * T, R = prng(`b:${b.kind}`, b.id, b.built ? 1 : 0);
     switch (b.kind) {
-      case 'kampung': { // Malay house on stilts with a steep attap/zinc roof and steps (UK: a brick house of rented rooms)
+      case 'kampung': { // Malay house on stilts with a steep attap/zinc roof and steps (UK: a brick house of rented rooms; US: a trailer)
+        if (USSTYLE()) { // a mobile home on a rented lot: skirting, a stripe, steps, a pickup and a propane tank
+          const body = ['#f1efe6', '#e6e1d3', '#dfe7e8', '#f2e6d0'][b.id % 4], stripe = ['#5d8aa8', '#8c5a3c', '#4f7d5a'][b.id % 3];
+          g.fillStyle = PAL.shadow; g.fillRect(X + 6, Y + 37, 40, 4);
+          rect(g, X + 4, Y + 18, 40, 3, '#b8b8b0'); rect(g, X + 4, Y + 21, 40, 15, body); rect(g, X + 4, Y + 27, 40, 2, stripe);
+          rect(g, X + 4, Y + 36, 40, 3, '#8d8f8a');
+          windows(g, X + 8, Y + 22, 20, 5, 3, 1, { col: PAL.glass, frame: '#ffffff' }); addLight(X + 9, Y + 22, 5, 4, 0.8);
+          door(g, X + 36, Y + 36, 6, 12, '#6b4e3d'); rect(g, X + 32, Y + 36, 10, 2, '#9a8f80'); rect(g, X + 32, Y + 38, 10, 2, '#8a8070');
+          rect(g, X + 44, Y + 30, 3, 6, '#e9ecef'); // propane tank
+          if (b.id % 2) car(g, X + 6, Y + 40, ['#7a2632', '#1d3557', '#5c5c5c'][b.id % 3]);
+          break;
+        }
         if (UKSTYLE()) {
           const brick = BRICK[b.id % BRICK.length];
           g.fillStyle = PAL.shadow; g.fillRect(X + 6, Y + 40, 38, 5);
@@ -597,7 +611,7 @@
         break;
       }
       case 'flat': { // PPR flats: corridors, laundry poles, AC units and motorbikes below
-        const uk = UKSTYLE(), wall = uk ? (b.id % 2 ? '#b06a52' : '#c9b9a0') : b.id % 2 ? '#e8dcc0' : '#d4e6da';
+        const uk = UKSTYLE(), wall = uk ? (b.id % 2 ? '#b06a52' : '#c9b9a0') : USSTYLE() ? (b.id % 2 ? '#d9cdb8' : '#c5cbd3') : b.id % 2 ? '#e8dcc0' : '#d4e6da';
         const s = building(g, X + 3, Y + 2, W - 6, H - 6, { wall, roof: PAL.roof.grey, wallH: H - 24, details: 'tanks', seed: b.id });
         const fy = s.wallY + 3, floors = 9, fh = (s.wallH - 14) / floors;
         for (let f = 0; f < floors; f++) {
@@ -609,12 +623,25 @@
         }
         door(g, X + W / 2, Y + H - 4, 10, 9, '#5b4a3f');
         for (let i = 0; i < 4; i++) bike(g, X + 4 + i * 8, Y + H - 4, R.pick(['#e63946', '#1d3557', '#2a9d8f', '#f4a261']));
-        sign(g, uk ? 'COUNCIL' : 'PPR', X + W / 2, Y + 1, '#3d5a80');
+        sign(g, SG('PPR'), X + W / 2, Y + 1, '#3d5a80');
         break;
       }
       case 'terrace': { // a row of two-storey link houses, each with its own porch
         const units = Math.floor(W / 32);
         castShadow(g, X + 1, Y, units * 32, H, 3);
+        if (USSTYLE()) { // a street of detached clapboard houses: siding, gable roofs, front porches
+          for (let i = 0; i < units; i++) {
+            const ux = X + i * 32 + 2, wall = SIDING[(b.id + i) % SIDING.length];
+            roof(g, ux, Y, 28, 11, [PAL.roof.slate, PAL.roof.brown, PAL.roof.grey][(b.id + i) % 3], 'gable');
+            facade(g, ux, Y + 11, 28, H - 13, wall);
+            for (let yy = Y + 12; yy < Y + H - 3; yy += 2) rect(g, ux, yy, 28, 1, shade(wall, 0.93));
+            windows(g, ux + 3, Y + 13, 22, 6, 2, 1, { col: PAL.glass, frame: '#ffffff' });
+            rect(g, ux + 1, Y + H - 11, 26, 2, '#e9e4da'); for (const px of [ux + 2, ux + 13, ux + 25]) rect(g, px, Y + H - 9, 1, 7, '#ffffff'); // porch
+            door(g, ux + 19, Y + H - 3, 6, 9, DOORS[(b.id + i) % DOORS.length]);
+            if ((b.id + i) % 3 === 0) car(g, ux + 2, Y + H - 9, ['#e63946', '#457b9d', '#e9e4da', '#2a9d8f'][(b.id + i) % 4]);
+          }
+          break;
+        }
         if (UKSTYLE()) { // red-brick Victorian terraces: slate roofs, chimneys, bay windows, painted doors
           for (let i = 0; i < units; i++) {
             const ux = X + i * 32 + 1, brick = BRICK[(b.id + i) % BRICK.length];
@@ -657,8 +684,8 @@
         for (let y = Y + 3; y < Y + H - 3; y += 6) rect(g, X + 1, y, W - 2, 3, '#6fab57');
         fence(g, X + 1, Y + H - 2, W - 2, '#f4f1e8');
         rect(g, X + 30, Y + H - 4, 14, 3, '#cfc6b0'); // gate
-        const ukB = UKSTYLE(), rc = ukB ? [PAL.roof.slate, PAL.roof.brown, PAL.roof.red][b.id % 3] : [PAL.roof.blue, PAL.roof.red, PAL.roof.slate, PAL.roof.brown][b.id % 4];
-        building(g, X + 6, Y + 6, 46, 36, { wall: ukB ? BRICK[b.id % BRICK.length] : PAL.white, roof: rc, roofType: 'hip', wallH: 14 });
+        const ukB = TEMPERATE(), rc = ukB ? [PAL.roof.slate, PAL.roof.brown, PAL.roof.red][b.id % 3] : [PAL.roof.blue, PAL.roof.red, PAL.roof.slate, PAL.roof.brown][b.id % 4];
+        building(g, X + 6, Y + 6, 46, 36, { wall: UKSTYLE() ? BRICK[b.id % BRICK.length] : USSTYLE() ? SIDING[b.id % SIDING.length] : PAL.white, roof: rc, roofType: 'hip', wallH: 14 });
         windows(g, X + 9, Y + 30, 20, 8, 2, 1, { col: PAL.glass, frame: '#ffffff' });
         door(g, X + 38, Y + 42, 7, 10, PAL.wood);
         rect(g, X + 20, Y + 44, 18, 13, '#d9d3c7'); car(g, X + 23, Y + 48, b.id % 2 ? '#14141a' : '#f1faee');
@@ -719,7 +746,7 @@
         break;
       }
       case 'hall': { // Dewan Komuniti: big Minangkabau-style swept roof
-        const ukH = UKSTYLE(), s = building(g, X + 2, Y + 8, W - 4, H - 10, { wall: ukH ? BRICK[1] : '#f0dcc0', roof: ukH ? PAL.roof.slate : '#b5651d', roofType: 'gable', wallH: 30 });
+        const ukH = TEMPERATE(), s = building(g, X + 2, Y + 8, W - 4, H - 10, { wall: UKSTYLE() ? BRICK[1] : USSTYLE() ? '#e4dccb' : '#f0dcc0', roof: ukH ? PAL.roof.slate : '#b5651d', roofType: 'gable', wallH: 30 });
         if (!ukH) for (const ex of [X + 2, X + W - 8]) { rect(g, ex, Y + 2, 6, 8, '#b5651d'); rect(g, ex + (ex === X + 2 ? 0 : 4), Y, 2, 3, '#8e4d14'); } // Minangkabau horns
         windows(g, X + 8, s.wallY + 6, W - 16, 12, 5, 1, { col: PAL.glass });
         door(g, X + W / 2, Y + H - 2, 12, 12, PAL.wood);
@@ -932,7 +959,7 @@
         break;
       }
       case 'padi': {
-        if (UKSTYLE()) { // fields and hedgerows: barley, pasture, a ploughed strip
+        if (TEMPERATE()) { // fields and hedgerows: barley (US: corn), pasture, a ploughed strip
           const fields = ['#d9c36a', '#8cb85a', '#a07c55', '#c9b25a'];
           for (let c = 0; c < W; c += 48) {
             const col = SEASON === 'winter' ? ['#8f9a6a', '#a07c55'][(c / 48 + b.id) % 2] : fields[(c / 48 + b.id) % fields.length];
@@ -941,7 +968,7 @@
             rect(g, X + c, Y, 2, H, '#3f6b35'); // hedge
           }
           rect(g, X, Y, W, 2, '#3f6b35'); rect(g, X, Y + H - 2, W, 2, '#3f6b35');
-          sign(g, SG('FARMLAND'), X + W / 2, Y + H / 2 - 5, '#4a6a1f');
+          sign(g, SG('SAWAH PADI'), X + W / 2, Y + H / 2 - 5, '#4a6a1f');
           break;
         }
         for (let r = 0; r < H; r += 4) rect(g, X, Y + r, W, 4, r % 8 ? '#a6d36b' : '#8cc152');

@@ -930,7 +930,7 @@
     // Births and deaths: the 'national' birth-rate multiplier (TFR ~1.6) and the old-age mortality multiplier (life expectancy ~75).
     demography: { fertMult: 0.42, mortMult: 1.9 },
     // Settings a new world starts from in this country (applied when the country is picked in setup).
-    defaults: { mortMult: 1.9, leaderTitle: 'president', termYears: 5, inflMin: -0.5, inflMax: 4.5 },
+    defaults: { goalRM: 100000000, marketOutsideRM: 200000000, mortMult: 1.9, leaderTitle: 'president', termYears: 5, inflMin: -0.5, inflMax: 4.5 },
     // Reference crime rates per 100k a year (DOSM Crime Statistics 2025, AADK 2024, World Prison Brief).
     crime: { index: 170, violent: 32, property: 138, murder: 0.7, users: 586, prison: 256 },
     // Town events: north-east monsoon floods (relief like Bantuan Wang Ihsan) and haze.

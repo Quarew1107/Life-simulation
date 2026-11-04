@@ -85,7 +85,8 @@
     p.health = Math.max(1, p.health - hpLoss);
     p.att[best] = Math.max(0, p.att[best] - attLoss);
     p.injuredUntil = w.day + R.int(7, 60);
-    LES.Services.medicalBill(w, p, Math.min(p.cash, w.px(R.range(500, 5000))));
+    const injury = w.px(R.range(500, 5000));
+    LES.Services.medicalBill(w, p, Math.min(p.cash, injury), false, injury);
     p.stress = Math.min(100, p.stress + 20);
     w.stats.catastrophes++;
     P.log(w, p, `Seriously ${what}: -${Math.round(hpLoss)} health, lost ${attLoss.toFixed(1)} ${C.ATTR_NAMES[best]}`, 'luck', 1);
@@ -344,7 +345,7 @@
       addCand(out, gb.INVEST, 'INVEST', u, town.byKind.bursa, surplus);
     }
 
-    if (reflect && !p.retired && ctx.age >= 20 && ctx.age < 65 && p.bankruptUntil < w.day && p.manages < 0 && w.day - p.lastBizTry > 120) {
+    if (reflect && !p.retired && ctx.age >= 20 && ctx.age < 65 && p.bankruptUntil < w.day && !p.medCollect && p.manages < 0 && w.day - p.lastBizTry > 120) {
       const pick = LES.Finance.bestBizType(w, p, ctx);
       if (pick) {
         let u = -2.5 + B.START_BIZ + 1.3 * ctx.risk - 0.3 * ctx.pat + 0.25 * (pick.skill - 5)

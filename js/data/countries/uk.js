@@ -592,7 +592,7 @@
     },
     // TFR 1.41 (ONS births 2024); life expectancy ~81 (ONS national life tables 2022-2024).
     demography: { fertMult: 0.42, mortMult: 1.1 }, // 4b.4: 80-year runs gave TFR 1.22 at 0.37 and life expectancy 80.0 at 1.1
-    defaults: { mortMult: 1.1, leaderTitle: 'mayor', termYears: 4, inflMin: 0, inflMax: 5 },
+    defaults: { goalRM: 100000000, marketOutsideRM: 200000000, mortMult: 1.1, leaderTitle: 'mayor', termYears: 4, inflMin: 0, inflMax: 5 },
     // Police-recorded crime per 100k a year, England and Wales, year ending March 2026 (~61.8m people),
     // for the offences the engine models: theft from the person, residential burglary, vehicle offences,
     // robbery (87,362), violence with injury (507,169) and homicide. Prisoners: ~88,000 (142 per 100k).

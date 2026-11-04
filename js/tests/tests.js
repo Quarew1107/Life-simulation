@@ -904,6 +904,62 @@
     LES.Countries.ensure(LES.DEFAULTS);
   }
 
+  // United States (step 5): Ohio's rules with US statistics; money in real dollars at 1.75x the engine's units.
+  async function usTests() {
+    print('--- United States rules ---', 'info');
+    const KC = LES.Countries, U = LES.U, USd = Object.assign({}, LES.DEFAULTS, KC.get('us').defaults, { country: 'us', seed: 'us-r', founders: 60 });
+    const myAlone = (() => { const m = new LES.World(Object.assign({}, LES.DEFAULTS, { seed: 'us-sw', founders: 40 })); for (let d = 0; d < 400; d++) m.step(); return m.stableHash(); })();
+    const w = new LES.World(USd), FS = LES.Fiscal, K = KC.scale(), near = (a, b, tol) => Math.abs(a - b) <= (tol || 2);
+    check('Money shows in real dollars (a janitor earns $3,000 a month; the goal is $200 million)', U.fmtMoney(LES.C.JOB_BY_ID.cleaner.salary * 100) === '$3,000' && U.fmtMoney(w.goal) === '$200.00M' && K === 1.75, `${U.fmtMoney(LES.C.JOB_BY_ID.cleaner.salary * 100)} ${U.fmtMoney(w.goal)}`);
+    const t60 = FS.annualTaxOn(w, null, 60000 / K) * K;
+    check('Federal income tax on $60,000: 10/12% above the $16,100 standard deduction and 401(k) savings', near(t60, 4588, 1), t60.toFixed(1));
+    const p = w.living.find(x => x.adult), tags = () => Object.assign({}, w.gov.month.tags);
+    p.cash = w.px(1e5);
+    const t0 = tags(), gross = w.px(5000 / K);
+    FS.onPay(w, p, { biz: -1, jobId: 'cleaner', salary: gross }, gross, 0);
+    const t1 = tags(), d = k => ((t1[k] || 0) - (t0[k] || 0)) * K;
+    check('On $5,000 a month: FICA $382.50 from worker and employer, Ohio tax $77.80, city tax $100',
+      near(d('FICA (Social Security & Medicare)'), w.px(382.5), 4) && near(d('FICA (employers)'), w.px(382.5), 4) && near(d('Ohio income tax'), w.px(77.8), 4) && near(d('city income tax'), w.px(100), 4),
+      ['FICA (Social Security & Medicare)', 'FICA (employers)', 'Ohio income tax', 'city income tax'].map(k => Math.round(d(k) / w.price) / 100).join(' / '));
+    const q = w.living.find(x => x.adult && x !== p);
+    q.cover = 'none'; q.cash = 0; q.debt.medical = 0;
+    const bill = w.px(1000);
+    LES.Services.medicalBill(w, q, 0, false, bill);
+    check('Uninsured: a bill is charged at US prices (x2.2, 40% off self-pay) and what cannot be paid becomes medical debt', near(q.debt.medical, Math.round(bill * 2.2 * 0.6), 2), `${q.debt.medical} vs ${Math.round(bill * 2.2 * 0.6)}`);
+    const r = w.living.find(x => x.adult && x !== p && x !== q);
+    r.cover = 'employer'; r.cash = w.px(1e5); r.med = null;
+    const own = LES.Services.medicalBill(w, r, 0, false, w.px(3000)), exp = w.px(1900 / K) + Math.round((w.px(3000) * 2.2 - w.px(1900 / K)) * 0.2);
+    check('Employer plan: the patient pays the deductible, then 20% coinsurance', near(own, exp, 3), `${own} vs ${exp}`);
+    for (let k = 0; k < 400; k++) w.step();
+    const cov = {}; for (const x of w.living) if (x.alive) cov[x.cover || '?'] = (cov[x.cover || '?'] || 0) + 1;
+    check('Everyone holds health cover or none: employer, Medicaid, marketplace, Medicare', (cov.employer || 0) > 0 && (cov.medicaid || 0) + (cov.market || 0) > 0, JSON.stringify(cov));
+    const myW = new LES.World(Object.assign({}, LES.DEFAULTS, { seed: 'us-sw', founders: 40 }));
+    for (let k = 0; k < 400; k++) { myW.step(); w.step(); }
+    check('Running a US town alongside changes nothing in a Malaysian one', myW.stableHash() === myAlone);
+    const sv = LES.Save.toJSON(w), w2 = LES.Save.fromJSON(sv);
+    for (let k = 0; k < 120; k++) { w.step(); w2.step(); }
+    check('A US save loads in dollars and continues identically', JSON.parse(sv).country === 'us' && w2.stableHash() === w.stableHash() && U.sym() === '$');
+    const old = new LES.World(Object.assign({}, USd, { seed: 'us-old', founders: 40, startAgeMin: 67, startAgeMax: 80 }));
+    for (let k = 0; k < 40; k++) old.step();
+    const ss = old.living.filter(x => x.alive && LES.P.age(old, x) >= 67);
+    check('Social Security is paid from 67 out of the earnings record (a typical benefit ~$1,000-2,500)', ss.length > 20 && ss.every(x => x.ssPIA > 0) && ss.every(x => x.ssPIA * K > 700 && x.ssPIA * K < 5100), `${ss.length} retirees, avg $${Math.round(ss.reduce((a, x) => a + x.ssPIA, 0) / Math.max(1, ss.length) * K)}`);
+    check('Medicare covers everyone from 65', ss.every(x => x.cover === 'medicare'));
+    const poor = new LES.World(Object.assign({}, USd, { seed: 'us-poor', founders: 60, wealthDist: 'unequal' }));
+    const base = {}; for (let k = 0; k < 400; k++) { const m = poor.gov.month; poor.step(); if (poor.gov.month !== m) for (const [kk, v] of Object.entries(m.spend || {})) base[kk] = (base[kk] || 0) + v; }
+    check('SNAP food stamps go to low-income households', (base['SNAP (food stamps)'] || 0) > 0, Object.keys(base).join(', '));
+    const fams = poor.living.filter(x => x.alive && x.isHead && x.careOf.some(id => !poor.people[id].adult && LES.P.age(poor, poor.people[id]) < 16));
+    const pre = new Map(fams.map(x => [x.id, x.earned.welfare])), yr = poor.date.year;
+    while (poor.date.year === yr) poor.step();
+    const got = fams.filter(x => x.alive && x.earned.welfare - pre.get(x.id) >= poor.px(2200 / K) * 0.9);
+    check('Families with children get the Child Tax Credit with the tax return', !fams.length || got.length >= fams.length * 0.5, `${got.length} of ${fams.length} families`);
+    const workers = poor.living.filter(x => x.alive && x.job), RT = KC.pack.retirement;
+    const inPlan = workers.filter(x => ((x.id * 2654435761 >>> 0) % 1000) / 1000 < RT.participation).length;
+    check('About half of workers save in a 401(k)', workers.length < 10 || (inPlan / workers.length > 0.3 && inPlan / workers.length < 0.8), `${inPlan} of ${workers.length}`);
+    check('US towns keep their books balanced', old.checkInvariants().length === 0 && poor.checkInvariants().length === 0, old.checkInvariants().concat(poor.checkInvariants()).join('; '));
+    LES.Countries.ensure(LES.DEFAULTS);
+    check('Malaysia shows ringgit again afterwards', U.fmtMoney(100000) === 'RM1,000');
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -922,6 +978,7 @@
       await castTests();
       await countryTests();
       await ukTests();
+      await usTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -933,6 +990,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, tileTests };
+  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

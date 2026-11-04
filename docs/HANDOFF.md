@@ -242,7 +242,7 @@ Cast members follow the normal rules; flagged with a star on leaderboards.
   (headless Edge via the DevTools protocol; full suite: `LES_TESTS.runAll()` with a 600 s timeout).
   The runner turns off Edge's timer throttling for hidden windows (without it, tests that pause with
   setTimeout stall for minutes after heavy work), closes Edge completely with Browser.close, dismisses
-  dialogs, and on a timeout prints the page's call stack and last console lines. Full suite: 175 tests, ~170 s.
+  dialogs, and on a timeout prints the page's call stack and last console lines. Full suite: 190 tests, ~170 s.
 - 4b steps: (1) UK pack on the existing mechanics + country dropdown [DONE: `js/data/countries/uk.js` (loaded after
   my.js in every page); ONS/HMRC/BoE/Home Office figures with sources in the file; Census 2021 groups (white, asian,
   black, mixed, other) and religions; Rexbury, Hollinford, Wrayfield; Albion Exchange companies (names searched: no real
@@ -281,9 +281,37 @@ Cast members follow the normal rules; flagged with a star on leaderboards.
   Still shared with Malaysia (fine for now): engine constants in Year-1 money (similar size in GBP and RM), the
   Chinese temple and gopuram art for the Buddhist centre and mandir, the mosque and church art.
 - Owner's new order (Nov 2026): three countries first, UK, USA, China (UAE, Mexico and South Africa later).
-  Finish a whole country before pushing, then stop and report. NEXT: write the USA plan (state choice, federal +
-  state income tax, FICA, sales tax by state, medical debt and insurance, Social Security, SNAP/EITC, 401k,
-  student debt, county government, US crime and incarceration) and get it approved before coding.
+  Finish a whole country before pushing, then stop and report.
+
+### 4.6 United States (step 5, approved as recommended Nov 2026: Ohio rules, money scale, $200M goal,
+medium health detail, no party names, guns as lethality only, Brightwater / Harlow Junction / Cedar Bend)
+- Money scale: `money.scale` (US 1.75; Malaysia/UK 1). A pack writes real money; `LES.Countries.use` activates a
+  scaled copy (`K.scaled`, `K.MONEY_PATHS` lists every money field: add new ones there!) so the engine keeps its
+  ringgit-sized units; `U.fmtMoney/fmtPrice/U.cur` multiply back (`U.setCurrency(sym, k)`); typed-in amounts
+  (goalRM, marketOutsideRM, cast cash) and law amounts (minWage, cashAid, ubi via `GV.policyOf` and the voter
+  formulas) are divided by `LES.Countries.scale()`. `{k:10}` in texts = engine thousands shown in local money.
+  `K.get(code)` is the raw pack (real money), `K.pack` the active scaled copy.
+- `js/data/countries/us.js`: Census groups (white, hispanic, black, asian, other), Pew religions, BLS pay, 2026
+  federal brackets + $16,100 standard deduction + 401(k) relief, FICA through `tax.ni` (with `name`/`employerName`),
+  `tax.stateBands`/`stateName` (Ohio 2.75% above $26,050) and `tax.localIncome` (2% city tax) in `FS.onPay`,
+  sales tax 7.25%, `tax.assessmentName` 'property tax', 21% corporate tax, `tax.credits` (EITC table, CTC) paid in
+  `FS.year`; `welfare.model: 'usa'` runs `usBenefits` (Social Security from `p.ssEarn` / `ssInit`, SNAP with the
+  3-month rule for adults without children, TANF) and `usHealth` (cover: medicare / medicaid / employer /
+  market / none, premiums, children via CHIP or the parent's plan, `p.cover`); `health` pack + `usBill` in
+  services.js (deductible, coinsurance, out-of-pocket limit, self-pay discount, unpaid -> `p.debt.medical`);
+  `F.debtMonth` collects medical debt (collections `p.medCollect` blocks starting a business, bankruptcy clears
+  it) and runs `education.loans.model 'fixed'` (10 years at 6.4%, not cleared by bankruptcy); Pell grants in
+  `L.enroll`; 401(k) `retirement.participation` (fixed per person by id hash); `crimeTuning.lethal` (guns);
+  `events.tornado`; art style 'us' (trailers, apartments, clapboard houses, ranch homes, temperate trees,
+  fields, pumpkins, US flags via `art.flag`), Ohio daylight at 40N with DST.
+- Calibration (80 years, 3 seeds, fertMult 0.6, mortMult 1.2): TFR 1.48, life expectancy 78.0, median pay
+  $5,808 ($5,420), crime 476 per 100k, 26% solved, 685 prisoners, 611 drug users all in band; Gini 0.56 (warn);
+  unemployment 1% and revenue off. Revenue per person is $1,800-2,600 for the first 40 years (one seed), then
+  company and dividend taxes from very successful firms push the 80-year average far up (~$11,800): the same
+  wealth-concentration drift as the Gini in all three countries (Phase 6). Murders are too rare to measure in
+  small towns at the Realistic scale; `lethal: 4` follows the US/Malaysia gap. Benchmark unchanged.
+- NEXT: China (plan first, for approval): hukou, appointed government, social insurance (pension, medical),
+  housing provident fund, IIT bands, VAT, gaokao, a money scale (~2.5).
 
 Original notes:
 First move everything Malaysia-specific into a country pack (`js/data/countries/my.js`:
