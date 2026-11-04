@@ -82,7 +82,7 @@
     if (!w) return 'setup';
     const day = Math.max(0, w.lastDay);
     const fest = LES.Ambience.festival(day);
-    if (fest && FESTIVAL_TRACKS.includes(fest.id)) {
+    if (fest && ((LES.Countries.pack.art || {}).festivalTracks || FESTIVAL_TRACKS).includes(fest.id)) { // a country may play only some cues
       const k = `${fest.id}|${Math.floor(day / 365)}`;
       // Each festival once a year, and not back to back at high speed.
       if (!state.festPlayed[k] && nowS() - state.lastFestAt > FESTIVAL_GAP_S) {

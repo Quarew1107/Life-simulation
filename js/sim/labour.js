@@ -190,10 +190,12 @@
     const e = p.enrol, course = C.COURSE_BY_ID[e.course], Ld = w.ledger;
     if (e.feeMonthly > 0 && e.monthsPaid < course.months) {
       const fee = e.feeMonthly;
-      if (p.cash < fee + p.mcost) {
-        if (p.bankruptUntil >= w.day) { L.dropOut(w, p, 'could not pay fees'); return; }
+      const SL = LES.Countries.pack.education && LES.Countries.pack.education.loans; // UK: the Student Loans Company pays every fee
+      if (SL || p.cash < fee + p.mcost) {
+        if (!SL && p.bankruptUntil >= w.day) { L.dropOut(w, p, 'could not pay fees'); return; }
         Ld.pay('BANK', p, 'cash', fee); // PTPTN-style study loan
         p.debt.study += fee; p.debt.studyOrig += fee;
+        if (SL && p.debt.slStart === undefined) p.debt.slStart = w.day;
       }
       if (!Ld.spend(p, 'cash', 'EDUCATION', fee)) { L.dropOut(w, p, 'could not pay fees'); return; }
       e.monthsPaid++;

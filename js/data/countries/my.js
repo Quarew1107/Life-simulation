@@ -8,8 +8,9 @@
     adj: 'Malaysian',
     money: { symbol: 'RM', code: 'MYR', name: 'ringgit' },
     content: {
-      // Default town name (fictional).
+      // Default town name (fictional) and the first suggestion when you create a person in My cast.
       townName: 'Bandar Rezeki',
+      castDefault: { first: 'Aina', last: 'Rahman', eth: 'malay', skin: '#c68642' },
       // People. Mixes: national = DOSM Q4 2025 shares (Malay 58.2%, Chinese 22.2%, other Bumiputera 12.3%, Indian 6.5%, others 0.8%); classic = the original engine.
       ethnicities: ['malay', 'chinese', 'indian', 'bumi', 'other'],
       ethnicNames: { malay: 'Malay', chinese: 'Chinese', indian: 'Indian', bumi: 'Other Bumiputera', other: 'Others' },
@@ -858,7 +859,10 @@
     services: {
       schools: { lean: 9, national: 12, generous: 16 },
       health: { lean: [2.5, 1], national: [3.5, 1.5], generous: [5, 2.2] },
+      charges: { minor: 1, share: 0.05 }, // RM1 at the klinik kesihatan, 5% of hospital costs
     },
+    // Welfare: flat cash aid for B40 households (the cashAid law) and EIS job-loss benefit (40% of pay, up to RM2,000, 6 months).
+    welfare: { model: 'flat', jobLoss: { share: 0.4, cap: 2000, days: 183 } },
     // Setup-screen texts that name the country (js/data/params.js; the rest use {cur}/{adj} words).
     settings: {
       preset: { options: { national: "Today's rules (calibrated to DOSM data)" }, help: 'Fills the settings below. Malaysia: welfare on, ~1.6 children per woman, ~75-year life expectancy.' },

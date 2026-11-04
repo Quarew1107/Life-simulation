@@ -27,6 +27,13 @@
     roof: { terracotta: '#c4603f', red: '#b5483a', brown: '#8a5a3c', blue: '#3e6f9e', green: '#3f7d5a', grey: '#7d8790', slate: '#55606b', zinc: '#9aa5ad', attap: '#a3804b', teal: '#2a8f84', purple: '#6c4f99', navy: '#24476b', maroon: '#7a2632' },
   };
   LES.PAL = PAL;
+  // Country look (pack.art.style: 'uk' draws brick houses and seasonal trees; none = Malaysia) and
+  // the season the trees show (set by the renderer from the date; null = evergreen tropics).
+  const UKSTYLE = () => (LES.Countries.pack.art || {}).style === 'uk';
+  let SEASON = null;
+  // Map sign words: Malaysia's by default, a pack's town.signs replaces them (keyed by the Malay text).
+  const SG = text => { const t = LES.Countries.pack.town.signs; return (t && t[text]) || text; };
+  const BRICK = ['#a5523d', '#b5614a', '#9a4b38', '#b8735a'], DOORS = ['#1d3557', '#7a2632', '#2d6a4f', '#14141a', '#f4f1e8'];
 
   // ---- Drawing area (null = everything) ----
   let VX0 = 0, VY0 = 0, VX1 = 0, VY1 = 0, VIEW = false;
@@ -206,10 +213,11 @@
   function bike(g, x, y, col) { rect(g, x, y + 2, 6, 2, col); rect(g, x, y + 4, 1, 1, '#111'); rect(g, x + 5, y + 4, 1, 1, '#111'); rect(g, x + 4, y, 1, 2, '#333'); }
 
   // ---- Trees and plants ----
-  function rainTree(g, x, y, s, R) { // broad Malaysian rain tree / angsana
+  function rainTree(g, x, y, s, R) { // broad Malaysian rain tree / angsana (UK: oak or ash through the seasons)
     s = s || 1;
     const w = Math.round(14 * s), h = Math.round(11 * s);
     if (!vis(x - 2, y - 2, w + 12, h + 10)) { if (R) R.next(); return; } // (keep the generator in step)
+    if (SEASON) { seasonalTree(g, x, y, w, h, s, R); return; }
     g.fillStyle = PAL.shadow; g.beginPath(); g.ellipse(x + w / 2 + 3, y + h + 2, w / 2, 3 * s, 0, 0, Math.PI * 2); g.fill();
     rect(g, x + w / 2 - 1, y + h - 3, 3, 5 * s, '#6e4e31');
     const blobs = [[0.5, 0.45, 0.5], [0.25, 0.55, 0.32], [0.75, 0.55, 0.32], [0.45, 0.25, 0.32], [0.7, 0.3, 0.26]];
@@ -218,7 +226,32 @@
     rect(g, x + w * 0.35, y + h * 0.12, 2, 1, '#7cc35f');
     if (R && R.next() < 0.15) rect(g, x + w * 0.6, y + h * 0.4, 2, 2, '#f28482'); // flowering
   }
+  function seasonalTree(g, x, y, w, h, s, R) {
+    g.fillStyle = PAL.shadow; g.beginPath(); g.ellipse(x + w / 2 + 3, y + h + 2, w / 2, (SEASON === 'winter' ? 2 : 3) * s, 0, 0, Math.PI * 2); g.fill();
+    rect(g, x + w / 2 - 1, y + h * 0.35, 2, h * 0.65 + 5 * s, '#5d4632');
+    const v = R ? R.next() : 0.5;
+    if (SEASON === 'winter') { // bare branches
+      const bx = x + w / 2;
+      for (const [dx, dy, len] of [[-1, 0.35, 0.45], [1, 0.3, 0.42], [-1, 0.6, 0.3], [1, 0.55, 0.32], [0, 0.1, 0.25]]) {
+        const yy = Math.round(y + h * dy);
+        for (let k = 0; k < Math.round(w * len); k++) rect(g, Math.round(bx + dx * k), yy - Math.round(k * 0.5), 1, 1, '#6b5440');
+      }
+      return;
+    }
+    const cols = SEASON === 'autumn' ? (v < 0.5 ? ['#b5602a', '#d98b3a'] : ['#c9a13a', '#e2c15a']) : SEASON === 'spring' ? ['#5c9e45', '#8cc66a'] : ['#3e7a3c', '#5c9b4c'];
+    const blobs = [[0.5, 0.42, 0.5], [0.28, 0.52, 0.3], [0.72, 0.52, 0.3], [0.5, 0.2, 0.3]];
+    for (const [bx, by, br] of blobs) { g.fillStyle = cols[0]; g.beginPath(); g.ellipse(x + w * bx, y + h * by, w * br, h * br * 0.95, 0, 0, Math.PI * 2); g.fill(); }
+    g.fillStyle = cols[1]; g.beginPath(); g.ellipse(x + w * 0.42, y + h * 0.28, w * 0.2, h * 0.16, 0, 0, Math.PI * 2); g.fill();
+    if (SEASON === 'spring' && v < 0.25) for (let k = 0; k < 4; k++) rect(g, x + w * (0.3 + 0.12 * k), y + h * (0.3 + 0.1 * (k % 2)), 1, 1, '#f7c6d9'); // blossom
+  }
+  function conifer(g, x, y) { // UK gardens: a small evergreen instead of a palm
+    if (!vis(x - 2, y - 2, 16, 20)) return;
+    g.fillStyle = PAL.shadow; g.beginPath(); g.ellipse(x + 7, y + 15, 5, 2, 0, 0, Math.PI * 2); g.fill();
+    rect(g, x + 6, y + 12, 2, 4, '#5d4632');
+    for (let r = 0; r < 5; r++) rect(g, x + 6 - r, y + 2 + r * 2, 2 + 2 * r, 2, r % 2 ? '#2f5d3a' : '#3b6e45');
+  }
   function palm(g, x, y) {
+    if (UKSTYLE()) { conifer(g, x, y); return; }
     if (!vis(x - 4, y - 2, 22, 20)) return;
     g.fillStyle = PAL.shadow; g.beginPath(); g.ellipse(x + 7, y + 15, 6, 2, 0, 0, Math.PI * 2); g.fill();
     for (let i = 0; i < 10; i++) rect(g, x + 4 + Math.round(Math.sin(i / 3) * 1), y + 5 + i, 2, 1, i % 2 ? '#8a6a43' : '#9c7a4f');
@@ -228,6 +261,7 @@
     rect(g, x + 4, y + 5, 2, 2, '#6b4f2a'); // coconuts
   }
   function banana(g, x, y) {
+    if (UKSTYLE()) { shrub(g, x + 2, y + 4, SEASON === 'winter' ? '#6d7f55' : '#4f8a41'); return; }
     if (!vis(x - 2, y, 16, 14)) return;
     rect(g, x + 4, y + 6, 2, 6, '#7b8f3a');
     for (const [dx, dy, w] of [[-3, 2, 6], [3, 1, 6], [0, -1, 4], [-2, 5, 4], [4, 5, 4]]) rect(g, x + 3 + dx, y + 3 + dy, w, 2, '#6fb342');
@@ -297,8 +331,9 @@
       else if (INDUSTRIAL.has(bl.code)) { g.fillStyle = grav; g.fillRect(X + 2, Y + 2, BW - 4, BH - 4); }
       else if (bl.code === 'K' || bl.code === 'A') { // kampung: sandy yards and footpaths
         const R = prng('yard', bi);
-        for (let i = 0; i < 14; i++) { g.fillStyle = dirt; g.beginPath(); g.ellipse(X + R.int(10, BW - 10), Y + R.int(10, BH - 10), R.int(10, 22), R.int(6, 12), 0, 0, Math.PI * 2); g.fill(); }
-        rect(g, X + BW / 2 - 3, Y, 6, BH, PAL.dirt);
+        if (UKSTYLE()) { rect(g, X + 4, Y + 4, BW - 8, BH - 8, PAL.lawn); rect(g, X + BW / 2 - 2, Y, 4, BH, PAL.pave); } // UK: back gardens and a paved path
+        else for (let i = 0; i < 14; i++) { g.fillStyle = dirt; g.beginPath(); g.ellipse(X + R.int(10, BW - 10), Y + R.int(10, BH - 10), R.int(10, 22), R.int(6, 12), 0, 0, Math.PI * 2); g.fill(); }
+        if (!UKSTYLE()) rect(g, X + BW / 2 - 3, Y, 6, BH, PAL.dirt);
       } else if (bl.code === 'T' || bl.code === 'B' || bl.code === 'C') { // tidy lawns
         rect(g, X + 4, Y + 4, BW - 8, BH - 8, PAL.lawn);
         for (let y = Y + 4; y < Y + BH - 4; y += 8) rect(g, X + 4, y, BW - 8, 4, PAL.lawnStripe);
@@ -387,6 +422,20 @@
     const T = town.T, c = town.layout.river, X0 = (town.colX[c] + 14 + town.layout.padX[c]) * T, Wd = town.layout.gapX[c] * T, H = (town.layout.edge.side === 's' ? town.H - town.layout.edge.size : town.H) * T;
     const R = prng('river', c), mid = X0 + Wd / 2, ph = R.next() * 6;
     if (!vis(X0 - 2 * T, 0, Wd + 4 * T, H)) return;
+    if (UKSTYLE()) { // a canal: straight, stone-edged, a towpath on one side and moored narrowboats
+      const y0 = VIEW ? Math.max(0, VY0 - 2) : 0, y1 = VIEW ? Math.min(H, VY1 + 2) : H, half = Math.round(T * 0.95);
+      rect(g, mid - half - 10, y0, 2 * half + 20, y1 - y0, PAL.grass[2]);
+      rect(g, mid - half - 9, y0, 7, y1 - y0, PAL.dirt); // towpath
+      rect(g, mid - half - 2, y0, 2, y1 - y0, '#8d8f8a'); rect(g, mid + half, y0, 2, y1 - y0, '#8d8f8a'); // stone edges
+      rect(g, mid - half, y0, 2 * half, y1 - y0, '#3d6e7a');
+      for (let y = y0 - (y0 % 12); y < y1; y += 12) rect(g, mid - half / 2 + (y % 24 ? 4 : -4), y, 6, 1, '#5d8f9a');
+      for (let y = 30; y < H - 40; y += 170) { // narrowboats
+        if (y + 34 < y0 || y > y1) continue;
+        const cols = [['#1d3557', '#c1121f'], ['#2d6a4f', '#e9c46a'], ['#7a2632', '#f1faee']][(y / 170 | 0) % 3];
+        rect(g, mid + half - 9, y, 7, 34, cols[0]); rect(g, mid + half - 8, y + 4, 5, 26, cols[1]); rect(g, mid + half - 7, y + 6, 3, 22, '#5b4a3f');
+      }
+      return;
+    }
     const at = y => mid + Math.sin(y / 70 + ph) * T * 0.55 + Math.sin(y / 23 + ph * 2) * 3;
     for (let y = VIEW ? Math.max(0, (VY0 & ~1) - 2) : 0; y < (VIEW ? Math.min(H, VY1 + 2) : H); y += 2) {
       const cx = at(y), half = T * 1.35 + Math.sin(y / 41 + ph) * 3;
@@ -520,7 +569,20 @@
   function drawBuilding(g, b) {
     const T = 16, X = b.x * T, Y = b.y * T, W = b.w * T, H = b.h * T, R = prng(`b:${b.kind}`, b.id, b.built ? 1 : 0);
     switch (b.kind) {
-      case 'kampung': { // Malay house on stilts with a steep attap/zinc roof and steps
+      case 'kampung': { // Malay house on stilts with a steep attap/zinc roof and steps (UK: a brick house of rented rooms)
+        if (UKSTYLE()) {
+          const brick = BRICK[b.id % BRICK.length];
+          g.fillStyle = PAL.shadow; g.fillRect(X + 6, Y + 40, 38, 5);
+          rect(g, X + 34, Y + 1, 4, 7, shade(brick, 0.8)); rect(g, X + 34, Y + 1, 4, 1, '#55606b'); // chimney
+          roof(g, X + 3, Y + 4, 42, 14, PAL.roof.slate, 'gable');
+          facade(g, X + 5, Y + 18, 38, 24, brick);
+          for (let yy = Y + 20; yy < Y + 41; yy += 3) rect(g, X + 5, yy, 38, 1, shade(brick, 0.88));
+          windows(g, X + 8, Y + 21, 30, 7, 3, 1, { col: PAL.glass, frame: '#ffffff' });
+          windows(g, X + 8, Y + 31, 14, 7, 2, 1, { col: PAL.glass, frame: '#ffffff' }); addLight(X + 9, Y + 32, 5, 5, 0.8);
+          door(g, X + 33, Y + 42, 7, 10, DOORS[b.id % DOORS.length]);
+          rect(g, X + 4, Y + 39, 3, 4, '#2b2d42'); rect(g, X + 8, Y + 39, 3, 4, '#2a9d8f'); // wheelie bins
+          break;
+        }
         g.fillStyle = PAL.shadow; g.fillRect(X + 8, Y + 40, 36, 5);
         for (const sx of [8, 18, 28, 38]) rect(g, X + sx, Y + 31, 2, 11, PAL.woodDark);
         const rc = b.id % 3 === 0 ? PAL.roof.zinc : b.id % 3 === 1 ? PAL.roof.attap : PAL.roof.terracotta;
@@ -535,7 +597,7 @@
         break;
       }
       case 'flat': { // PPR flats: corridors, laundry poles, AC units and motorbikes below
-        const wall = b.id % 2 ? '#e8dcc0' : '#d4e6da';
+        const uk = UKSTYLE(), wall = uk ? (b.id % 2 ? '#b06a52' : '#c9b9a0') : b.id % 2 ? '#e8dcc0' : '#d4e6da';
         const s = building(g, X + 3, Y + 2, W - 6, H - 6, { wall, roof: PAL.roof.grey, wallH: H - 24, details: 'tanks', seed: b.id });
         const fy = s.wallY + 3, floors = 9, fh = (s.wallH - 14) / floors;
         for (let f = 0; f < floors; f++) {
@@ -547,12 +609,27 @@
         }
         door(g, X + W / 2, Y + H - 4, 10, 9, '#5b4a3f');
         for (let i = 0; i < 4; i++) bike(g, X + 4 + i * 8, Y + H - 4, R.pick(['#e63946', '#1d3557', '#2a9d8f', '#f4a261']));
-        sign(g, 'PPR', X + W / 2, Y + 1, '#3d5a80');
+        sign(g, uk ? 'COUNCIL' : 'PPR', X + W / 2, Y + 1, '#3d5a80');
         break;
       }
       case 'terrace': { // a row of two-storey link houses, each with its own porch
         const units = Math.floor(W / 32);
         castShadow(g, X + 1, Y, units * 32, H, 3);
+        if (UKSTYLE()) { // red-brick Victorian terraces: slate roofs, chimneys, bay windows, painted doors
+          for (let i = 0; i < units; i++) {
+            const ux = X + i * 32 + 1, brick = BRICK[(b.id + i) % BRICK.length];
+            roof(g, ux, Y, 31, 11, PAL.roof.slate, 'gable');
+            rect(g, ux + 24, Y - 3, 4, 5, shade(brick, 0.8));
+            facade(g, ux, Y + 11, 31, H - 13, brick);
+            for (let yy = Y + 13; yy < Y + H - 3; yy += 3) rect(g, ux, yy, 31, 1, shade(brick, 0.9));
+            windows(g, ux + 3, Y + 13, 12, 6, 2, 1, { col: PAL.glass, frame: '#ffffff' });
+            rect(g, ux + 2, Y + 21, 14, 9, '#efe9df'); windows(g, ux + 3, Y + 22, 12, 7, 3, 1, { col: PAL.glass, frame: '#ffffff' }); // bay window
+            door(g, ux + 23, Y + H - 3, 6, 10, DOORS[(b.id + i) % DOORS.length]);
+            rect(g, ux + 30, Y + 11, 1, H - 13, shade(brick, 0.7)); // party wall
+            if ((b.id + i) % 3 === 0) car(g, ux + 3, Y + H - 9, ['#e63946', '#457b9d', '#e9e4da', '#2a9d8f'][(b.id + i) % 4]);
+          }
+          break;
+        }
         for (let i = 0; i < units; i++) {
           const ux = X + i * 32 + 1, wall = TERRACE_WALLS[(b.id + i) % TERRACE_WALLS.length];
           roof(g, ux, Y, 31, 11, i % 2 ? PAL.roof.terracotta : PAL.roof.red, 'gable');
@@ -580,13 +657,14 @@
         for (let y = Y + 3; y < Y + H - 3; y += 6) rect(g, X + 1, y, W - 2, 3, '#6fab57');
         fence(g, X + 1, Y + H - 2, W - 2, '#f4f1e8');
         rect(g, X + 30, Y + H - 4, 14, 3, '#cfc6b0'); // gate
-        const rc = [PAL.roof.blue, PAL.roof.red, PAL.roof.slate, PAL.roof.brown][b.id % 4];
-        building(g, X + 6, Y + 6, 46, 36, { wall: PAL.white, roof: rc, roofType: 'hip', wallH: 14 });
+        const ukB = UKSTYLE(), rc = ukB ? [PAL.roof.slate, PAL.roof.brown, PAL.roof.red][b.id % 3] : [PAL.roof.blue, PAL.roof.red, PAL.roof.slate, PAL.roof.brown][b.id % 4];
+        building(g, X + 6, Y + 6, 46, 36, { wall: ukB ? BRICK[b.id % BRICK.length] : PAL.white, roof: rc, roofType: 'hip', wallH: 14 });
         windows(g, X + 9, Y + 30, 20, 8, 2, 1, { col: PAL.glass, frame: '#ffffff' });
         door(g, X + 38, Y + 42, 7, 10, PAL.wood);
         rect(g, X + 20, Y + 44, 18, 13, '#d9d3c7'); car(g, X + 23, Y + 48, b.id % 2 ? '#14141a' : '#f1faee');
-        rect(g, X + 57, Y + 32, 18, 24, '#ffffff'); rect(g, X + 59, Y + 34, 14, 20, '#4fc1e0'); rect(g, X + 60, Y + 35, 6, 1, '#a6e3f2');
-        palm(g, X + 60, Y + 6);
+        if (ukB) { rect(g, X + 58, Y + 36, 14, 10, '#7a5a3a'); roof(g, X + 57, Y + 31, 16, 6, PAL.roof.green, 'shed'); rainTree(g, X + 58, Y + 6, 0.9); } // garden shed and a tree
+        else { rect(g, X + 57, Y + 32, 18, 24, '#ffffff'); rect(g, X + 59, Y + 34, 14, 20, '#4fc1e0'); rect(g, X + 60, Y + 35, 6, 1, '#a6e3f2');
+        palm(g, X + 60, Y + 6); }
         shrub(g, X + 4, Y + 46); shrub(g, X + 12, Y + 52, '#d65a8a');
         break;
       }
@@ -610,7 +688,7 @@
         for (let k = 0; k < 8; k++) { const tx = X + 8 + (k % 4) * 26, ty = Y + 34 + Math.floor(k / 4) * 18; rect(g, tx, ty, 12, 6, '#f4f1e8'); rect(g, tx, ty + 6, 12, 1, '#a59f92'); }
         roof(g, X - 1, Y, W + 2, 15, '#c94c4c', 'gable');
         for (const px of [X + 1, X + W - 4]) rect(g, px, Y + 14, 3, H - 18, '#8a7a70');
-        sign(g, 'HAWKER CENTRE', X + W / 2, Y + 2, '#7a1f1f');
+        sign(g, SG('HAWKER CENTRE'), X + W / 2, Y + 2, '#7a1f1f');
         break;
       }
       case 'university': {
@@ -623,29 +701,29 @@
         rect(g, X + W / 2 - 6, c.wallY + 4, 12, 12, '#ffffff'); rect(g, X + W / 2 - 1, c.wallY + 6, 2, 6, '#333'); rect(g, X + W / 2, c.wallY + 10, 4, 2, '#333'); // clock
         door(g, X + W / 2, Y + 72, 12, 14, '#5b4a3f');
         for (const tx of [10, W - 26]) rainTree(g, X + tx, Y + H - 30, 1, R);
-        sign(g, 'UNIVERSITI REZEKI', X + W / 2, Y + 75, '#24476b');
+        sign(g, SG('UNIVERSITI REZEKI'), X + W / 2, Y + 75, '#24476b');
         break;
       }
       case 'kolej': {
         const s = building(g, X + 2, Y + 4, W - 4, H - 10, { wall: '#efe3c9', roof: '#6f8f3a', roofType: 'gable', wallH: 34 });
         windows(g, X + 6, s.wallY + 4, W - 12, 22, 5, 2, { col: PAL.glass, frame: '#d9ccb0' });
         door(g, X + W / 2, Y + H - 6, 10, 9, PAL.wood);
-        sign(g, 'KOLEJ VOKASIONAL', X + W / 2, Y + H - 12, '#4d6a26');
+        sign(g, SG('KOLEJ VOKASIONAL'), X + W / 2, Y + H - 12, '#4d6a26');
         break;
       }
       case 'library': {
         const s = building(g, X + 2, Y + 4, W - 4, H - 10, { wall: '#e9e1d0', roof: PAL.roof.brown, roofType: 'gable', wallH: 36 });
         for (let i = 0; i < 6; i++) { rect(g, X + 9 + i * 14, s.wallY + 2, 4, 32, '#f8f4ea'); rect(g, X + 9 + i * 14, s.wallY + 2, 1, 32, '#ffffff'); rect(g, X + 12 + i * 14, s.wallY + 2, 1, 32, '#cfc6b0'); }
         door(g, X + W / 2, Y + H - 6, 10, 12, PAL.woodDark);
-        sign(g, 'LIBRARY', X + W / 2, Y + H - 12, '#6b4423');
+        sign(g, SG('LIBRARY'), X + W / 2, Y + H - 12, '#6b4423');
         break;
       }
       case 'hall': { // Dewan Komuniti: big Minangkabau-style swept roof
-        const s = building(g, X + 2, Y + 8, W - 4, H - 10, { wall: '#f0dcc0', roof: '#b5651d', roofType: 'gable', wallH: 30 });
-        for (const ex of [X + 2, X + W - 8]) { rect(g, ex, Y + 2, 6, 8, '#b5651d'); rect(g, ex + (ex === X + 2 ? 0 : 4), Y, 2, 3, '#8e4d14'); }
+        const ukH = UKSTYLE(), s = building(g, X + 2, Y + 8, W - 4, H - 10, { wall: ukH ? BRICK[1] : '#f0dcc0', roof: ukH ? PAL.roof.slate : '#b5651d', roofType: 'gable', wallH: 30 });
+        if (!ukH) for (const ex of [X + 2, X + W - 8]) { rect(g, ex, Y + 2, 6, 8, '#b5651d'); rect(g, ex + (ex === X + 2 ? 0 : 4), Y, 2, 3, '#8e4d14'); } // Minangkabau horns
         windows(g, X + 8, s.wallY + 6, W - 16, 12, 5, 1, { col: PAL.glass });
         door(g, X + W / 2, Y + H - 2, 12, 12, PAL.wood);
-        sign(g, 'DEWAN', X + W / 2, Y + H - 14, '#7a3f12');
+        sign(g, SG('DEWAN'), X + W / 2, Y + H - 14, '#7a3f12');
         break;
       }
       case 'office': case 'techhub': {
@@ -655,7 +733,7 @@
         if (tech) for (let yy = s.wallY + 10; yy < Y + H - 20; yy += 28) rect(g, X + 2, yy, W - 4, 2, '#3ec7b5');
         rect(g, X + W / 2 - 1, Y - 8, 2, 8, '#ccc');
         door(g, X + W / 2, Y + H - 4, 14, 11, '#203040');
-        sign(g, tech ? 'TECH HUB' : 'MENARA', X + W / 2, Y + H + 1, tech ? '#13615a' : '#2b3a48');
+        sign(g, tech ? 'TECH HUB' : SG('MENARA'), X + W / 2, Y + H + 1, tech ? '#13615a' : '#2b3a48');
         break;
       }
       case 'bank': { // neo-classical: pediment and columns
@@ -663,7 +741,7 @@
         for (let i = 0; i < 4; i++) { const cx = X + 8 + i * ((W - 20) / 3); rect(g, cx, s.wallY + 3, 4, s.wallH - 6, '#ffffff'); rect(g, cx + 3, s.wallY + 3, 1, s.wallH - 6, '#cfc9bc'); }
         rect(g, X + 4, s.wallY, W - 8, 3, '#d8d2c4');
         door(g, X + W / 2, Y + H - 2, 8, 12, '#5b4a3f');
-        sign(g, 'BANK', X + W / 2, Y + 2, '#8a6d1d', '#ffe9a8');
+        sign(g, SG('BANK'), X + W / 2, Y + 2, '#8a6d1d', '#ffe9a8');
         break;
       }
       case 'bursa': {
@@ -673,7 +751,7 @@
         for (let i = 0; i <= 10; i++) { const xx = X + 10 + i * (W - 20) / 10, yy = s.wallY + 24 - i * 1.4 - (i % 3) * 3; if (i) g.lineTo(xx, yy); else g.moveTo(xx, yy); }
         g.stroke();
         door(g, X + W / 2, Y + H - 2, 14, 10, '#0e1620');
-        sign(g, 'BURSA', X + W / 2, Y + 3, '#0e1620', '#57d38c');
+        sign(g, SG('BURSA'), X + W / 2, Y + 3, '#0e1620', '#57d38c');
         break;
       }
       case 'mall': {
@@ -681,7 +759,7 @@
         windows(g, X + 8, s.wallY + 6, W - 16, s.wallH - 44, 4, 3, { col: '#c9b8e8', frame: '#ffffff' });
         rect(g, X + 18, Y + H - 34, W - 36, 30, '#8fc1d8'); rect(g, X + 18, Y + H - 34, W - 36, 2, PAL.glassHi); rect(g, X + W / 2, Y + H - 34, 1, 30, '#5b7f94');
         awning(g, X + 14, Y + H - 38, W - 28, '#9b7fc4', '#ffffff');
-        sign(g, 'REZEKI MALL', X + W / 2, Y + 4, '#5e3f8f');
+        sign(g, SG('REZEKI MALL'), X + W / 2, Y + 4, '#5e3f8f');
         break;
       }
       case 'shoplot': { // two-storey shophouse; the business sign goes on the upper floor
@@ -702,7 +780,7 @@
         windows(g, X + 8, s.wallY + 4, W - 16, s.wallH - 28, 6, 4, { col: '#9fd3e0', frame: '#dfe7ea' });
         rect(g, X + W / 2 - 9, Y + H - 26, 18, 18, '#2a9d8f'); rect(g, X + W / 2 - 2, Y + H - 23, 4, 12, '#fff'); rect(g, X + W / 2 - 6, Y + H - 19, 12, 4, '#fff');
         rect(g, X + 6, Y + H - 14, 16, 9, '#ffffff'); rect(g, X + 6, Y + H - 10, 16, 2, '#e63946'); rect(g, X + 8, Y + H - 6, 3, 2, '#111'); rect(g, X + 17, Y + H - 6, 3, 2, '#111'); // ambulance
-        sign(g, 'HOSPITAL', X + W / 2, Y + 1, '#1d6f66');
+        sign(g, SG('HOSPITAL'), X + W / 2, Y + 1, '#1d6f66');
         break;
       }
       case 'school': {
@@ -714,7 +792,7 @@
         rect(g, X + W - 10, Y + 52, 1, 20, '#ddd'); // flag pole: Jalur Gemilang
         for (let k = 0; k < 4; k++) rect(g, X + W - 9, Y + 52 + k, 8, 1, k % 2 ? '#ffffff' : '#d62828');
         rect(g, X + W - 9, Y + 52, 4, 2, '#1d3557'); rect(g, X + W - 8, Y + 52, 1, 1, '#ffd166');
-        sign(g, 'SEKOLAH', X + W / 2, Y + 4, '#2c5282');
+        sign(g, SG('SEKOLAH'), X + W / 2, Y + 4, '#2c5282');
         break;
       }
       case 'privschool': { // private school: brick-and-white blocks around a courtyard, a crest and a gate
@@ -744,21 +822,21 @@
         windows(g, X + 8, Y + 26, W - 16, 22, 10, 1, { col: '#c3d7e0', wide: 0.7 });
         rect(g, X + W - 40, Y + H - 28, 30, 22, '#5d666f'); for (let i = 0; i < 6; i++) rect(g, X + W - 40, Y + H - 26 + i * 4, 30, 1, '#4a525a');
         for (let i = 0; i < 3; i++) { rect(g, X + 10 + i * 18, Y + H - 14, 14, 8, '#c08552'); rect(g, X + 10 + i * 18, Y + H - 14, 14, 1, '#d9a273'); } // crates
-        sign(g, 'KILANG', X + W / 2, Y + H - 14, '#3d454d');
+        sign(g, SG('KILANG'), X + W / 2, Y + H - 14, '#3d454d');
         break;
       }
       case 'workshop': {
         const s = building(g, X + 2, Y + 4, W - 4, H - 6, { wall: '#c9b49b', roof: PAL.roof.zinc, roofType: 'shed', wallH: 40 });
         for (const gx of [X + 8, X + 52]) { rect(g, gx, s.wallY + 6, 34, 32, '#6c757d'); for (let i = 0; i < 8; i++) rect(g, gx, s.wallY + 8 + i * 4, 34, 1, '#58606a'); }
         rect(g, X + 46, Y + H - 10, 4, 6, '#2b2d42'); // oil drum
-        sign(g, 'BENGKEL', X + W / 2, Y + 8, '#5a4632');
+        sign(g, SG('BENGKEL'), X + W / 2, Y + 8, '#5a4632');
         break;
       }
       case 'warehouse': {
         const s = building(g, X + 2, Y + 2, W - 4, H - 6, { wall: '#b8c4cc', roof: '#7c8a94', roofType: 'shed', wallH: 36 });
         rect(g, X + 10, s.wallY + 4, 40, 30, '#7c8a94'); for (let i = 0; i < 7; i++) rect(g, X + 10, s.wallY + 6 + i * 4, 40, 1, '#6a7780');
         rect(g, X + 60, Y + 42, 28, 14, '#f4f1e8'); rect(g, X + 88, Y + 46, 10, 10, '#2a9d8f'); rect(g, X + 64, Y + 55, 5, 3, '#222'); rect(g, X + 88, Y + 55, 5, 3, '#222'); // lorry
-        sign(g, 'GUDANG', X + W / 2, Y + 10, '#4a5861');
+        sign(g, SG('GUDANG'), X + W / 2, Y + 10, '#4a5861');
         break;
       }
       case 'construction': {
@@ -771,7 +849,7 @@
         for (let i = 0; i < 6; i++) rect(g, X + 44 + i * 12, Y + 10, 1, 46, '#d9b44a'); // scaffold poles
         rect(g, X + 150, Y - 30, 5, 88, '#f4c430'); rect(g, X + 110, Y - 30, 100, 4, '#f4c430'); rect(g, X + 130, Y - 26, 1, 30, '#333'); rect(g, X + 126, Y + 4, 9, 6, PAL.woodLight);
         for (let i = 0; i < W; i += 10) rect(g, X + i, Y + H - 2, 6, 2, i % 20 ? '#f4c430' : '#222'); // hoarding
-        sign(g, 'TAPAK BINAAN', X + 30, Y + H - 14, '#7a5a1d');
+        sign(g, SG('TAPAK BINAAN'), X + 30, Y + H - 14, '#7a5a1d');
         break;
       }
       case 'lake': { // an irregular lake with a sandy shore, reeds, a jetty and a boat
@@ -789,7 +867,18 @@
         sign(g, (b.label || 'TASIK').toUpperCase(), X + W / 2, Y + H - 14, '#1d6f8a');
         break;
       }
-      case 'hill': { // a forested hill: shaded slopes, rocks, a winding trail and a viewpoint hut
+      case 'hill': { // a forested hill: shaded slopes, rocks, a winding trail and a viewpoint hut (UK: open moorland)
+        if (UKSTYLE()) {
+          rect(g, X, Y, W, H, '#7f8f55');
+          const mx = X + W / 2, my = Y + H / 2 + 8, heather = SEASON === 'summer' || SEASON === 'autumn' ? ['#86677e', '#7a5c70', '#6e5466'] : ['#7d6f5a', '#6f6350', '#655a49'];
+          for (const [r, col] of [[96, '#76864e'], [74, heather[0]], [52, heather[1]], [30, heather[2]]]) { g.fillStyle = col; g.beginPath(); g.ellipse(mx, my, r, r * 0.7, 0, 0, Math.PI * 2); g.fill(); }
+          g.strokeStyle = '#b59a6a'; g.lineWidth = 2; g.beginPath(); g.moveTo(mx - 80, Y + H - 4); g.bezierCurveTo(mx - 40, my + 30, mx + 50, my + 10, mx, my - 10); g.stroke(); // footpath
+          for (let i = 0; i < 14; i++) rect(g, mx + R.int(-70, 70), my + R.int(-40, 40), R.int(3, 7), 2, '#9aa0a6'); // stones
+          rect(g, mx - 9, my - 20, 18, 9, '#8d8f8a'); rect(g, mx - 6, my - 25, 11, 6, '#a3a59f'); // the tor
+          for (let i = 0; i < 3; i++) rainTree(g, mx + R.int(-80, 60), my + R.int(-30, 20), 0.5, R);
+          sign(g, (b.label || 'MOOR').toUpperCase(), X + W / 2, Y + H - 14, '#4a4e2f');
+          break;
+        }
         rect(g, X, Y, W, H, '#6fa34b');
         const cx = X + W / 2, cy = Y + H / 2 + 10;
         for (const [r, col] of [[96, '#5f9440'], [74, '#558a3a'], [52, '#4c7f34'], [30, '#43742e']]) { g.fillStyle = col; g.beginPath(); g.ellipse(cx, cy, r, r * 0.7, 0, 0, Math.PI * 2); g.fill(); }
@@ -822,7 +911,7 @@
         rect(g, X + W / 2 - 1, Y + H / 2 + 6, 2, 6, '#e2cf9f'); // fountain
         for (const [tx, ty] of [[4, 6], [W - 20, 10], [6, H - 30], [W - 22, H - 28], [W / 2 - 7, 2]]) rainTree(g, X + tx, Y + ty, 1, R);
         for (const [bx, by] of [[20, H - 40], [W - 36, 40]]) { rect(g, X + bx, Y + by, 10, 2, PAL.wood); rect(g, X + bx, Y + by + 2, 1, 2, PAL.woodDark); rect(g, X + bx + 9, Y + by + 2, 1, 2, PAL.woodDark); }
-        sign(g, b.label === 'Garden' ? 'TAMAN' : 'TAMAN TASIK', X + W / 2, Y + H - 14, '#2d6a4f');
+        sign(g, SG(b.label === 'Garden' ? 'TAMAN' : 'TAMAN TASIK'), X + W / 2, Y + H - 14, '#2d6a4f');
         break;
       }
       case 'gym': { // stadium: running track around a pitch, small stand
@@ -832,28 +921,40 @@
         for (let y = Y + 12; y < Y + H - 12; y += 6) rect(g, X + 12, y, W - 24, 3, '#67aa52');
         g.strokeStyle = '#f4f1e8'; g.strokeRect(X + 14.5, Y + 14.5, W - 29, H - 29);
         rect(g, X + 2, Y + 2, W - 4, 6, '#8d99ae'); for (let x = X + 4; x < X + W - 4; x += 3) rect(g, x, Y + 3, 2, 1, R.pick(C.SHIRTS));
-        sign(g, 'STADIUM', X + W / 2, Y + H / 2 - 5, '#7a2e1e');
+        sign(g, SG('STADIUM'), X + W / 2, Y + H / 2 - 5, '#7a2e1e');
         break;
       }
       case 'welfare': {
         const s = building(g, X + 2, Y + 2, W - 4, H - 6, { wall: '#f0e6d2', roof: '#9c6644', roofType: 'gable', wallH: 22 });
         windows(g, X + 24, s.wallY + 4, W - 34, 12, 4, 1, { col: PAL.glass });
         rect(g, X + 10, s.wallY + 5, 7, 7, '#ffffff'); rect(g, X + 12, s.wallY + 6, 3, 5, '#e63946'); rect(g, X + 11, s.wallY + 7, 5, 3, '#e63946');
-        sign(g, 'RUMAH KEBAJIKAN', X + W / 2, Y + H - 4, '#6b3f22');
+        sign(g, SG('RUMAH KEBAJIKAN'), X + W / 2, Y + H - 4, '#6b3f22');
         break;
       }
       case 'padi': {
+        if (UKSTYLE()) { // fields and hedgerows: barley, pasture, a ploughed strip
+          const fields = ['#d9c36a', '#8cb85a', '#a07c55', '#c9b25a'];
+          for (let c = 0; c < W; c += 48) {
+            const col = SEASON === 'winter' ? ['#8f9a6a', '#a07c55'][(c / 48 + b.id) % 2] : fields[(c / 48 + b.id) % fields.length];
+            rect(g, X + c, Y, 48, H, col);
+            for (let r = 2; r < H; r += 5) rect(g, X + c + 2, Y + r, 44, 1, shade(col, 0.9));
+            rect(g, X + c, Y, 2, H, '#3f6b35'); // hedge
+          }
+          rect(g, X, Y, W, 2, '#3f6b35'); rect(g, X, Y + H - 2, W, 2, '#3f6b35');
+          sign(g, SG('FARMLAND'), X + W / 2, Y + H / 2 - 5, '#4a6a1f');
+          break;
+        }
         for (let r = 0; r < H; r += 4) rect(g, X, Y + r, W, 4, r % 8 ? '#a6d36b' : '#8cc152');
         for (let r = 0; r < H; r += 4) for (let c = (r / 4) % 2 * 3; c < W; c += 6) rect(g, X + c, Y + r + 1, 1, 2, '#6fa33a');
         for (let c = 0; c < W; c += 48) { rect(g, X + c, Y, 3, H, '#6fb0c9'); rect(g, X + c, Y, 1, H, '#9fd0e0'); }
         for (const sx of [30, 130]) { rect(g, X + sx, Y + 20, 1, 14, PAL.wood); rect(g, X + sx - 4, Y + 22, 9, 1, PAL.wood); rect(g, X + sx - 2, Y + 18, 5, 3, '#c9a46b'); } // scarecrows
-        sign(g, 'SAWAH PADI', X + W / 2, Y + H / 2 - 5, '#4a6a1f');
+        sign(g, SG('SAWAH PADI'), X + W / 2, Y + H / 2 - 5, '#4a6a1f');
         break;
       }
       case 'depot': {
         const s = building(g, X + 2, Y + 4, W - 4, H - 6, { wall: '#d6d0c4', roof: PAL.roof.slate, roofType: 'shed', wallH: 36 });
         for (let i = 0; i < 3; i++) { rect(g, X + 8 + i * 28, s.wallY + 4, 22, 30, '#6c757d'); rect(g, X + 10 + i * 28, s.wallY + 20, 18, 12, '#e9c46a'); }
-        sign(g, 'DEPOT BAS', X + W / 2, Y + 8, '#3d5a80');
+        sign(g, SG('DEPOT BAS'), X + W / 2, Y + 8, '#3d5a80');
         break;
       }
       case 'memorial': { // Taman Kenangan: garden of remembrance (lanterns are drawn live)
@@ -862,7 +963,7 @@
         castShadow(g, X + W / 2 - 8, Y + H / 2 - 16, 16, 26, 3);
         rect(g, X + W / 2 - 8, Y + H / 2 - 10, 16, 20, '#cfc6b0'); rect(g, X + W / 2 - 5, Y + H / 2 - 16, 10, 6, '#b8ad95'); rect(g, X + W / 2 - 8, Y + H / 2 - 10, 16, 1, '#e8e1d0');
         for (const [tx, ty] of [[2, 2], [W - 18, 4], [4, H - 26], [W - 20, H - 24]]) rainTree(g, X + tx, Y + ty, 0.9, R);
-        sign(g, 'TAMAN KENANGAN', X + W / 2, Y + H - 14, '#4a5a3a');
+        sign(g, SG('TAMAN KENANGAN'), X + W / 2, Y + H - 14, '#4a5a3a');
         break;
       }
       case 'lot': {
@@ -872,7 +973,7 @@
         for (let i = 0; i < 40; i++) rect(g, X + 8 + R.int(0, W - 18), Y + 8 + R.int(0, H - 18), 2, 2, R.next() < 0.5 ? '#8fb463' : '#b0cd84');
         g.strokeStyle = '#8b6b43'; g.lineWidth = 1; g.setLineDash([3, 3]); g.strokeRect(X + 6.5, Y + 6.5, W - 13, H - 13); g.setLineDash([]);
         rect(g, X + W / 2 - 1, Y + H / 2 - 4, 2, 14, '#6b4423');
-        sign(g, 'TANAH DIJUAL', X + W / 2, Y + H / 2 - 12, '#7a5a1d');
+        sign(g, SG('TANAH DIJUAL'), X + W / 2, Y + H / 2 - 12, '#7a5a1d');
         break;
       }
       case 'builtlot': break;
@@ -916,7 +1017,7 @@
         rect(g, X + W / 2 - 6, Y + 3, 12, 3, '#2a9d8f'); // ridge ornament
         for (const lx of [X + 16, X + W - 20]) { rect(g, lx, Y + 27, 5, 6, '#e63946'); rect(g, lx + 2, Y + 33, 1, 2, '#f2c14e'); addLight(lx, Y + 27, 5, 6, 1, 'rgba(255,80,60,1)'); }
         rect(g, X + W / 2 - 4, Y + H + 1, 8, 4, '#8a6a43'); rect(g, X + W / 2 - 1, Y + H - 3, 1, 4, '#bbb'); // incense urn
-        sign(g, 'TOKONG', X + W / 2, Y + 14, '#7a1f1f', '#ffd166');
+        sign(g, SG('TOKONG'), X + W / 2, Y + 14, '#7a1f1f', '#ffd166');
         break;
       }
       case 'kuil': { // Hindu temple: a colourful stepped gopuram tower beside the hall
@@ -927,7 +1028,7 @@
         for (let i = 0; i < 5; i++) { const tw = 26 - i * 4, ty = Y + H - 6 - (i + 1) * 11; rect(g, X + 4 + i * 2, ty, tw, 11, tiers[i]); rect(g, X + 4 + i * 2, ty, tw, 2, shade(tiers[i], 1.25)); for (let k = 0; k < tw; k += 4) rect(g, X + 5 + i * 2 + k, ty + 5, 2, 3, shade(tiers[i], 0.7)); }
         rect(g, X + 14, Y + H - 6 - 60, 6, 5, '#f2c14e');
         door(g, X + 17, Y + H - 4, 8, 10, '#5c3b20');
-        sign(g, 'KUIL', X + W - 22, Y + H - 13, '#9c4221', '#ffe9a8');
+        sign(g, SG('KUIL'), X + W - 22, Y + H - 13, '#9c4221', '#ffe9a8');
         break;
       }
       case 'gereja': { // church: white walls, pitched roof, steeple with a cross
@@ -947,14 +1048,14 @@
         windows(g, X + 8, s.wallY + 8, W - 16, 10, 4, 1, { col: PAL.glass, lit: 1, night: 'rgba(200,230,255,0.95)' });
         door(g, X + W / 2, Y + H - 4, 10, 10, '#1d3557');
         rect(g, X + W - 26, Y + H - 12, 16, 8, '#f4f6f8'); rect(g, X + W - 26, Y + H - 9, 16, 2, '#1d3557'); rect(g, X + W - 20, Y + H - 14, 4, 2, '#e63946'); rect(g, X + W - 16, Y + H - 14, 2, 2, '#3a86ff');
-        sign(g, 'POLIS', X + W / 2, Y + 4, '#1d3557', '#f2e8cf');
+        sign(g, SG('POLIS'), X + W / 2, Y + 4, '#1d3557', '#f2e8cf');
         break;
       }
       case 'jail': { // police lock-up: barred windows
         const s = building(g, X + 2, Y + 4, W - 4, H - 8, { wall: '#c9ced3', roof: '#1d3557', wallH: 26 });
         for (let i = 0; i < 3; i++) { const wx = X + 6 + i * 12; rect(g, wx, s.wallY + 6, 8, 8, '#2b2d42'); for (let k = 1; k < 8; k += 2) rect(g, wx + k, s.wallY + 6, 1, 8, '#9aa0a6'); }
         door(g, X + W / 2, Y + H - 4, 8, 10, '#3d405b');
-        sign(g, 'LOKAP', X + W / 2, Y + 2, '#2b2d42', '#f2e8cf');
+        sign(g, SG('LOKAP'), X + W / 2, Y + 2, '#2b2d42', '#f2e8cf');
         break;
       }
       case 'townhall': { // Dewan Bandaraya: white colonial-style hall with a clock tower and flags
@@ -968,14 +1069,14 @@
         rect(g, tx + 4, Y + 8, 12, 12, '#ffffff'); rect(g, tx + 9, Y + 10, 2, 6, '#333'); rect(g, tx + 10, Y + 14, 4, 2, '#333');
         door(g, X + W / 2, Y + 98, 16, 18, PAL.woodDark);
         for (const fx of [X + 8, X + W - 18]) { rect(g, fx, Y + H - 40, 1, 22, '#ddd'); for (let k = 0; k < 4; k++) rect(g, fx + 1, Y + H - 40 + k, 9, 1, k % 2 ? '#ffffff' : '#d62828'); rect(g, fx + 1, Y + H - 40, 4, 2, '#1d3557'); }
-        sign(g, 'DEWAN BANDARAYA', X + W / 2, Y + H - 14, '#7a2632', '#f2e8cf');
+        sign(g, SG('DEWAN BANDARAYA'), X + W / 2, Y + H - 14, '#7a2632', '#f2e8cf');
         break;
       }
       case 'padang': {
         rect(g, X, Y, W, H, '#7fbf5a'); for (let y = Y; y < Y + H; y += 8) rect(g, X, y, W, 4, '#77b553');
         g.strokeStyle = '#f4f1e8'; g.lineWidth = 1; g.strokeRect(X + 4.5, Y + 6.5, W - 9, H - 13);
         rect(g, X + W / 2 - 10, Y + 8, 20, 8, '#cfc6b0'); rect(g, X + W / 2 - 10, Y + 8, 20, 2, '#e8e1d0'); // the stage
-        if (b.label !== 'Field') sign(g, 'PADANG', X + W / 2, Y + H - 14, '#2d6a4f');
+        if (b.label !== 'Field') sign(g, SG('PADANG'), X + W / 2, Y + H - 14, '#2d6a4f');
         else { rect(g, X + 8, Y + H / 2 - 1, W - 16, 1, '#f4f1e8'); for (const gx of [X + 6, X + W - 9]) rect(g, gx, Y + H / 2 - 5, 3, 10, '#ffffff'); } // a school sports field
         break;
       }
@@ -984,7 +1085,7 @@
         for (let i = 0; i < 6; i++) { const cx = X + 8 + i * ((W - 20) / 5); rect(g, cx, s.wallY + 3, 3, s.wallH - 6, '#ffffff'); rect(g, cx + 2, s.wallY + 3, 1, s.wallH - 6, '#cfc6b0'); }
         door(g, X + W / 2, Y + H - 4, 10, 13, '#5c3b20');
         g.fillStyle = '#c9a227'; g.beginPath(); g.arc(X + W / 2, Y + 6, 7, Math.PI, 0); g.fill();
-        sign(g, 'MAHKAMAH', X + W / 2, Y + H - 3, '#3d0c15', '#f2c14e');
+        sign(g, SG('MAHKAMAH'), X + W / 2, Y + H - 3, '#3d0c15', '#f2c14e');
         break;
       }
       case 'prison': { // high walls, watchtowers, cell blocks and an exercise yard
@@ -995,7 +1096,7 @@
         rect(g, X + 76, Y + 12, 54, 58, '#c9b48a'); g.strokeStyle = '#f4f1e8'; g.lineWidth = 1; g.strokeRect(X + 80.5, Y + 16.5, 46, 50); // yard
         for (const [tx, ty] of [[-3, -3], [W - 9, -3], [-3, H - 9], [W - 9, H - 9]]) { rect(g, X + tx, Y + ty, 10, 10, '#5d666f'); rect(g, X + tx + 2, Y + ty + 2, 6, 3, '#2b2d42'); }
         for (let x = X + 2; x < X + W - 4; x += 4) rect(g, x, Y - 2, 2, 2, '#c0c0c0'); // razor wire
-        sign(g, 'PENJARA', X + W / 2 - 20, Y + H - 14, '#2b2d42', '#f2e8cf');
+        sign(g, SG('PENJARA'), X + W / 2 - 20, Y + H - 14, '#2b2d42', '#f2e8cf');
         break;
       }
       case 'rehab': {
@@ -1004,7 +1105,7 @@
         windows(g, X + 8, s.wallY + 4, W - 16, 12, 2, 1, { col: PAL.glass });
         door(g, X + W / 2, Y + 54, 8, 9, PAL.wood);
         garden(g, X + 6, Y + 60, W - 12, H - 70, R);
-        sign(g, 'PEMULIHAN', X + W / 2, Y + 2, '#2f3e46', '#e9f5db');
+        sign(g, SG('PEMULIHAN'), X + W / 2, Y + 2, '#2f3e46', '#e9f5db');
         break;
       }
       // ---- Leisure venues ----
@@ -1014,21 +1115,21 @@
         for (let i = 0; i < 6; i++) rect(g, X + 12 + i * 12, s.wallY + 10 + (i % 2) * 6, 6, 4, ['#e63946', '#3ec7b5', '#f4a261'][i % 3]);
         for (let i = 0; i < W - 8; i += 6) rect(g, X + 4 + i, s.wallY + 1, 3, 2, (i / 6) % 2 ? '#ffd166' : '#fff3c4');
         door(g, X + W / 2, Y + H - 2, 12, 10, '#8d0801');
-        sign(g, 'PAWAGAM', X + W / 2, Y + 1, '#8d0801', '#ffe9a8');
+        sign(g, SG('PAWAGAM'), X + W / 2, Y + 1, '#8d0801', '#ffe9a8');
         break;
       }
       case 'karaoke': {
         const s = building(g, X + 2, Y + 2, W - 4, H - 4, { wall: '#3a0ca3', roof: '#240046', wallH: H - 18 });
         windows(g, X + 6, s.wallY + 6, W - 12, 18, 4, 1, { col: '#f72585', wide: 0.7, lit: 1, night: 'rgba(255,70,190,1)' });
         door(g, X + W / 2, Y + H - 2, 10, 10, '#10002b');
-        sign(g, 'KARAOKE & BAR', X + W / 2, Y + 1, '#7209b7', '#ffe9ff');
+        sign(g, SG('KARAOKE & BAR'), X + W / 2, Y + 1, '#7209b7', '#ffe9ff');
         break;
       }
       case 'bowling': {
         const s = building(g, X + 2, Y + 2, W - 4, H - 4, { wall: '#e9ecef', roof: '#457b9d', wallH: H - 18 });
         for (let i = 0; i < 5; i++) { rect(g, X + 10 + i * 16, s.wallY + 6, 4, 10, '#ffffff'); rect(g, X + 10 + i * 16, s.wallY + 9, 4, 1, '#e63946'); }
         g.fillStyle = '#e63946'; g.beginPath(); g.arc(X + W - 14, Y + H - 14, 5, 0, Math.PI * 2); g.fill();
-        sign(g, 'BOWLING', X + W / 2, Y + 1, '#1d3557');
+        sign(g, SG('BOWLING'), X + W / 2, Y + 1, '#1d3557');
         break;
       }
       case 'futsal': {
@@ -1039,7 +1140,7 @@
         rect(g, X + W / 2, Y + 5, 1, H - 10, '#f4f1e8');
         rect(g, X + 5, Y + H / 2 - 6, 4, 12, '#ffffff'); rect(g, X + W - 9, Y + H / 2 - 6, 4, 12, '#ffffff');
         g.strokeStyle = 'rgba(255,255,255,0.4)'; g.strokeRect(X + 2.5, Y + 2.5, W - 5, H - 5); // netting
-        sign(g, 'FUTSAL', X + W / 2, Y + H - 13, '#1b4332');
+        sign(g, SG('FUTSAL'), X + W / 2, Y + H - 13, '#1b4332');
         break;
       }
       case 'finedine': {
@@ -1047,21 +1148,21 @@
         awning(g, X + 4, s.wallY, W - 8, '#a4133c', '#f8f1e7');
         windows(g, X + 6, s.wallY + 8, W - 12, 14, 4, 1, { col: '#ffe8a3', frame: '#c9a227', lit: 1 });
         door(g, X + W / 2, Y + H - 2, 8, 11, '#6b2737');
-        sign(g, 'RESTORAN MEWAH', X + W / 2, Y + 1, '#3d0c15', '#f2c14e');
+        sign(g, SG('RESTORAN MEWAH'), X + W / 2, Y + 1, '#3d0c15', '#f2c14e');
         break;
       }
       case 'lounge': {
         const s = building(g, X + 2, Y, W - 4, H - 2, { wall: '#1d3557', roof: '#0b132b', wallH: H - 20, details: 'pool', seed: b.id });
         windows(g, X + 5, s.wallY + 4, W - 10, s.wallH - 20, 3, 12, { col: '#a8dadc', wide: 0.75, lit: 0.85, night: 'rgba(170,220,255,0.95)' });
         rect(g, X, Y - 4, W, 6, '#f2c14e'); rect(g, X + 4, Y - 8, W - 8, 4, '#e9c46a');
-        sign(g, 'SKY LOUNGE', X + W / 2, Y + H + 1, '#0b132b', '#f2c14e');
+        sign(g, SG('SKY LOUNGE'), X + W / 2, Y + H + 1, '#0b132b', '#f2c14e');
         break;
       }
       case 'spa': {
         const s = building(g, X + 2, Y + 2, W - 4, H - 4, { wall: '#eef6e2', roof: '#52796f', roofType: 'hip', wallH: H - 22 });
         rect(g, X + W - 28, s.wallY + 4, 20, 14, '#ffffff'); rect(g, X + W - 26, s.wallY + 6, 16, 10, '#8ecae6');
         palm(g, X + 6, Y + 18);
-        sign(g, 'SPA', X + W / 2, Y + 1, '#2f3e46', '#e9f5db');
+        sign(g, SG('SPA'), X + W / 2, Y + 1, '#2f3e46', '#e9f5db');
         break;
       }
       case 'golf': {
@@ -1075,7 +1176,7 @@
         const s = building(g, X + W - 72, Y + 6, 62, 38, { wall: '#fbf7ef', roof: '#7a1f1f', roofType: 'hip', wallH: 16 });
         windows(g, X + W - 68, s.wallY + 3, 54, 10, 5, 1, { col: PAL.glass });
         for (const [tx, ty] of [[6, 4], [100, 6], [8, 70], [200, 90], [180, 150]]) if (tx < W - 16 && ty < H - 18) rainTree(g, X + tx, Y + ty, 1, R);
-        sign(g, 'KELAB GOLF', X + W - 40, Y + 2, '#3d0c15', '#f2c14e');
+        sign(g, SG('KELAB GOLF'), X + W - 40, Y + 2, '#3d0c15', '#f2c14e');
         break;
       }
       case 'station': {
@@ -1086,7 +1187,7 @@
         for (let i = 0; i < 3; i++) rect(g, X + 12 + i * 40, s.wallY + 4, 20, s.wallH - 10, PAL.glass);
         door(g, X + W / 2, Y + H - 2, 20, 16, PAL.wood);
         rect(g, X + W / 2 - 8, Y + 12, 16, 6, '#ffffff'); rect(g, X + W / 2 - 1, Y + 13, 2, 4, '#333');
-        sign(g, 'STESEN KERETAPI', X + W / 2, Y + H - 2, '#386641', '#f2e8cf');
+        sign(g, SG('STESEN KERETAPI'), X + W / 2, Y + H - 2, '#386641', '#f2e8cf');
         break;
       }
       case 'rail': {
@@ -1107,16 +1208,16 @@
     if (kind === 'palm') {
       rect(g, X + 2, Y + 2, W - 4, H - 4, '#8fae5a');
       for (let y = Y + 10; y < Y + H - 18; y += 22) for (let x = X + 8 + ((y / 22) % 2) * 11; x < X + W - 16; x += 22) palm(g, x, y);
-      sign(g, 'LADANG SAWIT', X + W / 2, Y + H - 13, '#4a6a1f');
+      sign(g, SG('LADANG SAWIT'), X + W / 2, Y + H - 13, '#4a6a1f');
     } else if (kind === 'forest') {
       rect(g, X + 2, Y + 2, W - 4, H - 4, '#5d8f43');
       for (let i = 0; i < 46; i++) rainTree(g, X + R.int(0, W - 18), Y + R.int(0, H - 18), 0.8 + R.next() * 0.5, R);
-      sign(g, 'HUTAN', X + W / 2, Y + H - 13, '#2d4a1f');
+      sign(g, SG('HUTAN'), X + W / 2, Y + H - 13, '#2d4a1f');
     } else {
       rect(g, X + 4, Y + 4, W - 8, H - 8, '#a3bf6e');
       for (let i = 0; i < 70; i++) rect(g, X + 6 + R.int(0, W - 14), Y + 6 + R.int(0, H - 14), 2, 2, R.next() < 0.5 ? '#8fb463' : '#c2b27a');
       for (let i = 0; i < 8; i++) shrub(g, X + R.int(6, W - 16), Y + R.int(6, H - 14));
-      sign(g, 'TANAH DIJUAL', X + W / 2, Y + H / 2 - 12, '#7a5a1d');
+      sign(g, SG('TANAH DIJUAL'), X + W / 2, Y + H / 2 - 12, '#7a5a1d');
     }
   }
 
@@ -1143,5 +1244,7 @@
   function beginLights() { lightRects = []; }
   function takeLights() { const r = lightRects || []; lightRects = null; return r; }
 
-  LES.Art = { beginLights, takeLights, PAL, rect, shade, sign, building, roof, facade, windows, door, awning, castShadow, rainTree, palm, banana, shrub, drawGround, drawBuilding, drawGreenery, setView, vis, prng };
+  // The season trees show; returns true when it changed (the renderer then repaints the map).
+  const setSeason = s => { if (s === SEASON) return false; SEASON = s; return true; };
+  LES.Art = { setSeason, beginLights, takeLights, PAL, rect, shade, sign, building, roof, facade, windows, door, awning, castShadow, rainTree, palm, banana, shrub, drawGround, drawBuilding, drawGreenery, setView, vis, prng };
 })(globalThis.LES = globalThis.LES || {});

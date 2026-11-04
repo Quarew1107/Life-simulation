@@ -109,7 +109,7 @@
     badge.textContent = `${r.name} economy`;
     badge.style.color = r.color;
     const day0 = Math.max(0, w.lastDay), fest = LES.Ambience.festival(day0), wx = LES.Ambience.weather(day0);
-    $('mood').innerHTML = `${{ rain: '🌧️', haze: '🌫️', clear: '☀️' }[wx.id]} ${wx.name}${fest ? ` · 🎉 <b>${fest.name}</b>` : ''}`;
+    $('mood').innerHTML = `${{ rain: '🌧️', haze: '🌫️', clear: '☀️', snow: '❄️', heat: '🥵' }[wx.id] || '☀️'} ${wx.name}${fest ? ` · 🎉 <b>${fest.name}</b>` : ''}`;
     $('mood').title = `${wx.name}${fest ? ` · ${fest.name}` : ''}`; // full text if the fixed-width box truncates it
     const h = w.history[w.history.length - 1];
     const adults = w.counts.adults;

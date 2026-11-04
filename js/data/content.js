@@ -246,6 +246,7 @@
     C.CHILD_COST = N.childCost; C.CHILD_COST_PER_HOUSING = N.childCostPerHousing;
     list(C.TAX_BANDS, N.simpleTaxBands); C.CORP_TAX = N.corpTax;
     list(C.ETHNICITIES, N.ethnicities); into(C.ETHNIC_NAMES, N.ethnicNames); into(C.ETHNIC_MIXES, N.ethnicMixes);
+    C.START_WEALTH = N.startWealth || null; // the country's starting-wealth gap by group (none for Malaysia)
     C.ETHNIC_WEIGHTS = C.ETHNIC_MIXES.classic.w;
     into(C.NAMES, N.names); into(C.SKIN, N.skin); C.TOWN_NAME = N.townName;
     list(C.STOCKS, N.stocks); list(C.IPO_POOL, N.ipoPool); list(C.GLC_STOCKS, N.glcStocks);

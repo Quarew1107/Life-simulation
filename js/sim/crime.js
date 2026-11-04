@@ -43,6 +43,10 @@
   CR.INDEX = ['theft', 'burglary', 'vehicle', 'robbery', 'assault', 'murder']; // DOSM index crimes (scams are commercial crime)
   const BASE = 0.0013;     // monthly opportunity chance per unit temptation at intensity 1 (calibrated: tools/headless.js)
   const DRUG_BASE = 0.00024;
+  // Country tuning (pack crimeTuning): how often chances to offend come up, how often police solve
+  // a case and how long sentences are, against the Malaysian calibration (1 = unchanged).
+  const TUNE0 = { opportunity: 1, clear: 1, murderClear: 1, sentence: 1, community: 0, drugRepeat: 1 };
+  let TUNE = TUNE0;
   const GANG_COLOURS = ['#e63946', '#8338ec', '#ff8c42', '#06d6a0', '#3a86ff', '#ffbe0b', '#d62828', '#8d99ae'];
 
   const K = w => CR.INTENSITY[w.cfg.crime] || 10;
@@ -160,7 +164,7 @@
       P.log(w, p, `Committed ${def.name.toLowerCase()}${gain ? ` (${U.fmtMoney(gain)})` : ''}`, 'crime', 0);
     } else if (!roll.ok) P.log(w, p, `Tried ${def.name.toLowerCase()} but failed`, 'crime', 0);
     // Will the police solve it? Depends on how stretched the force is and how well it is led.
-    const pc = U.clamp(def.clear * CR.capacity(w) * policing(w).solve * (roll.ok ? 1 : 1.4) * (1 - 0.04 * Math.max(0, A.attrScore(p, def.w || [0, 0, 0, 0, 0, 0]) - 5)), 0.02, 0.95);
+    const pc = U.clamp(def.clear * TUNE.clear * CR.capacity(w) * policing(w).solve * (roll.ok ? 1 : 1.4) * (1 - 0.04 * Math.max(0, A.attrScore(p, def.w || [0, 0, 0, 0, 0, 0]) - 5)), 0.02, 0.95);
     st.crimesNow = (st.crimesNow || 0) + 1;
     if (!killed && R.next() < pc) { st.cases.push({ type, off: p.id, victim: v.id, day: w.day, arrest: w.day + R.int(2, 60) }); st.solvedNow = (st.solvedNow || 0) + 1; }
   }
@@ -172,7 +176,7 @@
     w.pushFeed({ day: w.day, pid: v.id, text: `${P.name(v)} was killed in ${how}`, cat: 'crime', imp: 2 });
     P.log(w, p, `Killed ${P.name(v)} in ${how}`, 'crime', 0);
     st.crimesNow = (st.crimesNow || 0) + 1;
-    if (R.next() < CR.TYPES.murder.clear * Math.min(1.1, CR.capacity(w) * policing(w).solve)) { st.cases.push({ type: 'murder', off: p.id, victim: v.id, day: w.day, arrest: w.day + R.int(3, 40) }); st.solvedNow = (st.solvedNow || 0) + 1; }
+    if (R.next() < CR.TYPES.murder.clear * TUNE.murderClear * Math.min(1.1, CR.capacity(w) * policing(w).solve)) { st.cases.push({ type: 'murder', off: p.id, victim: v.id, day: w.day, arrest: w.day + R.int(3, 40) }); st.solvedNow = (st.solvedNow || 0) + 1; }
     return true;
   }
 
@@ -250,7 +254,12 @@
       P.log(w, p, `Convicted of ${def.name.toLowerCase()} and fined ${U.fmtMoney(fine)}`, 'crime', 1);
       return;
     }
-    const months = Math.max(1, Math.round(def.months * R.range(0.6, 1.5) * (p.cr.rec ? 1.4 : 1) - served)); // remand counts toward the sentence
+    if (c.type !== 'murder' && TUNE.community > 0 && R.next() < TUNE.community) { // UK: most convictions end in a community order, not prison
+      p.cr.rec++; st.community = (st.community || 0) + 1;
+      P.log(w, p, `Convicted of ${def.name.toLowerCase()} and given a community order`, 'crime', 1);
+      return;
+    }
+    const months = Math.max(1, Math.round(def.months * TUNE.sentence * R.range(0.6, 1.5) * (p.cr.rec ? 1.4 : 1) - served)); // remand counts toward the sentence
     CR.admit(w, p, 'prison', months, def.name.toLowerCase());
     if (c.type === 'murder') w.pushFeed({ day: w.day, pid: p.id, text: `${P.name(p)} was convicted of murdering ${P.name(w.people[c.victim])}`, cat: 'crime', imp: 2 });
   }
@@ -290,7 +299,7 @@
     // Police: possession arrests (Malaysia arrests ~40% of users a year).
     if (policy !== 'decriminalised' && R.next() < 0.03 * police(w)) {
       cr.drugArrests++; st.drugArrests++;
-      const prison = policy === 'punitive' || (policy === 'national' && cr.drugArrests > 1);
+      const prison = policy === 'punitive' || (policy === 'national' && cr.drugArrests > TUNE.drugRepeat); // Malaysia: prison from the second arrest
       if (prison) CR.admit(w, p, 'prison', Math.round(R.range(12, 30)), 'drug possession');
       else CR.admit(w, p, 'rehab', policy === 'treatment' ? 6 : 12, 'drug use');
     }
@@ -528,7 +537,7 @@
         drugsMonth(w, p, R);
         if (!p.alive || p.inst) continue;
         cr.t = temptation(w, p);
-        if (R.next() < Math.min(0.6, cr.t * k * BASE * 30)) {
+        if (R.next() < Math.min(0.6, cr.t * k * (BASE * TUNE.opportunity) * 30)) {
           cr.opp = w.day + R.int(1, 27); cr.oppSlot = R.next() < 0.5 ? 0 : 1; cr.oppType = pickType(w, p, R);
         }
       }
@@ -584,5 +593,6 @@
     return out;
   };
   LES.Countries.require('gangNames.pattern', 'gangNames.a', 'gangNames.b', 'crime.index', 'crime.violent', 'crime.property', 'crime.murder', 'crime.users', 'crime.prison');
-  LES.Countries.on('crime', pack => { for (const k of Object.keys(CR.REF)) delete CR.REF[k]; Object.assign(CR.REF, pack.crime); });
+  LES.Countries.on('crime', pack => {
+    TUNE = Object.assign({}, TUNE0, pack.crimeTuning || {}); for (const k of Object.keys(CR.REF)) delete CR.REF[k]; Object.assign(CR.REF, pack.crime); });
 })(globalThis.LES = globalThis.LES || {});

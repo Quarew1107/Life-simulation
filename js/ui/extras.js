@@ -89,7 +89,7 @@
   };
 
   // ---------------- Map overlays ----------------
-  X.OVERLAYS = [['none', 'No overlay'], ['wealth', 'Wealth'], ['strategy', 'Strategy'], ['stress', 'Stress'], ['class', 'Class (B40/M40/T20)'], ['religion', 'Religion'], ['ethnicity', 'Ethnicity'], ['crime', 'Crime (records, gangs, drugs, victims)'], ['gangs', 'Gang turf'], ['family', "Selected person's family"]];
+  X.OVERLAYS = [['none', 'No overlay'], ['wealth', 'Wealth'], ['strategy', 'Strategy'], ['stress', 'Stress'], ['class', 'Class'], ['religion', 'Religion'], ['ethnicity', 'Ethnicity'], ['crime', 'Crime (records, gangs, drugs, victims)'], ['gangs', 'Gang turf'], ['family', "Selected person's family"]];
   const ETH_COLOURS = { malay: '#2a9d8f', chinese: '#e63946', indian: '#f4a261', bumi: '#b892ff', other: '#e8edf2' };
   X.overlayColour = function (w, p, mode, selected) {
     if (mode === 'wealth') {

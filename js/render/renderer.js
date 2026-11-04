@@ -315,7 +315,8 @@
     frame(t, fast, now) {
       const g = this.ctx, w = this.w;
       if (!w || !this.tiles) return;
-      if (this.bgVersion !== w.townVersion) { this.buildStatic(); this.anim.clear(); }
+      if (LES.Art.setSeason(LES.Ambience.season(w.lastDay < 0 ? 0 : w.lastDay))) { this.tiles.reset(); this.buildStatic(); this.anim.clear(); } // trees change with the seasons (UK)
+      else if (this.bgVersion !== w.townVersion) { this.buildStatic(); this.anim.clear(); }
       if (this.follow && this.selectedId >= 0) {
         const p = w.people[this.selectedId];
         if (p && p.alive && !p.away) { const pos = this.posOf(p, t, fast); if (!pos.riding) this.centerOn(pos.x, pos.y, 0.15); }
@@ -478,10 +479,10 @@
     // street lamps (added on top in Ambience.drawScreen) glow against the dark.
     drawNight(g, t, fast) {
       if (fast) { this.nightLevel = 0; return; }
-      const hr = (t * 24 + 6) % 24; // dusk 19:00-20:30, dawn 06:00-07:00
-      let night = hr >= 20.5 || hr < 6 ? 1 : hr >= 19 ? (hr - 19) / 1.5 : hr < 7 ? 1 - (hr - 6) : 0;
+      const hr = (t * 24 + 6) % 24, sun = LES.Ambience.sun(this.w.lastDay < 0 ? 0 : this.w.lastDay), rise = sun.rise, set = sun.set; // Malaysia: dusk 19:00-20:30, dawn 06:00-07:00
+      let night = hr >= set + 0.75 || hr < rise - 0.5 ? 1 : hr >= set - 0.75 ? (hr - (set - 0.75)) / 1.5 : hr < rise + 0.5 ? 1 - (hr - (rise - 0.5)) : 0;
       this.nightLevel = night;
-      const golden = hr >= 17.5 && hr < 20 ? Math.min(1, (hr - 17.5) / 1, (20 - hr) / 0.8) : hr >= 6 && hr < 7.5 ? Math.min(1, (7.5 - hr) / 1.2) * 0.7 : 0;
+      const golden = hr >= set - 2.25 && hr < set + 0.25 ? Math.min(1, (hr - (set - 2.25)) / 1, (set + 0.25 - hr) / 0.8) : hr >= rise - 0.5 && hr < rise + 1 ? Math.min(1, (rise + 1 - hr) / 1.2) * 0.7 : 0;
       g.setTransform(1, 0, 0, 1, 0, 0);
       if (golden > 0) {
         g.globalCompositeOperation = 'soft-light';
@@ -490,7 +491,7 @@
         g.globalCompositeOperation = 'source-over';
       }
       if (night <= 0) return;
-      if (LES.Ambience.weather(this.w.lastDay < 0 ? 0 : this.w.lastDay).id === 'rain') night = Math.min(1, night + 0.1);
+      if (['rain', 'snow'].includes(LES.Ambience.weather(this.w.lastDay < 0 ? 0 : this.w.lastDay).id)) night = Math.min(1, night + 0.1);
       const k = 0.62 * night, mix = (a, b) => Math.round(a + (b - a) * k);
       g.globalCompositeOperation = 'multiply';
       g.fillStyle = `rgb(${mix(255, 40)},${mix(255, 52)},${mix(255, 110)})`;

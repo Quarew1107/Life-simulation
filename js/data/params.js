@@ -12,6 +12,7 @@
     startAgeMin: 18,
     startAgeMax: 35,
     wealthDist: 'moderate',   // equal | moderate | unequal
+    groupWealth: 'realistic', // realistic (the pack's history gap by group, if any) | equal
     economy: 'normal',        // stable | normal | volatile
     education: 'subsidised',  // free | subsidised | expensive
     safetyNet: 'on',          // on = welfare/guardians (Malaysia has JKM welfare), off = Original harsh rules
@@ -116,6 +117,7 @@
     { group: 'Town & map', essential: true, key: 'founders', label: 'Founding population', type: 'int', min: 20, max: 6000, help: 'Strangers who found the town. The map size follows (100 = a small town).' },
     { group: 'Goal', essential: true, key: 'horizonYears', label: 'Years to simulate', type: 'int', min: 5, max: 300, help: '120 years is about four generations.' },
     { group: 'Economy & prices', essential: true, key: 'wealthDist', label: 'Starting wealth', type: 'select', options: [['equal', 'Equal ({cur}10k each)'], ['moderate', 'Moderate inequality'], ['unequal', 'High inequality (some born rich)']] },
+    { group: 'Economy & prices', key: 'groupWealth', label: 'Starting wealth by group', type: 'select', options: [['realistic', 'Realistic (history: some groups start with less)'], ['equal', 'Equal start for every group']], help: 'Used where the country has official figures (UK: ONS Wealth and Assets Survey; Malaysia: no gap). Groups never differ in ability.' },
     { group: 'Economy & prices', essential: true, key: 'economy', label: 'Economic cycles', type: 'select', options: [['stable', 'Stable'], ['normal', 'Normal cycles'], ['volatile', 'Volatile (frequent recessions)']] },
     { group: 'Crime & justice', essential: true, key: 'crime', label: 'Crime & vice', type: 'select', options: [['lively', 'Lively ({adj} rates x10)'], ['realistic', 'Realistic (rare in a small town)'], ['lawless', 'Lawless (x30)'], ['off', 'Off']], help: 'Lively makes crime visible in a small town.' },
     { group: 'Town & map', essential: true, key: 'seed', label: 'World seed', type: 'text', help: 'Same seed + same settings = the same history.' },

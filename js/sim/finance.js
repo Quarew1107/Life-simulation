@@ -553,6 +553,18 @@
   F.debtMonth = function (w, p) {
     const L = w.ledger, d = p.debt;
     if (d.study <= 0) return;
+    const SL = LES.Countries.pack.education && LES.Countries.pack.education.loans;
+    if (SL) { // UK Plan 5: 9% of pay above the threshold, never in arrears, written off after 40 years
+      d.study += Math.round(d.study * SL.interest / 12);
+      if (d.slStart !== undefined && w.day - d.slStart > SL.years * 365) {
+        L.writeOffs += d.study; P.log(w, p, `Student loan of ${U.fmtMoney(d.study)} written off after ${SL.years} years`, 'money', 1);
+        d.study = 0; d.studyOrig = 0; return;
+      }
+      if (p.enrol || !p.job) return;
+      const inst = Math.min(d.study, Math.round(Math.max(0, p.job.salary - w.px(SL.threshold / 12)) * SL.rate));
+      if (inst > 0 && p.cash >= inst && L.spend(p, 'cash', 'BANK', inst)) d.study -= inst;
+      return;
+    }
     d.study += Math.round(d.study * 0.01 / 12);
     if (p.enrol) return;
     const inst = Math.min(d.study, Math.max(w.px(100), Math.round(d.studyOrig / 120)));

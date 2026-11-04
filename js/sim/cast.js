@@ -16,9 +16,10 @@
   Cast.QUALS = [['', 'No qualification'], ['VOC', 'Vocational certificate'], ['BACH_GEN', 'Bachelor of Arts'], ['BACH_BUS', 'Bachelor of Business'], ['BACH_ENG', 'Bachelor of Engineering'], ['MED', 'Medical degree']];
   // A spec: { id, first, last, sex, age, eth, rel, relig, att[6], pers{}, famDesire, strategy, qual, cash, look{},
   //           partner: id | '', parents: [ids], town: 0-2 }
-  Cast.blank = () => ({ id: '', first: 'Aina', last: 'Rahman', sex: 'F', age: 25, eth: 'malay', rel: '', relig: 50, att: [5, 5, 5, 5, 5, 5],
+  const CD = () => LES.Countries.pack.content.castDefault; // the country's default new person
+  Cast.blank = () => ({ id: '', first: CD().first, last: CD().last, sex: 'F', age: 25, eth: CD().eth, country: LES.Countries.active, rel: '', relig: 50, att: [5, 5, 5, 5, 5, 5],
     pers: { dis: 50, pat: 50, risk: 50, resp: 50, res: 50 }, famDesire: 55, strategy: 'BAL', qual: '', cash: 10000, partner: '', parents: [],
-    look: { skin: '#c68642', hair: '#1b1b1b', shirt: '#2a9d8f', pants: '#1d3557', style: 1, scarf: '#c9184a', glasses: 0, beard: 0, hat: 0, hatColour: '#1d3557' } });
+    look: { skin: CD().skin, hair: '#1b1b1b', shirt: '#2a9d8f', pants: '#1d3557', style: 1, scarf: '#c9184a', glasses: 0, beard: 0, hat: 0, hatColour: '#1d3557' } });
   const ADULT = 18;
 
   // Group specs into households (connected by partner or parent links), in list order.
@@ -53,9 +54,12 @@
   }
 
   function makeAdult(w, R, spec, founder) {
-    const eth = C.NAMES[spec.eth] ? spec.eth : C.ETHNICITIES[0];
+    // Someone made in another country arrives as an immigrant (their group, if this country has no such group, is 'other').
+    const from = spec.country || 'my', abroad = from !== LES.Countries.of(w.cfg);
+    const eth = C.NAMES[spec.eth] ? spec.eth : abroad && C.NAMES.other ? 'other' : C.ETHNICITIES[0];
     const p = w.makeAdult(R, { age: U.clamp(Math.round(spec.age), ADULT, 90), sex: spec.sex === 'M' ? 'M' : 'F', eth, migrant: !founder, jobChance: founder ? 0.65 : 0 });
     applySpec(w, p, spec);
+    if (abroad) { const home = LES.Countries.get(from); p.bornIn = from; P.log(w, p, `Moved here from ${home ? home.name : 'abroad'}`, 'life', 1); }
     p.att = spec.att.map(v => U.clamp(Number(v) || 0, 0, 10)); p.pot = p.att.map(v => Math.max(v, U.clamp(v + 0.3, 0, 10))); p.peak = p.att.slice();
     p.attHist = [[w.day, p.att.slice()]];
     if (C.STRATEGIES.includes(spec.strategy)) { p.strategy = spec.strategy; p.stratHist = [{ day: w.day, strategy: p.strategy, reason: 'your choice' }]; }
