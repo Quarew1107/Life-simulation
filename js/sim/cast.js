@@ -117,10 +117,7 @@
       for (const t of parentsOf(s)) { const q = made.get(t); if (q && !c.parents.includes(q.id) && c.parents.length < 2) { c.parents.push(q.id); q.children.push(c.id); } }
     }
     // Homes: each head finds one; partners and children move in.
-    for (const p of made.values()) if (p.isHead) {
-      F.reviewTiers(w, p);
-      if (p.homeId < 0) F.moveHome(w, p, p.tiers.housing, true); // (reviewTiers only moves people whose housing level changes)
-    }
+    for (const p of made.values()) if (p.isHead) F.reviewTiers(w, p);
     for (const p of made.values()) {
       if (p.isHead) continue;
       const head = w.people[p.partnerId];

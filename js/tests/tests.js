@@ -301,9 +301,11 @@
   // Phase-0 foundations: the original engine is preserved, saves are exact, systems plug in.
   async function foundationTests() {
     print('--- Foundations (presets, save/load, systems) ---', 'info');
-    // Engine-independent fingerprints of the original engine at day 1500 (recorded from the
-    // code before the new systems; the same in Node and Chrome).
-    const ORIGINAL = { 'h-1': '65eac2d1dd21d2c310dc374bbbeb96b5', 'h-2': '1d3752726ba024c8edd4da025714b6d4' };
+    // Engine-independent fingerprints of the original engine at day 1500 (the same in Node and
+    // Chrome). Recorded from the code before the new systems, then re-recorded once in Nov 2026
+    // when the owner approved fixing household heads who never got a home (F.reviewTiers);
+    // the earlier values were h-1 65eac2d1..., h-2 1d375272....
+    const ORIGINAL = { 'h-1': '121339afaaaadb802454a22628f34f44', 'h-2': '783466648334746be71a097ab6b87fb5' };
     for (const seed of Object.keys(ORIGINAL)) {
       const w = new LES.World(Object.assign({ seed }, LES.PRESETS.classic.values));
       await runDays(w, 1500);
@@ -538,7 +540,7 @@
     const et = make('eternal', { startAgeMin: 50, startAgeMax: 60 });
     const att0 = et.people.map(p => p.att.slice());
     await runDays(et, 4 * 365);
-    check('Eternal Life: no ageing decline, no retirement, no old-age mortality', et.flags.noAgeing && et.cfg.mortMult === 0 && et.people.every(p => !p.retired) && et.people.every((p, i) => !p.alive || p.att[1] >= att0[i][1] - 1e-9 || p.injuredUntil > 0));
+    check('Eternal Life: no ageing decline, no retirement, no old-age mortality', et.flags.noAgeing && et.cfg.mortMult === 0 && et.people.every(p => !p.retired) && et.people.every((p, i) => !p.alive || i >= att0.length || p.att[1] >= att0[i][1] - 1e-9 || p.injuredUntil > 0));
     // Education Ban
     const eb = make('eduban');
     await runDays(eb, 365);

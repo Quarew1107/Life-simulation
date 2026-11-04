@@ -118,7 +118,9 @@
       if (cost + delta <= budget) { t[cat] = next; cost += delta; }
     }
     p.tiers.food = t.food; p.tiers.transport = t.transport; p.tiers.leisure = t.leisure;
-    if (p.isHead && t.housing !== p.tiers.housing) {
+    // A head moves when their housing level changes, and always finds a home if they have none
+    // (before Nov 2026 heads whose level matched the default never got one).
+    if (p.isHead && (t.housing !== p.tiers.housing || p.homeId < 0)) {
       const cantAfford = p.cash < F.tierCost(w, 'housing', p.tiers.housing) && t.housing < p.tiers.housing;
       p.housingWantMonths++;
       if (p.housingWantMonths >= 3 || cantAfford || p.homeId < 0) F.moveHome(w, p, t.housing, false);

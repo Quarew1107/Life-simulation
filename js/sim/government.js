@@ -55,11 +55,13 @@
       salesTax: laws.salesTax || 'sst', schools: laws.schools || 'malaysia', health: laws.health || 'malaysia', fuelSubsidy: laws.fuelSubsidy || 'targeted',
     };
   };
-  function applyLaws(w) {
+  // recost: also refresh everyone's monthly costs (not when a save is loaded: loading must not
+  // change anything, or the loaded world would drift from the one that was saved).
+  function applyLaws(w, recost = true) {
     w.policy = GV.policyOf(w.gov.laws);
     w.derived.eduMult = EDU_MULT[w.gov.laws.uniFees];
     w.taxPx = LES.Fiscal.priceMult(w.policy.salesTax, w.policy.fuelSubsidy); // GST and fuel subsidies change some prices
-    for (const p of w.living) if (p.alive && p.adult) p.mcost = LES.Finance.monthlyCost(w, p);
+    if (recost) for (const p of w.living) if (p.alive && p.adult) p.mcost = LES.Finance.monthlyCost(w, p);
   }
 
   // ---- Treasury ----
@@ -584,6 +586,6 @@
       officials: { treasurer: null, police: null, community: null }, offLog: [], trainPool: 0, staff: {}, eduQ: 1, healthQ: 1, lastMerchant: w.ledger.sec.MERCHANT.bal };
     for (const k in d) if (g[k] === undefined) g[k] = d[k];
     if (!w.bizTypes) w.bizTypes = C.BIZ.concat(C.BIZ_SERVICES);
-    applyLaws(w);
+    applyLaws(w, false);
   };
 })(globalThis.LES = globalThis.LES || {});
