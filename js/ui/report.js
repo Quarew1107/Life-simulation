@@ -212,10 +212,10 @@
     const S = LES.Society, SO = LES.Countries.pack.society;
     if (!w.society || !S) return '';
     const mob = S.mobility(w), st = w.society, pc = x => `${Math.round(x * 100)}%`;
-    const rows = S.CLASSES.map(a => { const r = mob.m[a], n = S.CLASSES.reduce((t, b) => t + r[b], 0); return `<tr><td>${a}</td>${S.CLASSES.map(b => `<td>${n ? pc(r[b] / n) : '–'}</td>`).join('')}<td>${n}</td></tr>`; }).join('');
+    const rows = S.CLASSES.map(a => { const r = mob.m[a], n = S.CLASSES.reduce((t, b) => t + r[b], 0); return `<tr><td>${S.short(a)}</td>${S.CLASSES.map(b => `<td>${n ? pc(r[b] / n) : '–'}</td>`).join('')}<td>${n}</td></tr>`; }).join('');
     const rel = S.groupStats(w, 'rel');
     return `<section><h2>Class and community</h2><div class="grid">
-<div class="card"><b>Social mobility</b> <span class="note">household class at 12 → own class at 35</span><table><tr><th>Grew up</th>${S.CLASSES.map(c => `<th>${c}</th>`).join('')}<th>n</th></tr>${rows}</table>
+<div class="card"><b>Social mobility</b> <span class="note">household class at 12 → own class at 35</span><table><tr><th>Grew up</th>${S.CLASSES.map(c => `<th>${S.short(c)}</th>`).join('')}<th>n</th></tr>${rows}</table>
 <p class="note">${S.short('B40')} ceiling now ${U.fmtMoney(st.cut40)}, ${S.short('T20')} floor ${U.fmtMoney(st.cut80)} (household income per month, Year-1 money; ${SO.statsOffice} ${SO.cutsYear}: ${U.cur(S.DOSM_B40_MAX)} and ${U.cur(S.DOSM_T20_MIN)}). The ${S.short('T20')} earn ${pc(st.t20share)} of all income.</p></div>
 <div class="card"><b>Religion</b><table><tr><th></th><th>Adults</th><th>Median wealth</th><th>${S.short('B40')}</th></tr>${S.REL_KEYS.filter(k => rel[k]).map(k => `<tr><td>${esc(S.RELIGIONS[k].name)}</td><td>${rel[k].n}</td><td>${U.fmtMoney(rel[k].medNw)}</td><td>${pc(rel[k].b40 / rel[k].n)}</td></tr>`).join('')}</table>
 <p class="note">Zakat paid ${U.fmtMoney(st.zakatTotal)} · aid from community funds ${U.fmtMoney(st.aidTotal)} · festival spending ${U.fmtMoney(st.festivalSpend)} · ${st.conversions} conversions. Groups differ in practices, not ability; differences here are outcomes of the model and of small samples.</p></div>

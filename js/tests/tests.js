@@ -771,8 +771,8 @@
       'my-region': 'b495fc0cc72406b997b9263068ac1d7b/1446da57|df40270e95862a096fbcf18074fe4e2a/b4341cfb|bec63c796b6fbe7b2f66ede517369097/40cf5843',
       'my-save': '93a0eff009e13bbf0631071fc098447a',
     };
-    // 4a.6: the report names the drug policy instead of printing its key.
-    const REPORT = { 'my-default': 'afe5f291', 'my-pandemic-lawless': '170436d6', 'my-region': '30bbe498' };
+    // 4a.6: the report names the drug policy instead of printing its key; 4b.1: a Country row in the settings table and "Today's rules".
+    const REPORT = { 'my-default': '1f9dede6', 'my-pandemic-lawless': '57bb5b23', 'my-region': 'ae21b71d' };
     const D = LES.DEFAULTS, base = { founders: 80, migration: 'normal' };
     const cases = {
       'my-default': () => new LES.World(Object.assign({}, D, base, { seed: 'my-1' })),
@@ -810,8 +810,22 @@
     const oldCfg = Object.assign({}, D, { seed: 'cty-old', founders: 30, fertility: 'malaysia', ethnicMix: 'malaysia', interfaith: 'malaysia', drugPolicy: 'malaysia', preset: 'malaysia' });
     const wa = new LES.World(oldCfg), wb = new LES.World(Object.assign({}, oldCfg, { fertility: 'national', ethnicMix: 'national', interfaith: 'national', drugPolicy: 'national', preset: 'national' }));
     for (let d = 0; d < 400; d++) { wa.step(); wb.step(); }
+    // The UK pack: a town runs on its own people, money and rules; switching countries changes nothing else.
+    const UKd = Object.assign({}, D, KC.get('uk').defaults, { country: 'uk', seed: 'uk-t', founders: 60 });
+    const myRun = () => { const w = new LES.World(Object.assign({}, D, { seed: 'cty-sw', founders: 40 })); for (let d = 0; d < 500; d++) w.step(); return w.stableHash(); };
+    const myAlone = myRun();
+    const uk = new LES.World(UKd), myW = new LES.World(Object.assign({}, D, { seed: 'cty-sw', founders: 40 }));
+    for (let d = 0; d < 3 * 365; d++) { uk.step(); if (d < 500) myW.step(); } // interleaved: each step re-applies its own country
+    check('A UK town runs: its own people, money and rules, the books balance', uk.checkInvariants().length === 0 && uk.counts.living > 40
+      && uk.people.every(p => ['white', 'asian', 'black', 'mixed', 'other'].includes(p.eth)) && LES.U.fmtMoney(100000).startsWith('£') && uk.gov.laws.minWage === '2065',
+      `${uk.counts.living} people, ${uk.checkInvariants().length} invariant errors`);
+    check('Running a UK town alongside changes nothing in a Malaysian one', myW.stableHash() === myAlone && myRun() === myAlone);
+    const ukSave = LES.Save.toJSON(uk), ukCopy = LES.Save.fromJSON(ukSave);
+    for (let d = 0; d < 200; d++) { uk.step(); ukCopy.step(); }
+    check('A UK save loads as the UK and continues identically', JSON.parse(ukSave).country === 'uk' && ukCopy.stableHash() === uk.stableHash() && LES.Countries.active === 'uk');
     check("Settings stored with the old 'malaysia' values run the same as 'national'", wa.stableHash() === wb.stableHash() && wa.cfg.fertility === 'national');
-    check("Money is shown with the pack's currency sign", LES.U.cur(11820) === 'RM11,820' && LES.U.fmtMoney(1234500) === 'RM12.3k' && LES.Countries.fill('{adj} {cur}5 {goal}') === 'Malaysian RM5 RM100 million');
+    LES.Countries.ensure(D); // the Malaysia pack (the UK checks above left the UK active)
+    check("Money is shown with the pack's currency sign", LES.U.cur(11820) === 'RM11,820' && LES.U.fmtMoney(1234500) === 'RM12.3k' && LES.Countries.fill('{adj} {cur}5 {goal}') === 'Malaysian RM5 RM100 million', `${LES.U.cur(11820)} ${LES.U.fmtMoney(1234500)} ${LES.Countries.fill('{adj} {cur}5 {goal}')}`);
     check('An unknown country is refused with a clear message', LES.validateConfig(Object.assign({}, D, { country: 'zz' })).blockers.some(b => b.includes('Country')));
     const sv = JSON.parse(LES.Save.toJSON(new LES.World(Object.assign({}, D, { seed: 'cty', founders: 20 }))));
     check('A save records its country; older saves load as Malaysia', sv.country === 'my' && !('country' in JSON.parse(LES_FIXTURES.mySave)));

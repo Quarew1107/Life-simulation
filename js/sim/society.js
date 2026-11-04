@@ -38,7 +38,7 @@
   S.DOSM_B40_MAX = 0; S.DOSM_T20_MIN = 0; S.HARDSHIP_RM = 0; S.NISAB_RM = 0;
   let NON_SHARIAH = new Set(), CEL = {}, LAW_REL = null;
   // Festivals each group celebrates (spending, joy) - by religion or by ethnicity.
-  const CELEBRATES = (p, f) => { const c = CEL[f]; return !!c && (c.rel ? p.rel === c.rel : p.eth === c.eth); };
+  const CELEBRATES = (p, f) => { const c = CEL[f]; return !!c && (c.all || (c.rel ? p.rel === c.rel : p.eth === c.eth)); }; // all: everyone (Christmas in the UK)
 
   const pick = (R, table) => { const ks = Object.keys(table); return ks[Math.max(0, R.weighted(ks.map(k => table[k])))]; };
   const relOf = p => S.RELIGIONS[p.rel] || S.RELIGIONS.none;

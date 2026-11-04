@@ -100,9 +100,9 @@
       }
       case 'ubi': { const d = Number(val) - Number(cur); return d - d * costShare(p, ts) * 0.9; }
       case 'estateTax': {
-        const d = Number(val) - Number(cur), nw = Math.max(0, p.nw / price / 100 - 1e5);
+        const d = Number(val) - Number(cur), EA = LES.Countries.pack.tax.estateAllowance || 1e5, nw = Math.max(0, p.nw / price / 100 - EA);
         let parentNw = 0;
-        for (const id of p.parents) { const q = w.people[id]; if (q.alive) parentNw += Math.max(0, q.nw / price / 100 - 1e5) / Math.max(1, q.children.length); }
+        for (const id of p.parents) { const q = w.people[id]; if (q.alive) parentNw += Math.max(0, q.nw / price / 100 - EA) / Math.max(1, q.children.length); }
         return -d * (age > 50 ? nw / Math.max(60, (85 - age) * 12) : 0) - d * parentNw / 240 + d * 20;
       }
       case 'police': {
@@ -135,7 +135,8 @@
       }
       case 'salesTax': { // prices of taxed spending, against more public money
         const FS = LES.Fiscal, d = FS.salesTaxCost(w, p, val) - FS.salesTaxCost(w, p, cur);
-        return -d + (val === 'gst6' ? -12 : 12); // more public money, but a broad new tax is deeply unpopular
+        const raise = LES.Countries.pack.tax.salesTaxRaise;
+        return -d + (val === raise ? -12 : 12); // more public money, but a broad new tax is deeply unpopular
       }
       case 'fuelSubsidy': { // what fuel costs this person, against the subsidy bill everyone shares
         const FS = LES.Fiscal, tr = LES.Finance.tierCost(w, 'transport', p.tiers.transport) / (w.taxPx ? w.taxPx.transport[p.tiers.transport] : 1) / price / 100;
@@ -167,7 +168,7 @@
     const cost = {
       cashAid: v => Number(v) * ts.b40, ubi: v => Number(v) * ts.adults, police: v => Number(v) * ts.pop / 1000 * 3400, uniFees: v => (v === 'free' ? 650 * ts.adults * 0.03 : 0),
       schools: v => SV.SCHOOLS[v] * ts.pop / 1000 * SP.teacher, health: v => (hs(v)[0] * SP.nurse + hs(v)[1] * SP.doctor) * ts.pop / 1000,
-      salesTax: v => (v === 'gst6' ? -0.03 : 0) * rev * 3, // GST brings in more money
+      salesTax: v => (v === LES.Countries.pack.tax.salesTaxRaise ? -0.03 : 0) * rev * 3, // the broader tax brings in more money
       fuelSubsidy: v => LES.Fiscal.FUEL[v].cost * 600 * ts.adults * 0.6,
     }[key];
     if (!cost) return 0;
@@ -389,8 +390,9 @@
   function respond(w, R, ts) {
     const g = w.gov, pres = g.president >= 0 ? w.people[g.president] : null;
     if (!pres || R.next() > 0.25) return;
-    if (w.regime === 'recession' && g.laws.cashAid === '0' && pres.pol.econ < 0.4) setLaw(w, 'cashAid', '100', 'emergency');
-    if (w.crime && LES.Crime.rates(w).index > 1.6 * LES.Crime.REF.index * (LES.Crime.INTENSITY[w.cfg.crime] || 1) && g.laws.police !== '7') setLaw(w, 'police', g.laws.police === '2' ? '4' : '7', 'emergency');
+    const EM = LES.Countries.pack.gov.emergency, aid = EM.aid[1][g.laws[EM.aid[0]]], cops = EM.police[1][g.laws[EM.police[0]]]; // [law, { current: new }]
+    if (w.regime === 'recession' && aid && pres.pol.econ < 0.4) setLaw(w, EM.aid[0], aid, 'emergency');
+    if (w.crime && LES.Crime.rates(w).index > 1.6 * LES.Crime.REF.index * (LES.Crime.INTENSITY[w.cfg.crime] || 1) && cops) setLaw(w, EM.police[0], cops, 'emergency');
     void ts;
   }
 
@@ -583,7 +585,7 @@
   // ---- Laws, leader titles and police strength from the country pack ----
   let SP = null; // monthly cost of a teacher, nurse and doctor (pay + employer contributions), for voters' sense of the bill
   let PREF = []; // groups the 'group' preference favours (pack gov.preferredGroups)
-  LES.Countries.require('gov.laws', 'gov.leaderTitles', 'gov.policePer1000', 'gov.servicePay');
+  LES.Countries.require('gov.emergency', 'gov.austerity', 'tax.salesTaxRaise', 'gov.laws', 'gov.leaderTitles', 'gov.policePer1000', 'gov.servicePay');
   LES.Countries.on('government', K => {
     GV.LAWS.length = 0; for (const l of K.gov.laws) GV.LAWS.push(l);
     for (const k of Object.keys(GV.LAW_BY_KEY)) delete GV.LAW_BY_KEY[k];

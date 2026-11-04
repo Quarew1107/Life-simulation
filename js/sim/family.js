@@ -282,8 +282,9 @@
     L.writeOffs += p.debt.study - pay;
     p.debt.study = 0;
 
-    if (w.policy && w.policy.estateTax > 0 && p.cash > w.px(1e5)) { // inheritance tax above RM100k
-      const tax = Math.round((p.cash - w.px(1e5)) * w.policy.estateTax);
+    const allow = w.policy && w.policy.estateTax > 0 ? w.px(LES.Countries.pack.tax.estateAllowance || 1e5) : 0; // tax-free amount (Malaysia's law option: RM100k; UK: GBP325k)
+    if (w.policy && w.policy.estateTax > 0 && p.cash > allow) { // inheritance tax above the allowance
+      const tax = Math.round((p.cash - allow) * w.policy.estateTax);
       L.spend(p, 'cash', 'TAX', tax);
       if (w.gov) { w.gov.estateTaxTotal += tax; LES.Fiscal.tag(w, 'inheritance tax', tax); }
     }

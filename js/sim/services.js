@@ -100,9 +100,10 @@
     }
     if (posted) w.vacancies.sort((a, b) => (b.salary - a.salary) || (a.id - b.id));
     const nurses = staffOf(w, 'nurse').length, doctors = staffOf(w, 'doctor').length, norm = Math.max(0.05, ts.pop / 1000);
-    // Quality 0.4-1.3: public staffing against the Malaysian norm (diminishing returns).
-    g.eduQ = U.clamp(Math.sqrt(staffOf(w, 'teacher').length / (12 * norm)), 0.4, 1.3);
-    g.healthQ = U.clamp(Math.sqrt((nurses / 3.5 + doctors / 1.5) / 2 / norm), 0.4, 1.3);
+    // Quality 0.4-1.3: public staffing against the national norm (diminishing returns).
+    const NS = SV.SCHOOLS.national, NH = SV.HEALTH.national;
+    g.eduQ = U.clamp(Math.sqrt(staffOf(w, 'teacher').length / (NS * norm)), 0.4, 1.3);
+    g.healthQ = U.clamp(Math.sqrt((nurses / NH[0] + doctors / NH[1]) / 2 / norm), 0.4, 1.3);
     w.mortAdj = U.clamp(1.15 - 0.15 * g.healthQ, 0.95, 1.1);
   };
 

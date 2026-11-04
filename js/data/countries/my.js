@@ -679,6 +679,9 @@
       fuel: { none: { px: 1.075, cost: 0 }, targeted: { px: 1, cost: 0.06 }, blanket: { px: 0.98, cost: 0.085 } },
       dividend: { above: 100000, rate: 0.02 },
       zakatRebate: true, // zakat paid is rebated against income tax
+      estateAllowance: 100000, // inheritance tax (when a law sets one) applies above this
+      salesTaxRaise: 'gst6', // the broad, unpopular sales tax option (more revenue)
+      priceBase: { salesTax: 'sst', fuel: 'targeted' }, // the laws content prices already include
     },
     // Central bank: Bank Negara OPR 2.75% (July 2025); the yearly rule keeps it between floor and ceiling.
     bank: { policyRate: 0.0275, floor: 0.0175, ceiling: 0.0375 },
@@ -841,6 +844,10 @@
       trainCost: 500,
       officialGroups: ['malay', 'chinese', 'indian', 'bumi'],
       preferredGroups: ['malay', 'bumi'], // the 'group' hiring/aid preference (Bumiputera)
+      // Deep in debt: the first step that applies ([law, { current: new }, chance]).
+      austerity: [['ubi', { 500: '0' }], ['cashAid', { 300: '100' }], ['salesTax', { sst: 'gst6' }, 0.5], ['incomeTax', { low: 'normal', normal: 'high' }]],
+      // Emergencies: cash aid in a recession, more police when crime is far above normal.
+      emergency: { aid: ['cashAid', { 0: '100' }], police: ['police', { 2: '4', 4: '7' }] },
       // Money to spare: the leader takes the first step that applies (law, { current: new }).
       surplus: {
         cuts: [['incomeTax', { high: 'normal', normal: 'low' }], ['salesTax', { gst6: 'sst' }], ['corpTax', { 30: '24', 24: '17' }]],
@@ -854,8 +861,7 @@
     },
     // Setup-screen texts that name the country (js/data/params.js; the rest use {cur}/{adj} words).
     settings: {
-      presets: { national: 'Malaysia today' },
-      preset: { options: { national: 'Malaysia today (calibrated to DOSM data)' }, help: 'Fills the settings below. Malaysia: welfare on, ~1.6 children per woman, ~75-year life expectancy.' },
+      preset: { options: { national: "Today's rules (calibrated to DOSM data)" }, help: 'Fills the settings below. Malaysia: welfare on, ~1.6 children per woman, ~75-year life expectancy.' },
       founders: { help: 'Strangers who found the town. The map size follows (100 = a small pekan).' },
       inflMin: { help: 'Malaysia: 2020 was -1.1%.' },
       inflMax: { help: 'Malaysia: 2010s ranged 0.7-3.9%, ~2% average.' },
@@ -915,12 +921,18 @@
       ],
       fast: { before: 'raya', days: 30 }, // Ramadan
     },
+    // Gang names: Geng + animal + colour/element.
+    gangNames: { pattern: 'Geng {a} {b}', a: ['Naga', 'Harimau', 'Helang', 'Kala', 'Ular', 'Serigala', 'Buaya', 'Tebuan'], b: ['Hitam', 'Merah', 'Besi', 'Api', 'Malam', 'Emas'] },
+    // Births and deaths: the 'national' birth-rate multiplier (TFR ~1.6) and the old-age mortality multiplier (life expectancy ~75).
+    demography: { fertMult: 0.42, mortMult: 1.9 },
+    // Settings a new world starts from in this country (applied when the country is picked in setup).
+    defaults: { mortMult: 1.9, leaderTitle: 'president', termYears: 5, inflMin: -0.5, inflMax: 4.5 },
     // Reference crime rates per 100k a year (DOSM Crime Statistics 2025, AADK 2024, World Prison Brief).
     crime: { index: 170, violent: 32, property: 138, murder: 0.7, users: 586, prison: 256 },
     // Town events: north-east monsoon floods (relief like Bantuan Wang Ihsan) and haze.
     events: {
       flood: { doy: 325, chance: 0.35, relief: 1000, name: 'Monsoon floods' },
-      haze: { doy: 190, chance: 0.3, days: 25, text: 'Haze from regional fires: the air is unhealthy for weeks' },
+      haze: { doy: 190, chance: 0.3, days: 25, name: 'Haze', text: 'Haze from regional fires: the air is unhealthy for weeks' },
     },
     // Calibration targets (js/sim/calibration.js): target, warning band, source.
     calibration: {
