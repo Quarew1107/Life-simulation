@@ -392,6 +392,37 @@
     return { pieces, nodes };
   };
 
+  // Junction control, seeded by the layout. Rules, so it stays logical:
+  // - junctions on an avenue or a bus route get traffic lights (busy roads)
+  // - four-way crossings of ordinary roads may become roundabouts, never next to
+  //   another roundabout, on a bridge column or at the map edge
+  // - some other quiet four-way crossings get lights; T-junctions on minor roads stay give-way
+  LES.junctions = function (town) {
+    if (town._junc) return town._junc;
+    const { nodes } = LES.roadPieces(town), L = town.layout, bx = LES.busIndices(town.cols, town.rows);
+    const R = new LES.RNG(`${town.size}|${town.cols}x${town.rows}|${town.W}|junctions`);
+    const out = [], round = new Set();
+    for (const n of nodes) {
+      if (n.deg < 3) continue;
+      const avenue = L && (L.avenueX.includes(n.c) || L.avenueY.includes(n.j));
+      const bus = bx.x.has(n.c) || bx.y.has(n.j);
+      const edge = n.c === 0 || n.j === 0 || n.c >= town.cols - 1 || n.j >= town.rows - 1;
+      const bridge = L && L.river >= 0 && n.c === L.river;
+      let type = 'giveway';
+      if (avenue) type = 'lights';
+      else if (n.deg === 4) {
+        const nearRound = round.has(`${n.c - 1},${n.j}`) || round.has(`${n.c},${n.j - 1}`) || round.has(`${n.c + 1},${n.j}`) || round.has(`${n.c},${n.j + 1}`);
+        const r = R.next();
+        if (!edge && !bridge && !nearRound && r < 0.35) type = 'roundabout';
+        else if ((bus && r > 0.45) || r > 0.7) type = 'lights';
+      } else if (bus && R.next() < 0.5) type = 'lights';
+      if (type === 'roundabout') round.add(`${n.c},${n.j}`);
+      out.push({ x: n.x, y: n.y, c: n.c, j: n.j, N: n.N, S: n.S, E: n.E, W: n.W, deg: n.deg, type, phase: R.next() });
+    }
+    Object.defineProperty(town, '_junc', { value: out, enumerable: false, configurable: true });
+    return out;
+  };
+
   // Seeded street plan for a varied town. Rules: the station column and the bus loops are
   // never cut; every block keeps a road for its doors; the network stays connected.
   LES.planLayout = function (size, seed, tpl) {
