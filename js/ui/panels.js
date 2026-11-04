@@ -92,11 +92,13 @@
     const R = app.region, ts = $('town-switch');
     ts.classList.toggle('hidden', !R);
     if (R) {
-      const key = R.towns.map(t => `${t.counts.living}`).join(',') + w.townIdx;
+      const regionOn = app.view === 'region';
+      const key = R.towns.map(t => `${t.counts.living}`).join(',') + w.townIdx + regionOn;
       if (ts.dataset.key !== key) {
         ts.dataset.key = key;
-        ts.innerHTML = R.towns.map((t, i) => `<button data-town="${i}" class="${t === w ? 'on' : ''}" title="Show ${U.esc(t.townName)}">${U.esc(t.townName)} <small>${t.counts.living}</small></button>`).join('');
-        for (const b of ts.querySelectorAll('button')) b.onclick = () => app.selectTown(Number(b.dataset.town));
+        ts.innerHTML = `<button data-town="-1" class="${regionOn ? 'on' : ''}" title="All the towns on one map (or scroll out past the whole town)">🗺 Region</button>`
+          + R.towns.map((t, i) => `<button data-town="${i}" class="${t === w && !regionOn ? 'on' : ''}" title="Show ${U.esc(t.townName)}">${U.esc(t.townName)} <small>${t.counts.living}</small></button>`).join('');
+        for (const b of ts.querySelectorAll('button')) b.onclick = () => (b.dataset.town === '-1' ? app.showRegion() : app.selectTown(Number(b.dataset.town)));
       }
     }
     const scn = LES.Scenarios.current(w), sb = $('scn-badge');
@@ -539,6 +541,7 @@
       if (!app.paused) app.setSpeed(back, true);
       d.nextShot = now + DIRECTOR_GAP_MS;
     }
+    if (app.view === 'region') return; // the director films a town, not the region map
     if (!d.on || now < d.until || now < d.nextShot || !d.queue.length) { if (now >= d.until) $('caption').classList.add('hidden'); return; }
     d.queue.sort((a, b) => b.imp - a.imp || b.seq - a.seq);
     const e = d.queue.shift();

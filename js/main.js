@@ -53,15 +53,31 @@
   // Switch which town the map and panels show (a region keeps running all of them).
   app.selectTown = function (i) {
     const R = app.region;
-    if (!R || !R.towns[i] || R.towns[i] === app.world) return;
+    if (!R || !R.towns[i]) return;
+    const wasRegion = app.view === 'region';
+    app.view = 'town'; $('tooltip').classList.add('hidden');
+    $('map-hint').textContent = MAP_HINT;
+    if (R.towns[i] === app.world) { if (wasRegion) { app.renderer.fit(); UI.update(true); } return; }
     app.world = R.towns[i];
     app.selected = -1; app._rich.t = 0; UI.feedSeqShown = 0;
     app.renderer.setWorld(app.world); app.renderer.selectedId = -1; app.renderer.follow = false;
     UI.update(true);
   };
 
+  const MAP_HINT = 'Click a person or building · drag to pan · scroll to zoom · Space to pause';
+  // Region view: every town on one map (only when there are several towns).
+  app.showRegion = function () {
+    if (!app.region) return;
+    app.view = 'region';
+    app.renderer.follow = false; app.renderer.hoverId = -1;
+    $('tooltip').classList.add('hidden');
+    $('map-hint').textContent = 'Click or scroll in on a town to open it · Esc goes back';
+    UI.update(true);
+  };
+
   // Show a world (new or loaded): reset selection, camera, feed and audio.
   app.useWorld = function (w) {
+    app.view = 'town';
     app.world = w;
     app.lastCfg = w.cfg;
     app.selected = -1;
@@ -141,6 +157,7 @@
   app.select = function (id, center) {
     const w = app.world;
     if (!w || !w.people[id]) return;
+    if (app.view === 'region') { app.view = 'town'; $('map-hint').textContent = MAP_HINT; } // a person is shown on their town's map
     app.selected = id;
     app.renderer.selectedId = id;
     if (center && w.people[id].alive) {
@@ -281,7 +298,8 @@
     }
     if (w) {
       app.renderer.richIds = app.richIds();
-      app.renderer.frame(app.dayFrac, app.fast && !app.paused, now);
+      if (app.view === 'region' && app.region) app.regionView.draw(app, now);
+      else app.renderer.frame(app.dayFrac, app.fast && !app.paused, now);
       UI.update(false);
       UI.directorTick(now);
     }
@@ -306,10 +324,23 @@
   function initInput() {
     const cv = $('map'), r = app.renderer, tip = $('tooltip');
     let drag = null;
+    const inRegion = () => app.view === 'region' && app.region;
     cv.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, moved: false }; cv.setPointerCapture(e.pointerId); });
     cv.addEventListener('pointermove', e => {
       const rect = cv.getBoundingClientRect();
       const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
+      if (inRegion()) { // region view: hover a town
+        if (drag) return;
+        const i = app.regionView.pick(app.region, sx, sy);
+        app.regionView.hover = i;
+        cv.style.cursor = i >= 0 ? 'pointer' : '';
+        if (i >= 0) {
+          tip.innerHTML = `<b>${U.esc(app.region.towns[i].townName)}</b>Click to open this town`;
+          tip.style.left = `${Math.min(sx + 14, rect.width - 240)}px`; tip.style.top = `${sy + 14}px`;
+          tip.classList.remove('hidden');
+        } else tip.classList.add('hidden');
+        return;
+      }
       if (drag) {
         const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
         if (drag.moved || Math.abs(dx) + Math.abs(dy) > 4) {
@@ -337,6 +368,12 @@
     });
     cv.addEventListener('pointerup', e => {
       cv.classList.remove('dragging');
+      if (inRegion()) {
+        const rect = cv.getBoundingClientRect(), i = app.regionView.pick(app.region, e.clientX - rect.left, e.clientY - rect.top);
+        if (drag && !drag.moved && i >= 0) app.selectTown(i);
+        drag = null;
+        return;
+      }
       if (drag && !drag.moved) {
         const rect = cv.getBoundingClientRect();
         const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
@@ -354,10 +391,18 @@
       drag = null;
     });
     cv.addEventListener('pointerleave', () => { tip.classList.add('hidden'); r.hoverId = -1; });
+    // Scrolling out past the whole town (after a short pause at the limit) opens the region
+    // view; scrolling in over a town there opens that town.
+    let atMinSince = 0;
+    const atMin = () => r.z <= r.fitZoom() * 0.9 + 1e-9;
     cv.addEventListener('wheel', e => {
       e.preventDefault();
-      const rect = cv.getBoundingClientRect();
-      r.zoomAt(e.clientX - rect.left, e.clientY - rect.top, e.deltaY < 0 ? 1.15 : 1 / 1.15);
+      const rect = cv.getBoundingClientRect(), sx = e.clientX - rect.left, sy = e.clientY - rect.top;
+      if (inRegion()) { const i = app.regionView.pick(app.region, sx, sy); if (e.deltaY < 0 && i >= 0) app.selectTown(i); return; }
+      if (e.deltaY > 0 && app.region && atMin() && performance.now() - atMinSince > 350) { app.showRegion(); return; }
+      const was = atMin();
+      r.zoomAt(sx, sy, e.deltaY < 0 ? 1.15 : 1 / 1.15);
+      if (atMin() && !was) atMinSince = performance.now();
     }, { passive: false });
     // Volume sliders: shown while the mouse is over the sound button (sound on), kept for
     // a second after it leaves, and kept as long as the mouse is over the sliders themselves.
@@ -390,6 +435,8 @@
         }
         return;
       }
+      if (inRegion()) { if (b.dataset.z === 'in' || b.dataset.z === 'fit') app.selectTown(app.world.townIdx); return; }
+      if (b.dataset.z === 'out' && app.region && atMin()) { app.showRegion(); return; }
       if (b.dataset.z === 'fit') { r.fit(); r.follow = false; }
       else r.zoomAt(r.vw / 2, r.vh / 2, b.dataset.z === 'in' ? 1.3 : 1 / 1.3);
     });
@@ -413,7 +460,7 @@
       else if (e.key >= '1' && e.key <= '7') app.setSpeed(Number(e.key) - 1);
       else if (e.key === 's' || e.key === 'S') stepDay();
       else if (e.key === 'f' || e.key === 'F') app.action('follow');
-      else if (e.key === 'Escape') app.action('deselect');
+      else if (e.key === 'Escape') { if (inRegion()) app.selectTown(app.world.townIdx); else app.action('deselect'); }
     });
     window.addEventListener('resize', () => r.resize());
   }
@@ -422,6 +469,7 @@
 
   function boot() {
     app.renderer = new LES.Renderer($('map'));
+    app.regionView = new LES.RegionView(app.renderer);
     UI.init(app);
     initInput();
     app.newWorld(Object.assign({}, LES.DEFAULTS));
