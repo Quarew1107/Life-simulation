@@ -120,9 +120,9 @@
   // that happens to the selected person; at high speed only the big ones.
   // The selected person's events come from their own life log (fromLog), which also
   // has the small ones the town feed leaves out.
-  Au.onEvent = function (e, app, fromLog) {
+  Au.onEvent = function (e, app, fromLog, cast) {
     if (!Au.on) return;
-    const t = e.text, mine = e.pid >= 0 && e.pid === app.selected;
+    const t = e.text, mine = (e.pid >= 0 && e.pid === app.selected) || !!cast; // cast alerts count as your own
     if (mine && !fromLog) return;
     if (/REACHED THE GOAL/.test(t)) return Au.play('fanfare', true);
     if (!(mine || e.imp >= 2)) return; // every speed: per-sound cooldowns keep fast runs from piling up

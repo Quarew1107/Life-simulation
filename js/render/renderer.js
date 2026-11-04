@@ -36,6 +36,12 @@
   const FONT = '"Silkscreen", "Press Start 2P", monospace';
 
   function rect(g, x, y, w, h, c) { g.fillStyle = c; g.fillRect(x, y, w, h); }
+  // A small gold star (5x5 pixels, dark edge) marking a member of your cast.
+  function star(g, cx, cy) {
+    const x = Math.round(cx) - 2, y = Math.round(cy) - 2;
+    g.fillStyle = '#3a2a00'; g.fillRect(x - 1, y + 1, 7, 3); g.fillRect(x + 1, y - 1, 3, 7);
+    g.fillStyle = '#f2c14e'; g.fillRect(x, y + 2, 5, 1); g.fillRect(x + 2, y, 1, 5); g.fillRect(x + 1, y + 1, 3, 3);
+  }
   function shade(hex, f) {
     const n = parseInt(hex.slice(1), 16);
     const r = Math.min(255, Math.round(((n >> 16) & 255) * f)), gg = Math.min(255, Math.round(((n >> 8) & 255) * f)), b = Math.min(255, Math.round((n & 255) * f));
@@ -390,6 +396,7 @@
           const oc = this.overlay && this.overlay !== 'none' ? LES.Extras.overlayColour(w, it.p, this.overlay, sel) : null;
           const c = oc || (it.mode > 0 ? '#f4f1e8' : it.p.look.shirt);
           if (it.moving && it.mode > 0) rect(g, it.x - 3, it.y - 2, 6, 3, c); else rect(g, it.x - 1.5, it.y - 3, 3, 3, c);
+          if (it.p.custom) star(g, it.x, it.y - 9); // your cast
           this.screenPos.push({ id: it.p.id, x: (it.x - this.cx) * this.z, y: (it.y - 2 - this.cy) * this.z });
           continue;
         }
@@ -421,6 +428,7 @@
         g.globalAlpha = 1;
         if (atPlace && this.z >= 2.2 && !fast) LES.Ambience.bubble(g, it.x, y - 1, LES.Actions.ICONS[slotAct.act] || '•');
         if (P.goalWorth(w, p) >= millionaire) rect(g, x + spr.width / 2 - 1, y - 3, 3, 2, '#f2c14e');
+        if (p.custom) star(g, x + spr.width / 2, y - 9); // your cast
         this.screenPos.push({ id: p.id, x: (it.x - this.cx) * this.z, y: (it.y - spr.height / 2 - this.cy) * this.z });
       }
       if (!fast) this.drawTrain(g, tm);
