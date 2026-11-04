@@ -402,7 +402,7 @@
     const sizeF = 1 + Math.log10(Math.max(1, b.scale / U.RM(t.scale0)));
     const mgmtF = 0.8 + 0.2 * Math.min(1, b.mgmt / 12);
     const skillF = (1 + t.skillSpread * (skill - 5) / 5 / sizeF) * mgmtF;
-    const demand = Math.pow(m.bizDemand, t.cyclical) * (w.boost ? w.boost.biz : 1) * (w.shock ? w.shock.biz : 1);
+    const demand = Math.pow(m.bizDemand, t.cyclical) * (w.boost ? w.boost.biz : 1) * (w.shock ? w.shock.biz : 1) * (w.regionDemand ? w.regionDemand : 1); // shoppers from sister towns
     const shock = Math.exp(U.clamp(R.normal(0, t.sigma), -3, 3));
     const revenue = Math.max(0, Math.round(b.scale * price * demand * skillF * shock));
     const interest = Math.round(b.debt * (w.gov ? LES.Fiscal.loanRate(w) : 0.06) / 12);
