@@ -672,6 +672,44 @@
     check('A gang member who moves keeps a tie to the old gang in the new town', !!tied && tied.cr.tie && tied.cr.tie.town === 0 && tied.cr.tie.gang === tg.id && T.G.checkInvariants().length === 0, T.G.checkInvariants()[0] || '');
   }
 
+  // ---- Map tiles (browser only: needs a canvas) ----
+  async function tileTests() {
+    print('--- Map tiles ---', 'info');
+    if (typeof document === 'undefined' || !LES.MapTiles || !document.createElement('canvas').getContext) { print('(skipped: no canvas here)', 'info'); return; }
+    const town = LES.buildTown('pekan', 'tile-t', 'varied'), TILE = LES.MapTiles.TILE;
+    const area = (MT, x, y, w, h) => {
+      const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+      const g = cv.getContext('2d', { willReadFrequently: true }), rects = MT.paintArea(g, x, y, w, h);
+      const lc = document.createElement('canvas'); lc.width = w; lc.height = h;
+      const lg = lc.getContext('2d', { willReadFrequently: true }); MT.paintLights(lg, x, y, w, h, rects);
+      return [g, lg];
+    };
+    const MT = new LES.MapTiles(); MT.setTown(town, 0);
+    // One tile painted alone must match the same square inside a bigger painted area.
+    const [a, al] = area(MT, TILE, TILE, TILE, TILE), [b, bl] = area(MT, TILE - 256, TILE - 256, TILE + 512, TILE + 512);
+    // The browser smooths the edge of a big curve (a pond) that crosses the tile border a
+    // shade differently on a smaller canvas; a real seam (a missing or moved item) would
+    // differ by far more than 32 levels.
+    const seam = (g1, g2) => { const p = g1.getImageData(0, 0, TILE, TILE).data, q = g2.getImageData(256, 256, TILE, TILE).data; let n = 0, big = 0; for (let i = 0; i < p.length; i++) { const d = Math.abs(p[i] - q[i]); if (d) n++; if (d > 32) big++; } return { n, big }; };
+    const d1 = seam(a, b), d2 = seam(al, bl);
+    check('A map tile painted on its own matches the same area of a bigger painting (no seams), night lights too',
+      d1.big === 0 && d2.big === 0 && d1.n + d2.n < TILE * TILE * 4 * 0.001, `${d1.n}/${d1.big} and ${d2.n}/${d2.big} values differ (any / by more than 32)`);
+    // The overview fills in pieces; then a change repaints only the tiles it touches.
+    while (MT.ovDone.indexOf(0) >= 0) MT.work(50);
+    for (let cy = 0; cy < MT.rows; cy++) for (let cx = 0; cx < MT.cols; cx++) MT.paintTile(cx, cy);
+    const all = MT.cache.size, b0 = town.buildings.find(x => x.kind === 'office' && x.x * town.T > TILE);
+    b0.label = 'Menara Ujian';
+    MT.setTown(town, 1);
+    const gone = MT.cols * MT.rows - MT.cache.size, holes = MT.ovDone.filter(x => !x).length;
+    check('When a building changes, only the tiles it touches are painted again', all === MT.cols * MT.rows && gone >= 1 && gone <= 4 && holes === gone, `${gone} tiles and ${holes} overview pieces redone of ${all}`);
+    // The memory cap: never more than the cap, never dropping what is on screen.
+    const small = new LES.MapTiles(8); small.setTown(town, 0);
+    const keep = small.need(0, 0, TILE * 1.5, TILE * 1.5, 1);
+    for (let cy = 0; cy < small.rows; cy++) for (let cx = 0; cx < small.cols; cx++) small.want.add(`${cx},${cy}`);
+    for (let k = 0; k < 40 && small.want.size; k++) small.work(30, keep);
+    check('The tile cache stays under its memory cap and keeps the tiles on screen', small.bytes <= 8 * 1048576 && [...keep].every(k => small.cache.has(k)), `${(small.bytes / 1048576).toFixed(1)} MB`);
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -687,6 +725,7 @@
       await fiscalTests();
       await scenarioTests();
       await regionTests();
+      await tileTests();
       await determinism();
       await invariantSweep(3, 60);
     } catch (err) {
@@ -697,6 +736,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests };
+  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

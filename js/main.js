@@ -477,7 +477,7 @@
     renderSpeed();
     if (LES.Audio.wasOn()) { LES.Audio.setOn(true); showSound(true); } // starts at the first click (browser rule)
     LES.Setup.open(app, true);
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { app.renderer.buildStatic(); UI.update(true); });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (app.renderer.tiles) app.renderer.tiles.reset(); UI.update(true); });
     requestAnimationFrame(frame);
   }
   boot();

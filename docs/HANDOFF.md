@@ -14,7 +14,7 @@ conversation. Branch: `main-4bf9gf` on `Quarew1107/Life-simulation`. Last update
 - **Systems:** optional features are `LES.Systems` plug-ins (`js/sim/systems.js` lists the
   hooks). With all of them off, the Classic preset reproduces the original engine exactly;
   `foundationTests` checks stored fingerprints (`stableHash`). Keep that test green.
-- **Tests:** `node tools/headless.js tests` (131 checks, ~4 min) or `tests.html` in a browser. Without Node,
+- **Tests:** `node tools/headless.js tests` (131 engine checks, ~4 min; the 3 map-tile checks need a canvas and run only in `tests.html`) or `tests.html` in a browser. Without Node,
   open `tests.html` (from disk is fine) and click Run all tests: ~2 min in Edge.
   Calibration: `node tools/headless.js calib`. Benchmarks: `node tools/headless.js bench founders=400 years=10`.
 - Docs: `README.md` (features), `docs/ROADMAP.md` (phases, decisions, Malaysian figures).
@@ -79,6 +79,16 @@ setup screen and tab bar. Latest additions:
 ## 4. Next phases: detailed plan
 
 ### 4.1 Performance groundwork (do first)
+**Map tiles: DONE** (`js/render/tiles.js`, `LES.MapTiles`). The static map is painted in 512 px tiles
+on demand (LRU cache capped at 160 MB, tiles on screen never dropped), with a quarter-scale overview
+painted directly at that scale a piece per frame (schematic plan from `LES.RegionMap` until done) and
+used when zoom < 0.5 or for tiles not painted yet. A changed building (signature diff on
+`townVersion`) repaints only the tiles it touches. Art painters take a view (`LES.Art.setView`) and
+skip what lies outside; random details come from `LES.Art.prng(tag, a, b)` seeded by what and where
+they are (building id, block, road piece, map cell), and window lights are chosen by position, so any
+area painted alone matches the whole map (test allows only anti-aliasing noise where a big curve
+crosses a tile edge). Metropolis: was 300 MB and ~1 s per rebuild; now ~19 MB overview plus about
+2 MB per tile on screen, pieces of ~5-13 ms between frames.
 Measured: ~60,000 person-days/s in Node for the Malaysia preset (Classic ~2x faster), so
 days/s ~= 60,000 / population. Profile (400 founders): `A.candidates` 21%, `A.liveDay` 18%,
 `endOfDay` 7%, `G.pickVenue` 5%, GC 4%. The static map is one canvas

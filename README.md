@@ -115,6 +115,7 @@ Bigger maps have more of everything, plus empty lots the town builds on as it gr
 
 **Performance:** small towns run at hundreds of simulated days per second. A 5,000-person Metropolis runs roughly 15–30 days/s at MAX on a Ryzen 5 laptop (about 12–25 seconds per simulated year), depending on how busy the laptop is. It slows down as the town grows. People show as coloured dots when zoomed out.
 - At 10 days/s and faster, the simulation runs in short slices between screen frames, so big towns keep the map responsive.
+- The map is drawn in tiles, only near the screen and a few at a time, with a quarter-size picture of the whole town for zoomed-out views. A Metropolis needs about 20–60 MB for its map instead of 300 MB, and the town building something no longer freezes the screen.
 - Speed-ups never change results: the same seed and settings still give exactly the same history.
 
 ## How the town looks

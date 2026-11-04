@@ -50,30 +50,31 @@
   };
 
   // ---- Night lights layer (built once per town version) ----
-  A.buildLights = function (town, rects) {
-    const T = town.T, cv = document.createElement('canvas');
-    cv.width = town.W * T; cv.height = town.H * T;
-    const g = cv.getContext('2d');
-    // Lit windows: a stable random share of the real windows the art painted.
-    (rects || []).forEach((r, i) => {
-      if (rnd(i * 977 + 13) >= r.lit) return;
-      g.fillStyle = r.c || (rnd(i * 31 + 5) < 0.75 ? 'rgba(255,214,120,0.95)' : 'rgba(190,225,255,0.85)');
+  // Night lights for an area of the map (world pixels; g is already translated): lit
+  // windows (a stable share of the real windows the art painted, chosen by position so
+  // neighbouring tiles agree) and street lamps along every road.
+  A.paintLights = function (g, town, rects, x0, y0, w, h) {
+    const x1 = x0 + w, y1 = y0 + h, inside = (x, y, m) => x > x0 - m && x < x1 + m && y > y0 - m && y < y1 + m;
+    for (const r of rects || []) {
+      if (!inside(r.x, r.y, 20)) continue;
+      const k = Math.round(r.x) * 7919 + Math.round(r.y) * 104729;
+      if (rnd(k * 977 + 13) >= r.lit) continue;
+      g.fillStyle = r.c || (rnd(k * 31 + 5) < 0.75 ? 'rgba(255,214,120,0.95)' : 'rgba(190,225,255,0.85)');
       g.fillRect(r.x, r.y, r.w, r.h);
       g.fillStyle = 'rgba(255,200,110,0.18)';
       g.fillRect(r.x - 1, r.y - 1, r.w + 2, r.h + 2);
-    });
-    // Street lamps along every road
+    }
     const glow = (x, y) => {
+      if (!inside(x, y, 16)) return;
       const gr = g.createRadialGradient(x, y, 0, x, y, 14);
       gr.addColorStop(0, 'rgba(255,220,140,0.55)'); gr.addColorStop(1, 'rgba(255,220,140,0)');
       g.fillStyle = gr; g.fillRect(x - 14, y - 14, 28, 28);
       g.fillStyle = '#fff3c4'; g.fillRect(x - 1, y - 1, 2, 2);
     };
     for (const p of LES.roadPieces(town).pieces) {
-      if (p.h) for (let x = p.x + 24; x < p.x + p.w; x += 72) glow(x, p.y - 2);
-      else for (let y = p.y + 40; y < p.y + p.h2; y += 72) glow(p.x - 2, y);
+      if (p.h) { if (p.y < y0 - 20 || p.y > y1 + 20) continue; for (let x = p.x + 24; x < p.x + p.w; x += 72) glow(x, p.y - 2); }
+      else { if (p.x < x0 - 20 || p.x > x1 + 20) continue; for (let y = p.y + 40; y < p.y + p.h2; y += 72) glow(p.x - 2, y); }
     }
-    return cv;
   };
 
   // ---- Per-frame ambient effects in world coordinates ----
@@ -159,12 +160,12 @@
     if (fast) return;
     const day = w.lastDay < 0 ? 0 : w.lastDay;
     const wx = A.weather(day), cw = r.cv.width, ch = r.cv.height, sec = (now || 0) / 1000;
-    if (night > 0 && r.lights) {
+    if (night > 0 && r.tiles) {
       const s = r.z * r.dpr;
       g.setTransform(s, 0, 0, s, -r.cx * s, -r.cy * s);
       g.globalCompositeOperation = 'lighter';
       g.globalAlpha = 0.85 * night;
-      g.drawImage(r.lights, 0, 0);
+      r.tiles.drawLights(g, r.cx, r.cy, r.vw / r.z, r.vh / r.z, r.z);
       g.globalAlpha = 1;
       g.globalCompositeOperation = 'source-over';
       g.setTransform(1, 0, 0, 1, 0, 0);
