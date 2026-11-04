@@ -69,9 +69,12 @@ inheritance follow across towns. Increment 2 is DONE: setting "Towns in the regi
 extra towns get ~60%/40% of the founders, `LES.makeRegion`), 1,500-founder total limit unless
 "Remove population limits", `app.region` stepped by `safeStep`, `app.world` = the town shown,
 town switcher in the top bar (`#town-switch`), links to family in other towns on the person
-panel, region save/load (`LES.Save` handles a `Region` root). **Not yet:** Region tab comparing
-towns, region overview map, commuting between towns, shopping/trade, spillovers, town types,
-report section for the region, chunked static map layer.
+panel, region save/load (`LES.Save` handles a `Region` root). Increment 3 is DONE: commuting (`Region.commuteDay`: private openings that nobody in the town
+applied for within 2 days may be re-advertised in a sister town, more often where unemployment
+is higher; `p.job.commuteTo` marks commuters, who lose a little energy) and a "Towns in the
+region" comparison card at the top of the Stats tab (`UI.regionCard`). **Not yet:** region
+overview map, shopping/trade between towns, spillovers (gangs, floods, pandemic via commuters),
+town types (district mixes), report section for the region, chunked static map layer.
 Architecture: **each town is a full `LES.World`** (own people, ledger, council, laws); a new
 `LES.Region` (new file `js/sim/region.js`) owns the towns and a shared national layer and
 steps them in lockstep (same day for all, fixed town order). Towns interact through fixed

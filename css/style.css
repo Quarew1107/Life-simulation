@@ -252,6 +252,7 @@ canvas.chart.tall { height: 190px; }
 @media (max-width: 760px) { .scn-cols { grid-template-columns: 1fr; } .scn-grid { grid-template-columns: repeat(2, 1fr); } }
 /* Scenario badge in the top bar and its card in the Stats tab */
 #town-switch { display: flex; gap: 3px; }
+.region-cmp td, .region-cmp th { font-size: 11px; padding: 3px 4px; } .region-cmp tr.on td { background: rgba(62,199,181,.08); }
 #town-switch button { background: var(--panel-2); border: 2px solid var(--line); border-radius: 6px; padding: 3px 8px; font-size: 11px; color: var(--muted); white-space: nowrap; }
 #town-switch button small { opacity: .7; }
 #town-switch button.on { border-color: var(--teal); color: var(--text); background: rgba(62,199,181,.12); }

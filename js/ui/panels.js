@@ -33,7 +33,7 @@
       const act = e.target.closest('[data-act]');
       if (act) { app.action(act.dataset.act, act.dataset); return; }
       const xl = e.target.closest('[data-xtown]'); // the same person or family in another town
-      if (xl) { e.preventDefault(); app.selectTown(Number(xl.dataset.xtown)); app.select(Number(xl.dataset.xid), true); return; }
+      if (xl) { e.preventDefault(); app.selectTown(Number(xl.dataset.xtown)); if (Number(xl.dataset.xid) >= 0) app.select(Number(xl.dataset.xid), true); return; }
       const link = e.target.closest('[data-pid]');
       if (link) { app.select(Number(link.dataset.pid), true); }
     });
@@ -440,6 +440,21 @@
   };
 
   // ---------------- Stats ----------------
+  // Side-by-side comparison of the towns in a region, with the flows between them.
+  UI.regionCard = function (w) {
+    const R = UI.app.region;
+    if (!R) return '';
+    const com = R.commuters(), moves = R.moves, rows = R.towns.map((t, i) => {
+      const h = t.history[t.history.length - 1] || {}, a = t.living.filter(p => p.alive && p.adult);
+      const wages = a.filter(p => p.job).map(p => p.job.salary).sort((x, y) => x - y);
+      const inn = moves.filter(m => m.to === i).reduce((s, m) => s + m.n, 0), out = moves.filter(m => m.from === i).reduce((s, m) => s + m.n, 0);
+      const crime = t.crime ? Math.round(LES.Crime.rates(t).index) : null;
+      return `<tr class="${t === w ? 'on' : ''}"><td><a href="#" data-xtown="${i}" data-xid="-1">${U.esc(t.townName)}</a></td><td>${t.counts.living}</td><td>${h.unemployed !== undefined ? (h.unemployed / Math.max(1, h.unemployed + h.employed + h.owners) * 100).toFixed(1) + '%' : '–'}</td><td>${wages.length ? U.fmtMoney(U.quantile(wages, 0.5)) : '–'}</td><td>${U.fmtMoney(h.median || 0)}</td><td>${t.rentMult ? Math.round(t.rentMult[1] * 100) : 100}</td><td>${crime === null ? '–' : crime}</td><td>${com[i]}</td><td>+${inn} / −${out}</td></tr>`;
+    }).join('');
+    return `<div class="card"><h3>Towns in the region</h3><div style="overflow-x:auto"><table class="cmp region-cmp"><tr><th>Town</th><th>Pop.</th><th>Jobless</th><th>Pay</th><th>Wealth</th><th>Rent</th><th>Crime</th><th title="Residents working in another town">Comm.</th><th title="People who moved in / out">In/out</th></tr>${rows}</table></div>
+      <div class="note">One economy and one stock exchange. Households move to the town that suits them better (jobs, rent, prospects), and job openings that find nobody at home are advertised in the other towns, so people commute. Pay and wealth are medians; rent is an index (100 = normal); crime is index crimes per 100k a year; Comm. = residents who work in another town. Click a town to show it.</div></div>`;
+  };
+
   UI.renderStats = function () {
     const w = UI.app.world, el = $('tab-stats');
     const h = w.history;
@@ -449,7 +464,7 @@
     const series = (k, label, color) => ({ label, color, data: h.map(r => [r.day / 365, r[k]]) });
     const race = w.living.filter(p => p.alive && p.adult).sort((a, b) => b.nw - a.nw).slice(0, 5);
     const scn = LES.Scenarios.current(w);
-    el.innerHTML = `
+    el.innerHTML = `${UI.regionCard(w)}
       ${scn ? `<div class="card"><h3><span>${LES.icon(scn.icon, 14)} Scenario: ${U.esc(scn.name)}</span></h3><div class="note">${U.esc(scn.short)}</div><div class="scn-status">${scn.status(w)}</div><canvas class="chart" id="st-scn"></canvas></div>` : ''}
       <div class="stat-grid">
         <div class="stat"><div class="v">${last.pop}</div><div class="l">alive (${last.children} kids)</div></div>
