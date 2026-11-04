@@ -36,6 +36,7 @@
     freezeLaws: 'no',         // yes = laws stay at their starting values (elections still happen)
     stopOnWinner: 'no',
     towns: '1',               // 1-3 towns in one region (js/sim/region.js)
+    town1Type: 'mixed', town2Type: 'industrial', town3Type: 'resort', // LES.TOWN_TYPES
     removeLimits: 'no',       // yes = allow bigger populations (slower)
     // Scenario (js/sim/scenarios.js) and its options
     scenario: 'none',         // none | equal | reset | eternal | eduban | pandemic | robots | lawless | island | clans
@@ -114,6 +115,9 @@
     { group: 'Base rules', key: 'preset', label: 'Rules', type: 'select', options: [['malaysia', 'Malaysia today (calibrated to DOSM data)'], ['classic', 'Classic (original harsh rules)'], ['custom', 'Custom']], help: 'Fills the settings below. Malaysia: welfare on, ~1.6 children per woman, ~75-year life expectancy.' },
     { group: 'Town & map', key: 'mapSize', label: 'Map size', type: 'select', options: [['auto', 'Auto (suggested from population)'], ['kampung', 'Kampung - up to ~60 founders'], ['pekan', 'Pekan - 60-250 founders'], ['bandar', 'Bandar - 250-700 founders'], ['bandaraya', 'Bandaraya - 700-2,000 founders'], ['metropolis', 'Metropolis - 2,000-5,000+ founders']], help: 'Bigger maps have more homes, shops, venues, bus lines and land to grow on.' },
     { group: 'Town & map', key: 'towns', label: 'Towns in the region', type: 'select', options: [['1', 'One town'], ['2', 'Two towns'], ['3', 'Three towns']], help: 'Extra towns get about 60% and 40% of the founding population. They share one economy and stock exchange, and people move between them.' },
+    { group: 'Town & map', key: 'town1Type', label: 'Main town type', type: 'select', options: [['mixed', 'Mixed town'], ['capital', 'Business city'], ['industrial', 'Industrial town'], ['university', 'University town'], ['resort', 'Coastal resort'], ['farming', 'Farming kampung']], help: 'Changes the mix of districts and the jobs on offer.' },
+    { group: 'Town & map', key: 'town2Type', label: 'Second town type', type: 'select', options: [['mixed', 'Mixed town'], ['capital', 'Business city'], ['industrial', 'Industrial town'], ['university', 'University town'], ['resort', 'Coastal resort'], ['farming', 'Farming kampung']] },
+    { group: 'Town & map', key: 'town3Type', label: 'Third town type', type: 'select', options: [['mixed', 'Mixed town'], ['capital', 'Business city'], ['industrial', 'Industrial town'], ['university', 'University town'], ['resort', 'Coastal resort'], ['farming', 'Farming kampung']] },
     { group: 'Town & map', key: 'removeLimits', label: 'Remove population limits', type: 'select', options: [['no', 'No (keeps the simulation smooth)'], ['yes', 'Yes (big worlds run slowly)']], help: 'Normally all towns together may start with at most 1,500 people.' },
     { group: 'Town & map', key: 'layout', label: 'Street layout', type: 'select', options: [['varied', 'Varied (avenues, a river, superblocks)'], ['grid', 'Grid (original equal blocks)']], help: 'Varied layouts change with the seed.' },
     { group: 'Goal', key: 'goalRM', label: 'Wealth goal (RM)', type: 'int', min: 10000, max: 1e12 },

@@ -28,7 +28,16 @@
   LES.suggestMapSize = founders => LES.MAP_ORDER.find(k => founders <= LES.MAP_SIZES[k].maxFounders) || 'metropolis';
 
   // How many blocks of each district a town of n blocks gets (facilities scale with size).
-  LES.districtQuota = function (n, varied) {
+  // Town types: a different mix of districts and of the jobs on offer. 'mixed' = the normal town.
+  LES.TOWN_TYPES = {
+    mixed: { name: 'Mixed town' },
+    capital: { name: 'Business city', q: { O: 2, H: 1.5, M: 1.5, Y: 1.5 }, jobs: { accountant: 1.8, banker: 1.8, manager: 1.8, sales: 1.5, softdev: 1.5, citycorp: 0.5 } },
+    industrial: { name: 'Industrial town', q: { I: 2.5, W: 2, Y: 0.5, Z: 0.5 }, jobs: { factory: 2.2, construction: 1.8, rider: 1.6, engineer: 1.8, mechanic: 1.6, electrician: 1.6 } },
+    university: { name: 'University town', q: { U: 2, E: 2, H: 1.5, D: 1.3 }, jobs: { softdev: 1.8, retail: 1.3, chef: 1.3 } },
+    resort: { name: 'Coastal resort', q: { V: 2, Y: 2, D: 1.5, P: 1.5, I: 0.5 }, jobs: { chef: 2, retail: 1.6, cleaner: 1.6, sales: 1.4, factory: 0.5 } },
+    farming: { name: 'Farming kampung', q: { O: 0.5, I: 0.7, Y: 0.5 }, homes: { K: 0.25, A: 0.15, F: 0.2, T: 0.25, C: 0.1, B: 0.05 }, jobs: { construction: 1.4, factory: 1.3, cleaner: 1.3, banker: 0.5, softdev: 0.5 } },
+  };
+  LES.districtQuota = function (n, varied, type) {
     const q = {
       N: 1, G: 1,
       O: 1 + Math.floor(n / 50), H: 1 + Math.floor(n / 80), M: 1 + Math.floor(n / 70), U: 1 + Math.floor(n / 150),
@@ -37,6 +46,8 @@
       Z: 1 + Math.floor(n / 220), S: Math.max(1, Math.round(n / 16)), I: Math.max(1, Math.round(n / 28)),
       W: Math.max(1, Math.round(n / 28)), R: 1 + Math.floor(n / 120),
     };
+    const tt = LES.TOWN_TYPES[type];
+    if (tt && tt.q) for (const [k, m] of Object.entries(tt.q)) q[k] = Math.max(k === 'O' || k === 'N' ? 1 : 0, Math.round(q[k] * m));
     q.L = Math.round(n * 0.14);
     if (varied) { // worship districts and a justice district (taken from the lot share)
       q.J = Math.max(1, Math.round(n / 25)); q.j = 1 + Math.floor(n / 200); q.g = 1;
@@ -44,7 +55,7 @@
     }
     const used = Object.values(q).reduce((a, b) => a + b, 0);
     const homes = Math.max(5, n - used);
-    const shares = { K: 0.13, A: n < 80 ? 0.05 : 0.03, F: 0.24, T: 0.28, C: 0.2, B: 0.1 };
+    const shares = tt && tt.homes ? tt.homes : { K: 0.13, A: n < 80 ? 0.05 : 0.03, F: 0.24, T: 0.28, C: 0.2, B: 0.1 };
     let given = 0;
     for (const k of ['F', 'T', 'C', 'K', 'B', 'A']) { q[k] = Math.max(1, Math.round(homes * shares[k])); given += q[k]; }
     q.T += homes - given; // keep the total exact
@@ -53,12 +64,12 @@
   };
 
   // Seeded district plan: returns an array of row strings like the old templates.
-  LES.planDistricts = function (size, seed, varied) {
+  LES.planDistricts = function (size, seed, varied, type) {
     const S = LES.MAP_SIZES[size];
     const cols = S.cols, rows = S.rows, n = cols * rows;
     const R = new LES.RNG(`${seed}|map|${size}`);
     const grid = Array.from({ length: rows }, () => Array(cols).fill(null));
-    const quota = LES.districtQuota(n, varied);
+    const quota = LES.districtQuota(n, varied, type);
     const cx = (cols - 1) / 2, cy = (rows - 1) / 2;
     const dCentre = (c, r) => Math.max(Math.abs(c - cx) / Math.max(1, cx), Math.abs(r - cy) / Math.max(1, cy));
     // The wealthy live around one of the right-hand corners; kampung sits far from them.
@@ -208,11 +219,11 @@
 
   // layout: 'grid' = the original equal blocks and straight roads (Classic preset);
   // 'varied' = seeded avenues, a river with bridges, merged superblocks and wild land.
-  LES.buildTown = function (size, seed, layout) {
+  LES.buildTown = function (size, seed, layout, type) {
     size = LES.MAP_ALIASES[size] || size;
     if (!LES.MAP_SIZES[size]) size = 'pekan';
     seed = seed === undefined ? 'rezeki-1' : seed;
-    const tpl = LES.planDistricts(size, seed, layout === 'varied');
+    const tpl = LES.planDistricts(size, seed, layout === 'varied', type);
     const rows = tpl.length, cols = tpl[0].length;
     const L = layout === 'varied' ? LES.planLayout(size, seed, tpl) : null;
     const gapX = L ? L.gapX : Array(cols).fill(ROAD), gapY = L ? L.gapY : Array(rows).fill(ROAD);

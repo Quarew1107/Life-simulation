@@ -412,7 +412,7 @@
   // ---- Events: monsoon floods and haze ----
   function eventsDay(w, R) {
     const g = w.gov, doy = w.date.doy;
-    if (doy === 325 && R.next() < 0.35) { // north-east monsoon floods
+    if (doy === 325 && (w.region ? w.region.monsoon(w.day) : R.next() < 0.35)) { // one monsoon for the whole region // north-east monsoon floods
       const t = w.town;
       const low = t.blocks.map((b, i) => ({ b, i })).filter(({ b }) => 'KAFTR'.includes(b.code) && (b.code === 'K' || b.code === 'A' || (t.layout && t.layout.river >= 0 && Math.abs(b.c - t.layout.river) <= 1) || R.next() < 0.15));
       const hit = [];

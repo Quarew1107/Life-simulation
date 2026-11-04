@@ -22,9 +22,10 @@ conversation. Branch: `main-4bf9gf` on `Quarew1107/Life-simulation`. Last update
 All work is committed and pushed; 120 tests pass (`node tools/headless.js tests`).
 Multiple towns (4.2) is usable: setting, switcher, migration, commuting, shopping, shared
 economy, comparison card, save/load. Next, in this order:
-1. Finish 4.2: town types (pass a `type` per town into `LES.districtQuota` weights), spillovers
-   (gangs, floods on a shared river, pandemic via commuters), a region section in the report,
-   and the overview map. Keep `regionTests` green and add a check for each new channel.
+1. Finish 4.2: DONE since: town types (`LES.TOWN_TYPES`, settings town1Type-town3Type, district
+   mix + `w.jobFreq` job mix), one monsoon for the region (`Region.monsoon`), pandemic spreading
+   between towns (`Region.pandemicSpread`), region section in the report. Still open: gang
+   spillover and the zoomed-out overview map.
 2. 4.1 chunked static map layer (needed before bigger maps in 4.3).
 3. 4.3 terrain, 4.4 My Cast, 4.5 countries, 4.6 polish.
 
