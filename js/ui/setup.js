@@ -71,8 +71,10 @@
   }
 
   LES.Setup = {
-    open(app, first) {
-      const base = Object.assign({}, LES.DEFAULTS, app.lastCfg || {});
+    // over: settings to show instead of the last world's (used when the country changes).
+    open(app, first, over) {
+      const base = Object.assign({}, LES.DEFAULTS, app.lastCfg || {}, over || {});
+      LES.Countries.ensure(base); // labels, prices and names of the chosen country
       const card = $('modal-card'), META = LES.SETTINGS_META, CARDS = cards();
       card.onclick = null;
       card.classList.remove('wide');
@@ -123,7 +125,18 @@
           ${c.cfg ? `<p class="note">Sets: ${Object.entries(c.cfg).map(([k, v]) => { const m = META.find(x => x.key === k); return m ? `${esc(m.label)} → ${esc(m.options ? (m.options.find(o => o[0] === v) || [, v])[1] : v)}` : ''; }).filter(Boolean).join(' · ')}.</p>` : ''}`;
         for (const id in keep) if ($(id)) $(id).value = keep[id];
       };
+      // A new country: its own defaults (life expectancy, leader title, term), then the form again in its words.
+      const reopen = (code, extra) => {
+        const cfg = Object.assign(readForm(base), LES.Countries.get(code).defaults || {}, { country: code });
+        LES.Countries.use(code);
+        if (LES.presetOf(cfg) !== 'custom' || extra) Object.assign(cfg, LES.PRESETS[(extra && extra.preset) || 'national'].values, extra || {});
+        const c = !extra && CARDS.find(x => x.key === chosen);
+        if (c && c.cfg) Object.assign(cfg, c.cfg); // keep the chosen scenario's settings
+        cfg.preset = LES.presetOf(cfg);
+        LES.Setup.open(app, first, cfg);
+      };
       const choose = key => {
+        if (key === 'classic' && $('set-country').value !== 'my') return reopen('my', Object.assign({ scenario: 'none', preset: 'classic' }, LES.PRESETS.classic.values)); // Classic rules are Malaysia only
         chosen = key;
         const c = CARDS.find(x => x.key === key);
         $('set-scenario').value = c.scenario;
@@ -167,7 +180,10 @@
       };
       castSync();
       card.oninput = e => { syncPreset(e); refresh(); };
-      card.onchange = e => { castSync(e); syncPreset(e); refresh(); };
+      card.onchange = e => {
+        if (e.target.id === 'set-country') return reopen(e.target.value, chosen === 'classic' ? { scenario: 'none' } : null);
+        castSync(e); syncPreset(e); refresh();
+      };
       for (const el of card.querySelectorAll('.scn-card')) el.onclick = () => choose(el.dataset.card);
       $('set-load').onclick = () => $('set-load-file').click();
       $('set-load-file').onchange = e => { const f = e.target.files[0]; if (f) app.loadWorld(f); e.target.value = ''; };
@@ -189,6 +205,7 @@
       $('modal').classList.add('hidden');
       $('modal-card').classList.remove('setup');
       const w = LES_APP.world;
+      if (w) LES.Countries.ensure(w.cfg); // back to the running world's country
       LES.Audio.setScene(w && w.ended ? 'report' : null);
     },
     isOpen() { return !$('modal').classList.contains('hidden'); },

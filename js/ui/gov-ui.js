@@ -17,7 +17,7 @@
   UI.renderGov = function () {
     const w = UI.app.world, el = $('tab-gov');
     if (!w.gov) { el.innerHTML = '<div class="card"><h3>Government</h3><p class="note">There is no town government in this world. Turn on <b>Government &amp; elections</b> in New world.</p></div>'; return; }
-    const g = w.gov, title = GV.title(w), pres = g.president >= 0 ? w.people[g.president] : null;
+    const g = w.gov, title = GV.title(w), pres = g.president >= 0 ? w.people[g.president] : null, EVN = LES.Countries.pack.events || {};
     const h = w.history.filter(r => r.gov), xs = x => `Y${Math.floor(x) + 1}`;
     const last = g.elections[g.elections.length - 1];
     const changed = key => { for (let i = g.lawLog.length - 1; i >= 0; i--) if (g.lawLog[i].key === key) return g.lawLog[i]; return null; };
@@ -45,10 +45,10 @@
       ${last ? `<div class="card"><h3>Last election <small class="muted">${U.fmtDate(last.day)} · turnout ${last.eligible ? pct(last.voted / last.eligible) : '–'} (GE15: 73.9%)</small></h3>
         ${last.cands.map(c => `<div class="why-opt ${c.id === last.winner ? 'chosen' : ''}"><span><span style="color:${c.colour}">■</span> ${UI.plink(w, c.id)}${c.incumbent ? ' <span class="muted">(incumbent)</span>' : ''}</span><div class="track"><i style="width:${last.voted ? (c.votes / last.voted * 100).toFixed(1) : 0}%;background:${c.colour}"></i></div><span class="pct">${c.votes}</span></div>
           <div class="note" style="margin:0 0 6px 10px">Promised: ${Object.keys(c.platform).length ? Object.entries(c.platform).map(([k, v]) => `${esc(GV.LAW_BY_KEY[k].name)} → ${esc(GV.optName(k, v))}`).join('; ') : 'no changes'}</div>`).join('')}
-        <h3 style="margin-top:10px">How groups voted</h3>${breakdown(w, last, 'cls')}${breakdown(w, last, 'rel', LES.Society ? Object.fromEntries(Object.entries(LES.Society.RELIGIONS).map(([k, v]) => [k, v.name])) : null)}${breakdown(w, last, 'eth', C.ETHNIC_NAMES)}
+        <h3 style="margin-top:10px">How groups voted</h3>${breakdown(w, last, 'cls', LES.Society ? LES.Society.CLASS_SHORT : null)}${breakdown(w, last, 'rel', LES.Society ? Object.fromEntries(Object.entries(LES.Society.RELIGIONS).map(([k, v]) => [k, v.name])) : null)}${breakdown(w, last, 'eth', C.ETHNIC_NAMES)}
         <div class="note">Voters weigh what each promise would mean for them (people with more education judge this better), their left-right and conservative-liberal leanings, the leader's record, shared identity, charisma and campaign spending, and then decide whether to vote at all.</div></div>` : ''}
       ${g.elections.length > 1 ? `<div class="card"><h3>Past elections</h3><ul class="list-plain">${g.elections.slice().reverse().slice(1, 12).map(e => { const win = e.cands.find(c => c.id === e.winner); return `<li><span>${U.fmtMonthYear(e.day)} · ${UI.plink(w, e.winner)}${win && win.incumbent ? ' (re-elected)' : ''}</span><span class="muted">${win ? win.votes : 0}/${e.voted} votes · turnout ${e.eligible ? pct(e.voted / e.eligible) : '–'}</span></li>`; }).join('')}</ul></div>` : ''}
-      <div class="card"><h3>Town events</h3><div class="grid2"><div><span class="muted">Monsoon floods</span><span>${g.floods}</span></div><div><span class="muted">Haze episodes</span><span>${g.hazes}</span></div><div><span class="muted">Inheritance tax collected</span><span>${U.fmtMoney(g.estateTaxTotal)}</span></div><div><span class="muted">Public money stolen</span><span>${U.fmtMoney(g.skimmed)}</span></div></div>
+      <div class="card"><h3>Town events</h3><div class="grid2"><div><span class="muted">${esc(EVN.flood ? EVN.flood.name : "Floods")}</span><span>${g.floods}</span></div><div><span class="muted">${esc(EVN.haze ? EVN.haze.name : "Haze")} episodes</span><span>${g.hazes}</span></div><div><span class="muted">Inheritance tax collected</span><span>${U.fmtMoney(g.estateTaxTotal)}</span></div><div><span class="muted">Public money stolen</span><span>${U.fmtMoney(g.skimmed)}</span></div></div>
         <div class="note">${LES.Countries.pack.notes.events}</div></div>`;
     if (h.length) {
       LES.Charts.line($('gv-appr'), { series: [{ label: 'Approval %', color: '#3ec7b5', data: h.map(r => [r.day / 365, r.gov.approval]) }], xFmt: xs, yMin: 0 });

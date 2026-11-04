@@ -112,6 +112,7 @@
     { group: 'Scenario', scenario: 'robots', key: 'robotSpeed', label: 'Speed', type: 'select', options: [['slow', 'Slow (40 years to the peak)'], ['normal', 'Normal (25 years)'], ['fast', 'Fast (12 years)']] },
 
     // ---- Your town (main page) ----
+    { group: 'Town & map', essential: true, key: 'country', label: 'Country', type: 'select', options: [['my', 'Malaysia']], help: 'Prices, wages, taxes, laws, people and festivals of this country. Classic rules are Malaysia only.' },
     { group: 'Town & map', essential: true, key: 'founders', label: 'Founding population', type: 'int', min: 20, max: 6000, help: 'Strangers who found the town. The map size follows (100 = a small town).' },
     { group: 'Goal', essential: true, key: 'horizonYears', label: 'Years to simulate', type: 'int', min: 5, max: 300, help: '120 years is about four generations.' },
     { group: 'Economy & prices', essential: true, key: 'wealthDist', label: 'Starting wealth', type: 'select', options: [['equal', 'Equal ({cur}10k each)'], ['moderate', 'Moderate inequality'], ['unequal', 'High inequality (some born rich)']] },
@@ -171,18 +172,21 @@
       m.label = F(o.label || b.label);
       const help = o.help || b.help;
       if (help === undefined) delete m.help; else m.help = F(help);
-      if (m.options) m.options.forEach((opt, j) => {
+      if (m.options && m.key !== 'country') m.options.forEach((opt, j) => {
         const t = (o.options && o.options[opt[0]]) || b.options[j];
         opt[1] = F(t).replace('{name}', (names[m.key] && names[m.key][opt[0]]) || opt[0]);
       });
     });
     for (const k of Object.keys(LES.PRESETS)) LES.PRESETS[k].name = (ov.presets && ov.presets[k]) || PRESET_BASE[k];
+    LES.PRESETS.national.values.mortMult = pack.demography.mortMult; // the national rules' life expectancy
+    const cm = LES.SETTINGS_META.find(m => m.key === 'country'); // every registered country
+    cm.options = LES.Countries.order.map(c => [c, LES.Countries.get(c).name]);
   });
 
   LES.derive = function (cfg) {
     return {
       eduMult: { free: 0, subsidised: 1, expensive: 2.5 }[cfg.education],
-      fertMult: { national: 0.42, low: 0.6, normal: 1, high: 1.6 }[cfg.fertility],
+      fertMult: { national: LES.Countries.pack.demography.fertMult, low: 0.6, normal: 1, high: 1.6 }[cfg.fertility],
       goal: Math.round(cfg.goalRM * 100),
       horizonDays: cfg.horizonYears * 365,
       welfare: cfg.safetyNet === 'on',

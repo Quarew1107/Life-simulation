@@ -43,7 +43,6 @@
   CR.INDEX = ['theft', 'burglary', 'vehicle', 'robbery', 'assault', 'murder']; // DOSM index crimes (scams are commercial crime)
   const BASE = 0.0013;     // monthly opportunity chance per unit temptation at intensity 1 (calibrated: tools/headless.js)
   const DRUG_BASE = 0.00024;
-  const GANG_NAMES = [['Naga', 'Harimau', 'Helang', 'Kala', 'Ular', 'Serigala', 'Buaya', 'Tebuan'], ['Hitam', 'Merah', 'Besi', 'Api', 'Malam', 'Emas']];
   const GANG_COLOURS = ['#e63946', '#8338ec', '#ff8c42', '#06d6a0', '#3a86ff', '#ffbe0b', '#d62828', '#8d99ae'];
 
   const K = w => CR.INTENSITY[w.cfg.crime] || 10;
@@ -315,7 +314,7 @@
         const hb = t.buildings[leader.homeId] || t.buildings[0];
         const others = pool.filter(q => q !== leader).sort((a, b) => dist(t, a, hb) - dist(t, b, hb)).slice(0, R.int(2, 4));
         const id = st.gangs.length, bl = blockOf(w, leader);
-        const g = { id, name: `Geng ${R.pick(GANG_NAMES[0])} ${R.pick(GANG_NAMES[1])}`, colour: GANG_COLOURS[id % GANG_COLOURS.length], leader: leader.id, members: [], cash: 0, turf: bl ? [t.blocks.indexOf(bl)] : [], founded: w.day, alive: true, crimes: 0, peak: 0 };
+        const g = { id, name: (GN => { const a = R.pick(GN.a), b = R.pick(GN.b); return GN.pattern.replace('{a}', a).replace('{b}', b); })(LES.Countries.pack.gangNames), colour: GANG_COLOURS[id % GANG_COLOURS.length], leader: leader.id, members: [], cash: 0, turf: bl ? [t.blocks.indexOf(bl)] : [], founded: w.day, alive: true, crimes: 0, peak: 0 };
         st.gangs.push(g);
         for (const q of [leader, ...others]) join(w, g, q);
         w.pushFeed({ day: w.day, pid: leader.id, text: `A gang formed: ${g.name}, led by ${P.name(leader)}`, cat: 'crime', imp: 2 });
@@ -584,6 +583,6 @@
     out.property = out.index - out.violent;
     return out;
   };
-  LES.Countries.require('crime.index', 'crime.violent', 'crime.property', 'crime.murder', 'crime.users', 'crime.prison');
+  LES.Countries.require('gangNames.pattern', 'gangNames.a', 'gangNames.b', 'crime.index', 'crime.violent', 'crime.property', 'crime.murder', 'crime.users', 'crime.prison');
   LES.Countries.on('crime', pack => { for (const k of Object.keys(CR.REF)) delete CR.REF[k]; Object.assign(CR.REF, pack.crime); });
 })(globalThis.LES = globalThis.LES || {});

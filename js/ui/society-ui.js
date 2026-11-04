@@ -21,7 +21,7 @@
     const fundOf = k => (st.funds[k] ? st.funds[k] : { bal: 0, inTotal: 0, outTotal: 0 });
     const mobRow = a => {
       const row = mob.m[a], n = S.CLASSES.reduce((s, b) => s + row[b], 0);
-      return `<tr><td class="muted">${a}</td>${S.CLASSES.map(b => `<td${a === b ? ' style="font-weight:600"' : ''}>${n ? pct(row[b] / n) : '–'}</td>`).join('')}<td class="muted">${n}</td></tr>`;
+      return `<tr><td class="muted">${S.short(a)}</td>${S.CLASSES.map(b => `<td${a === b ? ' style="font-weight:600"' : ''}>${n ? pct(row[b] / n) : '–'}</td>`).join('')}<td class="muted">${n}</td></tr>`;
     };
     el.innerHTML = `
       <div class="stat-grid">
@@ -32,10 +32,10 @@
         <div class="stat"><div class="v">${w.living.filter(p => p.alive && p.elite).length}</div><div class="l">T1 elite (top 1%, ${U.sym()}1M+)</div></div>
         <div class="stat"><div class="v">${w.living.filter(p => p.alive && p.adult && p.hardship).length}</div><div class="l">adults in hardship</div></div>
       </div>
-      <div class="card"><h3>Class lines <small class="muted">household income, Year-1 RM · dashed = DOSM 2024</small></h3><canvas class="chart" id="so-cut"></canvas>
+      <div class="card"><h3>Class lines <small class="muted">household income, Year-1 ${U.sym()} · dashed = ${LES.Countries.pack.society.statsOffice} ${LES.Countries.pack.society.cutsYear}</small></h3><canvas class="chart" id="so-cut"></canvas>
         <div class="note">Class is calculated every month from household income (head + partner), the way ${LES.Countries.pack.society.statsOffice} defines ${S.short('B40')}, ${S.short('M40')} and ${S.short('T20')}, so people move between classes as their lives change.</div></div>
       <div class="card"><h3>Social mobility <small class="muted">household class at 12 → own class at 35</small></h3>
-        <table class="cmp"><tr><th>Grew up</th>${S.CLASSES.map(c => `<th>${c}</th>`).join('')}<th>n</th></tr>${S.CLASSES.map(mobRow).join('')}</table>
+        <table class="cmp"><tr><th>Grew up</th>${S.CLASSES.map(c => `<th>${S.short(c)}</th>`).join('')}<th>n</th></tr>${S.CLASSES.map(mobRow).join('')}</table>
         <div class="note">${mob.n ? `Each row adds up to 100%. Bold = stayed in the class they grew up in. ${mob.n} people so far.` : 'Fills in once children born here reach 35.'} Mobility is one of the most telling results: compare it across seeds and settings.</div></div>
       <div class="card"><h3>Ethnic groups <small class="muted">adults alive now</small></h3>
         <table class="cmp"><tr><th>Group</th><th>Adults</th><th>Median NW</th><th>Median income</th><th>${S.short('B40')}</th><th>${S.short('T20')}</th><th>Degree</th></tr>
@@ -77,7 +77,7 @@
       <div><span class="muted">Ethnicity</span><span>${esc(C.ETHNIC_NAMES[p.eth] || p.eth)}</span></div>
       <div><span class="muted">Religion</span><span>${d.icon} ${esc(d.name)}</span></div>
       <div><span class="muted">Household class</span><span>${cls}${p.elite ? ' · <span style="color:#f2c14e">T1 elite</span>' : ''}${p.hardship ? ' · <span class="neg">hardship</span>' : ''}</span></div>
-      <div><span class="muted">Grew up in</span><span>${p.clsOrigin || '<span class="muted">—</span>'}</span></div>
+      <div><span class="muted">Grew up in</span><span>${p.clsOrigin ? S.short(p.clsOrigin) : '<span class="muted">—</span>'}</span></div>
       <div><span class="muted">Devotion</span><span>${p.relig}/100</span></div>
       <div><span class="muted">Given to community</span><span>${U.fmtMoney(p.donated)}</span></div>
       ${p.zakatPaid ? `<div><span class="muted">Zakat paid</span><span>${U.fmtMoney(p.zakatPaid)}</span></div>` : ''}

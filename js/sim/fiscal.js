@@ -64,7 +64,7 @@
   // vehicle costs; cost = the treasury's bill as a share of vehicle spending.
   FS.FUEL = {}; // tax.fuel
   FS.priceMult = function (law, fuel) {
-    const R = FS.RATES[law] || FS.RATES.sst, S = FS.RATES.sst, out = {}, fx = (FS.FUEL[fuel] || FS.FUEL.targeted).px;
+    const PB = TX.priceBase, S = FS.RATES[PB.salesTax], R = FS.RATES[law] || S, out = {}, fx = (FS.FUEL[fuel] || FS.FUEL[PB.fuel]).px; // content prices include today's tax and fuel price
     for (const cat of ['food', 'transport', 'leisure']) out[cat] = S[cat].map((r, i) => (1 + R[cat][i]) / (1 + r) * (cat === 'transport' && i >= 1 ? fx : 1));
     out.housing = C.TIERS.housing.map(() => 1);
     out.child = (1 + R.child) / (1 + S.child);
@@ -120,9 +120,9 @@
 
   // Sales tax, assessment tax and employers' company tax for the month.
   function collectMonth(w) {
-    const g = w.gov, L = w.ledger, F = LES.Finance, law = w.policy.salesTax === 'gst6' ? 'gst6' : 'sst', R = FS.RATES[law];
+    const g = w.gov, L = w.ledger, F = LES.Finance, law = FS.RATES[w.policy.salesTax] ? w.policy.salesTax : Object.keys(FS.RATES)[0], R = FS.RATES[law];
     let sales = 0, assess = 0, base = 0, fuel = 0;
-    const fuelCost = (FS.FUEL[w.policy.fuelSubsidy] || FS.FUEL.targeted).cost;
+    const fuelCost = (FS.FUEL[w.policy.fuelSubsidy] || FS.FUEL[TX.priceBase.fuel]).cost;
     for (const p of w.living) {
       if (!p.alive || !p.adult || p.away || p.inst) continue;
       const t = p.tiers, f = F.tierCost(w, 'food', t.food), tr = F.tierCost(w, 'transport', t.transport), le = F.tierCost(w, 'leisure', t.leisure), ch = F.careShare(w, p);
@@ -253,10 +253,12 @@
     const ratio = g.debt / Math.max(w.px(2e4), annualRev);
     g.afford = U.clamp(g.afford * 0.8 + 0.2 * (ratio > 1 ? 0.7 : ratio > 0.5 ? 0.85 : 1), 0.6, 1);
     if (ratio > 1 && R.next() < 0.5) {
-      if (g.laws.ubi !== '0') GV.setLaw(w, 'ubi', '0', 'austerity');
-      else if (g.laws.cashAid === '300') GV.setLaw(w, 'cashAid', '100', 'austerity');
-      else if (g.laws.salesTax === 'sst' && R.next() < 0.5) GV.setLaw(w, 'salesTax', 'gst6', 'austerity');
-      else if (g.laws.incomeTax !== 'high') GV.setLaw(w, 'incomeTax', g.laws.incomeTax === 'low' ? 'normal' : 'high', 'austerity');
+      for (const [key, map, chance] of GK.austerity) { // the first step that applies ([law, { current: new }, chance])
+        const to = map[g.laws[key]];
+        if (!to || (chance !== undefined && !(R.next() < chance))) continue;
+        GV.setLaw(w, key, to, 'austerity');
+        break;
+      }
     }
     const rev = U.sum(Object.values(m.rev)), spend = U.sum(Object.values(m.spend));
     g.revHist.push(rev); if (g.revHist.length > 24) g.revHist.shift();
@@ -342,7 +344,7 @@
   // ---- National tax schedule, central bank, retirement scheme and fund from the country pack ----
   let TX = null, BK = null, RT = null, FD = null, GK = null, NM = null;
   LES.Countries.require('tax.incomeBands', 'tax.personalRelief', 'tax.retirementRelief', 'tax.childRelief', 'tax.rebate', 'tax.companyBands',
-    'tax.companyRefRate', 'tax.largeCompanyRevenue', 'tax.salesTax', 'tax.salesTaxNames', 'tax.assessment', 'tax.employerCorp', 'tax.eis',
+    'tax.companyRefRate', 'tax.priceBase', 'tax.largeCompanyRevenue', 'tax.salesTax', 'tax.salesTaxNames', 'tax.assessment', 'tax.employerCorp', 'tax.eis',
     'tax.federalShare', 'tax.fuel', 'tax.dividend', 'bank.policyRate', 'bank.floor', 'bank.ceiling', 'retirement.dividend', 'fund.payout',
     'gov.leaderPay', 'names.centralBank', 'names.policyRate', 'names.fundReturns', 'names.exchange');
   LES.Countries.on('fiscal', K => {

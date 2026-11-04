@@ -242,8 +242,30 @@ Cast members follow the normal rules; flagged with a star on leaderboards.
   (headless Edge via the DevTools protocol; full suite: `LES_TESTS.runAll()` with a 600 s timeout).
   The runner turns off Edge's timer throttling for hidden windows (without it, tests that pause with
   setTimeout stall for minutes after heavy work), closes Edge completely with Browser.close, dismisses
-  dialogs, and on a timeout prints the page's call stack and last console lines. Full suite: 158 tests, ~165 s.
-- NEXT: 4b UK (`js/data/countries/uk.js`), as planned above. Step 4a (Malaysia pack) is complete.
+  dialogs, and on a timeout prints the page's call stack and last console lines. Full suite: 161 tests, ~165 s.
+- 4b steps: (1) UK pack on the existing mechanics + country dropdown [DONE: `js/data/countries/uk.js` (loaded after
+  my.js in every page); ONS/HMRC/BoE/Home Office figures with sources in the file; Census 2021 groups (white, asian,
+  black, mixed, other) and religions; Rexbury, Hollinford, Wrayfield; Albion Exchange companies (names searched: no real
+  matches); no GLCs. New pack parts used by the engine: `tax.estateAllowance`, `tax.salesTaxRaise`, `tax.priceBase`
+  (the sales-tax and fuel laws content prices include), `gov.austerity`, `gov.emergency`, `gangNames`, `demography`
+  (fertMult, mortMult for the 'national' rules), `defaults` (applied when the country is picked in setup),
+  `events.haze.name`, `celebrates.x.all`; staffing quality is measured against the pack's 'national' option. Setup:
+  Country field on the main page (`set-country`); changing it re-opens the form in that country's words with its
+  defaults; Classic switches the country back to Malaysia; closing setup re-applies the running world's country.
+  The rules preset is now called "Today's rules". Tests: a UK town runs with balanced books; running one alongside
+  changes nothing in a Malaysian town; a UK save loads and continues identically.]
+  Caveats for later steps: engine constants written in Year-1 money (clinic fee, festival spend, thresholds) are
+  shared, which works because UK amounts in GBP are of the same size as Malaysian amounts in RM (median wage
+  ~GBP2,650 vs ~RM3,000); employee NI is folded into the income-tax bands and council tax is 15% of rent until 4b.2;
+  the cash-aid law stands in for Universal Credit; the workplace pension runs on the EPF mechanics; UK crime
+  reference is 2,000 per 100k (police-recorded, modelled offences), 12x Malaysia's, check it in 4b.4; Easter is a
+  fixed date; Eid and Diwali reuse the ids 'raya' and 'deepavali' (so Malaysian festival clothes and music until 4b.3).
+- NEXT: 4b.2 UK mechanics as data where possible: Universal Credit (standard allowance GBP424.90/month single 25+,
+  55% taper, work allowance), Child Benefit, State Pension (GBP241.30/week from 66) and the Pension Credit floor,
+  workplace pension on market returns (access at 57), student loans (Plan 5: 9% above GBP25,000, 40 years), employee
+  and employer NI, council tax bands and business rates, NHS (free care). Then 4b.3 (daylight by latitude, bare
+  winter trees, UK weather, festival art, wealth gap by group with an equal-start option, immigrant cast) and 4b.4
+  (UK calibration in band, benchmark).
 
 Original notes:
 First move everything Malaysia-specific into a country pack (`js/data/countries/my.js`:
