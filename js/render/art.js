@@ -721,6 +721,44 @@
         sign(g, 'TAPAK BINAAN', X + 30, Y + H - 14, '#7a5a1d');
         break;
       }
+      case 'lake': { // an irregular lake with a sandy shore, reeds, a jetty and a boat
+        rect(g, X, Y, W, H, '#7fbf5a');
+        for (let i = 0; i < 40; i++) rect(g, X + R.int(0, W - 4), Y + R.int(0, H - 3), 4, 2, '#77b553');
+        const cx = X + W / 2, cy = Y + H / 2 + 4, rx = W / 2 - 18, ry = H / 2 - 20;
+        g.fillStyle = PAL.sand; g.beginPath(); g.ellipse(cx, cy, rx + 6, ry + 6, 0.1, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#3f8fb5'; g.beginPath(); g.ellipse(cx, cy, rx, ry, 0.1, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#4fa3c7'; g.beginPath(); g.ellipse(cx - 6, cy - 4, rx - 14, ry - 12, 0.1, 0, Math.PI * 2); g.fill();
+        for (let i = 0; i < 14; i++) rect(g, cx - rx / 2 + R.int(0, rx), cy - ry / 2 + R.int(0, ry), R.int(5, 10), 1, '#8fd0ea');
+        for (let i = 0; i < 18; i++) { const a = R.range(0, Math.PI * 2), x = cx + Math.cos(a) * (rx + 3), y = cy + Math.sin(a) * (ry + 3); rect(g, x, y - 4, 1, 5, '#4f8a3a'); rect(g, x + 2, y - 3, 1, 4, '#5f9f45'); }
+        rect(g, cx + rx - 30, cy - 2, 26, 4, PAL.woodLight); for (const px of [cx + rx - 28, cx + rx - 18, cx + rx - 8]) rect(g, px, cy + 2, 2, 3, PAL.woodDark); // jetty
+        rect(g, cx - 20, cy + 8, 14, 4, '#e76f51'); rect(g, cx - 18, cy + 6, 10, 2, '#f4f1e8'); // a boat
+        for (const [tx, ty] of [[X + 10, Y + 8], [X + W - 30, Y + 10], [X + 14, Y + H - 34], [X + W - 26, Y + H - 30]]) rainTree(g, tx, ty, 0.8, R);
+        sign(g, (b.label || 'TASIK').toUpperCase(), X + W / 2, Y + H - 14, '#1d6f8a');
+        break;
+      }
+      case 'hill': { // a forested hill: shaded slopes, rocks, a winding trail and a viewpoint hut
+        rect(g, X, Y, W, H, '#6fa34b');
+        const cx = X + W / 2, cy = Y + H / 2 + 10;
+        for (const [r, col] of [[96, '#5f9440'], [74, '#558a3a'], [52, '#4c7f34'], [30, '#43742e']]) { g.fillStyle = col; g.beginPath(); g.ellipse(cx, cy, r, r * 0.7, 0, 0, Math.PI * 2); g.fill(); }
+        g.fillStyle = 'rgba(0,0,0,0.12)'; g.beginPath(); g.ellipse(cx + 20, cy + 12, 70, 40, 0, 0, Math.PI); g.fill(); // shade on the south slope
+        g.strokeStyle = '#c9a66b'; g.lineWidth = 2; g.beginPath(); g.moveTo(cx - 80, Y + H - 4); g.bezierCurveTo(cx - 40, cy + 30, cx + 50, cy + 10, cx, cy - 10); g.stroke(); // the trail
+        for (let i = 0; i < 16; i++) { const a = R.range(0, Math.PI * 2), d = R.range(25, 85); rainTree(g, cx + Math.cos(a) * d - 8, cy + Math.sin(a) * d * 0.6 - 16, 0.55, R); }
+        for (let i = 0; i < 6; i++) rect(g, cx + R.int(-60, 60), cy + R.int(-30, 30), R.int(4, 7), 3, '#9aa0a6');
+        rect(g, cx - 8, cy - 22, 16, 8, PAL.woodLight); rect(g, cx - 10, cy - 26, 20, 4, '#8c2f39'); // viewpoint hut
+        sign(g, (b.label || 'BUKIT').toUpperCase(), X + W / 2, Y + H - 14, '#2d6a4f');
+        break;
+      }
+      case 'forest': { // dense forest reserve with a waterfall into a rock pool
+        rect(g, X, Y, W, H, '#3f7a35');
+        for (let i = 0; i < 26; i++) rainTree(g, X + R.int(-4, W - 24), Y + R.int(-6, H - 30), R.range(0.6, 1), R);
+        const fx = X + W / 2 - 8;
+        rect(g, fx - 10, Y + 20, 36, 40, '#8a8f96'); rect(g, fx - 6, Y + 24, 28, 34, '#9aa0a6'); // cliff
+        rect(g, fx + 2, Y + 24, 10, 40, '#bfe6f5'); for (let y = Y + 26; y < Y + 62; y += 4) rect(g, fx + 3 + (y % 8 ? 0 : 4), y, 3, 2, '#ffffff'); // falling water
+        g.fillStyle = '#4fa3c7'; g.beginPath(); g.ellipse(fx + 7, Y + 70, 26, 10, 0, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#8fd0ea'; g.beginPath(); g.ellipse(fx + 4, Y + 68, 12, 4, 0, 0, Math.PI * 2); g.fill();
+        sign(g, (b.label || 'HUTAN SIMPAN').toUpperCase(), X + W / 2, Y + H - 14, '#1f4d2b');
+        break;
+      }
       case 'park': {
         rect(g, X, Y, W, H, '#93c96b');
         g.fillStyle = '#8bc263'; for (let i = 0; i < 30; i++) g.fillRect(X + R.int(0, W - 4), Y + R.int(0, H - 3), 4, 2);

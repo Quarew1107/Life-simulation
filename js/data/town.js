@@ -64,12 +64,17 @@
   };
 
   // Seeded district plan: returns an array of row strings like the old templates.
+  // Varied towns are a little bigger than the original grid: the extra blocks are scenery
+  // (lakes, hills, forest reserves) that is never built on, so the town itself keeps the
+  // same number of homes, shops and services.
+  LES.SCENERY_EXTRA = { kampung: [1, 0], pekan: [1, 0], bandar: [1, 0], bandaraya: [1, 1], metropolis: [1, 1] };
   LES.planDistricts = function (size, seed, varied, type) {
-    const S = LES.MAP_SIZES[size];
-    const cols = S.cols, rows = S.rows, n = cols * rows;
+    const S = LES.MAP_SIZES[size], ex = varied ? LES.SCENERY_EXTRA[size] || [0, 0] : [0, 0];
+    const cols = S.cols + ex[0], rows = S.rows + ex[1], n = S.cols * S.rows, nScenery = cols * rows - n;
     const R = new LES.RNG(`${seed}|map|${size}`);
     const grid = Array.from({ length: rows }, () => Array(cols).fill(null));
     const quota = LES.districtQuota(n, varied, type);
+    if (nScenery > 0) { quota.k = Math.round(nScenery * 0.4); quota.m = Math.round(nScenery * 0.35); quota.f = nScenery - quota.k - quota.m; }
     const cx = (cols - 1) / 2, cy = (rows - 1) / 2;
     const dCentre = (c, r) => Math.max(Math.abs(c - cx) / Math.max(1, cx), Math.abs(r - cy) / Math.max(1, cy));
     // The wealthy live around one of the right-hand corners; kampung sits far from them.
@@ -108,9 +113,14 @@
       L: (c, r) => 2 * dCentre(c, r) + 0.6 * nearest('L', c, r),
       j: (c, r) => 1.2 * dCentre(c, r) + 2 * nearest('j', c, r), // the prison sits toward the edge of town
       g: (c, r) => -2.5 * dCentre(c, r), // the town hall is central
+      // Scenery sits toward the edges, away from the station, in clusters of up to four blocks.
+      k: (c, r) => 2 * dCentre(c, r) - (c === 0 ? 3 : 0) + (adjacent('k', c, r) && (placed.k || []).length % 4 ? 1.5 : 0),
+      m: (c, r) => 2.5 * dCentre(c, r) - (c === 0 ? 3 : 0) + (adjacent('m', c, r) && (placed.m || []).length % 4 ? 1.5 : 0),
+      f: (c, r) => 2 * dCentre(c, r) - (c === 0 ? 3 : 0) + (adjacent('f', c, r) ? 1 : 0),
     };
     const spread = (c, r, code) => -0.5 * dCentre(c, r) + 3 * nearest(code, c, r); // Q P D V E S
-    const order = ['O', 'U', 'M', 'H', 'Z', 'Y', 'B', 'C', 'I', 'W', 'Q', 'P', 'E', 'J', 'j', 'g', 'D', 'V', 'S', 'R', 'F', 'K', 'A', 'L', 'T'];
+    function adjacent(code, c, r) { return [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dc, dr]) => grid[r + dr] && grid[r + dr][c + dc] === code); }
+    const order = ['k', 'm', 'f', 'O', 'U', 'M', 'H', 'Z', 'Y', 'B', 'C', 'I', 'W', 'Q', 'P', 'E', 'J', 'j', 'g', 'D', 'V', 'S', 'R', 'F', 'K', 'A', 'L', 'T'];
     for (const code of order) {
       for (let k = 0; k < (quota[code] || 0); k++) {
         let best = null, bestS = -Infinity;
@@ -148,6 +158,9 @@
     mall: 'Shopping mall: retail and cleaning jobs, promoter and e-hailing gigs.',
     shoplot: 'Shoplot unit for a small business.',
     hospital: 'Hospital: doctors, nurses and treatment for the sick and injured.',
+    lake: 'A lake: a walk round the shore, fishing off the jetty, picnics. Not built on.',
+    hill: 'A forested hill with a trail and a viewpoint at the top. Not built on.',
+    forest: 'A forest reserve with a waterfall and a rock pool. Not built on.',
     privschool: 'A private school, owned by a resident. Fee-paying families send their children here; the owner pays the teachers.',
     privhosp: 'A private hospital, owned by a resident. Richer patients pay more for quicker care; the owner pays the doctors and nurses.',
     school: 'Sekolah: where children spend their days.',
@@ -327,6 +340,10 @@
         at('rail', '', 0, 1, 14, 2, { decor: true, rail: true });
         break;
       case 'L': { const lot = at('lot', '', 0, 0, 14, 11, { decor: true }); town.lots.push(lot.id); break; }
+      // Scenery (never built on). With functional scenery these are free outdoor places to go.
+      case 'k': at('lake', R2pick(block, ['Tasik Biru', 'Tasik Cermin', 'Tasik Seri', 'Tasik Damai']), 0, 0, 14, 11, { scenery: true }); break;
+      case 'm': at('hill', R2pick(block, ['Bukit Hijau', 'Bukit Tinggi', 'Bukit Kabus', 'Bukit Bintang']), 0, 0, 14, 11, { scenery: true }); break;
+      case 'f': at('forest', R2pick(block, ['Hutan Simpan', 'Air Terjun Lata', 'Hutan Lipur']), 0, 0, 14, 11, { scenery: true }); break;
       default: break;
     }
   };
@@ -433,6 +450,9 @@
     Object.defineProperty(town, '_junc', { value: out, enumerable: false, configurable: true });
     return out;
   };
+
+  // Deterministic choice from a block's position (no RNG stream needed).
+  function R2pick(block, list) { return list[((block.c || 0) * 7 + (block.r || 0) * 13) % list.length]; }
 
   // Seeded street plan for a varied town. Rules: the station column and the bus loops are
   // never cut; every block keeps a road for its doors; the network stays connected.

@@ -26,8 +26,12 @@ economy, comparison card, save/load. Next, in this order:
    mix + `w.jobFreq` job mix), one monsoon for the region (`Region.monsoon`), pandemic spreading
    between towns (`Region.pandemicSpread`), region section in the report. Still open: gang
    spillover and the zoomed-out overview map.
-2. 4.1 chunked static map layer (needed before bigger maps in 4.3).
-3. 4.3 terrain, 4.4 My Cast, 4.5 countries, 4.6 polish.
+2. 4.3 terrain is DONE (basic set): varied towns get one extra column (and a row for Bandaraya and
+   Metropolis) of scenery blocks: 'k' lake, 'm' hill, 'f' forest reserve (`LES.SCENERY_EXTRA`,
+   `planDistricts`, painters in `art.js`). Setting `scenery` both/decor: with both they join
+   `town.kinds.park` (venues) and homes next to them get `b.view` (less stress). Grid towns and
+   Classic are unchanged. Still open: country-specific scenery (karst, moors, dunes...).
+3. 4.1 chunked static map layer, 4.4 My Cast, 4.5 countries, 4.6 polish.
 
 ## 2. Done so far
 Phases 0-5 are complete (see ROADMAP): foundations, art, varied layouts, society (class,
