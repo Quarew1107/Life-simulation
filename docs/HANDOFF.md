@@ -65,10 +65,13 @@ steps up to 3 Worlds in lockstep; the lead town runs the economy and the shared 
 (`w.follower` skips `Market.daily` and `macroYear`; GLC listings only in the lead); leavers may
 settle in a sister town (`Region.onLeave` -> `relocate` at month end, money via each ledger's
 ABROAD sector, origin record `p.away = { town, id }`, copy has `xlinks`); deaths and
-inheritance follow across towns. **Not yet:** UI (setup option "Towns: 1-3", town switcher,
-main loop stepping the Region, Region tab), region save/load, commuting, shopping, spillovers,
-town types. Next step: in `js/main.js` keep `app.region` and make `app.world` the selected town;
-`app.step` calls `region.step()`; the renderer is rebuilt for the selected town on switch.
+inheritance follow across towns. Increment 2 is DONE: setting "Towns in the region" (Advanced > Town & map, default one town,
+extra towns get ~60%/40% of the founders, `LES.makeRegion`), 1,500-founder total limit unless
+"Remove population limits", `app.region` stepped by `safeStep`, `app.world` = the town shown,
+town switcher in the top bar (`#town-switch`), links to family in other towns on the person
+panel, region save/load (`LES.Save` handles a `Region` root). **Not yet:** Region tab comparing
+towns, region overview map, commuting between towns, shopping/trade, spillovers, town types,
+report section for the region, chunked static map layer.
 Architecture: **each town is a full `LES.World`** (own people, ledger, council, laws); a new
 `LES.Region` (new file `js/sim/region.js`) owns the towns and a shared national layer and
 steps them in lockstep (same day for all, fixed town order). Towns interact through fixed

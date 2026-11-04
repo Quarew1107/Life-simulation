@@ -14,6 +14,14 @@
   LES.TOWN_NAMES = ['Bandar Rezeki', 'Pekan Damai', 'Kuala Sentosa'];
   LES.townName = w => (w && (w.townName || (w.cfg && w.cfg.townName))) || LES.C.TOWN_NAME;
 
+  // Founders per town for the "towns" setting: the first town gets the founding population,
+  // the others about 60% and 40% of it.
+  LES.regionFounders = cfg => [1, 0.6, 0.4].slice(0, Math.max(1, Number(cfg.towns) || 1)).map(k => Math.max(20, Math.round(cfg.founders * k)));
+  LES.makeRegion = function (cfg) {
+    const n = LES.regionFounders(cfg);
+    return new Region(cfg, n.map((f, i) => ({ name: LES.TOWN_NAMES[i], townName: LES.TOWN_NAMES[i], founders: f, seed: i ? `${cfg.seed}~${i + 1}` : cfg.seed })));
+  };
+
   class Region {
     // towns: [{ name, seed, founders, ... }] - each entry overrides the base settings.
     constructor(base, towns) {
