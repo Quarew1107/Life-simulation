@@ -590,6 +590,33 @@
     for (let d = 0; d < 2 * 365; d++) { R2.step(); R3.step(); }
     check('Same seed -> same region history', R2.hash() === R3.hash());
 
+    // ---- Region overview map (layout and schematic plans; drawing goes through a stub) ----
+    const RM = LES.RegionMap, wide = RM.layout(R, 4), narrow = RM.layout(R, 1.4), L = narrow;
+    const overlap = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+    const layoutOk = M => M.towns.length === 3 && M.towns.every((a, i) => a.x >= 0 && a.y >= 0 && a.x + a.w <= M.W && a.y + a.h <= M.H && M.towns.every((b, j) => i === j || !overlap(a, b)));
+    // Roads between towns never cut through a third town (sampled along each route).
+    const routesOk = M => [[0, 1], [1, 2], [0, 2], [2, 0]].every(([a, b]) => {
+      const pts = RM.route(M, a, b);
+      for (let f = 0.02; f < 0.98; f += 0.02) { const p = RM.along(pts, f), i = RM.hit(M, p.x, p.y); if (i >= 0 && i !== a && i !== b) return false; }
+      return true;
+    });
+    check('Region map: a row for wide views and a staircase for narrower ones, towns never overlapping and roads never crossing a third town',
+      wide.mode === 'row' && narrow.mode === 'stair' && layoutOk(wide) && layoutOk(narrow) && routesOk(wide) && routesOk(narrow));
+    check('Region map: clicking a town finds it, clicking countryside finds nothing, and the layout is the same every time',
+      L.towns.every(b => RM.hit(L, b.x + b.w / 2, b.y + b.h / 2) === b.i) && RM.hit(L, 2, 2) === -1
+        && JSON.stringify(RM.layout(R, 1.4)) === JSON.stringify(L));
+    const plansOk = (() => {
+      for (const [size, layout] of [['kampung', 'grid'], ['pekan', 'varied'], ['bandar', 'varied'], ['bandaraya', 'varied'], ['metropolis', 'grid']]) {
+        const town = LES.buildTown(size, `rm-${size}`, layout), S = RM.S, Wp = town.W * S, Hp = town.H * S;
+        let n = 0, bad = 0;
+        const stub = { fillStyle: '', fillRect(x, y, w, h) { n++; if (!(x >= 0 && y >= 0 && w > 0 && h > 0 && x + w <= Wp + 0.01 && y + h <= Hp + 0.01)) bad++; } };
+        RM.drawTown(stub, town, S);
+        if (bad || n < town.blocks.length) return `${size}: ${bad} shapes outside of ${n}`;
+      }
+      return '';
+    })();
+    check('Region map: a schematic plan draws for every map size, grid or varied, all inside the town', plansOk === '', plansOk);
+
     // ---- Gangs spreading between towns (set up by hand so the test doesn't wait on luck) ----
     const CR = LES.Crime;
     const endGang = (w, g) => { // break a gang up cleanly (funds to the merchants, members freed)

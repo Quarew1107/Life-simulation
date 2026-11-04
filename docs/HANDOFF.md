@@ -14,7 +14,7 @@ conversation. Branch: `main-4bf9gf` on `Quarew1107/Life-simulation`. Last update
 - **Systems:** optional features are `LES.Systems` plug-ins (`js/sim/systems.js` lists the
   hooks). With all of them off, the Classic preset reproduces the original engine exactly;
   `foundationTests` checks stored fingerprints (`stableHash`). Keep that test green.
-- **Tests:** `node tools/headless.js tests` (128 checks, ~4 min) or `tests.html` in a browser. Without Node,
+- **Tests:** `node tools/headless.js tests` (131 checks, ~4 min) or `tests.html` in a browser. Without Node,
   open `tests.html` (from disk is fine) and click Run all tests: ~2 min in Edge.
   Calibration: `node tools/headless.js calib`. Benchmarks: `node tools/headless.js bench founders=400 years=10`.
 - Docs: `README.md` (features), `docs/ROADMAP.md` (phases, decisions, Malaysian figures).
@@ -33,8 +33,14 @@ economy, comparison card, save/load. Next, in this order:
    and go independent (`g.formerParent`) when the parent breaks up; members who move keep `p.cr.tie` for
    3 years and may start or join a chapter. Rare by design: in 25-year Lawless test runs, 2 of 3 regions
    saw a chapter. Also fixed: the consistency check now accepts one parent in town when the other stayed
-   in a sister town (`xlinks` rel 'parent'). Still open: the zoomed-out region overview map (approved
-   design: schematic map, 🗺 Region button plus zoom-out, click a town to open it).
+   in a sister town (`xlinks` rel 'parent'). The region overview map is DONE: `js/data/region-map.js`
+   (`LES.RegionMap`: pure layout, routes, hit test and the schematic town plan `drawTown`, testable
+   without a browser) and `js/render/region-view.js` (`LES.RegionView`: cached plans and countryside,
+   live commuters, moves, gang turf, floods, rain, labels placed beside each town, legend). Layout is a
+   row for wide views and a staircase otherwise; roads never cross a third town. `app.view` is 'town' or
+   'region'; 🗺 Region button in `#town-switch`, scrolling out at the fit limit, Esc/click to return.
+   Section 4.2 is now complete apart from optional extras (tax competition between towns, real map
+   thumbnails once 4.1 tiles exist). Next: 4.1 performance groundwork.
 2. 4.3 terrain is DONE (basic set): varied towns get one extra column (and a row for Bandaraya and
    Metropolis) of scenery blocks: 'k' lake, 'm' hill, 'f' forest reserve (`LES.SCENERY_EXTRA`,
    `planDistricts`, painters in `art.js`). Setting `scenery` both/decor: with both they join
