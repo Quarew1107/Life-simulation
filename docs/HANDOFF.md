@@ -31,7 +31,11 @@ economy, comparison card, save/load. Next, in this order:
    `planDistricts`, painters in `art.js`). Setting `scenery` both/decor: with both they join
    `town.kinds.park` (venues) and homes next to them get `b.view` (less stress). Grid towns and
    Classic are unchanged. Still open: country-specific scenery (karst, moors, dunes...).
-3. 4.1 chunked static map layer, 4.4 My Cast, 4.5 countries, 4.6 polish.
+3. 4.4 My Cast is DONE (lean version): `js/sim/cast.js` (`LES.Cast.add`), `js/ui/cast-ui.js` (creator with
+   sprite preview, roster in localStorage with export/import, "★ My cast" mode in the Leaders tab,
+   ★ on leaderboards). Still open: adding cast as founders at setup, partners/families inside the cast,
+   more appearance options (glasses, beard, headwear), life-event alerts, a report section.
+4. 4.1 chunked static map layer, 4.5 countries, 4.6 polish.
 
 ## 2. Done so far
 Phases 0-5 are complete (see ROADMAP): foundations, art, varied layouts, society (class,
