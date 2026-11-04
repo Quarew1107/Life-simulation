@@ -62,12 +62,14 @@
       return name ? { t: 'c', c: name, v } : { t: 'o', v };
     }
     const root = ref(world);
-    return { app: 'LES', version: S.VERSION, saved: new Date().toISOString(), day: world.day, seed: (world.cfg || world.base).seed, root, table };
+    return { app: 'LES', version: S.VERSION, saved: new Date().toISOString(), day: world.day, seed: (world.cfg || world.base).seed, country: LES.Countries.of(world.cfg || world.base), root, table };
   };
 
   S.decode = function (data) {
     if (!data || data.app !== 'LES' || !Array.isArray(data.table)) throw new Error('Not a Life Evolution Simulator save file.');
     if (data.version !== S.VERSION) throw new Error(`Save file version ${data.version} is not supported (expected ${S.VERSION}).`);
+    if (!LES.Countries.get(data.country || LES.Countries.DEFAULT)) throw new Error(`This save is from a country this version does not have (${data.country}).`);
+    LES.Countries.use(data.country || LES.Countries.DEFAULT); // content tables of the save's country
     const ci = contentIndex(), K = classes(), T = data.table, out = new Array(T.length);
     const fns = [];
     // Pass 1: create empty shells, so references can point at them in any order.

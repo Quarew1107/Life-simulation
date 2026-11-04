@@ -12,6 +12,7 @@
     constructor(cfgIn) {
       this.cfg = Object.assign({}, LES.DEFAULTS, cfgIn || {});
       const v = LES.validateConfig(this.cfg);
+      if (!v.blockers.length) LES.Countries.ensure(this.cfg); // national tables before anything reads them
       if (v.blockers.length) throw new Error('Invalid settings: ' + v.blockers.join(' '));
       this.derived = LES.derive(this.cfg);
       this.attachSystems();
@@ -211,6 +212,7 @@
     // ---------------- Daily tick (fixed stage order, FSD 4.1) ----------------
     step() {
       if (this.ended) return;
+      if (LES.Countries.active !== (this.cfg.country || 'my')) LES.Countries.ensure(this.cfg); // another world switched country
       if ((this.region ? this.region.base : this.cfg).castArrivals) LES.Cast.due(this); // replays: cast added on this day
       this.date = U.dayToDate(this.day);
       this.refreshLiving();
