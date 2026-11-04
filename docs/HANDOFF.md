@@ -96,11 +96,19 @@ days/s ~= 60,000 / population. Profile (400 founders): `A.candidates` 21%, `A.li
 building changes.
 - Split the static layer into 512 px chunks, built on demand, LRU-capped (~150 MB), plus a
   1/4-scale overview for zoomed-out views; rebuild only chunks a changed building touches.
+Measured with tiles (Edge, GPU): Metropolis town switch 941 ms -> 29 ms, frame zoomed out 9.7 ->
+4.9 ms, zoomed in 4.0 -> 3.4 ms, map memory 300 MB -> ~21 MB plus ~2 MB per tile on screen.
 - Engine: lazy labels (`A.labelOf`), compact Why records (`WhySlot`) and fixed-shape bias rows
   are already in (commit 3c616df, ~1.5x, results identical). Reusing candidate objects was
   measured SLOWER in Chrome (old objects pointing at new ones cost the garbage collector), so
-  skip it. Next ideas: skip map-only work (plans/labels) for towns not on screen; re-profile
-  first. Target 1.3-1.6x.
+  skip it. Tried in Nov 2026 and reverted (no measurable gain, results identical): lazy plan
+  labels (a PlanStep class), skipping Why records for towns not on screen, fixed-shape tier
+  effect rows in endOfDay, caching system venue preferences per day. Engine speed is ~55-70k
+  person-days/s in Edge and run-to-run noise on this laptop is ~15% (it slows as it heats up),
+  so benchmark old vs new alternating, several rounds. The remaining cost is spread across the
+  daily decision (candidates, venue choice, resolve, softmax): further gains need a structural
+  change (e.g. reuse the morning's options for the evening slot where nothing changed, needs
+  kept in typed arrays, or one Web Worker per town for regions).
 - Time-slice stepping: done for 10 days/s and faster (MessageChannel pump in `js/main.js`).
 - Later, optional: one Web Worker per town for multi-core. Workers cannot load file:// scripts,
   so this needs a generated engine bundle (`tools/bundle.js` concatenating core/data/sim into
