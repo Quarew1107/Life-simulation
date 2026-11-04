@@ -233,6 +233,7 @@
         c.quals = s.quals.slice(); c.attHist = [[B.day, c.att.slice()]]; c.stratHist = [{ day: B.day, strategy: c.strategy, reason: 'moved town' }];
         c.migrant = true; c.arrivedDay = B.day; c.timesMoved = (s.timesMoved || 0);
         c.debt = { study: s.debt.study, studyOrig: s.debt.studyOrig };
+        if (s.debt.slStart !== undefined) c.debt.slStart = s.debt.slStart;
         c.xlinks = [{ town: A.townIdx, id: s.id, rel: 'self' }];
         for (const pid of s.parents) if (!mv.ids.includes(pid)) c.xlinks.push({ town: A.townIdx, id: pid, rel: 'parent' });
         for (const cid of s.children) if (!mv.ids.includes(cid)) c.xlinks.push({ town: A.townIdx, id: cid, rel: 'child' });

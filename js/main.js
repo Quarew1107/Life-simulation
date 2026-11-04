@@ -79,6 +79,7 @@
   app.useWorld = function (w) {
     app.view = 'town';
     app.world = w;
+    if (app.fillOverlays) app.fillOverlays();
     app.lastCfg = app.region ? app.region.base : w.cfg; // a region's shared settings hold its cast arrivals
     app.selected = -1;
     app.dayFrac = 0;
@@ -441,7 +442,12 @@
       else r.zoomAt(r.vw / 2, r.vh / 2, b.dataset.z === 'in' ? 1.3 : 1 / 1.3);
     });
     const ov = $('overlay');
-    ov.innerHTML = LES.Extras.OVERLAYS.map(([k, l]) => `<option value="${k}">${l}</option>`).join('');
+    app.fillOverlays = () => { // the class overlay names the country's classes (B40/M40/T20, Bottom 40%...)
+      const S = LES.Society, cls = S ? ` (${S.CLASSES.map(S.short).join('/')})` : '', keep = ov.value;
+      ov.innerHTML = LES.Extras.OVERLAYS.map(([k, l]) => `<option value="${k}">${l}${k === 'class' ? cls : ''}</option>`).join('');
+      if (keep) ov.value = keep;
+    };
+    app.fillOverlays();
     ov.addEventListener('change', () => { r.overlay = ov.value; ov.blur(); });
     $('speed').addEventListener('click', e => {
       const b = e.target.closest('button'); if (!b) return;

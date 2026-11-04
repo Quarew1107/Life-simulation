@@ -162,7 +162,8 @@
   CO.onJobLoss = function (w, p, job) {
     if (!w.gov) return;
     const c = CO.comp(w, 'community');
-    p.eis = { until: w.day + 183, amt: Math.round(Math.min(job.salary * 0.4, w.px(2000)) * (0.7 + 0.3 * c)) };
+    const JL = LES.Countries.pack.welfare.jobLoss; // Malaysia: EIS 40% of pay up to RM2,000; UK: New Style JSA, flat
+    p.eis = { until: w.day + JL.days, amt: Math.round((JL.flat ? w.px(JL.flat) : Math.min(job.salary * JL.share, w.px(JL.cap))) * (0.7 + 0.3 * c)) };
   };
   // Public servants who retire get a pension: 1/600 of the last salary per month served, up to 60%.
   CO.onRetire = function (w, p, job) {

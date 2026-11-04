@@ -242,7 +242,7 @@ Cast members follow the normal rules; flagged with a star on leaderboards.
   (headless Edge via the DevTools protocol; full suite: `LES_TESTS.runAll()` with a 600 s timeout).
   The runner turns off Edge's timer throttling for hidden windows (without it, tests that pause with
   setTimeout stall for minutes after heavy work), closes Edge completely with Browser.close, dismisses
-  dialogs, and on a timeout prints the page's call stack and last console lines. Full suite: 161 tests, ~165 s.
+  dialogs, and on a timeout prints the page's call stack and last console lines. Full suite: 175 tests, ~170 s.
 - 4b steps: (1) UK pack on the existing mechanics + country dropdown [DONE: `js/data/countries/uk.js` (loaded after
   my.js in every page); ONS/HMRC/BoE/Home Office figures with sources in the file; Census 2021 groups (white, asian,
   black, mixed, other) and religions; Rexbury, Hollinford, Wrayfield; Albion Exchange companies (names searched: no real
@@ -254,18 +254,36 @@ Cast members follow the normal rules; flagged with a star on leaderboards.
   defaults; Classic switches the country back to Malaysia; closing setup re-applies the running world's country.
   The rules preset is now called "Today's rules". Tests: a UK town runs with balanced books; running one alongside
   changes nothing in a Malaysian town; a UK save loads and continues identically.]
-  Caveats for later steps: engine constants written in Year-1 money (clinic fee, festival spend, thresholds) are
-  shared, which works because UK amounts in GBP are of the same size as Malaysian amounts in RM (median wage
-  ~GBP2,650 vs ~RM3,000); employee NI is folded into the income-tax bands and council tax is 15% of rent until 4b.2;
-  the cash-aid law stands in for Universal Credit; the workplace pension runs on the EPF mechanics; UK crime
-  reference is 2,000 per 100k (police-recorded, modelled offences), 12x Malaysia's, check it in 4b.4; Easter is a
-  fixed date; Eid and Diwali reuse the ids 'raya' and 'deepavali' (so Malaysian festival clothes and music until 4b.3).
-- NEXT: 4b.2 UK mechanics as data where possible: Universal Credit (standard allowance GBP424.90/month single 25+,
-  55% taper, work allowance), Child Benefit, State Pension (GBP241.30/week from 66) and the Pension Credit floor,
-  workplace pension on market returns (access at 57), student loans (Plan 5: 9% above GBP25,000, 40 years), employee
-  and employer NI, council tax bands and business rates, NHS (free care). Then 4b.3 (daylight by latitude, bare
-  winter trees, UK weather, festival art, wealth gap by group with an equal-start option, immigrant cast) and 4b.4
-  (UK calibration in band, benchmark).
+  (2) UK rules [DONE, all switched on by pack data so Malaysia runs the old code paths: `tax.ni` (employee 8%/2%,
+  employer 15%, collected in `FS.onPay`), `tax.allowanceTaper`, `tax.councilTax` (by housing tier, single-person
+  discount, support for UC households) and `tax.businessRates`; `welfare.model: 'meansTested'` runs `ukBenefits` in
+  fiscal.js: Universal Credit (cashAid law = standard allowance; couples x1.57, GBP304 a child, housing up to a
+  council flat, 55% taper above the work allowance for parents, savings tariff and GBP16k limit, 80% take-up via
+  `p.ucTake`), Child Benefit with the GBP60-80k charge, State Pension from 66, Pension Credit floor;
+  `welfare.jobLoss` (Malaysia EIS share/cap, UK flat New Style JSA); `education.loans` (Plan 5: the fee is always
+  borrowed, 9% of pay above GBP25k, written off after 40 years, `debt.slStart`); `services.charges` (NHS free).
+  Tests: `ukTests` (tax, NI, loan, NHS, UC, pension, council tax).]
+  (3) UK look and people [DONE: pack `art` (style 'uk': brick shared houses, council blocks, Victorian terraces,
+  detached houses, farmland, moorland, a canal with narrowboats, conifers instead of palms, gardens instead of
+  sandy yards; trees by season via `LES.Art.setSeason` + `Ambience.season`, the renderer repaints tiles when the
+  season changes; daylight `Ambience.sun` from latitude 52.5 with summer time; weather by month with snow;
+  heatwave for the haze event; festival clothes, decorations, fireworks and music cues from the pack);
+  `town.signs` (map sign words keyed by the Malay text); `content.startWealth` (UK: square root of the ONS Wealth
+  and Assets Survey ratios, average unchanged) with the setting `groupWealth` (realistic | equal);
+  `content.castDefault`; cast specs record `country`, and a person made in another country arrives as an
+  immigrant (`p.bornIn`, group 'other' when needed); the class overlay names the country's classes.]
+  (4) UK calibration [DONE: `crimeTuning` (opportunity 5, solve x0.45, 85% community orders, possession prison
+  after 4 arrests, sentences x0.5; Malaysia's TUNE0 is all 1/0 so its numbers are unchanged), `demography`
+  fertMult 0.42, mortMult 1.1; medWage target is the full-time median. 80 years, 3 seeds: TFR 1.52, life
+  expectancy 80.1, median pay GBP3,416, crime 1,667 per 100k, 12% solved, prisoners 99, users 441 all in band;
+  unemployment 1% (5%), household income Gini 0.51 (0.38) and revenue GBP3,038 (GBP1,480) are off, the same
+  engine-wide drift as Malaysia (Phase 6). Benchmark unchanged against 2846882 (200 founders, 5 years).]
+  Still shared with Malaysia (fine for now): engine constants in Year-1 money (similar size in GBP and RM), the
+  Chinese temple and gopuram art for the Buddhist centre and mandir, the mosque and church art.
+- Owner's new order (Nov 2026): three countries first, UK, USA, China (UAE, Mexico and South Africa later).
+  Finish a whole country before pushing, then stop and report. NEXT: write the USA plan (state choice, federal +
+  state income tax, FICA, sales tax by state, medical debt and insurance, Social Security, SNAP/EITC, 401k,
+  student debt, county government, US crime and incarceration) and get it approved before coding.
 
 Original notes:
 First move everything Malaysia-specific into a country pack (`js/data/countries/my.js`:

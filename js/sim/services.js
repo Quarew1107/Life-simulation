@@ -197,8 +197,9 @@
       const b = priv[p.id % priv.length], amt = Math.min(p.cash, Math.round(bill * 1.4));
       if (amt > 0 && L.move(p, 'cash', b, 'cash', amt)) { b.townRev = (b.townRev || 0) + amt; p.health = Math.min(100, p.health + (minor ? 1 : 6)); return amt; }
     }
-    // Public: RM1 at the klinik kesihatan; hospitals charge a small share of the cost.
-    const own = minor ? Math.min(p.cash, w.px(1)) : Math.min(p.cash, Math.round(bill * 0.05));
+    // Public: a token charge at the clinic (Malaysia RM1) and a small share of hospital costs (UK NHS: none).
+    const CH = LES.Countries.pack.services.charges;
+    const own = minor ? Math.min(p.cash, w.px(CH.minor)) : Math.min(p.cash, Math.round(bill * CH.share));
     L.spend(p, 'cash', 'HEALTH', own);
     w.gov.month.healthSub = (w.gov.month.healthSub || 0) + Math.max(0, bill - own);
     return own;

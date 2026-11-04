@@ -13,6 +13,11 @@
     money: { symbol: '£', code: 'GBP', name: 'pounds' },
     content: {
       townName: ALL_TOWN,
+      castDefault: { first: 'Olivia', last: 'Smith', eth: 'white', skin: '#f1c8a0' },
+      // Starting wealth by group (founders and newcomers): the square root of the ONS Wealth and Assets
+      // Survey ratios of median household wealth to White British households (2018-2020), a mild gap as
+      // agreed; the town's average is unchanged and the 'equal start' setting turns it off.
+      startWealth: { white: 1, asian: 0.9, black: 0.5, mixed: 0.65, other: 0.65 },
       // People. Census 2021, England and Wales: White 81.7%, Asian 9.3%, Black 4.0%, Mixed 2.9%, Other 2.1%.
       ethnicities: ['white', 'asian', 'black', 'mixed', 'other'],
       ethnicNames: { white: 'White', asian: 'Asian', black: 'Black', mixed: 'Mixed', other: 'Other' },
@@ -151,7 +156,7 @@
       // (income tax + National Insurance, used without the government system) and company tax.
       childCost: 450,
       childCostPerHousing: 150,
-      simpleTaxBands: [[1048, 0], [4189, 0.28], [10428, 0.42], [Infinity, 0.47]],
+      simpleTaxBands: [[1048, 0], [4189, 0.28], [10428, 0.42], [Infinity, 0.47]], // income tax + employee NI, monthly
       corpTax: 0.25,
       biz: {
         stall: { name: 'Food Van', capital: 15000, scale0: 9000, cap: 50000, fixed: 600,
@@ -275,6 +280,17 @@
         forest: ['Kings Wood', 'Hollin Copse', 'Old Forest'],
       },
       busLine: 'Route',
+      // Words on the map signs (keyed by the Malaysian sign text).
+      signs: {
+        'HAWKER CENTRE': 'MARKET HALL', 'UNIVERSITI REZEKI': 'UNIVERSITY', 'KOLEJ VOKASIONAL': 'COLLEGE', DEWAN: 'COMMUNITY CENTRE',
+        BURSA: 'ALBION EXCHANGE', 'REZEKI MALL': 'REXBURY CENTRE', HOSPITAL: 'NHS HOSPITAL', SEKOLAH: 'SCHOOL', KILANG: 'WORKS',
+        BENGKEL: 'GARAGE', GUDANG: 'WAREHOUSE', 'TAPAK BINAAN': 'BUILDING SITE', STADIUM: 'LEISURE CENTRE', 'RUMAH KEBAJIKAN': "CHILDREN'S HOME",
+        'SAWAH PADI': 'FARMLAND', 'DEPOT BAS': 'BUS STATION', 'TAMAN KENANGAN': 'REMEMBRANCE', 'TANAH DIJUAL': 'FOR SALE', TOKONG: 'BUDDHIST CENTRE',
+        KUIL: 'MANDIR', POLIS: 'POLICE', LOKAP: 'CUSTODY', 'DEWAN BANDARAYA': 'TOWN HALL', PADANG: 'VILLAGE GREEN', MAHKAMAH: 'COURT',
+        PENJARA: 'HMP REXBURY', PEMULIHAN: 'RECOVERY', PAWAGAM: 'CINEMA', 'KARAOKE & BAR': 'THE RED LION', FUTSAL: 'FIVE-A-SIDE',
+        'RESTORAN MEWAH': 'BRASSERIE', 'SKY LOUNGE': 'ROOFTOP BAR', 'KELAB GOLF': 'GOLF CLUB', 'STESEN KERETAPI': 'STATION',
+        'LADANG SAWIT': 'FARMLAND', HUTAN: 'WOODLAND', PPR: 'COUNCIL', TAMAN: 'GARDENS', 'TAMAN TASIK': 'PARK', MENARA: 'OFFICES',
+      },
       mapSizeNames: { kampung: 'Hamlet', pekan: 'Village', bandar: 'Town', bandaraya: 'City', metropolis: 'Metropolis' },
       townTypeNames: {
         mixed: 'Mixed town',
@@ -355,15 +371,21 @@
       antiCorruption: 'Serious Fraud Office',
       lockdown: 'Lockdown',
     },
-    // Taxes (Year-1 GBP a year). HMRC 2026/27, England: personal allowance GBP12,570; 20% / 40% / 45%
-    // with employee National Insurance (8% / 2%) folded into the bands until 4b.2; pension contributions
-    // relieved; corporation tax 19% to GBP50k, marginal relief (26.5%) to GBP250k, 25% above (exact as
+    // Taxes (Year-1 GBP a year). HMRC 2026/27, England: personal allowance GBP12,570 (lost GBP1 per GBP2
+    // above GBP100k); 20% / 40% / 45%; National Insurance 8% (2% above GBP50,270) for workers and 15% above
+    // GBP5,000 for employers; pension contributions relieved; corporation tax 19% to GBP50k, marginal relief (26.5%) to GBP250k, 25% above (exact as
     // bands); VAT 20% with food, children's clothes and public transport zero-rated (shares of spending
     // below are VAT-inclusive); council tax ~15% of rent (Band D average GBP2,280); dividends above the
-    // GBP500 allowance at 8.75%; inheritance tax 40% above GBP325k (the law); no fuel subsidy.
+    // GBP500 allowance at 8.75%; inheritance tax 40% above GBP325k (the law); no fuel subsidy. Council tax
+    // (monthly, by housing tier; Band D average GBP2,280 a year), 25% single-person discount, 75% support
+    // for Universal Credit households; business rates ~20% of a firm's fixed costs.
     tax: {
-      incomeBands: [[37700, 0.28], [112570, 0.42], [Infinity, 0.47]],
+      incomeBands: [[37700, 0.2], [125140, 0.4], [Infinity, 0.45]],
       personalRelief: 12570,
+      allowanceTaper: { from: 100000, rate: 0.5 },
+      ni: { employee: { from: 12570, to: 50270, rate: 0.08, above: 0.02 }, employer: { from: 5000, rate: 0.15 } },
+      councilTax: { byTier: [70, 135, 170, 210, 320], single: 0.25, support: 0.75 },
+      businessRates: 0.2,
       retirementRelief: { rate: 0.05, cap: 60000 },
       childRelief: 0,
       rebate: { amount: 0, upTo: 0 },
@@ -389,7 +411,7 @@
       salesTaxNames: { vat20: 'VAT', vat225: 'VAT' },
       salesTaxRaise: 'vat225',
       priceBase: { salesTax: 'vat20', fuel: 'none' },
-      assessment: 0.15,
+      assessment: 0,
       employerCorp: 0.05,
       eis: 0,
       federalShare: { 'company tax (town firms)': 0.7, 'dividend tax': 0.5 },
@@ -408,7 +430,7 @@
     gov: {
       laws: [
         { key: 'incomeTax', name: 'Income tax', def: 'normal',
-          options: [['low', 'Low (bands x0.6)'], ['normal', 'UK bands (with National Insurance)'], ['high', 'High (bands x1.5)']],
+          options: [['low', 'Low (bands x0.6)'], ['normal', 'UK bands (20%, 40%, 45%)'], ['high', 'High (bands x1.5)']],
           econ: { low: 1, normal: 0, high: -1 } },
         { key: 'corpTax', name: 'Corporation tax', def: '25',
           options: [['19', '19%'], ['25', '25% (UK)'], ['30', '30%']],
@@ -416,9 +438,9 @@
         { key: 'minWage', name: 'Minimum wage', def: '2065',
           options: [['1800', '£1,800 a month'], ['2065', '£12.71 an hour (UK 2026)'], ['2400', '£2,400 a month']],
           econ: { '1800': 0.8, '2065': 0, '2400': -0.9 } },
-        { key: 'cashAid', name: 'Cash support for low-income households', def: '100',
-          options: [['0', 'None'], ['100', '£100/month'], ['300', '£300/month']],
-          econ: { '0': 0.7, '100': 0, '300': -0.8 } },
+        { key: 'cashAid', name: 'Universal Credit (standard allowance)', def: '425',
+          options: [['0', 'None'], ['425', '£424.90 a month (UK 2026)'], ['550', '£550 a month']],
+          econ: { '0': 0.9, '425': 0, '550': -0.7 } },
         { key: 'ubi', name: 'Universal basic income', def: '0',
           options: [['0', 'None'], ['500', '£500/month for every adult']],
           econ: { '0': 0.3, '500': -1.3 } },
@@ -471,18 +493,36 @@
       trainCost: 400,
       officialGroups: ['white', 'asian', 'black', 'mixed'],
       preferredGroups: ['asian', 'black', 'mixed', 'other'], // the 'group' positive-action option
-      austerity: [['ubi', { 500: '0' }], ['cashAid', { 300: '100' }], ['salesTax', { vat20: 'vat225' }, 0.5], ['incomeTax', { low: 'normal', normal: 'high' }]],
-      emergency: { aid: ['cashAid', { 0: '100' }], police: ['police', { 1.5: '2.4', 2.4: '4' }] },
+      austerity: [['ubi', { 500: '0' }], ['cashAid', { 550: '425' }], ['salesTax', { vat20: 'vat225' }, 0.5], ['incomeTax', { low: 'normal', normal: 'high' }]],
+      emergency: { aid: ['cashAid', { 0: '425' }], police: ['police', { 1.5: '2.4', 2.4: '4' }] },
       surplus: {
         cuts: [['incomeTax', { high: 'normal', normal: 'low' }], ['salesTax', { vat225: 'vat20' }], ['corpTax', { 30: '25', 25: '19' }]],
-        spends: [['health', { lean: 'national', national: 'generous' }], ['schools', { lean: 'national', national: 'generous' }], ['cashAid', { 0: '100', 100: '300' }], ['fuelSubsidy', { none: 'targeted' }]],
+        spends: [['health', { lean: 'national', national: 'generous' }], ['schools', { lean: 'national', national: 'generous' }], ['cashAid', { 0: '425', 425: '550' }], ['fuelSubsidy', { none: 'targeted' }]],
       },
     },
     // Public servants per 1,000 residents: teachers (DfE ~468k FTE); nurses and doctors (NHS England).
     services: {
       schools: { lean: 6.5, national: 8.2, generous: 10 },
       health: { lean: [5, 2], national: [6.5, 2.6], generous: [8, 3.2] },
+      charges: { minor: 1, share: 0 }, // NHS: free at the point of use (prescriptions average ~GBP1 with exemptions)
     },
+    // Welfare (DWP 2026/27, monthly): Universal Credit = standard allowance (the cashAid law; couples x1.57),
+    // GBP304 per child (no two-child limit from April 2026), housing costs up to a council flat's rent,
+    // minus 55% of net earnings above the GBP411 work allowance (parents only) and GBP4.35 per GBP250 of
+    // savings above GBP6,000 (none above GBP16,000). Child Benefit GBP27.05 / GBP17.90 a week, taken back
+    // between GBP60k and GBP80k. New State Pension GBP241.30 a week from 66; Pension Credit guarantee
+    // GBP238. New Style JSA ~GBP99 a week for six months.
+    welfare: {
+      model: 'meansTested',
+      uc: { couple: 1.57, child: 304, housingTier: 1, netShare: 0.82, workAllowance: 411, taper: 0.55, capital: { lower: 6000, upper: 16000, per250: 4.35 }, takeUp: 0.8 },
+      childBenefit: { first: 117.2, other: 77.6, taperFrom: 60000, taperTo: 80000 },
+      statePension: { age: 66, weekly: 241.3 },
+      pensionCredit: { weekly: 238 },
+      jobLoss: { flat: 429, days: 182 },
+    },
+    // Plan 5 student loans: every fee is borrowed; 9% of pay above GBP25,000 a year; interest ~RPI;
+    // written off after 40 years.
+    education: { loans: { rate: 0.09, threshold: 25000, years: 40, interest: 0.03 } },
     settings: {
       preset: { options: { national: "Today's rules (calibrated to ONS data)" }, help: 'Fills the settings below. UK: welfare on, ~1.4 children per woman, ~81-year life expectancy.' },
       founders: { help: 'Strangers who found the town. The map size follows (100 = a small village).' },
@@ -536,13 +576,33 @@
       fast: { before: 'raya', days: 30 }, // Ramadan
     },
     gangNames: { pattern: 'The {a} {b}', a: ['Black', 'Red', 'Iron', 'Night', 'Gold', 'Steel', 'Grey', 'Crown'], b: ['Wolves', 'Vipers', 'Ravens', 'Hornets', 'Foxes', 'Bulldogs'] },
+    // The look of the town (js/render): brick houses, slate roofs and trees through the seasons;
+    // daylight at 52.5N with British Summer Time; Met Office-like rain days, a little winter snow;
+    // heatwaves for the 'haze' event; festival clothes, decorations, fireworks and music cues.
+    art: {
+      style: 'uk',
+      latitude: 52.5, summerTime: [88, 300],
+      seasons: true,
+      weather: { rain: [0.5, 0.42, 0.42, 0.38, 0.36, 0.34, 0.34, 0.38, 0.38, 0.45, 0.5, 0.5], heavy: 0.12, snow: { months: [0, 1, 11], chance: 0.05 } },
+      hazeSky: { id: 'heat', name: 'Heatwave' },
+      outfits: [['raya', { rel: 'islam' }, 'kurta', 'kurung'], ['deepavali', { rel: 'hinduism' }, 'kurta', 'saree'], ['christmas', { rel: 'christianity' }, 'office', 'office'], ['easter', { rel: 'christianity' }, 'office', 'office']],
+      decor: { raya: 'homeLights', deepavali: 'diyas', christmas: 'mallTree' },
+      fireworks: ['newyear', 'bonfire'],
+      festivalTracks: ['christmas'],
+    },
     // TFR 1.41 (ONS births 2024); life expectancy ~81 (ONS national life tables 2022-2024).
-    demography: { fertMult: 0.37, mortMult: 1.1 },
+    demography: { fertMult: 0.42, mortMult: 1.1 }, // 4b.4: 80-year runs gave TFR 1.22 at 0.37 and life expectancy 80.0 at 1.1
     defaults: { mortMult: 1.1, leaderTitle: 'mayor', termYears: 4, inflMin: 0, inflMax: 5 },
     // Police-recorded crime per 100k a year, England and Wales, year ending March 2026 (~61.8m people),
     // for the offences the engine models: theft from the person, residential burglary, vehicle offences,
     // robbery (87,362), violence with injury (507,169) and homicide. Prisoners: ~88,000 (142 per 100k).
     // Users: opiate and crack users, England (~550 per 100k).
+    // Crime tuned to England and Wales (4b.4, 3 seeds x 40 years at the Realistic scale: index ~1,740,
+    // 13% solved, ~125 prisoners, ~600 users per 100k): five times Malaysia's chances to offend, police solve
+    // fewer cases (charge rate ~7%, ~12% with out-of-court outcomes), most convictions end in a community
+    // order or fine (sentencing statistics: few offenders go to prison), sentences are shorter, and
+    // possession leads to prison only after repeated arrests (diversion schemes).
+    crimeTuning: { opportunity: 5, clear: 0.45, community: 0.85, drugRepeat: 4, sentence: 0.5 },
     crime: { index: 2000, violent: 960, property: 1040, murder: 0.9, users: 550, prison: 142 },
     events: {
       flood: { doy: 15, chance: 0.3, relief: 500, name: 'Winter floods' },
@@ -552,7 +612,7 @@
       tfr: { target: 1.41, band: 0.35, src: 'ONS Births in England and Wales 2024 (TFR 1.41)' },
       e0: { target: 81, band: 3, src: 'ONS National life tables 2022-2024 (men 79.1, women 83.0)' },
       unemp: { target: 0.05, band: 0.015, src: 'ONS Labour Force Survey, 2026 (~5%)' },
-      medWage: { target: 2650, band: 500, src: 'ONS ASHE 2025, all employees (~£31,600 a year)' },
+      medWage: { target: 3300, band: 600, src: 'ONS ASHE 2025, full-time employees (~£39,900 a year; all jobs in the town are full-time)' },
       hhGini: { target: 0.38, band: 0.06, src: 'ONS Effects of taxes and benefits FYE 2024 (gross ~0.38, disposable ~0.33)' },
       starve: { target: 0, band: 0.01, src: 'No deaths from hunger' },
       crimeIdx: { target: 2000, band: 800, src: 'ONS police-recorded crime YE March 2026, modelled offences' },
@@ -565,7 +625,7 @@
       revenue: 'UK ~£1,480 incl. all national taxes',
       events: 'Winter storms flood low-lying and riverside homes; the council pays £500 recovery help per household. Summer heatwaves hurt health, most of all for the old and very young.',
       laws: 'Each law is a real lever in the engine: tax rates, the minimum wage on every job, cash support and basic income paid each month, how many police officers, teachers, nurses and doctors the town employs, how drug users are treated, university fees, whether employers may check records, positive action in hiring, whether the pub is open, fuel duty and VAT.',
-      taxes: 'Taxes follow England: income tax bands (20/40/45% above the £12,570 personal allowance, with National Insurance folded in for now), corporation tax (19% to £50k profit, 25% above £250k, marginal relief between), VAT 20% with food zero-rated, council tax, dividend tax above £500 and inheritance tax at 40% above £325k. Universal Credit, the State Pension, student loans and council tax bands arrive in the next step.',
+      taxes: 'Taxes follow England: income tax bands (20/40/45% above the £12,570 personal allowance) and National Insurance (8% for workers, 15% for employers), corporation tax (19% to £50k profit, 25% above £250k, marginal relief between), VAT 20% with food zero-rated, council tax, dividend tax above £500 and inheritance tax at 40% above £325k. Universal Credit tops up low household incomes (55% taper), Child Benefit goes to parents, everyone gets the State Pension from 66, student loans are repaid at 9% above £25,000, and the NHS is free at the point of use.',
       bank: 'The Bank of England sets Bank Rate (3.75% in 2026); the town economy moves it between 0.25% and 5.25%.',
       council: 'Leaders who care less about merit may appoint friends over abler people. The Serious Fraud Office can catch officials who take kickbacks or bribes.',
       glcLater: 'There are no government-linked companies; the council puts its surplus into the Rexbury Investment Fund.',

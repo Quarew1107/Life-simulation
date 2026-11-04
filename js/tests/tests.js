@@ -772,7 +772,7 @@
       'my-save': '93a0eff009e13bbf0631071fc098447a',
     };
     // 4a.6: the report names the drug policy instead of printing its key; 4b.1: a Country row in the settings table and "Today's rules".
-    const REPORT = { 'my-default': '1f9dede6', 'my-pandemic-lawless': '57bb5b23', 'my-region': 'ae21b71d' };
+    const REPORT = { 'my-default': '6c3f3adc', 'my-pandemic-lawless': '2db065c', 'my-region': '2290240d' }; // 4b.3: a 'Starting wealth by group' row
     const D = LES.DEFAULTS, base = { founders: 80, migration: 'normal' };
     const cases = {
       'my-default': () => new LES.World(Object.assign({}, D, base, { seed: 'my-1' })),
@@ -844,6 +844,66 @@
     check('Religions, festivals, crime rates and calibration targets come from the country pack', fromPack && fx === 2 && fast === 0, `${fx} holidays, ${fast} fasting days`);
   }
 
+  // UK rules (step 4b.2): taxes and benefits as HMRC and DWP set them for 2026/27.
+  async function ukTests() {
+    print('--- United Kingdom rules ---', 'info');
+    const UKd = Object.assign({}, LES.DEFAULTS, LES.Countries.get('uk').defaults, { country: 'uk', seed: 'uk-r', founders: 60 });
+    const w = new LES.World(UKd), FS = LES.Fiscal, near = (a, b, tol) => Math.abs(a - b) <= (tol || 2);
+    check('Income tax: 20% above the £12,570 allowance after pension relief; the allowance tapers away above £100k',
+      Math.round(FS.annualTaxOn(w, null, 36000)) === 4326 && Math.round(FS.annualTaxOn(w, null, 120000)) === 37032,
+      `${Math.round(FS.annualTaxOn(w, null, 36000))} / ${Math.round(FS.annualTaxOn(w, null, 120000))}`);
+    const p = w.living.find(x => x.adult), tags = () => Object.assign({}, w.gov.month.tags);
+    p.cash = w.px(1e5);
+    const t0 = tags(), job = { biz: -1, jobId: 'cleaner', salary: w.px(3000) };
+    FS.onPay(w, p, job, w.px(3000), 0);
+    const t1 = tags(), d = k => (t1[k] || 0) - (t0[k] || 0);
+    check('National Insurance on £3,000 a month: £156.20 from the worker, £387.50 from the employer',
+      near(d('National Insurance'), w.px(156.2)) && near(d('National Insurance (employers)'), w.px(387.5)), `${d('National Insurance')} / ${d('National Insurance (employers)')}`);
+    const q = w.living.find(x => x.adult && x.job && x !== p);
+    q.debt.study = w.px(40000); q.debt.studyOrig = q.debt.study; q.debt.slStart = w.day; q.enrol = null; q.cash = w.px(1e4);
+    const sal = q.job.salary, before = q.debt.study;
+    LES.Finance.debtMonth(w, q);
+    const repaid = before + Math.round(before * 0.03 / 12) - q.debt.study, want = Math.round(Math.max(0, sal - w.px(25000 / 12)) * 0.09);
+    check('Student loan (Plan 5): 9% of pay above £25,000 a year, through payroll', near(repaid, want), `${repaid} vs ${want}`);
+    const poor = w.living.find(x => x.adult && x.cls !== 'T20' && x !== p && x !== q);
+    if (poor) poor.cash = w.px(200);
+    check('NHS care is free at the point of use', poor && LES.Services.medicalBill(w, poor, w.px(2000), false) === 0);
+    for (let k = 0; k < 62; k++) w.step();
+    const F = LES.Finance, uc = w.living.filter(x => x.alive && x.isHead && x.ucLast > 0);
+    const single = uc.find(x => !x.job && x.partnerId === null && !x.careOf.some(id => !w.people[id].adult) && x.cash < w.px(5000));
+    const exp = single ? w.px(425) + Math.min(F.tierCost(w, 'housing', single.tiers.housing), F.tierCost(w, 'housing', 1)) : 0;
+    check('Universal Credit: a single adult with no job gets the standard allowance plus rent up to a council flat',
+      single && Math.abs(single.ucLast - exp) / exp < 0.03, single ? `${single.ucLast} vs ${exp}` : `${uc.length} claimants, none single and jobless`);
+    check('Universal Credit is tapered: households in work get less than the maximum', uc.some(x => x.job) ? uc.filter(x => x.job).every(x => x.ucLast < w.px(425 * 1.57 + 304 * 6) + F.tierCost(w, 'housing', 1)) : true);
+    const M = w.gov.last ? w.gov.last.rev : {};
+    check('Council tax and business rates are collected', (M['council tax'] || 0) > 0 && ((M['business rates'] || 0) > 0 || !w.biz.some(b => b.open)), JSON.stringify(Object.keys(M)));
+    const old = new LES.World(Object.assign({}, UKd, { seed: 'uk-old', founders: 30, startAgeMin: 66, startAgeMax: 75 }));
+    for (let k = 0; k < 40; k++) old.step();
+    const sp = old.living.filter(x => x.alive && LES.P.age(old, x) >= 66);
+    check('Everyone from 66 gets the State Pension (£241.30 a week)', sp.length > 10 && sp.every(x => x.earned.welfare >= old.px(241.3 * 52 / 12) - 2), `${sp.length} pensioners`);
+    check('UK towns keep their books balanced', old.checkInvariants().length === 0, old.checkInvariants().join('; ')); // (w had cash set by hand above)
+
+    // Step 4b.3: history in starting wealth, an equal-start option, cast from abroad, daylight and seasons.
+    const startCash = cfg => { const t = new LES.World(Object.assign({}, UKd, { seed: 'uk-gap', founders: 400 }, cfg)), by = {};
+      for (const x of t.living) (by[x.eth] = by[x.eth] || []).push(x.cash); return { by, mean: U.sum(t.living.map(x => x.cash)) / t.living.length }; };
+    const U = LES.U, gap = startCash({}), eq = startCash({ groupWealth: 'equal' }), mean = a => U.sum(a) / a.length;
+    check('UK founders start with a mild wealth gap by group (ONS), the town average unchanged',
+      mean(gap.by.black) < mean(gap.by.white) * 0.75 && Math.abs(gap.mean / eq.mean - 1) < 0.08, `black ${Math.round(mean(gap.by.black) / 100)} white ${Math.round(mean(gap.by.white) / 100)} avg ${Math.round(gap.mean / 100)} vs ${Math.round(eq.mean / 100)}`);
+    check('"Equal start" removes the gap', Math.abs(mean(eq.by.black) / mean(eq.by.white) - 1) < 0.6 && mean(eq.by.black) > mean(gap.by.black));
+    const spec = Object.assign(LES.Cast.blank(), { id: 'x1', first: 'Aina', last: 'Rahman', eth: 'malay', country: 'my' });
+    const withCast = new LES.World(Object.assign({}, UKd, { seed: 'uk-cast', founders: 30, cast: [Object.assign(spec, { town: 0 })] }));
+    const aina = withCast.people.find(x => x.first === 'Aina' && x.last === 'Rahman');
+    check('A cast member made in Malaysia arrives in a UK town as an immigrant', aina && aina.bornIn === 'my' && aina.eth === 'other' && aina.log.some(e => e.text.includes('Moved here from Malaysia')), aina ? `${aina.eth} ${aina.bornIn}` : 'not found');
+    const A = LES.Ambience;
+    if (A) {
+      const len = d => { const x = A.sun(d); return x.set - x.rise; };
+      check('UK daylight follows the seasons (16+ hours in June, under 8 in December); trees go bare in winter', len(171) > 16 && len(354) < 8 && A.season(10) === 'winter' && A.season(200) === 'summer', `${len(171).toFixed(1)}h / ${len(354).toFixed(1)}h`);
+      LES.Countries.ensure(LES.DEFAULTS);
+      check('Malaysian days stay the same length all year, with no seasons', len(171) === len(354) && A.season(10) === null);
+    }
+    LES.Countries.ensure(LES.DEFAULTS);
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -861,6 +921,7 @@
       await regionTests();
       await castTests();
       await countryTests();
+      await ukTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -872,6 +933,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, tileTests };
+  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

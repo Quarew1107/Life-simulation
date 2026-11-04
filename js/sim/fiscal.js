@@ -33,7 +33,8 @@
   FS.annualTaxOn = function (w, p, gross) {
     let kids = 0;
     if (p) for (const id of p.careOf) { const c = w.people[id]; if (c.alive && !c.adult) kids += 1 / Math.max(1, c.caregivers.length); }
-    const ch = Math.max(0, gross - TX.personalRelief - Math.min(TX.retirementRelief.cap, TX.retirementRelief.rate * gross) - TX.childRelief * kids);
+    const AT = TX.allowanceTaper, relief = AT && gross > AT.from ? Math.max(0, TX.personalRelief - (gross - AT.from) * AT.rate) : TX.personalRelief; // UK: GBP1 of allowance lost per GBP2 above GBP100k
+    const ch = Math.max(0, gross - relief - Math.min(TX.retirementRelief.cap, TX.retirementRelief.rate * gross) - TX.childRelief * kids);
     let tax = FS.annualPIT(ch) * (w.policy ? w.policy.incomeTaxMult : 1);
     if (ch <= TX.rebate.upTo) tax = Math.max(0, tax - TX.rebate.amount);
     return tax;
@@ -93,10 +94,18 @@
     const b = job.biz >= 0 ? w.biz[job.biz] : null;
     if (b && b.cash >= eis) FS.collect(w, b, 'cash', eis, 'EIS contributions');
     else FS.collect(w, L.sec.EMPLOYER, 'bal', eis, 'EIS contributions');
+    let ni = 0, erNi = 0;
+    if (TX.ni) { // National Insurance (UK): the worker's on pay between the thresholds (and a little above), the employer's above its own
+      const a = gross / 100 / w.price * 12, E = TX.ni.employee, R = TX.ni.employer;
+      ni = FS.collect(w, p, 'cash', Math.round(U.RM((Math.max(0, Math.min(a, E.to) - E.from) * E.rate + Math.max(0, a - E.to) * E.above) / 12) * w.price), 'National Insurance');
+      erNi = Math.round(U.RM(Math.max(0, a - R.from) * R.rate / 12) * w.price);
+      if (b && b.cash >= erNi) FS.collect(w, b, 'cash', erNi, 'National Insurance (employers)');
+      else FS.collect(w, L.sec.EMPLOYER, 'bal', erNi, 'National Insurance (employers)');
+    }
     const line = LES.Services.lineOf(job);
-    if (line) g.month.wages[line] = (g.month.wages[line] || 0) + gross + er + eis;
+    if (line) g.month.wages[line] = (g.month.wages[line] || 0) + gross + er + eis + erNi;
     else if (!b && !C.JOB_BY_ID[job.jobId].commute) g.month.privWages += gross;
-    return tax + got;
+    return tax + got + ni;
   };
 
   // The 2% tax on dividends above RM100k a year (Budget 2025).
@@ -118,6 +127,51 @@
     return paid;
   };
 
+  // Council tax (UK): a household charge by housing tier, 25% off for people living alone, mostly
+  // waived for households on Universal Credit (council tax support).
+  function councilTax(w, p) {
+    const CT = TX.councilTax, alone = p.partnerId === null || !w.people[p.partnerId].alive;
+    const amt = w.px(CT.byTier[p.tiers.housing] || 0) * (alone ? 1 - CT.single : 1) * (p.ucLast > 0 ? 1 - CT.support : 1);
+    FS.collect(w, p, 'cash', amt, 'council tax');
+  }
+
+  // UK benefits each month: Universal Credit (means-tested; the cash-aid law sets its standard
+  // allowance), Child Benefit (tapered away for high earners), the State Pension and Pension Credit.
+  function ukBenefits(w, p, pol, cc, R) {
+    const WF = LES.Countries.pack.welfare, age = P.age(w, p), pay = (amt, line) => {
+      if (!(amt > 0)) return 0;
+      const a = LES.Gov.payOut(w, p, 'cash', amt, line); p.earned.welfare += a; p.monthIncome += a; return a;
+    };
+    const SPn = WF.statePension;
+    if (age >= SPn.age) {
+      const sp = w.px(SPn.weekly * 52 / 12);
+      pay(sp, 'State Pension');
+      pay(w.px(WF.pensionCredit.weekly * 52 / 12) - sp - (p.pension || 0), 'Pension Credit'); // tops up only very low pensions
+    }
+    if (!p.isHead) return;
+    const q = p.partnerId !== null ? w.people[p.partnerId] : null, couple = !!(q && q.alive && !q.away);
+    let kids = 0;
+    for (const id of p.careOf) { const c = w.people[id]; if (c.alive && !c.adult) kids++; }
+    if (kids) { // Child Benefit; the High Income Child Benefit Charge takes it back between GBP60k and GBP80k
+      const CB = WF.childBenefit, top = Math.max(p.job ? p.job.salary : 0, couple && q.job ? q.job.salary : 0) * 12 / 100 / w.price;
+      pay(w.px(CB.first + CB.other * (kids - 1)) * (1 - U.clamp((top - CB.taperFrom) / (CB.taperTo - CB.taperFrom), 0, 1)), 'Child Benefit');
+    }
+    p.ucLast = 0;
+    const UC = WF.uc;
+    if (!pol.cashAid || age >= SPn.age) return;
+    const savings = p.cash + (couple ? q.cash : 0);
+    if (savings > w.px(UC.capital.upper)) return;
+    const F = LES.Finance, housing = Math.min(F.tierCost(w, 'housing', p.tiers.housing), F.tierCost(w, 'housing', UC.housingTier));
+    const most = w.px(pol.cashAid * (couple ? UC.couple : 1)) + w.px(UC.child) * kids + housing;
+    const earned = ((p.job ? p.job.salary : 0) + (couple && q.job ? q.job.salary : 0)) * UC.netShare;
+    const allow = kids ? w.px(UC.workAllowance) : 0; // the work allowance is for parents (and disabled people)
+    const tariff = Math.max(0, Math.ceil((savings - w.px(UC.capital.lower)) / w.px(250))) * w.px(UC.capital.per250);
+    const award = Math.round(most - Math.max(0, earned - allow) * UC.taper - tariff);
+    if (award < w.px(10)) return;
+    if (p.ucTake === undefined) p.ucTake = R.next() < UC.takeUp + 0.1 * cc; // some never claim
+    if (p.ucTake) p.ucLast = pay(award, 'Universal Credit');
+  }
+
   // Sales tax, assessment tax and employers' company tax for the month.
   function collectMonth(w) {
     const g = w.gov, L = w.ledger, F = LES.Finance, law = FS.RATES[w.policy.salesTax] ? w.policy.salesTax : Object.keys(FS.RATES)[0], R = FS.RATES[law];
@@ -129,11 +183,11 @@
       sales += inPrice(f, R.food[t.food]) + inPrice(tr, R.transport[t.transport]) + inPrice(le, R.leisure[t.leisure]) + inPrice(ch, R.child);
       if (t.transport >= 1) fuel += tr / w.taxPx.transport[t.transport] * fuelCost;
       base += f + tr + le + ch;
-      if (p.isHead) { const rent = F.tierCost(w, 'housing', t.housing); assess += rent * FS.ASSESSMENT; base += rent; }
+      if (p.isHead) { const rent = F.tierCost(w, 'housing', t.housing); assess += rent * FS.ASSESSMENT; base += rent; if (TX.councilTax) councilTax(w, p); }
     }
     const merch = L.sec.MERCHANT.bal - (g.lastMerchant === undefined ? L.sec.MERCHANT.bal : g.lastMerchant);
     sales += inPrice(Math.max(0, merch - base), R.other); // luxuries, outings, repairs, celebrations...
-    for (const b of w.biz) if (b.open) assess += U.RM(b.typeDef.fixed) * w.price * FS.ASSESSMENT;
+    for (const b of w.biz) if (b.open) { assess += U.RM(b.typeDef.fixed) * w.price * FS.ASSESSMENT; if (TX.businessRates) FS.collect(w, b, 'cash', U.RM(b.typeDef.fixed) * w.price * TX.businessRates, 'business rates'); }
     const k = FS.compliance(w);
     FS.collect(w, L.sec.MERCHANT, 'bal', sales * k, TX.salesTaxNames[law]);
     FS.collect(w, L.sec.MERCHANT, 'bal', assess * (0.5 + 0.5 * k), 'assessment tax');
@@ -214,10 +268,12 @@
     // Programmes (cash aid reaches B40 households through the community office: a weak
     // office misses some families and pays some who do not qualify).
     const cc = comp(w, 'community');
+    const meansTested = (LES.Countries.pack.welfare || {}).model === 'meansTested';
     for (const p of w.living) {
       if (!p.alive || !p.adult || p.away) continue;
       let amt = 0, line = 'cash aid';
-      if (pol.cashAid && p.isHead && (p.cls === 'B40' ? R.next() < 1 - 0.3 * (1 - cc) : p.cls === 'M40' && R.next() < 0.12 * (1 - cc))) amt += w.px(pol.cashAid);
+      if (meansTested) ukBenefits(w, p, pol, cc, R);
+      else if (pol.cashAid && p.isHead && (p.cls === 'B40' ? R.next() < 1 - 0.3 * (1 - cc) : p.cls === 'M40' && R.next() < 0.12 * (1 - cc))) amt += w.px(pol.cashAid);
       if (pol.ubi) { amt += w.px(pol.ubi); line = 'basic income & aid'; }
       if (p.pension > 0) { const a = payOut(w, p, 'cash', p.pension, 'civil service pensions'); p.earned.welfare += a; p.monthIncome += a; }
       if (p.eis && !p.job && w.day < p.eis.until) { const e = payOut(w, p, 'cash', p.eis.amt, 'job-loss benefit'); p.earned.welfare += e; p.monthIncome += e; }

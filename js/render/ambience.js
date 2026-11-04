@@ -22,17 +22,37 @@
   };
 
   const fcache = { day: -1, f: null };
+  // The country's look (pack.art); Malaysia uses the defaults below.
+  const ART = () => LES.Countries.pack.art || {};
+  const OUTFITS = [['raya', { eth: 'malay' }, 'bajuMelayu', 'kurung'], ['deepavali', { eth: 'indian' }, 'kurta', 'saree'], ['cny', { eth: 'chinese' }, 'cny', 'cny'],
+    ['gawai', { eth: 'bumi' }, 'gawai', 'gawai'], ['christmas', { rel: 'christianity' }, 'office', 'office']];
+  const DECOR = { raya: 'homeLights', cny: 'lanterns', deepavali: 'diyas', christmas: 'mallTree', merdeka: 'flags' };
+  // Sunrise and sunset (hours): Malaysia near the equator barely changes; packs with a latitude get
+  // the real day length, and summer time (an hour later) between the given days of the year.
+  A.sun = function (day) {
+    const a = ART();
+    if (!a.latitude) return { rise: 6.5, set: 19.75 };
+    const doy = ((day % 365) + 365) % 365, rad = Math.PI / 180;
+    const decl = 23.44 * Math.sin(2 * Math.PI * (doy - 80) / 365) * rad, cosH = U.clamp(-Math.tan(a.latitude * rad) * Math.tan(decl), -1, 1);
+    const half = Math.acos(cosH) / rad / 15, noon = 12 + (a.summerTime && doy >= a.summerTime[0] && doy < a.summerTime[1] ? 1 : 0);
+    return { rise: noon - half, set: noon + half };
+  };
+  // The season trees show (null in the tropics).
+  A.season = function (day) {
+    if (!ART().seasons) return null;
+    const m = U.dayToDate(day).month;
+    return m <= 1 || m === 11 ? 'winter' : m <= 3 ? 'spring' : m <= 8 ? 'summer' : 'autumn';
+  };
   // Festival clothes on the big days (only for the communities that celebrate them).
   A.festivalOutfit = function (p, day) {
     if (!p.adult) return null;
     if (fcache.day !== day) { fcache.day = day; fcache.f = A.festival(day); } // once per day, not per person
     const f = fcache.f;
     if (!f) return null;
-    if (f.id === 'raya' && p.eth === 'malay') return p.sex === 'M' ? 'bajuMelayu' : 'kurung';
-    if (f.id === 'deepavali' && p.eth === 'indian') return p.sex === 'F' ? 'saree' : 'kurta';
-    if (f.id === 'cny' && p.eth === 'chinese') return 'cny';
-    if (f.id === 'gawai' && p.eth === 'bumi') return 'gawai';
-    if (f.id === 'christmas' && p.rel === 'christianity') return 'office';
+    for (const o of ART().outfits || OUTFITS) { // [festival, { eth | rel }, outfit for men, for women]
+      if (o[0] !== f.id || (o[1].eth && p.eth !== o[1].eth) || (o[1].rel && p.rel !== o[1].rel)) continue;
+      return p.sex === 'M' ? o[2] : o[3];
+    }
     return null;
   };
 
@@ -41,8 +61,14 @@
   // ---- Weather: north-east monsoon (Nov-Feb) is rainy; mid-year can bring haze ----
   A.weather = function (day) {
     const gw = globalThis.LES_APP && LES_APP.world;
-    if (gw && gw.gov && gw.gov.haze && day < gw.gov.haze.until && day >= gw.gov.haze.until - 25) return { id: 'haze', name: 'Haze (unhealthy air)' };
+    const HZ = (LES.Countries.pack.events || {}).haze, aw = ART().weather;
+    if (gw && gw.gov && gw.gov.haze && HZ && day < gw.gov.haze.until && day >= gw.gov.haze.until - HZ.days) return ART().hazeSky || { id: 'haze', name: 'Haze (unhealthy air)' };
     const m = U.dayToDate(day).month, r = rnd(day * 31 + 7);
+    if (aw) { // a country's own weather: rain chance by month, snow in winter
+      if (aw.snow && aw.snow.months.includes(m) && r < aw.snow.chance) return { id: 'snow', name: 'Snow' };
+      if (r < aw.rain[m]) return { id: 'rain', name: r < aw.heavy ? 'Heavy rain' : 'Rain', heavy: r < aw.heavy };
+      return { id: 'clear', name: m >= 5 && m <= 7 && r > 0.85 ? 'Sunny' : 'Clear' };
+    }
     const monsoon = m >= 10 || m <= 1;
     if (r < (monsoon ? 0.45 : 0.12)) return { id: 'rain', name: monsoon ? 'Monsoon rain' : 'Rain', heavy: monsoon && r < 0.2 };
     if (m >= 5 && m <= 8 && r > 0.9) return { id: 'haze', name: 'Haze' };
@@ -114,17 +140,18 @@
     const fest = A.festival(w.lastDay < 0 ? 0 : w.lastDay);
     if (fest) {
       const blink = Math.floor(sec * 2) % 2;
-      if (fest.id === 'raya') for (const id of town.kinds.kampung || []) { const b = town.buildings[id]; for (let i = 0; i < 6; i++) { g.fillStyle = (i + blink) % 2 ? '#ffb703' : '#fb8500'; g.fillRect(b.x * T + 2 + i * 8, (b.y + b.h) * T + 2, 2, 3); } }
-      if (fest.id === 'cny') for (const id of town.shoplots) { const b = town.buildings[id]; for (let i = 0; i < 3; i++) { g.fillStyle = '#d62828'; g.fillRect(b.x * T + 8 + i * 20, b.y * T + 29, 5, 6); g.fillStyle = '#ffd166'; g.fillRect(b.x * T + 10 + i * 20, b.y * T + 35, 1, 3); } }
-      if (fest.id === 'deepavali') for (const tier of [1, 2]) for (const id of town.homesByTier[tier]) { const b = town.buildings[id]; for (let i = 0; i < 5; i++) { g.fillStyle = ['#ff006e', '#ffbe0b', '#3a86ff', '#8338ec', '#fb5607'][(i + blink) % 5]; g.fillRect(b.x * T + 4 + i * 6, (b.y + b.h) * T + 3, 3, 3); } }
-      if (fest.id === 'christmas') for (const id of town.kinds.mall || []) { // a lit tree outside each mall
+      const deco = (ART().decor || DECOR)[fest.id];
+      if (deco === 'homeLights') for (const id of town.kinds.kampung || []) { const b = town.buildings[id]; for (let i = 0; i < 6; i++) { g.fillStyle = (i + blink) % 2 ? '#ffb703' : '#fb8500'; g.fillRect(b.x * T + 2 + i * 8, (b.y + b.h) * T + 2, 2, 3); } }
+      if (deco === 'lanterns') for (const id of town.shoplots) { const b = town.buildings[id]; for (let i = 0; i < 3; i++) { g.fillStyle = '#d62828'; g.fillRect(b.x * T + 8 + i * 20, b.y * T + 29, 5, 6); g.fillStyle = '#ffd166'; g.fillRect(b.x * T + 10 + i * 20, b.y * T + 35, 1, 3); } }
+      if (deco === 'diyas') for (const tier of [1, 2]) for (const id of town.homesByTier[tier]) { const b = town.buildings[id]; for (let i = 0; i < 5; i++) { g.fillStyle = ['#ff006e', '#ffbe0b', '#3a86ff', '#8338ec', '#fb5607'][(i + blink) % 5]; g.fillRect(b.x * T + 4 + i * 6, (b.y + b.h) * T + 3, 3, 3); } }
+      if (deco === 'mallTree') for (const id of town.kinds.mall || []) { // a lit tree outside each mall
         const b = town.buildings[id], x = (b.x + b.w) * T - 14, y = (b.y + b.h) * T - 2;
         g.fillStyle = '#6b4226'; g.fillRect(x + 4, y - 3, 2, 3);
         g.fillStyle = '#2d6a4f'; for (let r = 0; r < 4; r++) g.fillRect(x + 4 - r, y - 6 - (3 - r) * 3, 2 + 2 * r, 3);
         for (let i = 0; i < 4; i++) { g.fillStyle = (i + blink) % 2 ? '#ffd166' : '#e63946'; g.fillRect(x + 2 + (i * 3) % 6, y - 14 + i * 3, 1, 1); }
         g.fillStyle = '#ffd166'; g.fillRect(x + 4, y - 19, 2, 2);
       }
-      if (fest.id === 'merdeka') for (const b of town.buildings) { if (!['office', 'school', 'hospital', 'university', 'condo', 'mall'].includes(b.kind)) continue; const x = b.x * T + 3, y = b.y * T - 10; g.fillStyle = '#ddd'; g.fillRect(x, y, 1, 10); for (let k = 0; k < 4; k++) { g.fillStyle = k % 2 ? '#ffffff' : '#d62828'; g.fillRect(x + 1, y + k, 8, 1); } g.fillStyle = '#1d3557'; g.fillRect(x + 1, y, 4, 2); g.fillStyle = '#ffd166'; g.fillRect(x + 2, y, 1, 1); }
+      if (deco === 'flags') for (const b of town.buildings) { if (!['office', 'school', 'hospital', 'university', 'condo', 'mall'].includes(b.kind)) continue; const x = b.x * T + 3, y = b.y * T - 10; g.fillStyle = '#ddd'; g.fillRect(x, y, 1, 10); for (let k = 0; k < 4; k++) { g.fillStyle = k % 2 ? '#ffffff' : '#d62828'; g.fillRect(x + 1, y + k, 8, 1); } g.fillStyle = '#1d3557'; g.fillRect(x + 1, y, 4, 2); g.fillStyle = '#ffd166'; g.fillRect(x + 2, y, 1, 1); }
     }
     // Birds crossing the sky
     const W = town.W * T, H = town.H * T;
@@ -171,6 +198,15 @@
       g.setTransform(1, 0, 0, 1, 0, 0);
     }
     if (wx.id === 'haze') { g.fillStyle = 'rgba(200,170,120,0.22)'; g.fillRect(0, 0, cw, ch); }
+    if (wx.id === 'heat') { g.fillStyle = 'rgba(255,190,90,0.14)'; g.fillRect(0, 0, cw, ch); } // heatwave glare
+    if (wx.id === 'snow') { // slow flakes and a pale sky
+      g.fillStyle = 'rgba(220,230,245,0.16)'; g.fillRect(0, 0, cw, ch);
+      g.fillStyle = 'rgba(255,255,255,0.85)';
+      for (let i = 0; i < 160; i++) {
+        const x = (rnd(i * 17) * cw + Math.sin(sec + i) * 12 + sec * 10) % cw, y = (rnd(i * 31 + 5) * ch + sec * 40 * (0.6 + rnd(i))) % ch;
+        g.fillRect(x, y, 2, 2);
+      }
+    }
     if (wx.id === 'rain') {
       g.fillStyle = 'rgba(40,60,90,0.12)'; g.fillRect(0, 0, cw, ch);
       g.strokeStyle = 'rgba(200,220,255,0.35)'; g.lineWidth = 1;
@@ -184,7 +220,7 @@
     }
     // New Year / Merdeka night fireworks
     const fest = A.festival(day);
-    if (fest && (fest.id === 'newyear' || fest.id === 'merdeka') && night > 0.5) {
+    if (fest && (ART().fireworks || ['newyear', 'merdeka']).includes(fest.id) && night > 0.5) {
       for (let k = 0; k < 3; k++) {
         const ph = (sec * 0.6 + k / 3) % 1, cx = cw * (0.2 + 0.3 * k), cy = ch * (0.25 + 0.1 * k);
         const col = ['#ff006e', '#ffbe0b', '#3a86ff'][k];
