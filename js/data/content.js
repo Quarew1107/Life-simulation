@@ -18,78 +18,75 @@
   C.XP_CATS = ['manual', 'technical', 'office', 'sales', 'medical', 'business'];
 
   // ---- Qualifications & courses ----
-  C.QUALS = {
-    VOC: 'Vocational Cert.', BACH_GEN: 'Bachelor of Arts', BACH_BUS: 'Bachelor of Business',
-    BACH_ENG: 'Bachelor of Engineering', MED: 'Medical Degree', MASTER: "Master's Degree",
-  };
+  C.QUALS = {}; // names from the country pack
   C.BACHELORS = ['BACH_GEN', 'BACH_BUS', 'BACH_ENG', 'MED'];
   C.COURSES = [
-    { id: 'VOC', name: 'Vocational Certificate', months: 18, fee: 6000, minInt: 2, place: 'kolej', diff: 3.5, w: w(.4, .1, .3, 0, .1, .1) },
-    { id: 'BACH_GEN', name: 'Bachelor of Arts', months: 36, fee: 24000, minInt: 5, place: 'university', diff: 4.5, w: w(.7, 0, .2, .1, 0, 0) },
-    { id: 'BACH_BUS', name: 'Bachelor of Business', months: 36, fee: 30000, minInt: 5.5, place: 'university', diff: 5, w: w(.6, 0, .2, .2, 0, 0) },
-    { id: 'BACH_ENG', name: 'Bachelor of Engineering', months: 48, fee: 45000, minInt: 6.3, place: 'university', diff: 6, w: w(.8, 0, .2, 0, 0, 0) },
-    { id: 'MED', name: 'Medicine (MBBS)', months: 60, fee: 120000, minInt: 7.5, place: 'university', diff: 7, w: w(.7, 0, .2, 0, 0, .1) },
-    { id: 'MASTER', name: "Master's Degree", months: 18, fee: 30000, minInt: 5, place: 'university', diff: 6.5, w: w(.8, 0, .2, 0, 0, 0), prereq: 'BACH' },
+    { id: 'VOC', minInt: 2, place: 'kolej', diff: 3.5, w: w(.4, .1, .3, 0, .1, .1) },
+    { id: 'BACH_GEN', minInt: 5, place: 'university', diff: 4.5, w: w(.7, 0, .2, .1, 0, 0) },
+    { id: 'BACH_BUS', minInt: 5.5, place: 'university', diff: 5, w: w(.6, 0, .2, .2, 0, 0) },
+    { id: 'BACH_ENG', minInt: 6.3, place: 'university', diff: 6, w: w(.8, 0, .2, 0, 0, 0) },
+    { id: 'MED', minInt: 7.5, place: 'university', diff: 7, w: w(.7, 0, .2, 0, 0, .1) },
+    { id: 'MASTER', minInt: 5, place: 'university', diff: 6.5, w: w(.8, 0, .2, 0, 0, 0), prereq: 'BACH' },
   ];
   C.COURSE_BY_ID = {};
   for (const c of C.COURSES) C.COURSE_BY_ID[c.id] = c;
 
   // ---- Jobs: req = minimum credential (the only eligibility gate) ----
   C.JOBS = [
-    { id: 'cleaner', title: 'Cleaner', salary: 1700, req: null, w: w(0, .3, .2, 0, .2, .3), diff: 2.5, cat: 'manual', place: 'mall', freq: 10 },
-    { id: 'retail', title: 'Retail Assistant', salary: 1900, req: null, w: w(.1, 0, .3, .5, 0, .1), diff: 3, cat: 'sales', place: 'mall', freq: 10 },
-    { id: 'rider', title: 'Despatch Rider', salary: 2200, req: null, w: w(0, .1, .3, 0, .3, .3), diff: 3.5, cat: 'manual', place: 'warehouse', risk: 'physical', freq: 8 },
-    { id: 'factory', title: 'Factory Operator', salary: 2200, req: null, w: w(.1, .3, .3, 0, .1, .2), diff: 3.5, cat: 'manual', place: 'factory', risk: 'physical', freq: 10 },
-    { id: 'construction', title: 'Construction Worker', salary: 2500, req: null, w: w(0, .5, .1, 0, .1, .3), diff: 4.5, cat: 'manual', place: 'construction', risk: 'heavy', freq: 7 },
-    { id: 'sales', title: 'Sales Executive', salary: 3000, req: null, w: w(.1, 0, .2, .6, 0, .1), diff: 5, cat: 'sales', place: 'office', freq: 6 },
-    { id: 'chef', title: 'Chef', salary: 2800, req: 'VOC', w: w(.1, .1, .4, 0, .3, .1), diff: 4.5, cat: 'technical', place: 'hawker', freq: 5 },
-    { id: 'mechanic', title: 'Mechanic', salary: 3200, req: 'VOC', w: w(.3, .3, .3, 0, .1, 0), diff: 5, cat: 'technical', place: 'workshop', risk: 'physical', freq: 5 },
-    { id: 'electrician', title: 'Electrician', salary: 3600, req: 'VOC', w: w(.3, .1, .3, 0, .3, 0), diff: 5.5, cat: 'technical', place: 'construction', risk: 'heavy', freq: 4 },
-    { id: 'nurse', title: 'Nurse', salary: 3400, req: 'VOC', w: w(.2, 0, .3, .3, 0, .2), diff: 5, cat: 'medical', place: 'hospital', freq: 4 },
-    { id: 'teacher', title: 'Teacher', salary: 3800, req: 'BACH', w: w(.4, 0, .1, .4, 0, .1), diff: 5, cat: 'office', place: 'school', freq: 4 },
-    { id: 'accountant', title: 'Accountant', salary: 5000, req: 'BACH_BUS', w: w(.6, 0, .4, 0, 0, 0), diff: 6, cat: 'office', place: 'office', freq: 3 },
-    { id: 'banker', title: 'Bank Officer', salary: 6500, req: 'BACH_BUS', w: w(.5, 0, .2, .3, 0, 0), diff: 6.5, cat: 'office', place: 'bank', freq: 2 },
-    { id: 'engineer', title: 'Engineer', salary: 6000, req: 'BACH_ENG', w: w(.6, 0, .4, 0, 0, 0), diff: 6.5, cat: 'technical', place: 'factory', freq: 3 },
-    { id: 'softdev', title: 'Software Developer', salary: 6800, req: 'BACH_ENG', w: w(.7, 0, .3, 0, 0, 0), diff: 7, cat: 'technical', place: 'techhub', freq: 3 },
-    { id: 'manager', title: 'Manager', salary: 9000, req: 'BACH_BUS', w: w(.4, 0, .1, .5, 0, 0), diff: 7, cat: 'office', place: 'office', freq: 1.5 },
-    { id: 'doctor', title: 'Doctor', salary: 11000, req: 'MED', w: w(.5, 0, .3, 0, .1, .1), diff: 7.5, cat: 'medical', place: 'hospital', freq: 1.5 },
+    { id: 'cleaner', req: null, w: w(0, .3, .2, 0, .2, .3), diff: 2.5, cat: 'manual', place: 'mall' },
+    { id: 'retail', req: null, w: w(.1, 0, .3, .5, 0, .1), diff: 3, cat: 'sales', place: 'mall' },
+    { id: 'rider', req: null, w: w(0, .1, .3, 0, .3, .3), diff: 3.5, cat: 'manual', place: 'warehouse', risk: 'physical' },
+    { id: 'factory', req: null, w: w(.1, .3, .3, 0, .1, .2), diff: 3.5, cat: 'manual', place: 'factory', risk: 'physical' },
+    { id: 'construction', req: null, w: w(0, .5, .1, 0, .1, .3), diff: 4.5, cat: 'manual', place: 'construction', risk: 'heavy' },
+    { id: 'sales', req: null, w: w(.1, 0, .2, .6, 0, .1), diff: 5, cat: 'sales', place: 'office' },
+    { id: 'chef', req: 'VOC', w: w(.1, .1, .4, 0, .3, .1), diff: 4.5, cat: 'technical', place: 'hawker' },
+    { id: 'mechanic', req: 'VOC', w: w(.3, .3, .3, 0, .1, 0), diff: 5, cat: 'technical', place: 'workshop', risk: 'physical' },
+    { id: 'electrician', req: 'VOC', w: w(.3, .1, .3, 0, .3, 0), diff: 5.5, cat: 'technical', place: 'construction', risk: 'heavy' },
+    { id: 'nurse', req: 'VOC', w: w(.2, 0, .3, .3, 0, .2), diff: 5, cat: 'medical', place: 'hospital' },
+    { id: 'teacher', req: 'BACH', w: w(.4, 0, .1, .4, 0, .1), diff: 5, cat: 'office', place: 'school' },
+    { id: 'accountant', req: 'BACH_BUS', w: w(.6, 0, .4, 0, 0, 0), diff: 6, cat: 'office', place: 'office' },
+    { id: 'banker', req: 'BACH_BUS', w: w(.5, 0, .2, .3, 0, 0), diff: 6.5, cat: 'office', place: 'bank' },
+    { id: 'engineer', req: 'BACH_ENG', w: w(.6, 0, .4, 0, 0, 0), diff: 6.5, cat: 'technical', place: 'factory' },
+    { id: 'softdev', req: 'BACH_ENG', w: w(.7, 0, .3, 0, 0, 0), diff: 7, cat: 'technical', place: 'techhub' },
+    { id: 'manager', req: 'BACH_BUS', w: w(.4, 0, .1, .5, 0, 0), diff: 7, cat: 'office', place: 'office' },
+    { id: 'doctor', req: 'MED', w: w(.5, 0, .3, 0, .1, .1), diff: 7.5, cat: 'medical', place: 'hospital' },
     // Commuter jobs in the big city: better pay, but a long train ride each way.
-    { id: 'cityretail', title: 'City Retail Supervisor', salary: 3300, req: null, w: w(.1, 0, .3, .5, 0, .1), diff: 4.5, cat: 'sales', place: 'station', freq: 1.5, commute: true },
-    { id: 'citycorp', title: 'City Office Executive', salary: 5600, req: 'BACH', w: w(.5, 0, .2, .3, 0, 0), diff: 6, cat: 'office', place: 'station', freq: 1.5, commute: true },
-    { id: 'citytech', title: 'City Software Engineer', salary: 8600, req: 'BACH_ENG', w: w(.7, 0, .3, 0, 0, 0), diff: 7, cat: 'technical', place: 'station', freq: 1, commute: true },
+    { id: 'cityretail', req: null, w: w(.1, 0, .3, .5, 0, .1), diff: 4.5, cat: 'sales', place: 'station', commute: true },
+    { id: 'citycorp', req: 'BACH', w: w(.5, 0, .2, .3, 0, 0), diff: 6, cat: 'office', place: 'station', commute: true },
+    { id: 'citytech', req: 'BACH_ENG', w: w(.7, 0, .3, 0, 0, 0), diff: 7, cat: 'technical', place: 'station', commute: true },
   ];
   C.JOB_BY_ID = {};
   for (const j of C.JOBS) C.JOB_BY_ID[j.id] = j;
   // Public-sector jobs: not in the random vacancy market; the government hires to its budget.
   C.GOV_JOBS = {
-    police: { id: 'police', title: 'Police Officer', salary: 3000, req: null, w: w(.1, .3, .3, .1, .1, .1), diff: 4.5, cat: 'office', place: 'police', risk: 'physical', gov: true, freq: 0 },
+    police: { id: 'police', req: null, w: w(.1, .3, .3, .1, .1, .1), diff: 4.5, cat: 'office', place: 'police', risk: 'physical', gov: true, freq: 0 },
     // City council officials, appointed by the leader (js/sim/council.js).
-    treasurer: { id: 'treasurer', title: 'Bendahari Bandaraya', salary: 8000, req: 'BACH', w: w(.6, 0, .3, .1, 0, 0), diff: 6, cat: 'office', place: 'townhall', gov: true, freq: 0 },
-    community: { id: 'community', title: 'Pengarah Pembangunan Masyarakat', salary: 7000, req: 'BACH', w: w(.3, 0, .1, .5, 0, .1), diff: 5.5, cat: 'office', place: 'townhall', gov: true, freq: 0 },
+    treasurer: { id: 'treasurer', req: 'BACH', w: w(.6, 0, .3, .1, 0, 0), diff: 6, cat: 'office', place: 'townhall', gov: true, freq: 0 },
+    community: { id: 'community', req: 'BACH', w: w(.3, 0, .1, .5, 0, .1), diff: 5.5, cat: 'office', place: 'townhall', gov: true, freq: 0 },
   };
   for (const j of Object.values(C.GOV_JOBS)) C.JOB_BY_ID[j.id] = j;
-  C.JOB_FREQ = C.JOBS.map(j => j.freq);
+  C.JOB_FREQ = []; // from the pack's job mix
   C.LEVEL_PREFIX = ['', '', 'Senior ', 'Lead ', 'Head ', 'Chief '];
 
   // ---- Gigs: short paid tasks (not employment). needTransport = minimum transport tier ----
   C.GIGS = [
-    { id: 'labour', name: 'Odd labour job', pay: 90, diff: 3.5, w: w(0, .5, 0, 0, .1, .4), cat: 'manual', place: 'construction', risk: 'heavy' },
-    { id: 'delivery', name: 'Food delivery', pay: 85, diff: 3, w: w(0, 0, .3, 0, .4, .3), cat: 'manual', place: 'hawker', risk: 'physical', needTransport: 1 },
-    { id: 'ehailing', name: 'E-hailing driver', pay: 140, diff: 3, w: w(0, 0, .5, .2, .3, 0), cat: 'sales', place: 'mall', needTransport: 2 },
-    { id: 'pasar', name: 'Pasar malam helper', pay: 70, diff: 2.5, w: w(0, .2, .1, .4, .1, .2), cat: 'sales', place: 'hawker' },
-    { id: 'tuition', name: 'Private tuition', pay: 120, diff: 6, w: w(.6, 0, 0, .4, 0, 0), cat: 'office', place: 'library' },
-    { id: 'repair', name: 'Repair job', pay: 130, diff: 5.5, w: w(.3, .2, .3, 0, .2, 0), cat: 'technical', place: 'workshop', risk: 'physical' },
-    { id: 'freelance', name: 'Freelance coding', pay: 280, diff: 8, w: w(.8, 0, .2, 0, 0, 0), cat: 'technical', place: 'library' },
-    { id: 'promoter', name: 'Event promoter', pay: 110, diff: 5, w: w(0, 0, .1, .7, .2, 0), cat: 'sales', place: 'mall' },
+    { id: 'labour', diff: 3.5, w: w(0, .5, 0, 0, .1, .4), cat: 'manual', place: 'construction', risk: 'heavy' },
+    { id: 'delivery', diff: 3, w: w(0, 0, .3, 0, .4, .3), cat: 'manual', place: 'hawker', risk: 'physical', needTransport: 1 },
+    { id: 'ehailing', diff: 3, w: w(0, 0, .5, .2, .3, 0), cat: 'sales', place: 'mall', needTransport: 2 },
+    { id: 'pasar', diff: 2.5, w: w(0, .2, .1, .4, .1, .2), cat: 'sales', place: 'hawker' },
+    { id: 'tuition', diff: 6, w: w(.6, 0, 0, .4, 0, 0), cat: 'office', place: 'library' },
+    { id: 'repair', diff: 5.5, w: w(.3, .2, .3, 0, .2, 0), cat: 'technical', place: 'workshop', risk: 'physical' },
+    { id: 'freelance', diff: 8, w: w(.8, 0, .2, 0, 0, 0), cat: 'technical', place: 'library' },
+    { id: 'promoter', diff: 5, w: w(0, 0, .1, .7, .2, 0), cat: 'sales', place: 'mall' },
   ];
 
   // ---- Training: spend time + money to raise attributes ----
   C.TRAININGS = [
-    { id: 'library', name: 'Self-study at library', cost: 5, attrs: [C.INT, C.PER], diff: 4, w: w(.8, 0, .2, 0, 0, 0), place: 'library' },
-    { id: 'gym', name: 'Gym workout', cost: 15, attrs: [C.STR, C.END], diff: 3, w: w(0, .5, 0, 0, 0, .5), place: 'gym', risk: 'physical' },
-    { id: 'sports', name: 'Sports & silat', cost: 20, attrs: [C.AGI, C.PER], diff: 4.5, w: w(0, .2, .3, 0, .5, 0), place: 'gym', risk: 'physical' },
-    { id: 'speaking', name: 'Public speaking club', cost: 20, attrs: [C.CHA], diff: 4, w: w(.2, 0, 0, .8, 0, 0), place: 'hall' },
-    { id: 'running', name: 'Running at the park', cost: 0, attrs: [C.END, C.AGI], diff: 3, w: w(0, .2, 0, 0, .3, .5), place: 'park', risk: 'physical' },
+    { id: 'library', attrs: [C.INT, C.PER], diff: 4, w: w(.8, 0, .2, 0, 0, 0), place: 'library' },
+    { id: 'gym', attrs: [C.STR, C.END], diff: 3, w: w(0, .5, 0, 0, 0, .5), place: 'gym', risk: 'physical' },
+    { id: 'sports', attrs: [C.AGI, C.PER], diff: 4.5, w: w(0, .2, .3, 0, .5, 0), place: 'gym', risk: 'physical' },
+    { id: 'speaking', attrs: [C.CHA], diff: 4, w: w(.2, 0, 0, .8, 0, 0), place: 'hall' },
+    { id: 'running', attrs: [C.END, C.AGI], diff: 3, w: w(0, .2, 0, 0, .3, .5), place: 'park', risk: 'physical' },
   ];
   C.RISK_MULT = { physical: 1, heavy: 2.5 };
 
@@ -98,65 +95,63 @@
   C.TIER_CAT_NAMES = { food: 'Food', housing: 'Housing', transport: 'Transport', leisure: 'Leisure' };
   C.TIERS = {
     food: [
-      { name: 'Cook at home', cost: 450, health: -0.02, energy: -3, stress: 0.3, fx: 'Cheap; slowly hurts health & energy' },
-      { name: 'Hawker meals', cost: 800, fx: 'Baseline' },
-      { name: 'Healthy diet', cost: 1300, health: 0.03, energy: 3, stress: -0.3, fx: '+health, +energy' },
-      { name: 'Fine dining', cost: 3200, health: 0.03, energy: 3, stress: -1, prestige: 1, fx: '+health, -stress, +prestige' },
+      { health: -0.02, energy: -3, stress: 0.3 },
+      { fx: 'Baseline' },
+      { health: 0.03, energy: 3, stress: -0.3 },
+      { health: 0.03, energy: 3, stress: -1, prestige: 1 },
     ],
     housing: [
-      { name: 'Rented kampung room', cost: 500, energy: -6, stress: 0.6, kind: 'kampung', fx: 'Poor sleep, more stress' },
-      { name: 'Low-cost flat', cost: 1100, kind: 'flat', fx: 'Baseline' },
-      { name: 'Terrace house', cost: 2400, energy: 3, stress: -0.4, prestige: 0.5, kind: 'terrace', fx: 'Better sleep' },
-      { name: 'Condominium', cost: 4800, energy: 5, stress: -0.8, prestige: 1, kind: 'condo', fx: 'Great sleep, +prestige' },
-      { name: 'Bungalow', cost: 12000, energy: 7, stress: -1.2, prestige: 2, kind: 'bungalow', fx: 'Best sleep, ++prestige' },
+      { energy: -6, stress: 0.6, kind: 'kampung' },
+      { kind: 'flat' },
+      { energy: 3, stress: -0.4, prestige: 0.5, kind: 'terrace' },
+      { energy: 5, stress: -0.8, prestige: 1, kind: 'condo' },
+      { energy: 7, stress: -1.2, prestige: 2, kind: 'bungalow' },
     ],
     transport: [
-      { name: 'Bus & walking', cost: 120, energy: -3, stress: 0.2, fx: 'Tiring; no vehicle gigs' },
-      { name: 'Motorbike', cost: 450, accident: 0.0015, fx: 'Unlocks delivery gigs; small accident risk' },
-      { name: 'Car', cost: 1600, stress: -0.2, fx: 'Unlocks e-hailing' },
-      { name: 'Luxury car', cost: 5500, stress: -0.3, prestige: 1, fx: '+prestige' },
+      { energy: -3, stress: 0.2 },
+      { accident: 0.0015 },
+      { stress: -0.2 },
+      { stress: -0.3, prestige: 1 },
     ],
     leisure: [
-      { name: 'None', cost: 0, stress: 0.8, fx: 'Stress builds up' },
-      { name: 'Streaming & outings', cost: 250, fx: 'Baseline' },
-      { name: 'Gym membership', cost: 400, stress: -0.4, fitness: true, fx: 'Keeps body fit, -stress' },
-      { name: 'Country club', cost: 3000, stress: -0.8, prestige: 1, network: true, fx: 'Networking: more business luck' },
+      { stress: 0.8 },
+      { fx: 'Baseline' },
+      { stress: -0.4, fitness: true },
+      { stress: -0.8, prestige: 1, network: true },
     ],
   };
-  C.CHILD_COST = 600;          // RM / month per child, plus per housing tier:
-  C.CHILD_COST_PER_HOUSING = 200;
+  // C.CHILD_COST and C.CHILD_COST_PER_HOUSING (per child per month, plus per housing tier) come from the pack.
 
   // Monthly income tax on wages (simplified progressive bands, RM) and corporate tax.
-  C.TAX_BANDS = [[3000, 0], [8000, 0.1], [20000, 0.2], [Infinity, 0.26]];
-  C.CORP_TAX = 0.24;
+  C.TAX_BANDS = [];
 
   // ---- Businesses (monthly numbers in RM). Fat-tailed: most stay small or fail, a few boom. ----
   C.BIZ = [
-    { id: 'stall', name: 'Hawker Stall', capital: 15000, scale0: 9000, cap: 50000, costRatio: 0.88, fixed: 600, sigma: 0.12, boom: 0.0003, boomMin: 1.5, boomMax: 2.5, bust: 0.003, capEff: 0.12, skillSpread: 0.16, cyclical: 0.5, multiple: 1.5, w: w(.1, .1, .3, .3, .1, .1), place: 'hawker', names: ['Nasi Lemak', 'Kopitiam', 'Roti Canai Corner', 'Satay House', 'Laksa Stall', 'Char Kuey Teow'] },
-    { id: 'workshop', name: 'Repair Workshop', capital: 40000, scale0: 18000, cap: 250000, costRatio: 0.88, fixed: 1500, sigma: 0.12, boom: 0.0004, boomMin: 1.5, boomMax: 3, bust: 0.003, capEff: 0.1, skillSpread: 0.18, cyclical: 0.8, multiple: 2.5, w: w(.3, .2, .3, .1, .1, 0), place: 'shoplot', req: 'VOC', names: ['Motor Works', 'Auto Service', 'Repair Centre', 'Engineering Works'] },
-    { id: 'retail', name: 'Retail Shop', capital: 60000, scale0: 30000, cap: 600000, costRatio: 0.9, fixed: 2500, sigma: 0.15, boom: 0.0004, boomMin: 1.5, boomMax: 3, bust: 0.004, capEff: 0.1, skillSpread: 0.18, cyclical: 1, multiple: 3, w: w(.3, 0, .3, .4, 0, 0), place: 'shoplot', names: ['Mart', 'Fashion', 'Electronics', 'Kedai Runcit', 'Bookstore', 'Pharmacy'] },
-    { id: 'restaurant', name: 'Restaurant', capital: 150000, scale0: 70000, cap: 3000000, costRatio: 0.9, fixed: 6000, sigma: 0.18, boom: 0.0006, boomMin: 2, boomMax: 4, bust: 0.004, capEff: 0.09, skillSpread: 0.2, cyclical: 1, multiple: 4, w: w(.2, 0, .4, .4, 0, 0), place: 'shoplot', names: ['Restaurant', 'Seafood', 'Curry House', 'Bistro', 'Dim Sum'] },
-    { id: 'trading', name: 'Trading Company', capital: 250000, scale0: 150000, cap: 15000000, costRatio: 0.93, fixed: 10000, sigma: 0.22, boom: 0.0011, boomMin: 2, boomMax: 4, bust: 0.005, capEff: 0.08, skillSpread: 0.22, cyclical: 1.3, multiple: 5, w: w(.4, 0, .2, .4, 0, 0), place: 'office', names: ['Trading Sdn Bhd', 'Import Export', 'Holdings', 'Logistics'] },
-    { id: 'tech', name: 'Tech Startup', capital: 120000, scale0: 15000, cap: 30000000, costRatio: 0.92, fixed: 6000, sigma: 0.35, boom: 0.0026, boomMin: 3, boomMax: 8, bust: 0.012, capEff: 0.12, skillSpread: 0.35, cyclical: 1.2, multiple: 8, w: w(.7, 0, .2, .1, 0, 0), place: 'techhub', names: ['Tech', 'Labs', 'Digital', 'AI', 'Apps', 'Robotics'] },
-    { id: 'property', name: 'Property Developer', capital: 1000000, scale0: 300000, cap: 20000000, costRatio: 0.88, fixed: 30000, sigma: 0.3, boom: 0.0011, boomMin: 2, boomMax: 3.5, bust: 0.005, capEff: 0.07, skillSpread: 0.22, cyclical: 2.5, multiple: 5, w: w(.3, 0, .2, .5, 0, 0), place: 'office', names: ['Properties', 'Development', 'Land Sdn Bhd', 'Realty'] },
+    { id: 'stall', costRatio: 0.88, sigma: 0.12, boom: 0.0003, boomMin: 1.5, boomMax: 2.5, bust: 0.003, capEff: 0.12, skillSpread: 0.16, cyclical: 0.5, multiple: 1.5, w: w(.1, .1, .3, .3, .1, .1), place: 'hawker' },
+    { id: 'workshop', costRatio: 0.88, sigma: 0.12, boom: 0.0004, boomMin: 1.5, boomMax: 3, bust: 0.003, capEff: 0.1, skillSpread: 0.18, cyclical: 0.8, multiple: 2.5, w: w(.3, .2, .3, .1, .1, 0), place: 'shoplot', req: 'VOC' },
+    { id: 'retail', costRatio: 0.9, sigma: 0.15, boom: 0.0004, boomMin: 1.5, boomMax: 3, bust: 0.004, capEff: 0.1, skillSpread: 0.18, cyclical: 1, multiple: 3, w: w(.3, 0, .3, .4, 0, 0), place: 'shoplot' },
+    { id: 'restaurant', costRatio: 0.9, sigma: 0.18, boom: 0.0006, boomMin: 2, boomMax: 4, bust: 0.004, capEff: 0.09, skillSpread: 0.2, cyclical: 1, multiple: 4, w: w(.2, 0, .4, .4, 0, 0), place: 'shoplot' },
+    { id: 'trading', costRatio: 0.93, sigma: 0.22, boom: 0.0011, boomMin: 2, boomMax: 4, bust: 0.005, capEff: 0.08, skillSpread: 0.22, cyclical: 1.3, multiple: 5, w: w(.4, 0, .2, .4, 0, 0), place: 'office' },
+    { id: 'tech', costRatio: 0.92, sigma: 0.35, boom: 0.0026, boomMin: 3, boomMax: 8, bust: 0.012, capEff: 0.12, skillSpread: 0.35, cyclical: 1.2, multiple: 8, w: w(.7, 0, .2, .1, 0, 0), place: 'techhub' },
+    { id: 'property', costRatio: 0.88, sigma: 0.3, boom: 0.0011, boomMin: 2, boomMax: 3.5, bust: 0.005, capEff: 0.07, skillSpread: 0.22, cyclical: 2.5, multiple: 5, w: w(.3, 0, .2, .5, 0, 0), place: 'office' },
   ];
   // Private health and education (only with the government system, which pays for the
   // public ones). Owners pay their own staff (staff = posts at the starting size);
   // build = district code of the building put up on an empty lot; maxPer = at most one
   // per this many residents; fee = monthly school fee per pupil (Year-1 RM).
   C.BIZ_SERVICES = [
-    { id: 'clinic', name: 'Private Clinic', capital: 200000, scale0: 45000, cap: 400000, costRatio: 0.84, fixed: 3000, sigma: 0.08, boom: 0.0003, boomMin: 1.3, boomMax: 2, bust: 0.002, capEff: 0.1, skillSpread: 0.15, cyclical: 0.3, multiple: 4, w: w(.5, 0, .3, .2, 0, 0), place: 'shoplot', req: 'MED', staff: { nurse: 1 }, service: 'health', maxPer: 250, names: ['Klinik', 'Poliklinik', 'Klinik Keluarga', 'Medical Clinic'] },
-    { id: 'privschool', name: 'Private School', capital: 1500000, scale0: 120000, cap: 3000000, costRatio: 0.86, fixed: 20000, sigma: 0.06, boom: 0.0003, boomMin: 1.3, boomMax: 2, bust: 0.0015, capEff: 0.08, skillSpread: 0.15, cyclical: 0.4, multiple: 6, w: w(.4, 0, .1, .5, 0, 0), place: 'build', build: 'e', staff: { teacher: 6 }, service: 'education', fee: 1500, maxPer: 700, names: ['International School', 'Academy', 'Sekolah Swasta', 'Private School'] },
-    { id: 'privhosp', name: 'Private Hospital', capital: 4000000, scale0: 350000, cap: 12000000, costRatio: 0.86, fixed: 40000, sigma: 0.08, boom: 0.0004, boomMin: 1.3, boomMax: 2.2, bust: 0.0015, capEff: 0.07, skillSpread: 0.15, cyclical: 0.3, multiple: 7, w: w(.4, 0, .2, .4, 0, 0), place: 'build', build: 'h', staff: { doctor: 3, nurse: 6 }, service: 'health', maxPer: 1200, names: ['Specialist Hospital', 'Medical Centre', 'Hospital Pakar'] },
+    { id: 'clinic', costRatio: 0.84, sigma: 0.08, boom: 0.0003, boomMin: 1.3, boomMax: 2, bust: 0.002, capEff: 0.1, skillSpread: 0.15, cyclical: 0.3, multiple: 4, w: w(.5, 0, .3, .2, 0, 0), place: 'shoplot', req: 'MED', staff: { nurse: 1 }, service: 'health', maxPer: 250 },
+    { id: 'privschool', costRatio: 0.86, sigma: 0.06, boom: 0.0003, boomMin: 1.3, boomMax: 2, bust: 0.0015, capEff: 0.08, skillSpread: 0.15, cyclical: 0.4, multiple: 6, w: w(.4, 0, .1, .5, 0, 0), place: 'build', build: 'e', staff: { teacher: 6 }, service: 'education', maxPer: 700 },
+    { id: 'privhosp', costRatio: 0.86, sigma: 0.08, boom: 0.0004, boomMin: 1.3, boomMax: 2.2, bust: 0.0015, capEff: 0.07, skillSpread: 0.15, cyclical: 0.3, multiple: 7, w: w(.4, 0, .2, .4, 0, 0), place: 'build', build: 'h', staff: { doctor: 3, nurse: 6 }, service: 'health', maxPer: 1200 },
   ];
   C.BIZ_BY_ID = {};
   for (const b of C.BIZ.concat(C.BIZ_SERVICES)) C.BIZ_BY_ID[b.id] = b;
 
   // ---- Economy regimes (yearly Markov chain) ----
   C.REGIMES = {
-    growth: { name: 'Boom', color: '#3ec7b5', vacMult: 1.35, wageMult: 1.05, layoff: 0.001, promoMult: 1.3, bizDemand: 1.08, idxMu: 0.10, idxSig: 0.14, spdMu: 0.2, spdSig: 0.3, depositRate: 0.03, gigMult: 1.1 },
-    normal: { name: 'Normal', color: '#9aa5b1', vacMult: 1, wageMult: 1, layoff: 0.0025, promoMult: 1, bizDemand: 1, idxMu: 0.035, idxSig: 0.15, spdMu: 0.05, spdSig: 0.35, depositRate: 0.025, gigMult: 1 },
-    recession: { name: 'Recession', color: '#e76f51', vacMult: 0.5, wageMult: 0.93, layoff: 0.012, promoMult: 0.5, bizDemand: 0.85, idxMu: -0.15, idxSig: 0.28, spdMu: -0.3, spdSig: 0.45, depositRate: 0.015, gigMult: 0.85 },
+    growth: { name: 'Boom', color: '#3ec7b5', vacMult: 1.35, wageMult: 1.05, layoff: 0.001, promoMult: 1.3, bizDemand: 1.08, idxMu: 0.10, idxSig: 0.14, spdMu: 0.2, spdSig: 0.3, gigMult: 1.1 },
+    normal: { name: 'Normal', color: '#9aa5b1', vacMult: 1, wageMult: 1, layoff: 0.0025, promoMult: 1, bizDemand: 1, idxMu: 0.035, idxSig: 0.15, spdMu: 0.05, spdSig: 0.35, gigMult: 1 },
+    recession: { name: 'Recession', color: '#e76f51', vacMult: 0.5, wageMult: 0.93, layoff: 0.012, promoMult: 0.5, bizDemand: 0.85, idxMu: -0.15, idxSig: 0.28, spdMu: -0.3, spdSig: 0.45, gigMult: 0.85 },
   };
   C.REGIME_TRANSITIONS = {
     stable: { growth: { growth: .4, normal: .6, recession: 0 }, normal: { growth: .1, normal: .87, recession: .03 }, recession: { growth: .1, normal: .8, recession: .1 } },
@@ -165,86 +160,27 @@
   };
 
   // ---- Names (Malaysian mix) & looks ----
-  C.ETHNICITIES = ['malay', 'chinese', 'indian', 'bumi', 'other'];
-  C.ETHNIC_NAMES = { malay: 'Malay', chinese: 'Chinese', indian: 'Indian', bumi: 'Other Bumiputera', other: 'Others' };
+  C.ETHNICITIES = [];
+  C.ETHNIC_NAMES = {};
   // Population mixes. Classic = the original engine; Malaysia = DOSM Q4 2025 shares
   // (Malay 58.2%, Chinese 22.2%, other Bumiputera 12.3%, Indian 6.5%, others 0.8%).
-  C.ETHNIC_MIXES = {
-    classic: { keys: ['malay', 'chinese', 'indian'], w: [0.6, 0.27, 0.13] },
-    malaysia: { keys: ['malay', 'chinese', 'bumi', 'indian', 'other'], w: [0.582, 0.222, 0.123, 0.065, 0.008] },
-  };
-  C.ETHNIC_WEIGHTS = C.ETHNIC_MIXES.classic.w;
-  C.NAMES = {
-    malay: {
-      M: ['Ahmad', 'Hafiz', 'Amir', 'Faiz', 'Hakim', 'Irfan', 'Zul', 'Azlan', 'Danial', 'Syafiq', 'Rizal', 'Imran', 'Khairul', 'Aiman', 'Haziq', 'Firdaus', 'Naim', 'Adam'],
-      F: ['Siti', 'Nurul', 'Aisyah', 'Farah', 'Nadia', 'Aina', 'Sofea', 'Hani', 'Liyana', 'Zara', 'Amira', 'Balqis', 'Intan', 'Syahira', 'Yasmin', 'Alya', 'Damia', 'Hana'],
-      last: ['Rahman', 'Ismail', 'Hassan', 'Abdullah', 'Yusof', 'Omar', 'Aziz', 'Hamid', 'Salleh', 'Kassim', 'Ibrahim', 'Razak', 'Rashid', 'Latif'],
-    },
-    chinese: {
-      M: ['Wei Jie', 'Jun Hao', 'Kok Leong', 'Zhi Hao', 'Chee Keong', 'Ming', 'Jia Wei', 'Yong', 'Kai Xiang', 'Boon', 'Seng', 'Hao Ran'],
-      F: ['Mei Ling', 'Xin Yi', 'Hui Min', 'Pei Shan', 'Jia Yi', 'Siew Lan', 'Wen Xin', 'Li Ting', 'Yee Mun', 'Ka Yan', 'Shu Fen'],
-      last: ['Tan', 'Lim', 'Lee', 'Wong', 'Ng', 'Chong', 'Teoh', 'Ong', 'Goh', 'Chan', 'Yap', 'Low'],
-    },
-    indian: {
-      M: ['Arjun', 'Ravi', 'Suresh', 'Vikram', 'Ganesh', 'Rajesh', 'Pravin', 'Dinesh', 'Sanjay', 'Naveen', 'Hari', 'Kiran'],
-      F: ['Priya', 'Kavitha', 'Divya', 'Anjali', 'Lakshmi', 'Meena', 'Shalini', 'Revathi', 'Nisha', 'Deepa', 'Thanya'],
-      last: ['Kumar', 'Raj', 'Pillai', 'Nair', 'Muthu', 'Krishnan', 'Rao', 'Singh', 'Subramaniam', 'Maniam'],
-    },
-    bumi: { // Iban, Kadazan-Dusun, Bidayuh, Melanau, Orang Asli...
-      M: ['Jugah', 'Rentap', 'Linggi', 'Ngumbang', 'Michael', 'Gerald', 'Joseph', 'Ewon', 'Jimmy', 'Peter', 'Masidi', 'Anyi'],
-      F: ['Juliana', 'Mary', 'Linda', 'Doris', 'Rosnah', 'Jenny', 'Christina', 'Dayang', 'Grace', 'Nancy', 'Sumbang', 'Lilian'],
-      last: ['Jugah', 'Linggi', 'Gerunsin', 'Kitingan', 'Majimbun', 'Ngau', 'Lajim', 'Ongkili', 'Sindang', 'Sanggau'],
-    },
-    other: { // Eurasian and other Malaysians
-      M: ['Daniel', 'Marcus', 'Ryan', 'Adrian', 'Joshua', 'Gerard', 'Kevin', 'Nathan'],
-      F: ['Sarah', 'Natalie', 'Michelle', 'Rachel', 'Melissa', 'Joanne', 'Angela', 'Clara'],
-      last: ['Fernandez', 'De Souza', 'Pereira', "D'Cruz", 'Gomes', 'Rozario', 'Lazaroo', 'Theseira'],
-    },
-  };
-  C.SKIN = {
-    malay: ['#c68642', '#b5763a', '#d29a5e'],
-    chinese: ['#f1c27d', '#e8b98a', '#f3cfa0'],
-    indian: ['#8d5524', '#7a4a22', '#9c6232'],
-    bumi: ['#b5763a', '#c68642', '#a86b3c'],
-    other: ['#e0ac69', '#c68642', '#f1c27d'],
-  };
+  C.ETHNIC_MIXES = {};
+  C.NAMES = {};
+  C.SKIN = {};
   C.HAIR = ['#1b1b1b', '#2b1d14', '#3b2a1d', '#141414'];
   C.SHIRTS = ['#e63946', '#f4a261', '#2a9d8f', '#457b9d', '#e9c46a', '#8d99ae', '#6a4c93', '#43aa8b', '#f28482', '#3d5a80', '#ffffff', '#ff7f51'];
   C.PANTS = ['#1d3557', '#3d405b', '#5c4033', '#2b2d42', '#6b705c'];
   C.SCARVES = ['#c9184a', '#7b2cbf', '#0096c7', '#2d6a4f', '#f77f00', '#e5989b'];
-  C.TOWN_NAME = 'Bandar Rezeki';
 
   // ---- Bursa Rezeki: fictional listed companies (price in RM, shares in millions) ----
   // drift = extra real yearly drift, beta = sensitivity to the market, idio = own yearly volatility.
-  C.STOCKS = [
-    { tk: 'RZBANK', name: 'Rezeki Bank', sector: 'Finance', price0: 8.5, sharesM: 400, beta: 1.0, idio: 0.14, drift: 0.005, colour: '#5aa9e6' },
-    { tk: 'TANI', name: 'Tani Plantations', sector: 'Plantation', price0: 5.2, sharesM: 300, beta: 0.7, idio: 0.18, drift: 0, colour: '#57d38c' },
-    { tk: 'SAMBUNG', name: 'Sambung Telco', sector: 'Telco', price0: 4.1, sharesM: 500, beta: 0.8, idio: 0.13, drift: 0, colour: '#b892ff' },
-    { tk: 'KILAT', name: 'Kilat Tech', sector: 'Technology', price0: 2.3, sharesM: 600, beta: 1.5, idio: 0.38, drift: 0.02, colour: '#3ec7b5' },
-    { tk: 'RUMAH', name: 'Rumah Properties', sector: 'Property', price0: 1.8, sharesM: 700, beta: 1.4, idio: 0.22, drift: -0.005, colour: '#f4a261' },
-    { tk: 'KEDAI', name: 'KedaiMart Retail', sector: 'Consumer', price0: 6.0, sharesM: 250, beta: 0.9, idio: 0.15, drift: 0, colour: '#f28482' },
-    { tk: 'PETRA', name: 'Petrolia Energy', sector: 'Energy', price0: 7.4, sharesM: 350, beta: 1.1, idio: 0.25, drift: 0, colour: '#e9c46a' },
-    { tk: 'SARUNG', name: 'Sarung Gloves', sector: 'Healthcare', price0: 3.3, sharesM: 300, beta: 0.6, idio: 0.32, drift: 0, colour: '#ff8c42' },
-  ];
+  C.STOCKS = [];
   // New companies that can list (IPO) when a listed company goes bust.
-  C.IPO_POOL = [
-    { tk: 'NAGA', name: 'Naga Logistics', sector: 'Logistics', sharesM: 300, beta: 1.0, idio: 0.22, drift: 0, colour: '#90be6d' },
-    { tk: 'BINTANG', name: 'Bintang Solar', sector: 'Energy', sharesM: 400, beta: 1.3, idio: 0.35, drift: 0.01, colour: '#ffd166' },
-    { tk: 'SIHAT', name: 'Sihat Pharma', sector: 'Healthcare', sharesM: 250, beta: 0.7, idio: 0.25, drift: 0, colour: '#ef476f' },
-    { tk: 'AWAN', name: 'Awan Cloud', sector: 'Technology', sharesM: 500, beta: 1.5, idio: 0.4, drift: 0.02, colour: '#118ab2' },
-    { tk: 'JALAN', name: 'Jalan Builders', sector: 'Construction', sharesM: 350, beta: 1.3, idio: 0.25, drift: -0.005, colour: '#b5838d' },
-    { tk: 'MAKAN', name: 'Makan Foods', sector: 'Consumer', sharesM: 300, beta: 0.8, idio: 0.16, drift: 0, colour: '#f28482' },
-    { tk: 'SAWIT', name: 'Sawit Agro', sector: 'Plantation', sharesM: 400, beta: 0.7, idio: 0.2, drift: 0, colour: '#57cc99' },
-    { tk: 'INSAN', name: 'Insan Insurance', sector: 'Finance', sharesM: 300, beta: 0.9, idio: 0.14, drift: 0, colour: '#4361ee' },
-  ];
+  C.IPO_POOL = [];
   // Government-linked companies listed once the town's public finances have matured
   // (js/sim/fiscal.js). div = yearly dividend yield, paid quarterly; the treasury's
   // sovereign fund (Khazanah Rezeki) buys a stake at listing.
-  C.GLC_STOCKS = [
-    { tk: 'TENAGA', name: 'Tenaga Rezeki', sector: 'Utilities', sharesM: 60, price0: 3.2, beta: 0.5, idio: 0.12, drift: 0, div: 0.04, colour: '#ffd166', glc: true, blurb: 'electricity for the town and the region' },
-    { tk: 'PETROZ', name: 'Petroliam Rezeki', sector: 'Oil & gas', sharesM: 80, price0: 5.5, beta: 0.9, idio: 0.26, drift: 0, div: 0.06, colour: '#06d6a0', glc: true, blurb: 'offshore oil and gas' },
-    { tk: 'BPR', name: 'Bank Pembangunan Rezeki', sector: 'Finance', sharesM: 50, price0: 2.6, beta: 0.8, idio: 0.14, drift: 0, div: 0.05, colour: '#118ab2', glc: true, islamic: true, blurb: 'Islamic development bank for local businesses' },
-  ];
+  C.GLC_STOCKS = [];
   C.MARKET_IMPACT_Y = 0.8;      // square-root impact prefactor (Toth et al. 2011: order one)
   C.TRADING_DAYS = 252;
   C.TOWN_REVERSION = 0.015;    // daily pull of town-driven mispricing back to fundamentals (~45-day half-life)
@@ -272,17 +208,46 @@
   // cost in Year-1 RM per visit; joy = happiness gained; relief = stress removed.
   // member = minimum leisure tier needed (golf is members only). network = deals & referrals.
   C.VENUES = {
-    park: { name: 'Park', tier: 0, cost: 0, joy: 5, relief: 10, energy: 4, slot: 0, tags: ['outdoor'] },
-    futsal: { name: 'Futsal court', tier: 0, cost: 8, joy: 6, relief: 10, energy: 12, slot: 0, tags: ['sport'] },
-    mamak: { name: 'Mamak', tier: 0, cost: 12, joy: 6, relief: 12, energy: 6, tags: ['social'] },
-    mall: { name: 'Mall', tier: 1, cost: 40, joy: 7, relief: 10, energy: 6, tags: ['shopping'] },
-    cinema: { name: 'Cinema', tier: 1, cost: 30, joy: 8, relief: 12, energy: 4 },
-    bowling: { name: 'Bowling', tier: 1, cost: 45, joy: 8, relief: 12, energy: 8, tags: ['sport', 'social'] },
-    karaoke: { name: 'Karaoke & bar', tier: 1, cost: 70, joy: 9, relief: 14, energy: 8, slot: 1, tags: ['social'] },
-    finedine: { name: 'Fine dining', tier: 2, cost: 220, joy: 11, relief: 14, energy: 4, slot: 1, tags: ['status'] },
-    spa: { name: 'Spa', tier: 2, cost: 260, joy: 10, relief: 25, energy: -6 },
-    lounge: { name: 'Sky lounge', tier: 2, cost: 180, joy: 11, relief: 14, energy: 8, slot: 1, tags: ['social', 'status'], network: true },
-    golf: { name: 'Golf club', tier: 3, cost: 350, joy: 13, relief: 16, energy: 10, slot: 0, member: 3, tags: ['status', 'sport'], network: true },
+    park: { tier: 0, joy: 5, relief: 10, energy: 4, slot: 0, tags: ['outdoor'] },
+    futsal: { tier: 0, joy: 6, relief: 10, energy: 12, slot: 0, tags: ['sport'] },
+    mamak: { tier: 0, joy: 6, relief: 12, energy: 6, tags: ['social'] },
+    mall: { tier: 1, joy: 7, relief: 10, energy: 6, tags: ['shopping'] },
+    cinema: { tier: 1, joy: 8, relief: 12, energy: 4 },
+    bowling: { tier: 1, joy: 8, relief: 12, energy: 8, tags: ['sport', 'social'] },
+    karaoke: { tier: 1, joy: 9, relief: 14, energy: 8, slot: 1, tags: ['social'] },
+    finedine: { tier: 2, joy: 11, relief: 14, energy: 4, slot: 1, tags: ['status'] },
+    spa: { tier: 2, joy: 10, relief: 25, energy: -6 },
+    lounge: { tier: 2, joy: 11, relief: 14, energy: 8, slot: 1, tags: ['social', 'status'], network: true },
+    golf: { tier: 3, joy: 13, relief: 16, energy: 10, slot: 0, member: 3, tags: ['status', 'sport'], network: true },
   };
   C.MIND_ATTRS = [0, 2];
+
+  // ---- National values (titles, pay, prices, people, listed companies) from the active country pack ----
+  // Objects are updated in place: saves refer to these tables by path.
+  const into = (obj, src) => { for (const k of Object.keys(obj)) delete obj[k]; Object.assign(obj, src); };
+  const list = (arr, src) => { arr.length = 0; for (const x of src) arr.push(x); };
+  const fill = (items, vals, what) => {
+    for (const o of items) { const v = vals[o.id]; if (!v) throw new Error(`no ${what} values for '${o.id}'`); Object.assign(o, v); }
+  };
+  LES.Countries.require('content.jobs', 'content.govJobs', 'content.quals', 'content.courses', 'content.gigs', 'content.trainings',
+    'content.tiers', 'content.biz', 'content.depositRates', 'content.venues', 'content.childCost', 'content.childCostPerHousing',
+    'content.simpleTaxBands', 'content.corpTax', 'content.ethnicities', 'content.ethnicNames', 'content.ethnicMixes', 'content.names',
+    'content.skin', 'content.townName', 'content.stocks', 'content.ipoPool', 'content.glcStocks');
+  LES.Countries.on('content', K => {
+    const N = K.content;
+    fill(C.JOBS, N.jobs, 'job'); fill(Object.values(C.GOV_JOBS), N.govJobs, 'public job');
+    list(C.JOB_FREQ, C.JOBS.map(j => j.freq));
+    into(C.QUALS, N.quals);
+    fill(C.COURSES, N.courses, 'course'); fill(C.GIGS, N.gigs, 'gig'); fill(C.TRAININGS, N.trainings, 'training');
+    for (const cat of C.TIER_CATS) C.TIERS[cat].forEach((t, i) => Object.assign(t, N.tiers[cat][i]));
+    fill(C.BIZ.concat(C.BIZ_SERVICES), N.biz, 'business');
+    for (const k of Object.keys(C.REGIMES)) C.REGIMES[k].depositRate = N.depositRates[k];
+    for (const k of Object.keys(C.VENUES)) Object.assign(C.VENUES[k], N.venues[k]);
+    C.CHILD_COST = N.childCost; C.CHILD_COST_PER_HOUSING = N.childCostPerHousing;
+    list(C.TAX_BANDS, N.simpleTaxBands); C.CORP_TAX = N.corpTax;
+    list(C.ETHNICITIES, N.ethnicities); into(C.ETHNIC_NAMES, N.ethnicNames); into(C.ETHNIC_MIXES, N.ethnicMixes);
+    C.ETHNIC_WEIGHTS = C.ETHNIC_MIXES.classic.w;
+    into(C.NAMES, N.names); into(C.SKIN, N.skin); C.TOWN_NAME = N.townName;
+    list(C.STOCKS, N.stocks); list(C.IPO_POOL, N.ipoPool); list(C.GLC_STOCKS, N.glcStocks);
+  });
 })(globalThis.LES = globalThis.LES || {});

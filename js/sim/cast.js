@@ -53,7 +53,7 @@
   }
 
   function makeAdult(w, R, spec, founder) {
-    const eth = C.NAMES[spec.eth] ? spec.eth : 'malay';
+    const eth = C.NAMES[spec.eth] ? spec.eth : C.ETHNICITIES[0];
     const p = w.makeAdult(R, { age: U.clamp(Math.round(spec.age), ADULT, 90), sex: spec.sex === 'M' ? 'M' : 'F', eth, migrant: !founder, jobChance: founder ? 0.65 : 0 });
     applySpec(w, p, spec);
     p.att = spec.att.map(v => U.clamp(Number(v) || 0, 0, 10)); p.pot = p.att.map(v => Math.max(v, U.clamp(v + 0.3, 0, 10))); p.peak = p.att.slice();

@@ -32,7 +32,7 @@ async def run(page, expr, timeout):
         for _ in range(100):
             try:
                 tabs = json.load(urllib.request.urlopen(f"http://127.0.0.1:{port}/json"))
-                ws_url = next((t["webSocketDebuggerUrl"] for t in tabs if t.get("type") == "page"), None)
+                ws_url = next((t["webSocketDebuggerUrl"] for t in tabs if t.get("type") == "page" and t.get("url", "").startswith("file:")), None)
                 if ws_url:
                     break
             except Exception:
