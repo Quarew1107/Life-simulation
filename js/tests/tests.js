@@ -576,6 +576,7 @@
     check('12 years: every town passes its money and consistency checks', errs.length === 0, errs.slice(0, 3).join(' | '));
     check('One national economy: same business cycle, inflation and stock exchange', R.towns.every(w => w.regime === R.lead.regime && w.infl === R.lead.infl && w.mkt === R.lead.mkt && Math.abs(w.price - R.lead.price) < 1e-12));
     check('Households move between the towns', R.moves.length > 0, `${R.moves.length} moves`);
+    check('Some residents commute to jobs in a sister town', R.commuters().some(n => n > 0) && R.commutePosts > 0, `${R.commuters()} commuters`);
     const mv = R.moves[0], [fromId, toId] = mv.pairs[0], a = R.towns[mv.from].people[fromId], b = R.towns[mv.to].people[toId];
     check('A mover is the same person in the new town, linked back to the old one', a.first === b.first && a.birthDay === b.birthDay && a.away.town === mv.to && b.xlinks[0].id === fromId);
     const R2 = mk(), R3 = mk();

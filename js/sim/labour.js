@@ -59,6 +59,7 @@
       lastShiftDay: -1, warnings: 0, place: v.place, perfOk: 0, perfN: 0, cat: v.job.cat,
     };
     if (v.biz >= 0) p.job.biz = v.biz; // works for a resident's business, which pays the wage
+    if (v.commuteTo !== undefined) { p.job.commuteTo = v.commuteTo; p.job.commuteName = v.commuteName; } // works in a sister town
     p.retired = false;
     const others = nApplicants > 1 ? ` (beat ${nApplicants - 1} other applicant${nApplicants > 2 ? 's' : ''})` : '';
     P.log(w, p, old

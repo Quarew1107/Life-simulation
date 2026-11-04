@@ -60,7 +60,35 @@
       this.sync();
       const L = this.lead;
       if (L.date.lastOfMonth) this.monthClose();
+      this.commuteDay();
     }
+
+    // ---- Commuting: some private job openings in one town are advertised in its sister
+    // towns too (the bus and train run between them). Applicants commute and are paid by
+    // the employer; it costs them time and energy. Openings that stay unfilled at home, in
+    // towns with fewer jobs than workers, are the ones that travel.
+    commuteDay() {
+      const R = this.rng;
+      for (const B of this.towns) {
+        if (B.ended || !B.vacancies.length) continue;
+        for (const A of this.towns) {
+          if (A === B || A.ended) continue;
+          const slack = (A.townMood ? A.townMood.unemp : 0) - (B.townMood ? B.townMood.unemp : 0); // commuters go where work is
+          for (const v of B.vacancies) {
+            if (v.shared || v.biz >= 0 || v.commuteTo !== undefined || v.job.gov || v.job.commute || LES.Services && LES.Services.PUBLIC_JOBS.has(v.job.id)) continue;
+            if (B.day - v.openDay !== 2 || v.applicants.length || R.next() > U.clamp(0.25 + 3 * slack, 0.05, 0.6)) continue; // nobody local applied yet
+            v.shared = true;
+            const st = A.town.kinds.station && A.town.kinds.station.length ? A.town.kinds.station[0] : A.town.byKind.depot;
+            A.vacancies.push({ id: A.nextVacId++, job: v.job, salary: v.salary, openDay: A.day, closeDay: v.closeDay, applicants: [], appSet: new Set(), place: st, commuteTo: B.townIdx, commuteName: B.townName });
+            A.vacancies.sort((a, b) => (b.salary - a.salary) || (a.id - b.id));
+            this.commutePosts = (this.commutePosts || 0) + 1;
+          }
+        }
+        B.vacancies = B.vacancies.filter(v => !v.shared); // the opening is now filled from the sister town
+      }
+    }
+    // Residents of each town who work in another one.
+    commuters() { return this.towns.map(w => w.living.filter(p => p.alive && p.job && p.job.commuteTo !== undefined).length); }
 
     monthClose() {
       // Shared Bursa: the town's market influence is everyone's holdings together.

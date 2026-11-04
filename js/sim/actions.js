@@ -397,6 +397,7 @@
         p.xp[j.cat] = Math.min(5, p.xp[j.cat] + 1 / 240);
         p.energy -= 28; p.stress += r.ok ? 4 : 6;
         if (j.commute) { p.energy -= 12; p.stress += 2; } // long train ride to the city and back
+        else if (job.commuteTo !== undefined) { p.energy -= 8; p.stress += 1.5; } // bus ride to a sister town
         A.practice(w, p, j.w, 0.15);
         if (r.cat) A.catastrophe(w, p, j.w, `injured in a work accident as ${job.title}`);
         break;
