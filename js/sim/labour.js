@@ -14,12 +14,13 @@
     }
     w.vacancies = still;
 
-    const lambda = w.cfg.vacancyRate * w.counts.adults / 100 / 30 * w.macro().vacMult;
+    const lambda = w.cfg.vacancyRate * w.counts.adults / 100 / 30 * w.macro().vacMult * (w.boost ? w.boost.vac : 1);
     const n = R.poisson(lambda);
     for (let i = 0; i < n; i++) {
       const j = C.JOBS[R.weighted(C.JOB_FREQ)];
       const salary = Math.round(w.px(j.salary * U.clamp(R.normal(1, 0.12), 0.7, 1.5) * w.macro().wageMult) / 1000) * 1000;
       const days = R.int(w.cfg.vacancyDaysMin, w.cfg.vacancyDaysMax);
+      if (w.gov && LES.Services.PUBLIC_JOBS.has(j.id)) { R.pick(w.town.kinds[j.place]); continue; } // the town and private employers post these
       w.vacancies.push({ id: w.nextVacId++, job: j, salary, openDay: day, closeDay: day + days, applicants: [], appSet: new Set(), place: R.pick(w.town.kinds[j.place]) });
       w.stats.vacOpened++;
     }
@@ -35,7 +36,7 @@
       seen.add(id);
       const p = w.people[id];
       if (!P.isAdult(w, p) || p.away || p.inst || p.retired || !P.hasCred(p, v.job.req)) continue;
-      if (p.job && p.job.salary >= v.salary) continue;
+      if (p.job && (p.job.salary >= v.salary || p.job.fixedTitle)) continue; // council officials stay in post
       const a = U.clamp(LES.Actions.attrScore(p, v.job.w) / 10, 0, 1);
       const e = U.clamp(p.xp[v.job.cat] / 5, 0, 1);
       const q = U.clamp(P.extraQuals(p, v.job.req) / 2, 0, 1);
@@ -56,6 +57,7 @@
       jobId: v.job.id, title: v.job.title, salary, level: 1, startDay: w.day, shiftsMonth: 0,
       lastShiftDay: -1, warnings: 0, place: v.place, perfOk: 0, perfN: 0, cat: v.job.cat,
     };
+    if (v.biz >= 0) p.job.biz = v.biz; // works for a resident's business, which pays the wage
     p.retired = false;
     const others = nApplicants > 1 ? ` (beat ${nApplicants - 1} other applicant${nApplicants > 2 ? 's' : ''})` : '';
     P.log(w, p, old
@@ -65,7 +67,7 @@
     w.stats.hires++;
   };
 
-  L.title = job => C.LEVEL_PREFIX[Math.min(job.level, C.LEVEL_PREFIX.length - 1)] + job.title;
+  L.title = job => (job.fixedTitle ? job.title : C.LEVEL_PREFIX[Math.min(job.level, C.LEVEL_PREFIX.length - 1)] + job.title);
 
   // Pay attended shifts (capped at the monthly target) with EPF contributions.
   L.payJob = function (w, p, job) {
@@ -74,13 +76,20 @@
     const gross = Math.round(job.salary * paid / target);
     if (gross > 0) {
       const ee = Math.round(gross * 0.11), er = Math.round(gross * 0.13);
-      w.ledger.pay('EMPLOYER', p, 'cash', gross - ee);
-      w.ledger.pay('EMPLOYER', p, 'epf', ee + er);
-      const tax = L.incomeTax(w, gross - ee);
-      w.ledger.spend(p, 'cash', 'TAX', tax);
+      const b = job.biz >= 0 ? w.biz[job.biz] : null; // private clinic, school or hospital
+      if (b && b.open && b.cash >= gross + er) {
+        w.ledger.move(b, 'cash', p, 'cash', gross - ee);
+        w.ledger.move(b, 'cash', p, 'epf', ee + er);
+        b.payrollNow = (b.payrollNow || 0) + gross + er;
+      } else {
+        w.ledger.pay('EMPLOYER', p, 'cash', gross - ee);
+        w.ledger.pay('EMPLOYER', p, 'epf', ee + er);
+      }
+      let tax;
+      if (w.gov) tax = LES.Fiscal.onPay(w, p, job, gross, er); // LHDN PCB and EIS; the treasury pays public servants
+      else { tax = L.incomeTax(w, gross - ee); w.ledger.spend(p, 'cash', 'TAX', tax); }
       p.earned.wages += gross + er;
       p.monthIncome += gross - ee - tax;
-      if (w.gov && C.JOB_BY_ID[job.jobId].gov) w.gov.month.wages += gross + er; // the treasury pays public servants
     }
     job.shiftsMonth = 0;
   };
@@ -102,10 +111,12 @@
     if (!job) return;
     L.payJob(w, p, job);
     p.job = null;
+    if (w.gov && reason === 'retired' && LES.Services.lineOf(job)) LES.Council.onRetire(w, p, job); // civil-service pension
     if (silent) return;
     const bad = reason === 'fired' || reason === 'laid off';
     P.log(w, p, bad ? `${reason === 'fired' ? 'Fired' : 'Laid off'} from ${job.title} job` : `Left ${job.title} job (${reason})`, 'career', bad ? 1 : 0);
     if (bad) {
+      if (w.gov && reason === 'laid off') LES.Council.onJobLoss(w, p, job); // EIS job-loss benefit
       p.stress = Math.min(100, p.stress + 15);
       p.pendingReview = reason === 'fired' ? 'being fired' : 'being laid off';
       w.stats[reason === 'fired' ? 'fired' : 'laidOff']++;
@@ -134,7 +145,8 @@
     const R = w.rng.outcome;
     p.lastEnrollTry = w.day;
     p.energy -= 8;
-    const acc = U.sigmoid((p.att[C.INT] - course.minInt) * 1.5);
+    const bar = w.gov && course.id !== 'VOC' ? 1.0 : 0; // public university places are competitive (UPU)
+    const acc = U.sigmoid((p.att[C.INT] - course.minInt - bar) * 1.5);
     if (R.next() >= acc) {
       P.log(w, p, `Application to ${course.name} rejected`, 'edu', 0);
       return;
@@ -163,7 +175,7 @@
         } else if (shifts >= target) {
           job.warnings = Math.max(0, job.warnings - 1);
         }
-        if (R.next() < m.layoff * (1.6 - perf)) { L.endJob(w, p, 'laid off'); continue; }
+        if (R.next() < m.layoff * (1.6 - perf) && !(w.gov && LES.Services.lineOf(job))) { L.endJob(w, p, 'laid off'); continue; } // public servants are not laid off by the business cycle
         // Voluntary quits: stressed, impatient people sometimes walk out.
         const quit = 0.002 + 0.012 * Math.max(0, p.stress - 60) / 40 * (1.3 - p.pers.pat / 100);
         if (R.next() < quit) { L.endJob(w, p, p.stress > 70 ? 'burnt out' : 'resigned'); continue; }

@@ -28,15 +28,20 @@
           <div><span class="muted">In office since</span><span>${U.fmtMonthYear(g.termStart)} (term ${g.terms[pres.id] || 1})</span></div><div><span class="muted">Approval</span><span class="${g.approval < 40 ? 'neg' : g.approval >= 60 ? 'pos' : ''}">${g.approval}%</span></div></div>` : '<p class="note">The office is vacant: a by-election is coming.</p>'}
         <div class="note">${g.campaign ? `🗳️ Campaign under way: polling day ${U.fmtDate(g.electionDay)}.` : `Next election ${U.fmtMonthYear(g.electionDay)} (${Math.max(0, Math.round(days / 30))} months).`} ${g.scandals ? `${g.scandals} corruption scandal${g.scandals > 1 ? 's' : ''} so far.` : ''}</div>
         <canvas class="chart" id="gv-appr"></canvas></div>
+      ${councilCard(w)}
       <div class="card"><h3>Laws in force</h3><table class="cmp"><tr><th>Law</th><th>Now</th><th>Since</th></tr>
         ${GV.LAWS.map(l => { const c = changed(l.key); return `<tr><td>${esc(l.name)}</td><td>${esc(GV.optName(l.key, g.laws[l.key]))}</td><td class="muted">${c ? `${U.fmtMonthYear(c.day)}${c.why === 'emergency' ? ' (emergency)' : c.why === 'austerity' ? ' (austerity)' : ''}` : 'start'}</td></tr>`; }).join('')}</table>
-        <div class="note">Each law is a real lever in the engine: tax rates, the minimum wage on every job, cash aid and basic income paid each month, the police headcount, how drug users are treated, university fees, whether employers may check records, a hiring preference, and whether the bar is open.</div></div>
+        <div class="note">Each law is a real lever in the engine: tax rates, the minimum wage on every job, cash aid and basic income paid each month, how many police officers, teachers, nurses and doctors the town employs, how drug users are treated, university fees, whether employers may check records, a hiring preference, whether the bar is open, fuel subsidies and SST or GST.</div></div>
       <div class="card"><h3>Treasury <small class="muted">Year-1 money</small></h3>
-        <div class="stat-grid"><div class="stat"><div class="v">${U.fmtMoney(g.treasury.cash)}</div><div class="l">in the treasury</div></div><div class="stat"><div class="v ${g.debt ? 'neg' : ''}">${U.fmtMoney(g.debt)}</div><div class="l">public debt</div></div><div class="stat"><div class="v">${g.officers}</div><div class="l">police officers (${(g.officers / Math.max(1, w.counts.living) * 1000).toFixed(1)} per 1,000; Malaysia ~4)</div></div></div>
+        <div class="stat-grid"><div class="stat"><div class="v">${U.fmtMoney(g.treasury.cash)}</div><div class="l">in the treasury</div></div><div class="stat"><div class="v ${g.debt ? 'neg' : ''}">${U.fmtMoney(g.debt)}</div><div class="l">public debt</div></div><div class="stat"><div class="v">${U.fmtMoney(LES.Fiscal.fundValue(w))}</div><div class="l">Khazanah Rezeki (sovereign fund)</div></div>
+          <div class="stat"><div class="v">${g.last ? U.fmtMoney(g.last.revTotal / Math.max(1, w.counts.living)) : '–'}</div><div class="l">revenue per resident / month (Malaysia ~RM800 incl. oil)</div></div>
+          <div class="stat"><div class="v">${g.last ? U.fmtMoney(g.last.federal || 0) : '–'}</div><div class="l">sent to the federal government last month (70% of local company tax)</div></div></div>
         <canvas class="chart" id="gv-tre"></canvas>
         ${g.last ? `<table class="cmp"><tr><th>Last month in</th><th>${U.fmtMoney(g.last.revTotal)}</th><th>Last month out</th><th>${U.fmtMoney(g.last.spendTotal)}</th></tr>
           ${(() => { const a = Object.entries(g.last.rev).sort((x, y) => y[1] - x[1]), b = Object.entries(g.last.spend).sort((x, y) => y[1] - x[1]); const n = Math.max(a.length, b.length); let s = ''; for (let i = 0; i < n; i++) s += `<tr><td class="muted">${a[i] ? esc(a[i][0]) : ''}</td><td>${a[i] ? U.fmtMoney(a[i][1]) : ''}</td><td class="muted">${b[i] ? esc(b[i][0]) : ''}</td><td>${b[i] ? U.fmtMoney(b[i][1]) : ''}</td></tr>`; return s; })()}</table>` : ''}
-        <div class="note">Income tax, corporate tax, fines and inheritance tax come in; police wages, the leader's salary, aid, welfare, free university places, interest and public services go out. When the treasury is short it borrows; deep debt forces austerity.</div></div>
+        <div class="note">Taxes follow Malaysia: LHDN income tax bands (0-30%, RM9,000 relief, RM400 rebate, zakat rebated), SME company tax (15/17/24%), SST inside prices (or GST 6% if the law changes), assessment tax on homes and premises, the 2% dividend tax above RM100k, and EIS contributions. Most residents earn too little to pay income tax, as in Malaysia, so sales and company taxes matter more. Money goes out on public servants' pay, public hospitals, fuel subsidies, welfare, aid, pensions, training, development and interest. A surplus builds a three-month reserve, then development projects, training places and Khazanah Rezeki; a deficit draws on the fund, then borrows. Deep debt brings a hiring freeze and austerity.</div></div>
+      ${servicesCard(w)}
+      ${moneyCard(w)}
       ${last ? `<div class="card"><h3>Last election <small class="muted">${U.fmtDate(last.day)} · turnout ${last.eligible ? pct(last.voted / last.eligible) : '–'} (GE15: 73.9%)</small></h3>
         ${last.cands.map(c => `<div class="why-opt ${c.id === last.winner ? 'chosen' : ''}"><span><span style="color:${c.colour}">■</span> ${UI.plink(w, c.id)}${c.incumbent ? ' <span class="muted">(incumbent)</span>' : ''}</span><div class="track"><i style="width:${last.voted ? (c.votes / last.voted * 100).toFixed(1) : 0}%;background:${c.colour}"></i></div><span class="pct">${c.votes}</span></div>
           <div class="note" style="margin:0 0 6px 10px">Promised: ${Object.keys(c.platform).length ? Object.entries(c.platform).map(([k, v]) => `${esc(GV.LAW_BY_KEY[k].name)} → ${esc(GV.optName(k, v))}`).join('; ') : 'no changes'}</div>`).join('')}
@@ -47,9 +52,60 @@
         <div class="note">Floods hit low-lying and riverside homes in the north-east monsoon; the treasury pays RM1,000 relief per household (like Bantuan Wang Ihsan). Haze hurts health, most of all for the old and very young.</div></div>`;
     if (h.length) {
       LES.Charts.line($('gv-appr'), { series: [{ label: 'Approval %', color: '#3ec7b5', data: h.map(r => [r.day / 365, r.gov.approval]) }], xFmt: xs, yMin: 0 });
+      LES.Charts.line($('gv-q'), { series: [{ label: 'Schools', color: '#b892ff', data: h.map(r => [r.day / 365, (r.gov.eduQ || 1) * 100]) }, { label: 'Healthcare', color: '#3ec7b5', data: h.map(r => [r.day / 365, (r.gov.healthQ || 1) * 100]) }, { label: 'Infrastructure', color: '#f4a261', data: h.map(r => [r.day / 365, (r.gov.dev || 0) * 100]) }], xFmt: xs, yMin: 0 });
+      LES.Charts.line($('gv-opr'), { series: [{ label: 'OPR %', color: '#5aa9e6', data: h.map(r => [r.day / 365, (r.gov.opr || LES.Fiscal.MY_OPR) * 100]) }, { label: 'Inflation %', color: '#e76f51', data: (w.inflHist || []).map(x => [x.year - 1, x.rate * 100]) }], xFmt: xs, yMin: 0 });
+      LES.Charts.line($('gv-fund'), { series: [{ label: 'Khazanah Rezeki', color: '#f2c14e', data: h.map(r => [r.day / 365, r.gov.fund || 0]) }, { label: 'Treasury', color: '#57d38c', data: h.map(r => [r.day / 365, r.gov.treasury]) }], xFmt: xs, yMin: 0, yFmt: LES.Charts.fmtAxisMoney });
       LES.Charts.line($('gv-tre'), { series: [{ label: 'Revenue / month', color: '#57d38c', data: h.map(r => [r.day / 365, r.gov.rev]) }, { label: 'Spending / month', color: '#ff8c42', data: h.map(r => [r.day / 365, r.gov.spend]) }, { label: 'Debt', color: '#e63946', data: h.map(r => [r.day / 365, r.gov.debt]) }], xFmt: xs, yMin: 0, yFmt: LES.Charts.fmtAxisMoney });
     }
   };
+
+  // The three council officials and the council log.
+  function councilCard(w) {
+    const g = w.gov, CO = LES.Council;
+    if (!g.officials) return '';
+    const rows = CO.ORDER.map(role => {
+      const o = g.officials[role], R = CO.ROLES[role];
+      const who = !o ? '<span class="muted">vacant</span>' : o.id >= 0 ? UI.plink(w, o.id) : `${esc(o.name)} <span class="muted">(posted from outside)</span>`;
+      const bar = o ? `<div class="track" style="width:90px;display:inline-block;vertical-align:middle"><i style="width:${Math.round(o.comp * 100)}%;background:${o.comp >= 0.6 ? '#57d38c' : o.comp >= 0.4 ? '#f2c14e' : '#e63946'}"></i></div> ${Math.round(o.comp * 100)}` : '';
+      return `<tr><td><b>${esc(R.title)}</b><br><span class="muted">${esc(R.en)}</span></td><td>${who}${o && o.crony ? ' <span class="neg">· leader\'s relative</span>' : ''}${o ? `<br><span class="muted">since ${U.fmtMonthYear(o.since)}</span>` : ''}</td><td>${bar}</td></tr>`;
+    }).join('');
+    const log = g.offLog.slice(-8).reverse().map(e => `<li><span>${esc(e.text)}</span><span class="muted">${U.fmtMonthYear(e.day)}</span></li>`).join('');
+    return `<div class="card"><h3>City council <small class="muted">appointed by the ${esc(GV.title(w))}</small></h3>
+      <table class="cmp"><tr><th>Post</th><th>Holder</th><th>Competence</th></tr>${rows}</table>
+      <div class="note">${CO.ORDER.map(r => `<b>${esc(CO.ROLES[r].title)}</b>: ${esc(CO.ROLES[r].does)}`).join('<br>')}<br>Leaders who care less about merit may appoint relatives over abler people. The anti-corruption commission (MACC) can catch officials who take kickbacks or bribes.</div>
+      ${log ? `<h3 style="margin-top:8px">Council log</h3><ul class="list-plain">${log}</ul>` : ''}</div>`;
+  }
+
+  // Public services: staff against targets, quality, and private providers.
+  function servicesCard(w) {
+    const g = w.gov, st = g.staff || {}, pop = Math.max(1, w.counts.living);
+    const NAMES = { police: 'Police officers', teacher: 'Teachers', nurse: 'Nurses', doctor: 'Doctors' };
+    const rows = Object.keys(NAMES).map(k => st[k] ? `<tr><td>${NAMES[k]}</td><td>${st[k].have} / ${st[k].target}</td><td class="muted">${(st[k].have / pop * 1000).toFixed(1)} per 1,000</td></tr>` : '').join('');
+    const priv = w.biz.filter(b => b.open && b.typeDef.staff);
+    const pupils = w.living.filter(p => p.alive && p.school >= 0).length, pension = w.living.filter(p => p.alive && p.pension > 0).length;
+    const eis = w.living.filter(p => p.alive && p.eis && !p.job && w.day < p.eis.until).length;
+    return `<div class="card"><h3>Public services</h3>
+      <table class="cmp"><tr><th>Public servants</th><th>Posts filled</th><th></th></tr>${rows}</table>
+      <div class="grid2"><div><span class="muted">School quality</span><span>${Math.round((g.eduQ || 1) * 100)}</span></div><div><span class="muted">Healthcare quality</span><span>${Math.round((g.healthQ || 1) * 100)}</span></div>
+        <div><span class="muted">Infrastructure</span><span>${Math.round((g.devIdx || 0) * 100)} · ${g.projects || 0} projects</span></div><div><span class="muted">In funded training</span><span>${g.trainees || 0} (${g.trained || 0} so far)</span></div>
+        <div><span class="muted">Job-loss benefit (EIS)</span><span>${eis} people</span></div><div><span class="muted">Civil-service pensioners</span><span>${pension}</span></div></div>
+      <canvas class="chart" id="gv-q"></canvas>
+      <h3 style="margin-top:8px">Private providers</h3>
+      ${priv.length ? `<ul class="list-plain">${priv.map(b => `<li><span><b>${esc(b.name)}</b> <span class="muted">${esc(b.typeDef.name)} · owner ${UI.plink(w, b.founderId)} · ${w.living.filter(p => p.alive && p.job && p.job.biz === b.id).length} staff${b.type === 'privschool' ? ` · ${w.living.filter(p => p.alive && p.school === b.id).length} pupils from town` : ''}</span></span><span>${U.fmtMoney(b.lastRevenue)}/mo</span></li>`).join('')}</ul>` : '<p class="note">None yet. A doctor can open a clinic in a shoplot; a rich resident can build a private school (one per ~700 residents) or a private hospital (one per ~1,200) on an empty lot.</p>'}
+      <div class="note">Teachers, nurses, doctors and police are paid by the treasury; the laws set how many posts there are. Quality compares staffing with Malaysian norms: better schools raise children's abilities by adulthood, better healthcare lowers mortality. Private schools and hospitals pay their own staff. ${pupils} children attend private school; families pay the fees, and richer patients may pay for private care.</div></div>`;
+  }
+
+  // Bank Negara, the sovereign fund and government-linked companies.
+  function moneyCard(w) {
+    const g = w.gov, glc = w.mkt.stocks.filter(s => s.def.glc), f = g.fund;
+    return `<div class="card"><h3>Bank Negara &amp; Khazanah Rezeki</h3>
+      <div class="grid2"><div><span class="muted">OPR (policy rate)</span><span>${(g.opr * 100).toFixed(2)}%</span></div><div><span class="muted">Savings rate / business loans</span><span>${(LES.Fiscal.depositRate(w) * 100).toFixed(2)}% / ${(LES.Fiscal.loanRate(w) * 100).toFixed(2)}%</span></div>
+        <div><span class="muted">Fund value</span><span>${U.fmtMoney(LES.Fiscal.fundValue(w))}</span></div><div><span class="muted">Put in / drawn</span><span>${U.fmtMoney(f.invested)} / ${U.fmtMoney(f.drawn)}</span></div></div>
+      <canvas class="chart" id="gv-opr"></canvas>
+      <canvas class="chart" id="gv-fund"></canvas>
+      ${glc.length ? `<table class="cmp"><tr><th>Government-linked company</th><th>Price</th><th>Dividend</th><th>Fund holds</th></tr>${glc.map(s => `<tr><td>${esc(s.def.name)} <span class="muted">${esc(s.tk)}</span></td><td>${U.fmtPrice(s.price)}</td><td>${Math.round(s.def.div * 100)}%</td><td>${U.fmtMoney((f.glc[s.tk] || 0) * s.price)}</td></tr>`).join('')}</table>` : '<p class="note">Government-linked companies (Tenaga Rezeki, Petroliam Rezeki, Bank Pembangunan Rezeki) list on Bursa Rezeki once the town\'s finances have matured (after about 8 years without heavy debt).</p>'}
+      <div class="note">Bank Negara sets the Overnight Policy Rate each year (2.75% in 2026): up when inflation runs hot or the economy booms, down in recessions. It sets savings and loan rates, cools or warms business and hiring, and nudges inflation. EPF savings earn a yearly dividend (about 5.5%). Khazanah Rezeki invests the treasury's surplus in the Bursa index and the GLCs, returns 4% of its value each year, and is drawn on before the town borrows.</div></div>`;
+  }
 
   UI.politicsCard = function (w, p) {
     if (!w.gov || !p.pol || !p.adult) return '';
@@ -57,6 +113,8 @@
     return `<div class="card"><h3>Politics</h3><div class="grid2">
       <div><span class="muted">Leaning</span><span>${lean(p)}</span></div>
       ${g.president === p.id ? `<div><span class="muted">Office</span><span class="pos">${esc(GV.title(w))}</span></div>` : ''}
+      ${g.officials ? Object.entries(g.officials).filter(([, o]) => o && o.id === p.id).map(([r]) => `<div><span class="muted">Council post</span><span class="pos">${esc(LES.Council.ROLES[r].title)}</span></div>`).join('') : ''}
+      ${p.pension > 0 ? `<div><span class="muted">Civil-service pension</span><span>${U.fmtMoney(p.pension)}/mo</span></div>` : ''}
       ${ran.length ? `<div><span class="muted">Stood for election</span><span>${ran.length}× · won ${ran.filter(e => e.winner === p.id).length}</span></div>` : ''}
       ${p.pol.voted >= 0 && p.pol.voted !== undefined ? `<div><span class="muted">Last voted</span><span>${U.fmtMonthYear(p.pol.voted)}</span></div>` : ''}
     </div></div>`;

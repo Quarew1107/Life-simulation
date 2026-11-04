@@ -6,8 +6,14 @@
 // - low self-control: low responsibility and discipline, high risk tolerance
 // - the age-crime curve: offending peaks at 18-25 and falls after 30
 // - peers and history: gang membership, a criminal record
-// - deterrence: the chance of being caught matters more than the size of the sentence
-// - restraints: devotion, children to look after, a decent job
+// - deterrence: the chance of being caught matters more than the size of the sentence;
+//   people sense it from how many recent crimes the police actually solved
+// - restraints: devotion, children to look after, a decent job, an education
+// - the town: unemployment, inequality, few job openings and recessions push crime up;
+//   funded training and youth programmes pull it down
+// Police capacity: each officer can investigate only so many cases a month. When crime
+// outruns the force, fewer cases are solved, deterrence weakens and crime rises further;
+// more officers (the budget) and a capable district police chief turn this around.
 // Each month that gives a temptation score; a few people get a crime opportunity on a
 // day that month, which appears as one more choice in "Why did they do that?" - they may
 // still say no. Rates are tuned so that "Realistic" gives Malaysian per-capita rates
@@ -25,21 +31,31 @@
   // Crime types. w = attribute weights for the success roll, diff = difficulty,
   // clear = chance police solve it, months = typical sentence, violent = index violent crime.
   CR.TYPES = {
-    theft: { name: 'Snatch theft', icon: '👜', w: [0, 0, 0.4, 0, 0.6, 0], diff: 4, clear: 0.22, months: 8, fine: 0.5 },
-    burglary: { name: 'House-breaking', icon: '🏚️', w: [0.2, 0.1, 0.4, 0, 0.3, 0], diff: 5, clear: 0.2, months: 24 },
-    vehicle: { name: 'Vehicle theft', icon: '🏍️', w: [0.3, 0, 0.4, 0, 0.3, 0], diff: 5, clear: 0.2, months: 24 },
-    scam: { name: 'Scam', icon: '📱', w: [0.5, 0, 0.1, 0.4, 0, 0], diff: 5.5, clear: 0.3, months: 30 },
-    robbery: { name: 'Robbery', icon: '🔪', w: [0, 0.5, 0.2, 0, 0.3, 0], diff: 4.5, clear: 0.45, months: 48, violent: true },
-    assault: { name: 'Assault', icon: '👊', w: [0, 0.6, 0, 0, 0.2, 0.2], diff: 4, clear: 0.6, months: 18, violent: true },
-    murder: { name: 'Murder', icon: '⚰️', clear: 0.85, months: 300, violent: true },
+    theft: { name: 'Snatch theft', icon: '👜', w: [0, 0, 0.4, 0, 0.6, 0], diff: 4, clear: 0.55, months: 8, fine: 0.5 },
+    burglary: { name: 'House-breaking', icon: '🏚️', w: [0.2, 0.1, 0.4, 0, 0.3, 0], diff: 5, clear: 0.55, months: 24 },
+    vehicle: { name: 'Vehicle theft', icon: '🏍️', w: [0.3, 0, 0.4, 0, 0.3, 0], diff: 5, clear: 0.5, months: 24 },
+    scam: { name: 'Scam', icon: '📱', w: [0.5, 0, 0.1, 0.4, 0, 0], diff: 5.5, clear: 0.5, months: 30 },
+    robbery: { name: 'Robbery', icon: '🔪', w: [0, 0.5, 0.2, 0, 0.3, 0], diff: 4.5, clear: 0.8, months: 48, violent: true },
+    assault: { name: 'Assault', icon: '👊', w: [0, 0.6, 0, 0, 0.2, 0.2], diff: 4, clear: 0.9, months: 18, violent: true },
+    murder: { name: 'Murder', icon: '⚰️', clear: 0.9, months: 300, violent: true },
   };
   CR.INDEX = ['theft', 'burglary', 'vehicle', 'robbery', 'assault', 'murder']; // DOSM index crimes (scams are commercial crime)
-  const BASE = 0.0011;     // monthly opportunity chance per unit temptation at intensity 1 (calibrated: tools/headless.js)
+  const BASE = 0.0013;     // monthly opportunity chance per unit temptation at intensity 1 (calibrated: tools/headless.js)
   const DRUG_BASE = 0.00024;
   const GANG_NAMES = [['Naga', 'Harimau', 'Helang', 'Kala', 'Ular', 'Serigala', 'Buaya', 'Tebuan'], ['Hitam', 'Merah', 'Besi', 'Api', 'Malam', 'Emas']];
   const GANG_COLOURS = ['#e63946', '#8338ec', '#ff8c42', '#06d6a0', '#3a86ff', '#ffbe0b', '#d62828', '#8d99ae'];
 
   const K = w => CR.INTENSITY[w.cfg.crime] || 10;
+  CR.CASES_PER_OFFICER = 0.13; // index cases one officer can investigate a month (at the Realistic scale)
+  // Officers on duty: real officers with a government, otherwise the setting's notional force.
+  const officers = w => (w.gov ? w.gov.officers : w.counts.living / 1000 * 4 * (CR.POLICE[w.cfg.police] || 1));
+  // Share of cases the force has time for (1 at Malaysian staffing and crime rates).
+  CR.capacity = function (w) {
+    const st = state(w), load = Math.max(w.counts.living / 1e5 * CR.MY.index / 12 * K(w) * 0.5, st.lastCrimes || 0); // at least half the Malaysian monthly rate
+    const r = Math.max(0.3, officers(w)) * CR.CASES_PER_OFFICER * K(w) / load;
+    return U.clamp(1.2 * r / (r + 0.6), 0.1, 1.15);
+  };
+  const policing = w => (LES.Council ? LES.Council.policing(w) : { solve: 1, raid: 1 });
   // Police strength: with a government, set by how many officers the budget pays for
   // (officers per 1,000 residents relative to Malaysia's ~4); otherwise the setting.
   const police = w => (w.gov && Number.isFinite(w.gov.policeFactor) ? w.gov.policeFactor : CR.POLICE[w.cfg.police] || 1);
@@ -59,10 +75,16 @@
     const peer = (cr.gang >= 0 ? 1 : 0) + (p.partnerId !== null && w.people[p.partnerId].cr && w.people[p.partnerId].cr.rec ? 0.3 : 0);
     const kids = p.careOf.length ? 0.4 : 0;
     const jobV = p.job ? U.clamp(Math.log(p.job.salary / w.px(2500)), -0.3, 1.2) * 0.6 : 0;
-    const deter = 1.4 * U.clamp(0.35 * police(w), 0, 0.9) + 0.2;
+    const st = state(w), tc = st.town || { unemp: 0.03, gini: 0.39, vac: 1 };
+    const deter = 0.2 + 1.8 * (st.certainty === undefined ? 0.5 : st.certainty); // the chance of being caught, as people see it
     const devotion = p.relig !== undefined ? 0.8 * p.relig / 100 : 0;
-    const x = -4.4 + 1.6 * need - 1.0 * n01(pr.resp) - 0.7 * n01(pr.dis) + 0.7 * n01(pr.risk) - 0.3 * n01(pr.pat)
-      + ageT + 0.9 * peer + (cr.rec ? 0.7 : 0) - devotion - kids - jobV - deter + (p.stress > 75 ? 0.3 : 0);
+    const edu = p.quals.some(P.isBachelor) ? -0.35 : !p.quals.length && age >= 20 ? 0.25 : 0;
+    const origin = p.clsOrigin === 'B40' ? 0.1 : p.clsOrigin === 'T20' ? -0.1 : 0;
+    const idle = !p.job && p.manages < 0 && !p.retired && !p.enrol;
+    const town = (3 * (tc.unemp - 0.03) + 1.5 * Math.max(0, tc.gini - 0.39) - 0.15 * U.clamp(tc.vac - 1, -1, 2)) * (idle ? 1.5 : 1) + (w.regime === 'recession' ? 0.15 : 0);
+    const programme = p.trainUntil > w.day ? 0.4 : 0; // funded training and youth programmes
+    const x = -4.0 + 1.6 * need - 1.0 * n01(pr.resp) - 0.7 * n01(pr.dis) + 0.7 * n01(pr.risk) - 0.3 * n01(pr.pat)
+      + ageT + 0.9 * peer + (cr.rec ? 0.7 : 0) - devotion - kids - jobV - deter + (p.stress > 75 ? 0.3 : 0) + edu + origin + town - programme;
     return U.sigmoid(x);
   }
 
@@ -137,9 +159,10 @@
       P.log(w, v, `${text}${def.violent ? '' : ''}`, 'crime', 1);
       P.log(w, p, `Committed ${def.name.toLowerCase()}${gain ? ` (${U.fmtMoney(gain)})` : ''}`, 'crime', 0);
     } else if (!roll.ok) P.log(w, p, `Tried ${def.name.toLowerCase()} but failed`, 'crime', 0);
-    // Will the police solve it?
-    const pc = U.clamp(def.clear * Math.sqrt(police(w)) * (roll.ok ? 1 : 1.6) * (1 - 0.04 * Math.max(0, A.attrScore(p, def.w || [0, 0, 0, 0, 0, 0]) - 5)), 0.02, 0.95);
-    if (!killed && R.next() < pc) st.cases.push({ type, off: p.id, victim: v.id, day: w.day, arrest: w.day + R.int(2, 60) });
+    // Will the police solve it? Depends on how stretched the force is and how well it is led.
+    const pc = U.clamp(def.clear * CR.capacity(w) * policing(w).solve * (roll.ok ? 1 : 1.4) * (1 - 0.04 * Math.max(0, A.attrScore(p, def.w || [0, 0, 0, 0, 0, 0]) - 5)), 0.02, 0.95);
+    st.crimesNow = (st.crimesNow || 0) + 1;
+    if (!killed && R.next() < pc) { st.cases.push({ type, off: p.id, victim: v.id, day: w.day, arrest: w.day + R.int(2, 60) }); st.solvedNow = (st.solvedNow || 0) + 1; }
   }
 
   function murder(w, p, v, how) {
@@ -148,7 +171,8 @@
     count(w, 'murder');
     w.pushFeed({ day: w.day, pid: v.id, text: `${P.name(v)} was killed in ${how}`, cat: 'crime', imp: 2 });
     P.log(w, p, `Killed ${P.name(v)} in ${how}`, 'crime', 0);
-    if (R.next() < CR.TYPES.murder.clear * Math.min(1.1, Math.sqrt(police(w)))) st.cases.push({ type: 'murder', off: p.id, victim: v.id, day: w.day, arrest: w.day + R.int(3, 40) });
+    st.crimesNow = (st.crimesNow || 0) + 1;
+    if (R.next() < CR.TYPES.murder.clear * Math.min(1.1, CR.capacity(w) * policing(w).solve)) { st.cases.push({ type: 'murder', off: p.id, victim: v.id, day: w.day, arrest: w.day + R.int(3, 40) }); st.solvedNow = (st.solvedNow || 0) + 1; }
     return true;
   }
 
@@ -221,6 +245,7 @@
     if (def.fine && R.next() < def.fine) {
       const fine = Math.min(p.cash, w.px(R.range(1000, 4000)));
       w.ledger.spend(p, 'cash', 'TAX', fine);
+      if (w.gov) LES.Fiscal.tag(w, 'fines & other', fine);
       p.cr.rec++;
       P.log(w, p, `Convicted of ${def.name.toLowerCase()} and fined ${U.fmtMoney(fine)}`, 'crime', 1);
       return;
@@ -332,7 +357,7 @@
         if (near.length) g.turf.push(R.pick(near));
       }
       // Police crackdown on an active gang.
-      if (R.next() < 0.025 * police(w) * Math.min(3, 1 + g.crimes / 10)) {
+      if (R.next() < 0.025 * police(w) * policing(w).raid * Math.min(3, 1 + g.crimes / 10)) {
         let n = 0;
         for (const id of active) if (R.next() < 0.35) { CR.admit(w, w.people[id], 'prison', Math.round(R.range(24, 72)), 'gang crime'); n++; }
         if (n) { st.crackdowns++; w.pushFeed({ day: w.day, pid: -1, text: `Police raid on ${g.name}: ${n} member${n > 1 ? 's' : ''} jailed`, cat: 'crime', imp: 2 }); }
@@ -375,6 +400,17 @@
     if (g.cash > 0) w.ledger.move(g, 'cash', w.ledger.sec.MERCHANT, 'bal', g.cash);
     g.alive = false; g.members = []; g.ended = w.day;
     w.pushFeed({ day: w.day, pid: -1, text: `${g.name} broke up (${why})`, cat: 'crime', imp: 2 });
+  }
+
+  // Unemployment, household inequality and job openings (for temptation).
+  function townContext(w) {
+    const h = w.history[w.history.length - 1];
+    const unemp = h ? h.unemployed / Math.max(1, h.unemployed + h.employed + h.owners) : 0.03;
+    const inc = [];
+    for (const p of w.living) if (p.alive && p.adult && p.isHead) inc.push(p.incomeEMA + (p.partnerId !== null ? w.people[p.partnerId].incomeEMA : 0));
+    inc.sort((a, b) => a - b);
+    const idle = h ? Math.max(1, h.unemployed) : 1;
+    return { unemp, gini: inc.length > 5 ? U.gini(inc) : 0.39, vac: w.vacancies.length / idle };
   }
 
   // ---------- The system ----------
@@ -428,6 +464,12 @@
 
     month(w) {
       const R = w.rng.crime, st = w.crime, k = K(w);
+      // Deterrence follows the share of recent crimes the police solved; the town's economy sets the mood.
+      if (st.crimesNow) st.certainty = 0.85 * (st.certainty === undefined ? 0.5 : st.certainty) + 0.15 * (st.solvedNow || 0) / st.crimesNow;
+      st.lastCrimes = 0.6 * (st.lastCrimes || 0) + 0.4 * (st.crimesNow || 0);
+      st.solvedTotal = (st.solvedTotal || 0) + (st.solvedNow || 0); st.crimesTotal = (st.crimesTotal || 0) + (st.crimesNow || 0);
+      st.crimesNow = 0; st.solvedNow = 0;
+      st.town = townContext(w);
       for (const p of w.living) {
         if (!p.alive || !p.adult || !p.cr) continue;
         const cr = p.cr;
@@ -453,7 +495,8 @@
       const index = CR.INDEX.reduce((s, t) => s + (yr[t] || 0), 0);
       let prisoners = 0, rehab = 0, users = 0, gangMembers = 0;
       for (const p of w.living) { if (!p.alive || !p.cr) continue; if (p.inst) (p.inst.kind === 'rehab' ? rehab++ : prisoners++); if (p.cr.user) users++; if (p.cr.gang >= 0) gangMembers++; }
-      row.cr = { index: per(ann(index)), murder: per(ann(yr.murder || 0)), scam: per(ann(yr.scam || 0)), prison: per(prisoners), rehab, users: per(users), prisoners, gangs: st.gangs.filter(g => g.alive).length, gangMembers };
+      row.cr = { index: per(ann(index)), murder: per(ann(yr.murder || 0)), scam: per(ann(yr.scam || 0)), prison: per(prisoners), rehab, users: per(users), prisoners, gangs: st.gangs.filter(g => g.alive).length, gangMembers,
+        cert: st.certainty === undefined ? 0.5 : st.certainty, cap: CR.capacity(w), unemp: st.town ? st.town.unemp : 0 };
     },
 
     invariants(w, errs) {

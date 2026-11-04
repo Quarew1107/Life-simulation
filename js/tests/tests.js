@@ -66,15 +66,16 @@
     const w7 = small({ seed: 'tc007' });
     const e = w7.people[0];
     e.job = { jobId: 'cleaner', title: 'Cleaner', salary: U.RM(3000), level: 1, startDay: 0, shiftsMonth: 20, lastShiftDay: -1, warnings: 0, place: 0, perfOk: 0, perfN: 0, cat: 'manual' };
+    const eis = g => (w7.gov ? Math.round(g * 0.002) : 0); // the worker's EIS contribution (government on)
     let before = e.cash + e.epf;
     LES.Labour.payJob(w7, e, e.job);
-    check('TC-007 20 shifts -> full salary (+13% employer EPF)', e.cash + e.epf - before === U.RM(3000) + U.RM(390));
+    check('TC-007 20 shifts -> full salary (+13% employer EPF)', e.cash + e.epf - before === U.RM(3000) + U.RM(390) - eis(U.RM(3000)));
     e.job.shiftsMonth = 19; before = e.cash + e.epf;
     LES.Labour.payJob(w7, e, e.job);
-    check('TC-007 19 shifts -> RM2,850 gross', e.cash + e.epf - before === U.RM(2850) + Math.round(U.RM(2850) * 0.13));
+    check('TC-007 19 shifts -> RM2,850 gross', e.cash + e.epf - before === U.RM(2850) + Math.round(U.RM(2850) * 0.13) - eis(U.RM(2850)));
     e.job.shiftsMonth = 25; before = e.cash + e.epf;
     LES.Labour.payJob(w7, e, e.job);
-    check('TC-007 extra shifts capped at full salary', e.cash + e.epf - before === U.RM(3000) + U.RM(390));
+    check('TC-007 extra shifts capped at full salary', e.cash + e.epf - before === U.RM(3000) + U.RM(390) - eis(U.RM(3000)));
 
     // TC-013/014 estate split
     const w13 = small({ seed: 'tc013' });
@@ -404,7 +405,7 @@
     const inmates = w.people.filter(p => p.inst && p.inst.kind !== 'remand'); // on remand they keep job and family until the verdict
     check('Prisoners hold no job, course, business role or children', inmates.every(p => !p.job && !p.enrol && p.manages < 0 && !p.careOf.length));
     // Admission: job lost, children re-homed, record after release.
-    const w2 = new LES.World({ seed: 'crime-unit', founders: 60 });
+    const w2 = new LES.World({ seed: 'crime-unit', founders: 60, freezeLaws: 'yes' });
     const p = w2.people.find(q => q.job), job = p.job.title;
     CR.admit(w2, p, 'prison', 2, 'test');
     check('Going to prison ends the job and the person stops making choices', !p.job && p.inst && p.inst.kind === 'prison');
@@ -449,7 +450,7 @@
     LES.Systems.all().find(x => x.id === 'gov').month(t);
     check('The minimum wage lifts low salaries', p.job.salary >= t.px(2500));
     // More police -> more crime solved.
-    const lo = new LES.World({ seed: 'gov-pol', founders: 200, crime: 'lawless' }), hi = new LES.World({ seed: 'gov-pol', founders: 200, crime: 'lawless' });
+    const lo = new LES.World({ seed: 'gov-pol', founders: 400, crime: 'lawless' }), hi = new LES.World({ seed: 'gov-pol', founders: 400, crime: 'lawless' }); // big enough that 2 vs 7 per 1,000 differ in whole officers
     lo.gov.laws.police = '2'; lo.policy = GV.policyOf(lo.gov.laws); hi.gov.laws.police = '7'; hi.policy = GV.policyOf(hi.gov.laws);
     lo.gov.frozen = hi.gov.frozen = true;
     await runDays(lo, 6 * 365); await runDays(hi, 6 * 365);
@@ -457,6 +458,55 @@
     check('Suspects are held on remand in the lock-up before court', hi.crime.remanded > 0);
     const off = new LES.World({ seed: 'gov-off', founders: 40, government: 'off' });
     check('Government off: no treasury, laws or leanings', !off.gov && !off.policy && off.people.every(q => !q.pol));
+  }
+
+  async function fiscalTests() {
+    print('--- Taxes, budget, council, services ---', 'info');
+    const FS = LES.Fiscal, SV = LES.Services, CO = LES.Council, F = LES.Finance;
+    const w = new LES.World({ seed: 'fisc-test', founders: 200, freezeLaws: 'yes' });
+    // LHDN: RM120k a year -> chargeable RM107k (RM9k relief + RM4k EPF) -> RM11,150 tax.
+    check('LHDN bands: RM120k a year pays RM11,150', Math.abs(FS.annualTaxOn(w, null, 120000) - 11150) < 0.01, FS.annualTaxOn(w, null, 120000).toFixed(2));
+    check('LHDN rebate: RM3,000 a month pays no income tax', FS.pcb(w, null, w.px(3000)) === 0);
+    check('SME company tax: RM10k monthly profit pays 15% (RM1,500)', FS.corpTax(w, { lastRevenue: w.px(50000) }, w.px(10000)) === w.px(1500));
+    const gst = FS.priceMult('gst6', 'targeted'), none = FS.priceMult('sst', 'none');
+    check('GST raises hawker-meal prices; removing the fuel subsidy raises vehicle costs', gst.food[1] > 1 && gst.housing[2] === 1 && none.transport[2] > 1 && none.transport[0] === 1);
+    let errs = [];
+    await runDays(w, 12 * 365, wx => { if (!errs.length && wx.date.lastOfMonth && wx.date.month % 3 === 2) errs = wx.checkInvariants(); });
+    check('12 years: money check holds with taxes, the fund and GLC shares', errs.length === 0, errs.slice(0, 3).join(' | '));
+    const g = w.gov, rev = g.last.rev, spend = g.last.spend;
+    check('Revenue is recorded by source (income tax, SST, company tax, assessment)', ['SST', 'assessment tax', 'company tax (employers)'].every(k => rev[k] > 0), Object.keys(rev).join(', '));
+    check('The treasury pays teachers, nurses, doctors and police', ['education', 'health', 'police'].every(k => spend[k] > 0), Object.keys(spend).join(', '));
+    const keepVac = w.vacancies; w.vacancies = [];
+    for (let i = 0; i < 400; i++) LES.Labour.dailyMarket(w);
+    const marketPosts = w.vacancies; w.vacancies = keepVac;
+    check('The random job market no longer posts teacher, nurse or doctor jobs', marketPosts.length > 10 && marketPosts.every(v => !SV.PUBLIC_JOBS.has(v.job.id)), `${marketPosts.length} posts`);
+    check('Public servants are not counted as private payroll', w.living.filter(p => p.job && p.job.jobId === 'teacher' && !(p.job.biz >= 0)).every(p => SV.lineOf(p.job) === 'education'));
+    check('Council officials are appointed', CO.ORDER.filter(r => g.officials[r]).length >= 2, JSON.stringify(Object.keys(g.officials).filter(r => g.officials[r])));
+    check('Officials hold their council job', ['treasurer', 'community'].every(r => !g.officials[r] || g.officials[r].id < 0 || w.people[g.officials[r].id].job.jobId === r));
+    check('Bank Negara keeps the OPR within 1.75-3.75%', g.opr >= 0.0175 - 1e-9 && g.opr <= 0.0375 + 1e-9 && g.oprHist.length >= 10);
+    check('Service quality is measured', g.eduQ >= 0.4 && g.eduQ <= 1.3 && g.healthQ >= 0.4 && w.mortAdj > 0.9 && w.mortAdj < 1.11);
+    // A private school: built on an empty lot, staffed and paid by its owner.
+    const owner = w.living.filter(q => q.adult && !q.inst && q.manages < 0).sort((a, b) => b.cash - a.cash)[0];
+    w.ledger.pay('GENESIS', owner, 'cash', w.px(4e6));
+    const lots = w.town.lots.filter(id => !w.town.buildings[id].built).length;
+    F.startBusiness(w, owner, { type: LES.C.BIZ_BY_ID.privschool, skill: 5 }, { mc: owner.mcost, risk: 0.3 });
+    const sch = w.biz[w.biz.length - 1];
+    check('A private school is built on an empty lot', w.town.buildings[sch.place].kind === 'privschool' && w.town.lots.filter(id => !w.town.buildings[id].built).length === lots - 1);
+    await runDays(w, 75);
+    const staff = w.living.filter(p => p.job && p.job.biz === sch.id);
+    check('It hires its own teachers, who are paid by the school', staff.length > 0 && staff.every(p => p.job.jobId === 'teacher' && !SV.lineOf(p.job)) && (sch.payrollLast > 0 || sch.payrollNow > 0), `${staff.length} staff`);
+    F.closeBiz(w, sch, 'closed (test)', false);
+    check('When it closes, its staff lose their jobs', w.living.every(p => !(p.job && p.job.biz === sch.id)));
+    check('Money check after the school closes', w.checkInvariants().length === 0, w.checkInvariants().slice(0, 2).join(' | '));
+    // Police capacity: fewer officers -> a stretched force.
+    const keep = g.officers;
+    g.officers = 0; const thin = LES.Crime.capacity(w); g.officers = Math.max(10, keep * 5); const full = LES.Crime.capacity(w); g.officers = keep;
+    check('A stretched police force solves fewer cases', thin < full, `${thin.toFixed(2)} < ${full.toFixed(2)}`);
+    // Save and load keeps the new state.
+    const w2 = LES.Save.decode(LES.Save.encode(w));
+    check('Save/load keeps the treasury, council and fund', w2.gov.officials && w2.gov.fund && w2.stableHash() === w.stableHash());
+    const c = new LES.World({ seed: 'fisc-classic', founders: 40, preset: 'classic', government: 'off' });
+    check('Classic engine: no fiscal state, old income tax', !c.gov && !c.taxPx && LES.Labour.incomeTax(c, LES.U.RM(9000)) > 0);
   }
 
   async function runAll() {
@@ -471,6 +521,7 @@
       await societyTests();
       await crimeTests();
       await govTests();
+      await fiscalTests();
       await determinism();
       await invariantSweep(3, 60);
     } catch (err) {
@@ -481,6 +532,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests };
+  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

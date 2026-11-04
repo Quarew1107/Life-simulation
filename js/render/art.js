@@ -637,6 +637,25 @@
         sign(g, 'SEKOLAH', X + W / 2, Y + 4, '#2c5282');
         break;
       }
+      case 'privschool': { // private school: brick-and-white blocks around a courtyard, a crest and a gate
+        rect(g, X, Y + H - 12, W, 12, '#d9cfc0');
+        const s = building(g, X + 2, Y + 2, W - 4, H - 16, { wall: '#f7f3ea', roof: '#8c2f39', roofType: 'hip', wallH: H - 40, seed: b.id });
+        windows(g, X + 8, s.wallY + 4, W - 16, s.wallH - 12, 6, 3, { col: PAL.glass, frame: '#b5838d' });
+        rect(g, X + W / 2 - 7, s.wallY + 2, 14, 12, '#1d3557'); rect(g, X + W / 2 - 5, s.wallY + 4, 10, 8, '#f2c14e'); rect(g, X + W / 2 - 1, s.wallY + 5, 2, 6, '#1d3557'); // crest
+        for (const gx of [X + W / 2 - 14, X + W / 2 + 11]) rect(g, gx, Y + H - 14, 3, 12, '#6b4f3a');
+        rect(g, X + W / 2 - 11, Y + H - 13, 22, 2, '#2b2d42');
+        sign(g, (b.label || 'PRIVATE SCHOOL').toUpperCase().slice(0, 22), X + W / 2, Y + 1, '#1d3557', '#f2c14e');
+        break;
+      }
+      case 'privhosp': { // private hospital: glass tower on a podium, a canopy drop-off
+        rect(g, X, Y + H - 14, W, 14, '#cfd8dc');
+        const s = building(g, X + 6, Y, W - 12, H - 16, { wall: '#e8f1f5', roof: '#457b9d', wallH: H - 42, details: 'helipad', seed: b.id });
+        windows(g, X + 10, s.wallY + 4, W - 20, s.wallH - 10, 5, 8, { col: '#a8dadc', wide: 0.8 });
+        rect(g, X + 8, Y + H - 20, W - 16, 4, '#ffffff'); rect(g, X + 8, Y + H - 16, W - 16, 1, '#90a4ae'); // canopy
+        rect(g, X + W - 18, Y + 6, 10, 10, '#e63946'); rect(g, X + W - 14, Y + 7, 2, 8, '#fff'); rect(g, X + W - 17, Y + 10, 8, 2, '#fff');
+        sign(g, (b.label || 'PRIVATE HOSPITAL').toUpperCase().slice(0, 22), X + W / 2, Y + H - 12, '#1d3557');
+        break;
+      }
       case 'factory': { // saw-tooth roof, chimneys at fixed spots (smoke is drawn there)
         castShadow(g, X + 2, Y + 4, W - 4, H - 6, 5);
         for (let i = 0; i < W - 4; i += 16) { roof(g, X + 2 + i, Y + 4, 16, 14, '#8a949c', 'shed'); rect(g, X + 2 + i, Y + 4, 2, 14, '#b9d3e0'); }
@@ -678,14 +697,14 @@
       case 'park': {
         rect(g, X, Y, W, H, '#93c96b');
         g.fillStyle = '#8bc263'; for (let i = 0; i < 30; i++) g.fillRect(X + R.int(0, W - 4), Y + R.int(0, H - 3), 4, 2);
-        g.strokeStyle = '#e2cf9f'; g.lineWidth = 5; g.beginPath(); g.ellipse(X + W / 2, Y + H / 2 + 10, W / 2 - 8, H / 2 - 32, 0, 0, Math.PI * 2); g.stroke();
-        g.fillStyle = '#3f8fb5'; g.beginPath(); g.ellipse(X + W / 2, Y + H / 2 + 10, W / 2 - 16, H / 2 - 42, 0, 0, Math.PI * 2); g.fill();
-        g.fillStyle = '#4fa3c7'; g.beginPath(); g.ellipse(X + W / 2, Y + H / 2 + 8, W / 2 - 18, H / 2 - 45, 0, 0, Math.PI * 2); g.fill();
+        g.strokeStyle = '#e2cf9f'; g.lineWidth = 5; g.beginPath(); g.ellipse(X + W / 2, Y + H / 2 + 10, Math.max(1, W / 2 - 8), Math.max(1, H / 2 - 32), 0, 0, Math.PI * 2); g.stroke();
+        g.fillStyle = '#3f8fb5'; g.beginPath(); g.ellipse(X + W / 2, Y + H / 2 + 10, Math.max(1, W / 2 - 16), Math.max(1, H / 2 - 42), 0, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#4fa3c7'; g.beginPath(); g.ellipse(X + W / 2, Y + H / 2 + 8, Math.max(1, W / 2 - 18), Math.max(1, H / 2 - 45), 0, 0, Math.PI * 2); g.fill();
         g.fillStyle = '#7cc3e0'; g.beginPath(); g.ellipse(X + W / 2 - 8, Y + H / 2 + 2, 14, 6, 0, 0, Math.PI * 2); g.fill();
         rect(g, X + W / 2 - 1, Y + H / 2 + 6, 2, 6, '#e2cf9f'); // fountain
         for (const [tx, ty] of [[4, 6], [W - 20, 10], [6, H - 30], [W - 22, H - 28], [W / 2 - 7, 2]]) rainTree(g, X + tx, Y + ty, 1, R);
         for (const [bx, by] of [[20, H - 40], [W - 36, 40]]) { rect(g, X + bx, Y + by, 10, 2, PAL.wood); rect(g, X + bx, Y + by + 2, 1, 2, PAL.woodDark); rect(g, X + bx + 9, Y + by + 2, 1, 2, PAL.woodDark); }
-        sign(g, 'TAMAN TASIK', X + W / 2, Y + H - 14, '#2d6a4f');
+        sign(g, b.label === 'Garden' ? 'TAMAN' : 'TAMAN TASIK', X + W / 2, Y + H - 14, '#2d6a4f');
         break;
       }
       case 'gym': { // stadium: running track around a pitch, small stand
@@ -838,7 +857,8 @@
         rect(g, X, Y, W, H, '#7fbf5a'); for (let y = Y; y < Y + H; y += 8) rect(g, X, y, W, 4, '#77b553');
         g.strokeStyle = '#f4f1e8'; g.lineWidth = 1; g.strokeRect(X + 4.5, Y + 6.5, W - 9, H - 13);
         rect(g, X + W / 2 - 10, Y + 8, 20, 8, '#cfc6b0'); rect(g, X + W / 2 - 10, Y + 8, 20, 2, '#e8e1d0'); // the stage
-        sign(g, 'PADANG', X + W / 2, Y + H - 14, '#2d6a4f');
+        if (b.label !== 'Field') sign(g, 'PADANG', X + W / 2, Y + H - 14, '#2d6a4f');
+        else { rect(g, X + 8, Y + H / 2 - 1, W - 16, 1, '#f4f1e8'); for (const gx of [X + 6, X + W - 9]) rect(g, gx, Y + H / 2 - 5, 3, 10, '#ffffff'); } // a school sports field
         break;
       }
       case 'court': { // court with columns and a dome-capped clock tower

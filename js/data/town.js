@@ -15,6 +15,7 @@
   // R welfare home + flats, V mid-tier leisure (cinema, karaoke bar, bowling, futsal),
   // Y upscale leisure (fine dining, sky lounge, spa), Z golf & country club,
   // N train station, G gateway square (bus depot, memorial), L empty lot (the town grows here)
+  // e private school and h private hospital (built on an empty lot by a resident's business)
   LES.MAP_SIZES = {
     kampung: { name: 'Kampung', cols: 6, rows: 5, suggest: 'up to ~60 founders', maxFounders: 60 },
     pekan: { name: 'Pekan', cols: 9, rows: 6, suggest: '60-250 founders', maxFounders: 250 },
@@ -136,6 +137,8 @@
     mall: 'Shopping mall: retail and cleaning jobs, promoter and e-hailing gigs.',
     shoplot: 'Shoplot unit for a small business.',
     hospital: 'Hospital: doctors, nurses and treatment for the sick and injured.',
+    privschool: 'A private school, owned by a resident. Fee-paying families send their children here; the owner pays the teachers.',
+    privhosp: 'A private hospital, owned by a resident. Richer patients pay more for quicker care; the owner pays the doctors and nurses.',
     school: 'Sekolah: where children spend their days.',
     factory: 'Kilang: factory operator and engineer jobs.',
     workshop: 'Bengkel: mechanics and repair gigs.',
@@ -277,6 +280,8 @@
       case 'R': at('welfare', 'Rumah Kebajikan', 1, 1, 6, 3); home('flat', 8, 1, 5, 9, 1, 40); break;
       case 'G': at('depot', 'Bus Depot', 1, 1, 6, 4); at('memorial', 'Taman Kenangan', 8, 1, 6, 8); break;
       case 'X': at('hq', block.hqName || 'Menara', 4, 0, 6, 10); at('park', 'Plaza', 0, 0, 3, 11, { decor: true }); break;
+      case 'e': at('privschool', block.hqName || 'Private School', 1, 0, 9, 7); at('padang', 'Field', 1, 7, 12, 4, { decor: true }); break; // private school with a sports field
+      case 'h': at('privhosp', block.hqName || 'Private Hospital', 4, 0, 10, 9); at('park', 'Garden', 0, 0, 3, 11, { decor: true }); break;
       case 'V':
         at('cinema', 'Panggung Wayang', 1, 1, 6, 5, { venue: true });
         at('karaoke', 'Karaoke & Bar', 8, 1, 6, 4, { venue: true });

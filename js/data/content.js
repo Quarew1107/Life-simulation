@@ -63,6 +63,9 @@
   // Public-sector jobs: not in the random vacancy market; the government hires to its budget.
   C.GOV_JOBS = {
     police: { id: 'police', title: 'Police Officer', salary: 3000, req: null, w: w(.1, .3, .3, .1, .1, .1), diff: 4.5, cat: 'office', place: 'police', risk: 'physical', gov: true, freq: 0 },
+    // City council officials, appointed by the leader (js/sim/council.js).
+    treasurer: { id: 'treasurer', title: 'Bendahari Bandaraya', salary: 8000, req: 'BACH', w: w(.6, 0, .3, .1, 0, 0), diff: 6, cat: 'office', place: 'townhall', gov: true, freq: 0 },
+    community: { id: 'community', title: 'Pengarah Pembangunan Masyarakat', salary: 7000, req: 'BACH', w: w(.3, 0, .1, .5, 0, .1), diff: 5.5, cat: 'office', place: 'townhall', gov: true, freq: 0 },
   };
   for (const j of Object.values(C.GOV_JOBS)) C.JOB_BY_ID[j.id] = j;
   C.JOB_FREQ = C.JOBS.map(j => j.freq);
@@ -137,8 +140,17 @@
     { id: 'tech', name: 'Tech Startup', capital: 120000, scale0: 15000, cap: 30000000, costRatio: 0.92, fixed: 6000, sigma: 0.35, boom: 0.0026, boomMin: 3, boomMax: 8, bust: 0.012, capEff: 0.12, skillSpread: 0.35, cyclical: 1.2, multiple: 8, w: w(.7, 0, .2, .1, 0, 0), place: 'techhub', names: ['Tech', 'Labs', 'Digital', 'AI', 'Apps', 'Robotics'] },
     { id: 'property', name: 'Property Developer', capital: 1000000, scale0: 300000, cap: 20000000, costRatio: 0.88, fixed: 30000, sigma: 0.3, boom: 0.0011, boomMin: 2, boomMax: 3.5, bust: 0.005, capEff: 0.07, skillSpread: 0.22, cyclical: 2.5, multiple: 5, w: w(.3, 0, .2, .5, 0, 0), place: 'office', names: ['Properties', 'Development', 'Land Sdn Bhd', 'Realty'] },
   ];
+  // Private health and education (only with the government system, which pays for the
+  // public ones). Owners pay their own staff (staff = posts at the starting size);
+  // build = district code of the building put up on an empty lot; maxPer = at most one
+  // per this many residents; fee = monthly school fee per pupil (Year-1 RM).
+  C.BIZ_SERVICES = [
+    { id: 'clinic', name: 'Private Clinic', capital: 200000, scale0: 45000, cap: 400000, costRatio: 0.84, fixed: 3000, sigma: 0.08, boom: 0.0003, boomMin: 1.3, boomMax: 2, bust: 0.002, capEff: 0.1, skillSpread: 0.15, cyclical: 0.3, multiple: 4, w: w(.5, 0, .3, .2, 0, 0), place: 'shoplot', req: 'MED', staff: { nurse: 1 }, service: 'health', maxPer: 250, names: ['Klinik', 'Poliklinik', 'Klinik Keluarga', 'Medical Clinic'] },
+    { id: 'privschool', name: 'Private School', capital: 1500000, scale0: 120000, cap: 3000000, costRatio: 0.86, fixed: 20000, sigma: 0.06, boom: 0.0003, boomMin: 1.3, boomMax: 2, bust: 0.0015, capEff: 0.08, skillSpread: 0.15, cyclical: 0.4, multiple: 6, w: w(.4, 0, .1, .5, 0, 0), place: 'build', build: 'e', staff: { teacher: 6 }, service: 'education', fee: 1500, maxPer: 700, names: ['International School', 'Academy', 'Sekolah Swasta', 'Private School'] },
+    { id: 'privhosp', name: 'Private Hospital', capital: 4000000, scale0: 350000, cap: 12000000, costRatio: 0.86, fixed: 40000, sigma: 0.08, boom: 0.0004, boomMin: 1.3, boomMax: 2.2, bust: 0.0015, capEff: 0.07, skillSpread: 0.15, cyclical: 0.3, multiple: 7, w: w(.4, 0, .2, .4, 0, 0), place: 'build', build: 'h', staff: { doctor: 3, nurse: 6 }, service: 'health', maxPer: 1200, names: ['Specialist Hospital', 'Medical Centre', 'Hospital Pakar'] },
+  ];
   C.BIZ_BY_ID = {};
-  for (const b of C.BIZ) C.BIZ_BY_ID[b.id] = b;
+  for (const b of C.BIZ.concat(C.BIZ_SERVICES)) C.BIZ_BY_ID[b.id] = b;
 
   // ---- Economy regimes (yearly Markov chain) ----
   C.REGIMES = {
@@ -224,6 +236,14 @@
     { tk: 'MAKAN', name: 'Makan Foods', sector: 'Consumer', sharesM: 300, beta: 0.8, idio: 0.16, drift: 0, colour: '#f28482' },
     { tk: 'SAWIT', name: 'Sawit Agro', sector: 'Plantation', sharesM: 400, beta: 0.7, idio: 0.2, drift: 0, colour: '#57cc99' },
     { tk: 'INSAN', name: 'Insan Insurance', sector: 'Finance', sharesM: 300, beta: 0.9, idio: 0.14, drift: 0, colour: '#4361ee' },
+  ];
+  // Government-linked companies listed once the town's public finances have matured
+  // (js/sim/fiscal.js). div = yearly dividend yield, paid quarterly; the treasury's
+  // sovereign fund (Khazanah Rezeki) buys a stake at listing.
+  C.GLC_STOCKS = [
+    { tk: 'TENAGA', name: 'Tenaga Rezeki', sector: 'Utilities', sharesM: 60, price0: 3.2, beta: 0.5, idio: 0.12, drift: 0, div: 0.04, colour: '#ffd166', glc: true, blurb: 'electricity for the town and the region' },
+    { tk: 'PETROZ', name: 'Petroliam Rezeki', sector: 'Oil & gas', sharesM: 80, price0: 5.5, beta: 0.9, idio: 0.26, drift: 0, div: 0.06, colour: '#06d6a0', glc: true, blurb: 'offshore oil and gas' },
+    { tk: 'BPR', name: 'Bank Pembangunan Rezeki', sector: 'Finance', sharesM: 50, price0: 2.6, beta: 0.8, idio: 0.14, drift: 0, div: 0.05, colour: '#118ab2', glc: true, islamic: true, blurb: 'Islamic development bank for local businesses' },
   ];
   C.MARKET_IMPACT_Y = 0.8;      // square-root impact prefactor (Toth et al. 2011: order one)
   C.TRADING_DAYS = 252;

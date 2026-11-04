@@ -85,8 +85,7 @@
     p.health = Math.max(1, p.health - hpLoss);
     p.att[best] = Math.max(0, p.att[best] - attLoss);
     p.injuredUntil = w.day + R.int(7, 60);
-    const bill = Math.min(p.cash, w.px(R.range(500, 5000)));
-    w.ledger.spend(p, 'cash', 'HEALTH', bill);
+    LES.Services.medicalBill(w, p, Math.min(p.cash, w.px(R.range(500, 5000))));
     p.stress = Math.min(100, p.stress + 20);
     w.stats.catastrophes++;
     P.log(w, p, `Seriously ${what}: -${Math.round(hpLoss)} health, lost ${attLoss.toFixed(1)} ${C.ATTR_NAMES[best]}`, 'luck', 1);
@@ -442,7 +441,7 @@
         break;
       }
       case 'HEALTH':
-        if (L.spend(p, 'cash', 'HEALTH', w.px(60))) { p.health += 12; p.stress -= 2; }
+        if (w.gov ? p.cash >= w.px(60) && LES.Services.medicalBill(w, p, w.px(60), true) >= 0 : L.spend(p, 'cash', 'HEALTH', w.px(60))) { p.health += 12; p.stress -= 2; } // public clinics charge RM1
         p.energy -= 4;
         break;
       case 'CHILDCARE':

@@ -274,7 +274,8 @@
           const wealth = p.cash + P.invValue(w, p), nisab = w.px(S.NISAB_RM);
           if (wealth > nisab && R.next() < 0.35 + 0.6 * devout(p)) {
             const z = donate(w, p, Math.round(wealth * 0.025), 'zakat');
-            if (z >= w.px(1000)) P.log(w, p, `Paid ${U.fmtMoney(z)} zakat`, 'money', 0);
+            const reb = LES.Fiscal && w.gov ? LES.Fiscal.zakatRebate(w, p, z) : 0; // zakat is rebated against income tax
+            if (z >= w.px(1000)) P.log(w, p, `Paid ${U.fmtMoney(z)} zakat${reb > 0 ? ` (${U.fmtMoney(reb)} rebated against income tax)` : ''}`, 'money', 0);
           }
         }
         // Devotion drifts a little with age and practice; a few drift away from religion.

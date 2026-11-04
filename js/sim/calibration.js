@@ -18,6 +18,8 @@
     crimeIdx: { label: 'Index crime per 100k (realistic scale)', target: 170, band: 70, fmt: x => x.toFixed(0), src: 'DOSM Crime Statistics 2025 (58,255 cases in 2024)' },
     drugUsers: { label: 'Drug users per 100k (realistic scale)', target: 586, band: 250, fmt: x => x.toFixed(0), src: 'AADK 2024 (192,857 users)' },
     prison: { label: 'Prisoners per 100k (realistic scale)', target: 256, band: 110, fmt: x => x.toFixed(0), src: 'World Prison Brief, Nov 2024 (87,419)' },
+    clearance: { label: 'Share of crimes solved', target: 0.65, band: 0.1, fmt: U.fmtPct, src: 'PDRM index-crime solving rate (~65%)' },
+    revenue: { label: 'Public revenue per person / month (Year-1 RM)', target: 815, band: 250, fmt: x => `RM${Math.round(x)}`, src: 'MOF: federal revenue RM324bn (2024) / 34.1m people' },
   };
 
   // Period life expectancy from deaths and person-years lived in the last `years` years
@@ -73,7 +75,9 @@
       const k = LES.Crime.INTENSITY[w.cfg.crime] || 1, rows = w.history.filter(x => x.cr && x.day > 5 * 365 && U.dayToDate(x.day).month === 11);
       const avg = f => (rows.length ? rows.reduce((s, x) => s + f(x.cr), 0) / rows.length / k : NaN);
       r.crimeIdx = avg(c => c.index); r.drugUsers = avg(c => c.users); r.prison = avg(c => c.prison);
+      r.clearance = w.crime.crimesTotal ? w.crime.solvedTotal / w.crime.crimesTotal : NaN;
     }
+    if (w.gov && w.gov.revHist.length) r.revenue = U.sum(w.gov.revHist.slice(-12)) / Math.min(12, w.gov.revHist.length) / w.price / 100 / Math.max(1, w.counts.living);
     return r;
   };
 
@@ -90,7 +94,7 @@
     for (const k of Object.keys(Cal.TARGETS)) {
       const t = Cal.TARGETS[k], vals = rows.map(r => r[k]).filter(Number.isFinite);
       const v = vals.length ? U.sum(vals) / vals.length : NaN;
-      lines.push(`${t.label.padEnd(34)} sim ${String(Number.isFinite(v) ? t.fmt(v) : 'n/a').padStart(8)}   target ${String(t.fmt(t.target)).padStart(8)}   ${Cal.status(k, v)}`);
+      lines.push(`${t.label.padEnd(46)} sim ${String(Number.isFinite(v) ? t.fmt(v) : 'n/a').padStart(8)}   target ${String(t.fmt(t.target)).padStart(8)}   ${Cal.status(k, v)}`);
     }
     if (rows[0] && rows[0].years < 60) lines.push('Note: fewer than 60 years simulated, so life expectancy and children per woman are not meaningful yet.');
     return lines.join('\n');
