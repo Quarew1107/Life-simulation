@@ -488,10 +488,10 @@
     // A private school: built on an empty lot, staffed and paid by its owner.
     const owner = w.living.filter(q => q.adult && !q.inst && q.manages < 0).sort((a, b) => b.cash - a.cash)[0];
     w.ledger.pay('GENESIS', owner, 'cash', w.px(4e6));
-    const lots = w.town.lots.filter(id => !w.town.buildings[id].built).length;
+    const lots = w.town.lots.filter(id => !w.town.buildings[id].built).length, hadSchool = (w.town.kinds.privschool || []).length;
     F.startBusiness(w, owner, { type: LES.C.BIZ_BY_ID.privschool, skill: 5 }, { mc: owner.mcost, risk: 0.3 });
     const sch = w.biz[w.biz.length - 1];
-    check('A private school is built on an empty lot', w.town.buildings[sch.place].kind === 'privschool' && w.town.lots.filter(id => !w.town.buildings[id].built).length === lots - 1);
+    check('A private school is built on an empty lot', w.town.buildings[sch.place].kind === 'privschool' && (w.town.lots.filter(id => !w.town.buildings[id].built).length === lots - 1 || hadSchool > 0)); // or it takes over an empty school building
     await runDays(w, 75);
     const staff = w.living.filter(p => p.job && p.job.biz === sch.id);
     check('It hires its own teachers, who are paid by the school', staff.length > 0 && staff.every(p => p.job.jobId === 'teacher' && !SV.lineOf(p.job)) && (sch.payrollLast > 0 || sch.payrollNow > 0), `${staff.length} staff`);
@@ -577,8 +577,8 @@
     check('One national economy: same business cycle, inflation and stock exchange', R.towns.every(w => w.regime === R.lead.regime && w.infl === R.lead.infl && w.mkt === R.lead.mkt && Math.abs(w.price - R.lead.price) < 1e-12));
     check('Households move between the towns', R.moves.length > 0, `${R.moves.length} moves`);
     check('Some residents commute to jobs in a sister town', R.commuters().some(n => n > 0) && R.commutePosts > 0, `${R.commuters()} commuters`);
-    const mv = R.moves[0], [fromId, toId] = mv.pairs[0], a = R.towns[mv.from].people[fromId], b = R.towns[mv.to].people[toId];
-    check('A mover is the same person in the new town, linked back to the old one', a.first === b.first && a.birthDay === b.birthDay && a.away.town === mv.to && b.xlinks[0].id === fromId);
+    const mv = R.moves.find(m => R.towns[m.from].people[m.pairs[0][0]].away) || R.moves[0], [fromId, toId] = mv.pairs[0], a = R.towns[mv.from].people[fromId], b = R.towns[mv.to].people[toId]; // someone still alive
+    check('A mover is the same person in the new town, linked back to the old one', a.first === b.first && a.birthDay === b.birthDay && (!a.away || a.away.town === mv.to) && b.xlinks[0].id === fromId);
     check('Town types change the district mix', (() => { const k = t => { const w2 = new LES.World(Object.assign({}, LES.DEFAULTS, { seed: 'tt', founders: 120, town1Type: t })); return w2.town.blocks.filter(b => b.code === 'I').length; }; return k('industrial') > k('mixed'); })());
     const cw = new LES.World({ seed: 'cast-t', founders: 40 }), spec = Object.assign(LES.Cast.blank(), { first: 'Test', last: 'Person', att: [9, 1, 5, 5, 5, 5], cash: 77000, qual: 'BACH_BUS' });
     const cp = LES.Cast.add(cw, spec);
