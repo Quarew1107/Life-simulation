@@ -345,7 +345,7 @@
       const g = portrait.getContext('2d');
       g.imageSmoothingEnabled = false;
       const group = age < 3 ? 'baby' : !p.adult ? 'child' : age >= 65 ? 'elder' : 'adult';
-      const spr = LES.Sprites.person(p.look, group, 0);
+      const spr = LES.Sprites.person(LES.Sprites.lookOf(p, P.age(w, p)), group, 0);
       const k = Math.floor(Math.min(60 / spr.width, 80 / spr.height));
       g.drawImage(spr, Math.round((64 - spr.width * k) / 2), Math.round((88 - spr.height * k) / 2), spr.width * k, spr.height * k);
     }

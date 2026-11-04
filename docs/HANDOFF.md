@@ -50,6 +50,17 @@ economy, comparison card, save/load. Next, in this order:
    sprite preview, roster in localStorage with export/import, "★ My cast" mode in the Leaders tab,
    ★ on leaderboards). Still open: adding cast as founders at setup, partners/families inside the cast,
    more appearance options (glasses, beard, headwear), life-event alerts, a report section.
+   UPDATE (Nov 2026): founders at setup (`cfg.cast`, setup picker, `LES.Cast.founders`), households
+   (`spec.partner`, `spec.parents`, `LES.Cast.households/addGroup`; a child needs a cast parent 12+ years
+   older; the consistency check accepts one parent for cast children), recorded arrivals
+   (`cfg.castArrivals` = [{ day, town, specs }], on the region's base cfg in a region; `LES.Cast.due` at the
+   start of `World.step` replays them), and looks (`look.glasses/beard/hat/hatColour` in sprites.js;
+   residents get them from `LES.Sprites.lookOf`, a fixed rule, presentation only) are DONE. Still open:
+   alerts and the report section (in progress).
+   FOUND (not fixed, owner to decide): a household head whose affordable housing tier equals the default
+   (tier 1) never gets a home (`F.reviewTiers` only moves when the tier changes): ~38 of 100 founders
+   have homeId -1 for good. Present since the original engine; fixing it changes every history and the
+   stored Classic fingerprints. Cast households are given a home explicitly.
 4. 4.1 chunked static map layer, 4.5 countries, 4.6 polish.
 
 ## 2. Done so far
