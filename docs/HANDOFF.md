@@ -60,6 +60,15 @@ building changes.
   one function whose `toString()` feeds a Blob worker).
 
 ### 4.2 Multiple towns ("Region")
+**Progress:** increment 1 is DONE (`js/sim/region.js`, tests in `regionTests`): `new LES.Region(baseCfg, [townCfg, ...])`
+steps up to 3 Worlds in lockstep; the lead town runs the economy and the shared Bursa
+(`w.follower` skips `Market.daily` and `macroYear`; GLC listings only in the lead); leavers may
+settle in a sister town (`Region.onLeave` -> `relocate` at month end, money via each ledger's
+ABROAD sector, origin record `p.away = { town, id }`, copy has `xlinks`); deaths and
+inheritance follow across towns. **Not yet:** UI (setup option "Towns: 1-3", town switcher,
+main loop stepping the Region, Region tab), region save/load, commuting, shopping, spillovers,
+town types. Next step: in `js/main.js` keep `app.region` and make `app.world` the selected town;
+`app.step` calls `region.step()`; the renderer is rebuilt for the selected town on switch.
 Architecture: **each town is a full `LES.World`** (own people, ledger, council, laws); a new
 `LES.Region` (new file `js/sim/region.js`) owns the towns and a shared national layer and
 steps them in lockstep (same day for all, fixed town order). Towns interact through fixed

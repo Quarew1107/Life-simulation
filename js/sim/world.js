@@ -167,7 +167,7 @@
       p.peakNw = p.nw;
       LES.Goals.pick(this, p, null);
       for (const s of this.sys.personCreated) s.personCreated(this, p, 'adult');
-      if (!p.migrant) P.log(this, p, `Arrived in ${C.TOWN_NAME} aged ${age}${p.job ? ` working as ${p.job.title}` : ''} with ${U.fmtMoney(p.cash)}`, 'life', 0);
+      if (!p.migrant) P.log(this, p, `Arrived in ${LES.townName(this)} aged ${age}${p.job ? ` working as ${p.job.title}` : ''} with ${U.fmtMoney(p.cash)}`, 'life', 0);
       return p;
     }
 
@@ -207,7 +207,7 @@
       this.startOfDay();
       for (const p of this.living) if (p.alive && p.adult) F.dailyFood(this, p);
       Lb.dailyMarket(this);
-      LES.Market.daily(this);
+      if (!this.follower) LES.Market.daily(this); // in a region the first town runs the shared exchange
       for (const p of this.living) {
         if (!p.alive) continue;
         if (p.adult) {
@@ -316,7 +316,7 @@
         if (th === this.goal) {
           if (!this.winner) {
             this.winner = { pid: p.id, day: this.day, age, nw: p.nw, real: P.realWorth(this, p) };
-            P.log(this, p, `REACHED THE GOAL: ${U.fmtMoney(th)}${this.cfg.goalMode === 'real' ? ' (Year-1 money)' : ''} net worth at age ${age}! First in ${C.TOWN_NAME}.`, 'wealth', 3);
+            P.log(this, p, `REACHED THE GOAL: ${U.fmtMoney(th)}${this.cfg.goalMode === 'real' ? ' (Year-1 money)' : ''} net worth at age ${age}! First in ${LES.townName(this)}.`, 'wealth', 3);
             if (this.cfg.stopOnWinner === 'yes') this.pauseRequested = 'goal';
           } else {
             P.log(this, p, `Also reached the ${U.fmtMoney(th)} goal at age ${age}`, 'wealth', 2);
@@ -377,7 +377,7 @@
     }
 
     yearClose() {
-      F.macroYear(this);
+      if (!this.follower) F.macroYear(this); // the national economy (a region's other towns copy it)
       Lb.yearClose(this);
       for (const p of this.living) {
         if (!p.alive) continue;
@@ -427,7 +427,7 @@
       this.townVersion++;
       this.townGrowth = (this.townGrowth || 0) + 1;
       const names = { K: 'kampung houses', F: 'PPR flats', T: 'a terrace estate', C: 'condominium towers', B: 'hillside bungalows', S: 'a new row of shoplots' };
-      this.pushFeed({ day: this.day, pid: -1, text: `${C.TOWN_NAME} is growing: ${names[code]} built on empty land`, cat: 'economy', imp: 2 });
+      this.pushFeed({ day: this.day, pid: -1, text: `${LES.townName(this)} is growing: ${names[code]} built on empty land`, cat: 'economy', imp: 2 });
     }
 
     // Heritable ageing: after an onset age each attribute group loses a % of its

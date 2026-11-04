@@ -114,7 +114,8 @@
     w.departures = (w.departures || []).filter(d => w.day - d.day < 3);
     for (const x of [...adults, ...kids]) w.departures.push({ id: x.id, home: x.homeId, day: w.day });
     for (const x of [...adults, ...kids]) Mi.exile(w, x, reason);
-    P.log(w, head, `Moved away from ${C.TOWN_NAME} for ${reason}${adults.length > 1 || kids.length ? ` with ${adults.length - 1 + kids.length} family member${adults.length - 1 + kids.length > 1 ? 's' : ''}` : ''}`, 'migration', 1);
+    if (w.region) w.region.onLeave(w, [...adults, ...kids], reason); // they may settle in a sister town
+    P.log(w, head, `Moved away from ${LES.townName(w)} for ${reason}${adults.length > 1 || kids.length ? ` with ${adults.length - 1 + kids.length} family member${adults.length - 1 + kids.length > 1 ? 's' : ''}` : ''}`, 'migration', 1);
     w.stats.emigrants += adults.length + kids.length;
   };
 
@@ -132,7 +133,7 @@
   // Off-screen life: wealth drifts, people age and may die or come back.
   Mi.awayMonth = function (w, ind) {
     const R = w.rng.migration;
-    const away = w.people.filter(p => p.alive && p.away);
+    const away = w.people.filter(p => p.alive && p.away && p.away.town === undefined); // (people who moved to a sister town live on there)
     w.counts.away = away.length;
     for (const p of away) {
       p.away.wealth *= 1 + (0.02 + w.infl) / 12 + R.normal(0, 0.03);
@@ -170,7 +171,7 @@
     }
     F.moveHome(w, head, 0, true);
     for (const p of group) if (p.adult) F.reviewTiers(w, p);
-    P.log(w, head, `Returned to ${C.TOWN_NAME} after ${years} year${years > 1 ? 's' : ''} away`, 'migration', 1);
+    P.log(w, head, `Returned to ${LES.townName(w)} after ${years} year${years > 1 ? 's' : ''} away`, 'migration', 1);
     w.stats.returns += group.length;
   };
 
@@ -204,7 +205,7 @@
     }
     for (const m of members) if (m.adult) m.mcost = F.monthlyCost(w, m);
     const extra = members.length - 1;
-    P.log(w, head, `Moved to ${C.TOWN_NAME} aged ${Math.floor(P.age(w, head))}${extra ? ` with ${extra} family member${extra > 1 ? 's' : ''}` : ''}, bringing ${U.fmtMoney(members.reduce((s, m) => s + m.cash + m.trust, 0))}`, 'migration', 1);
+    P.log(w, head, `Moved to ${LES.townName(w)} aged ${Math.floor(P.age(w, head))}${extra ? ` with ${extra} family member${extra > 1 ? 's' : ''}` : ''}, bringing ${U.fmtMoney(members.reduce((s, m) => s + m.cash + m.trust, 0))}`, 'migration', 1);
     w.stats.immigrants += members.length;
   };
 })(globalThis.LES = globalThis.LES || {});

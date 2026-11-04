@@ -327,7 +327,7 @@
     g.electionDay = w.day + Math.round(w.cfg.termYears * 365);
     const turnout = res.eligible ? Math.round(res.voted / res.eligible * 100) : 0;
     const winner = w.people[win.id];
-    P.log(w, winner, `${prev === win.id ? 'Re-elected' : 'Elected'} ${GV.title(w)} of ${C.TOWN_NAME} with ${win.votes} votes`, 'politics', 3);
+    P.log(w, winner, `${prev === win.id ? 'Re-elected' : 'Elected'} ${GV.title(w)} of ${LES.townName(w)} with ${win.votes} votes`, 'politics', 3);
     w.pushFeed({ day: w.day, pid: win.id, text: `${P.name(winner)} ${prev === win.id ? 'was re-elected' : 'won the election'} as ${GV.title(w)} (${res.cands.map(c => `${c.name.split(' ')[0]} ${c.votes}`).join(', ')}; turnout ${turnout}%)`, cat: 'politics', imp: 3 });
     w.townVersion++; // banners come down
     if (LES.Council && w.gov.officials) LES.Council.reshuffle(w);

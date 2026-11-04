@@ -293,7 +293,7 @@
     }
     // Mature public finances: government-linked companies list on Bursa Rezeki.
     const years = w.day / 365, listed = w.mkt.stocks.filter(s => s.def.glc).length;
-    if (years >= 8 && g.revHist.length >= 24 && g.debt < FS.avgRevenue(w) * 6 && listed < C.GLC_STOCKS.length && R.next() < 0.35) FS.listGlc(w, C.GLC_STOCKS[listed]);
+    if (!w.follower && years >= 8 && g.revHist.length >= 24 && g.debt < FS.avgRevenue(w) * 6 && listed < C.GLC_STOCKS.length && R.next() < 0.35) FS.listGlc(w, C.GLC_STOCKS[listed]);
     for (const p of w.living) { p.taxYr = 0; p.divYr = 0; if (p.pension > 0) p.pension = Math.round(p.pension * 1.02); } // pensions rise 2% a year
     g.devStock = Math.round(g.devStock * 0.94); // infrastructure wears out
   };
