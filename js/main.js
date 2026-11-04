@@ -282,7 +282,7 @@
     const b = $('btn-sound');
     b.textContent = on ? '🔊' : '🔇';
     b.classList.toggle('on', on);
-    $('vol-pop').classList.toggle('hidden', !on);
+    if (!on) $('vol-pop').classList.add('hidden'); // the sliders only appear while hovering (see initVolumeHover)
     $('vol-music').value = Math.round(LES.Audio.music * 100);
     $('vol-sfx').value = Math.round(LES.Audio.sfx * 100);
   }
@@ -345,6 +345,19 @@
       const rect = cv.getBoundingClientRect();
       r.zoomAt(e.clientX - rect.left, e.clientY - rect.top, e.deltaY < 0 ? 1.15 : 1 / 1.15);
     }, { passive: false });
+    // Volume sliders: shown while the mouse is over the sound button (sound on), kept for
+    // a second after it leaves, and kept as long as the mouse is over the sliders themselves.
+    {
+      const pop = $('vol-pop'), btn = $('btn-sound');
+      let timer = 0, dragging = false;
+      const show = () => { clearTimeout(timer); if (LES.Audio.on) pop.classList.remove('hidden'); };
+      const hideSoon = () => { clearTimeout(timer); timer = setTimeout(() => { if (!dragging && !pop.matches(':hover') && !btn.matches(':hover')) pop.classList.add('hidden'); }, 1000); };
+      btn.addEventListener('mouseenter', show); btn.addEventListener('mouseleave', hideSoon);
+      pop.addEventListener('mouseenter', show); pop.addEventListener('mouseleave', hideSoon);
+      pop.addEventListener('pointerdown', () => { dragging = true; });
+      window.addEventListener('pointerup', () => { if (dragging) { dragging = false; hideSoon(); } }); // finished adjusting (even if released outside)
+      btn.addEventListener('click', () => { if (LES.Audio.on) { show(); hideSoon(); } });
+    }
     $('vol-music').addEventListener('input', e => LES.Audio.setMusicVolume(Number(e.target.value) / 100));
     $('vol-sfx').addEventListener('input', e => LES.Audio.setSfxVolume(Number(e.target.value) / 100));
     $('vol-sfx').addEventListener('change', () => LES.Audio.play('chime', true)); // preview

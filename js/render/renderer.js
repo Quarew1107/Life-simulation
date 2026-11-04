@@ -361,6 +361,7 @@
       this.drawShops(g);
       if (w.crime) this.drawTurf(g, w);
       if (w.gov) this.drawCivic(g, w, now);
+      this.drawSignals(g, now);
       LES.Ambience.drawWorld(this, g, w, t, now, fast);
       if (this.selectedBuilding >= 0) {
         const b = this.town.buildings[this.selectedBuilding], T = this.town.T;
@@ -555,6 +556,26 @@
     }
 
     // Flood water on the flooded blocks, and campaign flags along the roads before an election.
+    // Traffic lights: north-south and east-west take turns (green, amber, red), each junction
+    // on its own timing; only junctions on screen are drawn.
+    drawSignals(g, now) {
+      const town = this.town, T = town.T, list = LES.junctions(town);
+      const x0 = this.cx - 40, y0 = this.cy - 40, x1 = this.cx + this.vw / this.z + 40, y1 = this.cy + this.vh / this.z + 40;
+      const CYCLE = 20000, lamp = (px, py, st) => {
+        g.fillStyle = '#1b1e24'; g.fillRect(px - 1, py - 8, 4, 9);
+        g.fillStyle = st === 'red' ? '#ff4d4d' : '#3a2020'; g.fillRect(px, py - 7, 2, 2);
+        g.fillStyle = st === 'amber' ? '#ffbe0b' : '#3a3320'; g.fillRect(px, py - 4, 2, 2);
+        g.fillStyle = st === 'green' ? '#57d38c' : '#1f3a2a'; g.fillRect(px, py - 1, 2, 2);
+      };
+      for (const n of list) {
+        if (n.type !== 'lights' || n.x < x0 || n.x > x1 || n.y < y0 || n.y > y1) continue;
+        const t = ((now + n.phase * CYCLE) % CYCLE) / CYCLE; // 0-0.4 NS green, 0.4-0.5 NS amber, 0.5-0.9 EW green, 0.9-1 EW amber
+        const ns = t < 0.4 ? 'green' : t < 0.5 ? 'amber' : 'red', ew = t < 0.5 ? 'red' : t < 0.9 ? 'green' : 'amber';
+        lamp(n.x - 6, n.y - 12, ns); lamp(n.x + 2 * T + 4, n.y + 2 * T - 4, ns);
+        lamp(n.x + 2 * T + 4, n.y - 12, ew); lamp(n.x - 6, n.y + 2 * T - 4, ew);
+      }
+    }
+
     drawCivic(g, w, now) {
       const T = this.town.T, gv = w.gov;
       if (gv.flood && w.day < gv.flood.until) {

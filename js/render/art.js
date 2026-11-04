@@ -307,9 +307,36 @@
         if (n.N) rect(g, n.x + 2 + i * 8, n.y - 11, 4, 8, PAL.laneW);
         if (n.S) rect(g, n.x + 2 + i * 8, n.y + RW + 3, 4, 8, PAL.laneW);
       }
-      if (n.deg >= 2) { rect(g, n.x + T - 3, n.y + T - 3, 6, 6, PAL.asphaltLight); rect(g, n.x + T - 2, n.y + T - 2, 4, 4, '#3a3d44'); } // manhole
+      if (n.deg >= 2 && n.deg < 3) { rect(g, n.x + T - 3, n.y + T - 3, 6, 6, PAL.asphaltLight); rect(g, n.x + T - 2, n.y + T - 2, 4, 4, '#3a3d44'); } // manhole
     }
+    drawJunctions(g, town, RW, asph);
     if (L) { drawAvenues(g, town, pieces, R); if (L.river >= 0) drawBridges(g, town); }
+  }
+
+  // Roundabouts (island, ring, give-way teeth) and traffic-light stop lines and poles.
+  // The lamps themselves are drawn each frame by the renderer (they change colour).
+  function drawJunctions(g, town, RW, asph) {
+    const T = town.T;
+    for (const n of LES.junctions(town)) {
+      const cx = n.x + T, cy = n.y + T;
+      if (n.type === 'roundabout') {
+        g.fillStyle = asph; g.beginPath(); g.arc(cx, cy, 20, 0, Math.PI * 2); g.fill();
+        g.strokeStyle = PAL.laneW; g.lineWidth = 1; g.setLineDash([3, 3]); g.beginPath(); g.arc(cx, cy, 14, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
+        // A small central island (kept clear of the lanes vehicles drive in): kerb, grass, a shrub and flowers.
+        g.fillStyle = '#d9d2c3'; g.beginPath(); g.arc(cx, cy, 6, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#7fbf5a'; g.beginPath(); g.arc(cx, cy, 5, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#3c7d3a'; g.beginPath(); g.arc(cx, cy - 1, 3, 0, Math.PI * 2); g.fill();
+        for (const f of [[-4, 1, '#f28482'], [3, 1, '#ffd166'], [-1, 3, '#ffffff']]) rect(g, cx + f[0], cy + f[1], 1, 1, f[2]);
+        const teeth = (x, y, dx, dy) => { for (let k = 0; k < 3; k++) rect(g, x + dx * k * 5, y + dy * k * 5, 3, 3, PAL.laneW); };
+        if (n.W) teeth(n.x - 4, n.y + T + 2, 0, 1); if (n.E) teeth(n.x + RW + 1, n.y + 2, 0, 1); // give way to traffic on the roundabout (left-hand traffic)
+        if (n.N) teeth(n.x + 2, n.y - 4, 1, 0); if (n.S) teeth(n.x + T + 2, n.y + RW + 1, 1, 0);
+      } else if (n.type === 'lights') {
+        if (n.W) rect(g, n.x - 2, n.y + T, 2, T, PAL.laneW); if (n.E) rect(g, n.x + RW, n.y, 2, T, PAL.laneW); // stop lines on the inbound lanes
+        if (n.N) rect(g, n.x, n.y - 2, T, 2, PAL.laneW); if (n.S) rect(g, n.x + T, n.y + RW, T, 2, PAL.laneW);
+        for (const [px, py] of [[n.x - 6, n.y - 12], [n.x + RW + 4, n.y + RW - 4]]) { rect(g, px, py, 2, 12, '#4a4f57'); rect(g, px + 2, py + 11, 2, 2, 'rgba(0,0,0,0.25)'); } // poles
+        for (const [px, py] of [[n.x + RW + 4, n.y - 12], [n.x - 6, n.y + RW - 4]]) { rect(g, px, py, 2, 12, '#4a4f57'); }
+      }
+    }
   }
 
   // A river winding down one north-south gap, with sandy banks and a few reeds.
