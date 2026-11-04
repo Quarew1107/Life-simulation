@@ -18,6 +18,16 @@ conversation. Branch: `main-4bf9gf` on `Quarew1107/Life-simulation`. Last update
   Calibration: `node tools/headless.js calib`. Benchmarks: `node tools/headless.js bench founders=400 years=10`.
 - Docs: `README.md` (features), `docs/ROADMAP.md` (phases, decisions, Malaysian figures).
 
+## 0. Where to pick up (status at the end of the last session)
+All work is committed and pushed; 120 tests pass (`node tools/headless.js tests`).
+Multiple towns (4.2) is usable: setting, switcher, migration, commuting, shopping, shared
+economy, comparison card, save/load. Next, in this order:
+1. Finish 4.2: town types (pass a `type` per town into `LES.districtQuota` weights), spillovers
+   (gangs, floods on a shared river, pandemic via commuters), a region section in the report,
+   and the overview map. Keep `regionTests` green and add a check for each new channel.
+2. 4.1 chunked static map layer (needed before bigger maps in 4.3).
+3. 4.3 terrain, 4.4 My Cast, 4.5 countries, 4.6 polish.
+
 ## 2. Done so far
 Phases 0-5 are complete (see ROADMAP): foundations, art, varied layouts, society (class,
 religion, ethnicity), crime and justice, government and elections, public finance and the
@@ -72,8 +82,9 @@ town switcher in the top bar (`#town-switch`), links to family in other towns on
 panel, region save/load (`LES.Save` handles a `Region` root). Increment 3 is DONE: commuting (`Region.commuteDay`: private openings that nobody in the town
 applied for within 2 days may be re-advertised in a sister town, more often where unemployment
 is higher; `p.job.commuteTo` marks commuters, who lose a little energy) and a "Towns in the
-region" comparison card at the top of the Stats tab (`UI.regionCard`). **Not yet:** region
-overview map, shopping/trade between towns, spillovers (gangs, floods, pandemic via commuters),
+region" comparison card at the top of the Stats tab (`UI.regionCard`). Shopping is DONE too: each month every town gets `w.regionDemand`
+(0.9-1.1, bigger towns draw neighbours' spending), applied to business demand in `F.bizMonth`.
+**Not yet:** region overview map, spillovers (gangs, floods, pandemic via commuters),
 town types (district mixes), report section for the region, chunked static map layer.
 Architecture: **each town is a full `LES.World`** (own people, ledger, council, laws); a new
 `LES.Region` (new file `js/sim/region.js`) owns the towns and a shared national layer and

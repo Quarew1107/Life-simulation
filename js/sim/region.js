@@ -95,6 +95,10 @@
       let hold = 0;
       for (const w of this.towns) for (const p of w.living) if (p.alive && !p.away) hold += P.invValue(w, p);
       this.lead.mkt.townHold = hold;
+      // Shopping: the bigger town is the regional hub (mall, restaurants) and draws some of
+      // its neighbours' spending; small towns' shops lose a little trade to it.
+      const pops = this.towns.map(w => Math.max(1, w.counts.living)), avg = pops.reduce((a, b) => a + b, 0) / pops.length;
+      this.towns.forEach((w, i) => { w.regionDemand = U.clamp(Math.pow(pops[i] / avg, 0.12), 0.9, 1.1); });
       this.settleMoves();
       this.followDeaths();
     }
