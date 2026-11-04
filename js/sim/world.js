@@ -556,7 +556,9 @@
         if (p.away && (p.cash || p.trust || p.epf || p.job || p.manages >= 0 || Object.keys(p.shares).length || p.homeId >= 0)) errs.push(`away P${p.id} still holds town assets`);
         for (const k of ['health', 'energy', 'stress', 'hunger']) if (!(p[k] >= 0 && p[k] <= 100)) errs.push(`P${p.id} ${k}=${p[k]}`);
         for (let i = 0; i < 6; i++) if (!(p.att[i] >= 0 && p.att[i] <= 10)) errs.push(`P${p.id} att${i}=${p.att[i]}`);
-        if (p.parents.length !== 0 && p.parents.length !== 2) errs.push(`P${p.id} has ${p.parents.length} parents`);
+        // One parent here is fine when the other stayed in a sister town (linked in xlinks).
+        const crossParent = p.parents.length === 1 && p.xlinks && p.xlinks.some(x => x.rel === 'parent');
+        if (p.parents.length !== 0 && p.parents.length !== 2 && !crossParent) errs.push(`P${p.id} has ${p.parents.length} parents`);
         for (const pid of p.parents) {
           const q = this.people[pid];
           if (!(q.birthDay < p.birthDay)) errs.push(`P${p.id} parent ${pid} not older`);

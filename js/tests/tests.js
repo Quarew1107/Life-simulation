@@ -589,6 +589,60 @@
     const R2 = mk(), R3 = mk();
     for (let d = 0; d < 2 * 365; d++) { R2.step(); R3.step(); }
     check('Same seed -> same region history', R2.hash() === R3.hash());
+
+    // ---- Gangs spreading between towns (set up by hand so the test doesn't wait on luck) ----
+    const CR = LES.Crime;
+    const endGang = (w, g) => { // break a gang up cleanly (funds to the merchants, members freed)
+      if (g.cash) w.ledger.move(g, 'cash', w.ledger.sec.MERCHANT, 'bal', g.cash);
+      for (const id of g.members) w.people[id].cr.gang = -1;
+      g.members = []; g.alive = false;
+    };
+    const gangRegion = () => {
+      const G = new LES.Region(Object.assign({}, LES.DEFAULTS, { seed: 'gang-t', migration: 'normal', crime: 'lawless' }), [{ founders: 120 }, { founders: 80, seed: 'gang-t2' }]);
+      for (let d = 0; d < 400; d++) G.step();
+      const [A, B] = G.towns;
+      for (const g of B.crime.gangs) if (g.alive) endGang(B, g); // make room in the sister town
+      const offenders = w => w.living.filter(p => p.alive && p.adult && !p.inst && p.cr.gang < 0 && P.age(w, p) < 40).slice(0, 6);
+      for (const p of [...offenders(A), ...offenders(B)]) p.cr.rec = Math.max(1, p.cr.rec);
+      const g = { id: A.crime.gangs.length, name: 'Geng Ujian Test', colour: '#123456', leader: -1, members: [], cash: 0, turf: [0], founded: A.day - 800, alive: true, crimes: 0, peak: 0 };
+      A.crime.gangs.push(g);
+      const crew = offenders(A).slice(0, 5);
+      g.leader = crew[0].id;
+      for (const p of crew) CR.joinGang(A, g, p);
+      A.ledger.pay('LUCK', g, 'cash', A.px(9000));
+      let ch = null;
+      for (let k = 0; k < 400 && !ch; k++) { G.gangSpread(); ch = CR.chapterIn(B, 0, g.id); }
+      return { G, A, B, g, ch };
+    };
+    const gs = gangRegion(), { A: gA, B: gB, g: pg, ch } = gs;
+    check('An established gang that cannot grow at home opens a chapter in the sister town', CR.wantsToExpand(gA, pg) && !!ch);
+    if (ch) {
+      check('The chapter is run by locals, carries the parent\'s name and colour, and is linked both ways',
+        ch.members.length >= 2 && ch.members.every(id => gB.people[id].cr.gang === ch.id) && ch.colour === pg.colour && ch.name.startsWith(pg.name)
+          && pg.chapters.some(c => c.town === 1 && c.gang === ch.id) && gB.feed.some(e => /opened a chapter here/.test(e.text)));
+      const before = pg.cash;
+      gB.ledger.pay('LUCK', ch, 'cash', 10000); ch.take = (ch.sent || 0) + 10000;
+      gs.G.gangSpread();
+      check('A chapter sends 20% of its takings home, and both towns\' money checks stay clean', pg.cash - before === 2000 && gs.G.checkInvariants().length === 0, gs.G.checkInvariants()[0] || `${pg.cash - before}`);
+      endGang(gA, pg);
+      gs.G.gangSpread();
+      check('When the parent gang breaks up, its chapter carries on alone', ch.alive && !ch.parent && ch.formerParent === pg.name);
+    }
+    const d1 = gangRegion(), d2 = gangRegion();
+    for (let d = 0; d < 120; d++) { d1.G.step(); d2.G.step(); }
+    check('Same seed -> same history with gangs spreading', !!d1.ch && d1.G.hash() === d2.G.hash());
+    // A gang member who moves to the sister town keeps a tie to the old gang.
+    const T = gangRegion(), tg = T.g;
+    let tied = null;
+    for (const id of tg.members.slice()) {
+      const p = T.A.people[id];
+      if (!p.alive || p.away || p.inst || !p.isHead) continue;
+      LES.Migration.leave(T.A, p, 'a test move');
+      T.G.settleMoves();
+      const mv = T.G.moves.find(m => m.pairs.some(([a]) => a === id));
+      if (mv) { tied = T.B.people[mv.pairs.find(([a]) => a === id)[1]]; break; }
+    }
+    check('A gang member who moves keeps a tie to the old gang in the new town', !!tied && tied.cr.tie && tied.cr.tie.town === 0 && tied.cr.tie.gang === tg.id && T.G.checkInvariants().length === 0, T.G.checkInvariants()[0] || '');
   }
 
   async function runAll() {

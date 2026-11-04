@@ -229,9 +229,9 @@
     const rows = R.towns.map((t, i) => {
       const h = t.history[t.history.length - 1] || {}, inn = R.moves.filter(m => m.to === i).reduce((s, m) => s + m.n, 0), out = R.moves.filter(m => m.from === i).reduce((s, m) => s + m.n, 0);
       const type = LES.TOWN_TYPES[t.cfg.townType || t.cfg.town1Type || 'mixed'];
-      return `<tr><td>${esc(t.townName)}${t === w ? ' (this report)' : ''}</td><td>${esc(type ? type.name : '')}</td><td>${t.counts.living}</td><td>${U.fmtMoney(h.median || 0)}</td><td>${h.unemployed !== undefined ? (h.unemployed / Math.max(1, h.unemployed + h.employed + h.owners) * 100).toFixed(1) + '%' : ''}</td><td>${com[i]}</td><td>${inn} / ${out}</td></tr>`;
+      return `<tr><td>${esc(t.townName)}${t === w ? ' (this report)' : ''}</td><td>${esc(type ? type.name : '')}</td><td>${t.counts.living}</td><td>${U.fmtMoney(h.median || 0)}</td><td>${h.unemployed !== undefined ? (h.unemployed / Math.max(1, h.unemployed + h.employed + h.owners) * 100).toFixed(1) + '%' : ''}</td><td>${t.crime ? (n => `${t.crime.gangs.length} (${n} chapter${n === 1 ? '' : 's'})`)(t.crime.gangs.filter(g => g.parent || g.formerParent).length) : '–'}</td><td>${com[i]}</td><td>${inn} / ${out}</td></tr>`;
     }).join('');
-    return `<section><h2>The region</h2><table><tr><th>Town</th><th>Type</th><th>People</th><th>Median wealth</th><th>Unemployment</th><th>Commuting out</th><th>Moved in / out</th></tr>${rows}</table>
+    return `<section><h2>The region</h2><table><tr><th>Town</th><th>Type</th><th>People</th><th>Median wealth</th><th>Unemployment</th><th>Gangs formed</th><th>Commuting out</th><th>Moved in / out</th></tr>${rows}</table>
 <p class="note">${R.moves.length} household moves between the towns and ${R.commutePosts || 0} job openings advertised across town lines. The towns share one economy, one stock exchange and one monsoon. This report covers ${esc(w.townName)}; switch towns in the top bar for the others.</p></section>`;
   }
 

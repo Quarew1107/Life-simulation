@@ -14,7 +14,8 @@ conversation. Branch: `main-4bf9gf` on `Quarew1107/Life-simulation`. Last update
 - **Systems:** optional features are `LES.Systems` plug-ins (`js/sim/systems.js` lists the
   hooks). With all of them off, the Classic preset reproduces the original engine exactly;
   `foundationTests` checks stored fingerprints (`stableHash`). Keep that test green.
-- **Tests:** `node tools/headless.js tests` (113 checks, ~4 min) or `tests.html` in a browser.
+- **Tests:** `node tools/headless.js tests` (128 checks, ~4 min) or `tests.html` in a browser. Without Node,
+  open `tests.html` (from disk is fine) and click Run all tests: ~2 min in Edge.
   Calibration: `node tools/headless.js calib`. Benchmarks: `node tools/headless.js bench founders=400 years=10`.
 - Docs: `README.md` (features), `docs/ROADMAP.md` (phases, decisions, Malaysian figures).
 
@@ -24,8 +25,16 @@ Multiple towns (4.2) is usable: setting, switcher, migration, commuting, shoppin
 economy, comparison card, save/load. Next, in this order:
 1. Finish 4.2: DONE since: town types (`LES.TOWN_TYPES`, settings town1Type-town3Type, district
    mix + `w.jobFreq` job mix), one monsoon for the region (`Region.monsoon`), pandemic spreading
-   between towns (`Region.pandemicSpread`), region section in the report. Still open: gang
-   spillover and the zoomed-out overview map.
+   between towns (`Region.pandemicSpread`), region section in the report. Gang spillover is DONE
+   (`Region.gangSpread`, `LES.Crime.foundChapter/wantsToExpand/chapterIn`): an established gang (4+ members,
+   RM4k, 2+ years, cannot buy more turf at home) may open a chapter in the sister town with the most young
+   jobless people and the thinnest police (5% a month); chapters are ordinary local gangs with the parent's
+   name and colour, send 20% of their takings (`g.take` - `g.sent`) home via each ledger's ABROAD account,
+   and go independent (`g.formerParent`) when the parent breaks up; members who move keep `p.cr.tie` for
+   3 years and may start or join a chapter. Rare by design: in 25-year Lawless test runs, 2 of 3 regions
+   saw a chapter. Also fixed: the consistency check now accepts one parent in town when the other stayed
+   in a sister town (`xlinks` rel 'parent'). Still open: the zoomed-out region overview map (approved
+   design: schematic map, 🗺 Region button plus zoom-out, click a town to open it).
 2. 4.3 terrain is DONE (basic set): varied towns get one extra column (and a row for Bandaraya and
    Metropolis) of scenery blocks: 'k' lake, 'm' hill, 'f' forest reserve (`LES.SCENERY_EXTRA`,
    `planDistricts`, painters in `art.js`). Setting `scenery` both/decor: with both they join
@@ -71,9 +80,12 @@ days/s ~= 60,000 / population. Profile (400 founders): `A.candidates` 21%, `A.li
 building changes.
 - Split the static layer into 512 px chunks, built on demand, LRU-capped (~150 MB), plus a
   1/4-scale overview for zoomed-out views; rebuild only chunks a changed building touches.
-- Engine: reuse candidate objects, build labels lazily (`A.labelOf` only when shown), skip
-  map-only work (plans/labels) for towns that are not on screen. Target 1.3-1.6x.
-- Time-slice stepping at visual speeds so frames never stall.
+- Engine: lazy labels (`A.labelOf`), compact Why records (`WhySlot`) and fixed-shape bias rows
+  are already in (commit 3c616df, ~1.5x, results identical). Reusing candidate objects was
+  measured SLOWER in Chrome (old objects pointing at new ones cost the garbage collector), so
+  skip it. Next ideas: skip map-only work (plans/labels) for towns not on screen; re-profile
+  first. Target 1.3-1.6x.
+- Time-slice stepping: done for 10 days/s and faster (MessageChannel pump in `js/main.js`).
 - Later, optional: one Web Worker per town for multi-core. Workers cannot load file:// scripts,
   so this needs a generated engine bundle (`tools/bundle.js` concatenating core/data/sim into
   one function whose `toString()` feeds a Blob worker).
