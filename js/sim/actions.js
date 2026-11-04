@@ -259,7 +259,7 @@
       addCand(out, gb.STUDY, 'STUDY', u, LES.townNear(town, course.place, p.homeId), course);
     }
 
-    if (reflect && !p.enrol && ctx.age < 45 && !p.retired && w.day - p.lastEnrollTry > 60 && p.bankruptUntil < w.day) {
+    if (reflect && !p.enrol && ctx.age < 45 && !p.retired && w.day - p.lastEnrollTry > 60 && p.bankruptUntil < w.day && !(w.flags && w.flags.noCourses)) {
       const pick = A.bestCourse(w, p);
       if (pick) {
         const u = -1.6 + B.ENROLL + 0.7 * ctx.pat + 0.4 * ctx.dis - 0.06 * Math.max(0, ctx.age - 25)
@@ -404,7 +404,7 @@
       case 'GIG': {
         const g = c.data;
         const r = A.taskRoll(w, p, g.w, g.diff, p.xp[g.cat], g.risk);
-        const pay = w.px(g.pay * (r.ok ? 1 : 0.25) * w.macro().gigMult);
+        const pay = w.px(g.pay * (r.ok ? 1 : 0.25) * w.macro().gigMult * (w.shock ? w.shock.gig : 1));
         L.pay('GIGS', p, 'cash', pay);
         p.earned.gigs += pay; p.monthIncome += pay;
         c.ok = r.ok;

@@ -6,12 +6,26 @@ A town of strangers in **Bandar Rezeki** each try to reach **RM100 million**. No
 
 Double-click **`Start Simulation.bat`**, or open `index.html` in Edge or Chrome. Nothing to install, and it works offline. The pixel font loads from Google Fonts when you're online. Offline, a plain font is used instead.
 
-**Presets:** the setup screen starts on **Malaysia today**, calibrated to DOSM figures:
-- the welfare safety net is on
-- about 1.6 children per woman
-- life expectancy of about 75
+**The setup screen** has three steps:
+1. **Choose a world.** **Malaysia today** (the default) is calibrated to DOSM figures, with welfare on, about 1.6 children per woman and a life expectancy of about 75. The nine what-if scenarios below build on it. **Classic rules** brings back the original engine: harsh mode, about 2.5 children per woman, longer lives and none of the newer systems. Each card shows what the world changes, what to watch, and its own options.
+2. **Your town.** The six settings people change most: founding population (the map size follows), years to simulate, starting wealth, economic cycles, crime and the world seed (🎲 picks a random one).
+3. **Advanced settings** (folded away): everything else, in groups for base rules, town and map, goal, economy and prices, people and families, society and religion, crime and justice, and government. Changing a base rule switches the rules to Custom.
 
-**Classic** brings back the original rules: harsh mode, about 2.5 children per woman and longer lives. Changing any preset setting switches the preset to Custom.
+**Scenarios:**
+
+| Scenario | What changes | What to watch |
+|---|---|---|
+| Born Equal | Everyone starts with RM10,000, identical abilities and ageing genes, no degrees; jobs by lottery. Children can be born equal too | How fast inequality appears, and which traits or luck the richest share |
+| Great Reset | In a chosen year every business is sold and all wealth is pooled and shared equally (once, or repeatedly) | How many years until inequality returns, and whether the same families rise again |
+| Eternal Life | No ageing after adulthood, no old-age deaths, no retirement | Crowding, the old holding wealth and jobs, young people's chances |
+| Education Ban | Schools, colleges and universities close (from the start or a chosen year) | Unfilled skilled jobs, wages, unemployment and crime |
+| Pandemic | A new virus with age-based risk (COVID-19 or a severe strain), lockdowns, aid and vaccines | Deaths by age, jobs and businesses lost in lockdowns |
+| Robot Age | Robots and AI take over routine jobs year by year; profits up, gig pay down, a few new tech jobs | Unemployment, inequality, and whether voters choose a basic income |
+| Lawless Town | Crime at 30× Malaysian rates, a thin police force and a corrupt first police chief | Whether elections and budgets restore order |
+| Isolated Island | No migration, no commuting, dearer imports | Population, surname diversity, a closed job market |
+| Five Clans | A fictional world of five clans with innate gifts (the only place where group membership changes ability) | Which gift the economy rewards |
+
+While a scenario runs, a badge in the top bar names it, the Stats tab shows its status and chart, and the report gets a section on what happened. Run the same seed with Malaysia today to compare.
 
 **Save / load:** 💾 **Save** in the top bar downloads the whole world as a compressed file. Open it again with **📂 Load saved world** on the New world screen. A loaded world continues exactly as it would have without saving.
 
@@ -232,9 +246,11 @@ The map is drawn in a 3/4 top-down pixel style: you see each building's roof and
 ## Planned next
 
 The roadmap is in `docs/ROADMAP.md`:
-- what-if scenarios on the setup screen: Born Equal, Great Reset, Eternal Life, Education Ban, Pandemic, Robot Age and more
+- more scenarios (Aristocracy vs Meritocracy) and compare-with-normal-world runs
 - a calibration pass (household income inequality and the share of graduates are still above Malaysia's), a town newspaper and compare-with-normal-world runs
 
 Each new system can be switched off, and with all of them off the Classic preset reproduces the original engine exactly.
+
+Pixel icons: [pixelarticons](https://github.com/halfmage/pixelarticons) by Gerrit Halfmann (MIT licence, `docs/licenses/pixelarticons-LICENSE.txt`), vendored in `js/ui/icons.js` so the app stays offline.
 
 *Results describe outcomes of this simulation under its assumptions and random seed. They do not establish universal real-world causes of success.*

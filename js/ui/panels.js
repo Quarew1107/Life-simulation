@@ -86,6 +86,9 @@
     const day = Math.max(0, w.lastDay);
     $('date-text').textContent = U.fmtDate(day);
     $('time-text').textContent = w.lastDay < 0 ? 'Not started' : app.fast ? `${app.speedLabel()} · fast-forward` : LES.clockAt(app.dayFrac);
+    const scn = LES.Scenarios.current(w), sb = $('scn-badge');
+    sb.classList.toggle('hidden', !scn);
+    if (scn && sb.dataset.id !== scn.id) { sb.dataset.id = scn.id; sb.innerHTML = `${LES.icon(scn.icon, 14)} ${U.esc(scn.name)}`; sb.title = `Scenario: ${scn.name}. ${scn.short}`; }
     const r = C.REGIMES[w.regime];
     const badge = $('regime');
     badge.textContent = `${r.name} economy`;
@@ -249,6 +252,7 @@
     html += UI.societyCard ? UI.societyCard(w, p) : '';
     html += UI.crimeCard ? UI.crimeCard(w, p) : '';
     html += UI.politicsCard ? UI.politicsCard(w, p) : '';
+    if (p.clan && LES.Scenarios.CLAN_BY_ID[p.clan]) { const cl = LES.Scenarios.CLAN_BY_ID[p.clan]; html += `<div class="card"><h3>Clan <small class="muted">Five Clans scenario</small></h3><p><span style="color:${cl.colour}">■</span> <b>${U.esc(cl.name)}</b> (${U.esc(cl.en)}): born with a gift for ${C.ATTR_NAMES[cl.attr].toLowerCase()}.</p></div>`; }
     if (p.adult) {
       html += `<div class="card tiers"><h3>Lifestyle <small class="muted">${U.fmtMoney(p.mcost)}/month incl. children</small></h3>
         ${C.TIER_CATS.map(cat => {
@@ -425,7 +429,9 @@
     const xs = x => `Y${Math.floor(x) + 1}`;
     const series = (k, label, color) => ({ label, color, data: h.map(r => [r.day / 365, r[k]]) });
     const race = w.living.filter(p => p.alive && p.adult).sort((a, b) => b.nw - a.nw).slice(0, 5);
+    const scn = LES.Scenarios.current(w);
     el.innerHTML = `
+      ${scn ? `<div class="card"><h3><span>${LES.icon(scn.icon, 14)} Scenario: ${U.esc(scn.name)}</span></h3><div class="note">${U.esc(scn.short)}</div><div class="scn-status">${scn.status(w)}</div><canvas class="chart" id="st-scn"></canvas></div>` : ''}
       <div class="stat-grid">
         <div class="stat"><div class="v">${last.pop}</div><div class="l">alive (${last.children} kids)</div></div>
         <div class="stat"><div class="v">${U.fmtMoney(last.median)}</div><div class="l">median net worth</div></div>
@@ -461,6 +467,7 @@
       </div></div>
       <p><button class="ghost" data-act="csv">Export everyone as CSV</button> <button class="ghost" data-act="report">Open full report</button></p>
       <p class="note">Results describe outcomes of this simulation under its specified assumptions and random seed (“${esc(w.cfg.seed)}”); they do not establish universal real-world causes of success.</p>`;
+    if (scn && $('st-scn')) LES.Charts.line($('st-scn'), { series: scn.series(h), xFmt: xs, yMin: scn.logY ? undefined : 0, logY: !!scn.logY, yFmt: scn.logY ? LES.Charts.fmtAxisMoney : undefined });
     LES.Charts.line($('st-wealth'), {
       series: [series('top', 'Richest', '#f2c14e'), series('p90', 'Top 10%', '#3ec7b5'), series('median', 'Median', '#5aa9e6')].map(s => ({ ...s, data: s.data.map(([x, y]) => [x, Math.max(0, y)]) })),
       logY: true, yFmt: LES.Charts.fmtAxisMoney, xFmt: xs, bands: UI.regimeBands(w),

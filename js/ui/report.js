@@ -222,6 +222,14 @@
 </div></section>`;
   }
 
+  function scenarioSection(w, svgChart) {
+    const s = LES.Scenarios.current(w);
+    if (!s) return '';
+    const h = w.history, chart = svgChart(s.series(h).map(x => ({ label: x.label, color: x.color, data: x.data.map(([d, v]) => [d, v]) })), { log: !!s.logY });
+    return `<section><h2>Scenario: ${esc(s.name)}</h2><p>${esc(s.desc)}</p><div class="grid"><div class="card"><b>What happened</b><p>${s.status(w)}</p>${s.report ? s.report(w) : ''}</div><div class="card"><b>Over time</b>${chart}</div></div>
+<p class="note">To see what the scenario changed, run the same seed without it (Malaysia today) and compare the two reports.</p></section>`;
+  }
+
   function govSection(w) {
     const GV = LES.Gov, g = w.gov;
     if (!g || !GV) return '';
@@ -263,7 +271,7 @@ ${g.officials ? `<div class="card"><b>City council at the end</b><table>${LES.Co
       ['Bursa index & price level', svgChart([{ label: 'Bursa index', color: '#2a9d8f', data: h.map(r => [yr(r), r.idx]) }, { label: 'Price level ×100', color: '#f4a261', data: h.map(r => [yr(r), (r.price || 1) * 100]) }], { log: true })],
       ['Work', svgChart([{ label: 'Employed', color: '#2a9d8f', data: h.map(r => [yr(r), r.employed]) }, { label: 'Unemployed', color: '#e63946', data: h.map(r => [yr(r), r.unemployed]) }, { label: 'Business owners', color: '#f4a261', data: h.map(r => [yr(r), r.owners]) }], {})],
     ];
-    const settings = LES.SETTINGS_META.map(m => `<tr><td>${esc(m.label)}</td><td>${esc(m.options ? (m.options.find(o => o[0] === cfg[m.key]) || [, cfg[m.key]])[1] : cfg[m.key])}</td></tr>`).join('');
+    const settings = LES.SETTINGS_META.filter(m => !m.scenario || m.scenario === cfg.scenario).map(m => `<tr><td>${esc(m.label)}</td><td>${esc(m.options ? (m.options.find(o => o[0] === cfg[m.key]) || [, cfg[m.key]])[1] : cfg[m.key])}</td></tr>`).join('');
     const compare = prev ? `<section><h2>Compared with the previous run</h2><table><tr><th></th><th>Previous (${esc(prev.seed)})</th><th>This run (${esc(cfg.seed)})</th></tr>
       ${[['Winner', prev.winner, a.awards[0] && w.winner ? esc(P.name(w.people[w.winner.pid])) : 'none'], ['Richest peak', prev.richest, a.top[0] ? U.fmtMoney(a.top[0].peakReal) : '—'], ['Final median wealth', prev.median, U.fmtMoney(h[h.length - 1].median)], ['Population at end', prev.pop, h[h.length - 1].pop], ['Businesses failed', prev.failed, w.stats.bizFailed]].map(([k, x, y]) => `<tr><td>${k}</td><td>${esc(x)}</td><td>${y}</td></tr>`).join('')}</table>
       <p class="note">Changed settings: ${Object.keys(cfg).filter(k => JSON.stringify(cfg[k]) !== JSON.stringify(prev.cfg[k])).map(esc).join(', ') || 'none (only randomness)'}.</p></section>` : '';
@@ -306,6 +314,7 @@ ${compare}
 <section><h2>Factors and peak wealth</h2><table><tr><th>Factor</th><th>Rank correlation with peak wealth</th></tr>${(a.factors || []).map(f => `<tr><td>${esc(f.name)}</td><td>${f.r.toFixed(2)} (${corrWord(f.r)})</td></tr>`).join('')}</table>
 <p class="note">Spearman rank correlation over adults who reached 30. Correlation is not causation: traits also affect who studies, who starts businesses and who has children.</p></section>
 ${a.strat ? `<section><h2>Strategies</h2><table><tr><th>Starting strategy</th><th>People</th><th>Median peak wealth</th><th>In top 10</th><th>Business failures</th></tr>${a.strat.map(s => `<tr><td>${C.STRATEGY_NAMES[s.s]}</td><td>${s.n}</td><td>${U.fmtMoney(s.med)}</td><td>${s.inTop}</td><td>${s.fail}</td></tr>`).join('')}</table></section>` : ''}
+${scenarioSection(w, svgChart)}
 ${societySection(w)}
 ${crimeSection(w)}
 ${govSection(w)}

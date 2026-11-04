@@ -19,6 +19,7 @@
       for (const k of ['init', 'decide', 'outcome', 'jobs', 'market', 'biz', 'family', 'luck', 'mortality', 'migration', 'goals', 'society', 'crime', 'gov']) {
         this.rng[k] = new LES.RNG(`${this.cfg.seed}|${k}`);
       }
+      if (this.cfg.scenario && this.cfg.scenario !== 'none') this.rng.scenario = new LES.RNG(`${this.cfg.seed}|scenario`);
       const ms = this.cfg.mapSize === 'auto' ? LES.suggestMapSize(this.cfg.founders) : this.cfg.mapSize;
       this.mapSize = LES.MAP_ALIASES[ms] || ms;
       this.town = LES.buildTown(this.mapSize, this.cfg.seed, this.cfg.layout);
@@ -269,7 +270,9 @@
       const age = P.age(this, c);
       const priv = c.school >= 0 && this.biz[c.school] && this.biz[c.school].open ? this.biz[c.school] : null; // private school pupil
       const school = priv ? priv.place : LES.townNear(this.town, 'school', c.homeId);
-      c.plan = age >= 7
+      c.plan = age >= 7 && this.flags && this.flags.noSchool
+        ? [{ act: 'HOME', label: 'At home (schools are closed)', loc: c.homeId }, { act: 'HOME', label: 'Playing at home', loc: c.homeId }]
+        : age >= 7
         ? [{ act: 'SCHOOL', label: priv ? `At ${priv.name}` : 'At school', loc: school }, { act: 'HOME', label: 'Playing at home', loc: c.homeId }]
         : [{ act: 'HOME', label: 'At home', loc: c.homeId }, { act: 'HOME', label: 'At home', loc: c.homeId }];
       c.why = null;
@@ -432,6 +435,7 @@
     ageAttributes(p, age) {
       const g = p.ageing, yr = p.yr;
       if (!g) return;
+      if (this.flags && this.flags.noAgeing) { p.yr = { phys: 0, mental: 0, stress: 0, days: 0 }; return; } // Eternal Life
       for (let i = 0; i < 6; i++) p.peak[i] = Math.max(p.peak[i], p.att[i]);
       const stressAvg = yr.days ? yr.stress / yr.days : 30;
       if (age > g.bOnset) {
