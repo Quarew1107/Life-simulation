@@ -122,6 +122,33 @@
     UI.renderLeaders(true);
   };
 
+  // ---- Alerts: life events of your cast as toasts (and sounds, if sound is on) ----
+  // Major events by default: anything the town feed would show, and every career, education,
+  // goal, move and death; "Everything" adds the small ones; "Off" mutes them.
+  const ALERT_KEY = 'les-cast-alerts', MAJOR = new Set(['career', 'edu', 'goal', 'death', 'migration', 'family', 'biz', 'crime']);
+  UI.castAlertLevel = () => { try { return localStorage.getItem(ALERT_KEY) || 'major'; } catch (e) { return 'major'; } };
+  const seen = new WeakMap(), castOf = new WeakMap(); // person -> last entry announced; world -> its cast
+  UI.castAlerts = function (app) {
+    const w = app.world, level = UI.castAlertLevel();
+    let c = castOf.get(w);
+    if (!c || c.n !== w.people.length) castOf.set(w, c = { n: w.people.length, list: w.people.filter(p => p.custom) });
+    const cast = c.list;
+    let shown = 0;
+    for (const p of cast) {
+      const log = p.log, last = log[log.length - 1], prev = seen.get(p);
+      seen.set(p, last);
+      if (prev === undefined || prev === last || level === 'off') continue; // first look: nothing is news
+      let i = log.length - 1;
+      while (i > 0 && log[i - 1] !== prev && log.length - i < 6) i--;
+      for (; i < log.length; i++) {
+        const e = log[i];
+        if (level === 'major' && !(e.imp >= 1 || (MAJOR.has(e.cat) && !/^New life goal|^Application|rejected$/.test(e.text)))) continue;
+        if (shown++ < 3) UI.toast(`★ <b>${esc(P.name(p))}</b> — ${esc(e.text)}`, U.fmtDate(e.day), p.id, e.cat === 'death');
+        if (p.id !== app.selected) LES.Audio.onEvent(Object.assign({ pid: p.id }, e), app, true, true);
+      }
+    }
+  };
+
   // The "★ My cast" list: the saved roster (add, edit, remove, export, import) and the cast
   // members living in this town, with what they are doing now.
   UI.renderCast = function (force) {
@@ -130,6 +157,7 @@
     const live = w.people.filter(p => p.custom);
     const status = p => (!p.alive ? `died aged ${Math.floor(P.age(w, p))}` : p.away ? 'living elsewhere' : p.inst ? 'in prison or rehab' : p.job ? LES.Labour.title(p.job) : p.manages >= 0 ? `runs ${w.biz[p.manages].name}` : p.retired ? 'retired' : p.enrol ? 'studying' : 'looking for work');
     el.innerHTML = `<div class="card"><h3>Your cast in ${esc(LES.townName(w))}</h3>
+      <div class="cast-alerts">Alerts for their life events: ${sel('cast-alert', [['major', 'Major events'], ['all', 'Everything'], ['off', 'Off']], UI.castAlertLevel())}</div>
       ${live.length ? live.map(p => `<div class="lb-row ${p.id === app.selected ? 'sel' : ''}" data-pid="${p.id}"><span class="rank">★</span><span class="dot" style="background:${C.STRATEGY_COLORS[p.strategy]}"></span>
         <span><div class="nm">${esc(P.name(p))}${p.alive ? '' : ' <span class="muted">†</span>'}</div><div class="sub">${Math.floor(P.age(w, p))} yrs · ${esc(status(p))} · 😊 ${Math.round(p.happy)} · ❤️ ${Math.round(p.health)}</div></span><span class="val">${U.fmtMoney(p.nw)}</span></div>`).join('') : '<p class="note">Nobody from your cast lives here yet. Add someone from your saved list below, or create a new person.</p>'}
       </div>
@@ -137,6 +165,7 @@
         ${roster.length ? `<ul class="list-plain">${roster.map((s, i) => `<li><span><b>${esc(s.first)} ${esc(s.last)}</b> <span class="muted">${s.age} · ${esc(C.ETHNIC_NAMES[s.eth] || s.eth)} · ${esc(C.STRATEGY_NAMES[s.strategy] || '')}</span></span><span><button class="ghost" data-cast="add" data-i="${i}">Add to town</button> <button class="ghost" data-cast="edit" data-i="${i}">Edit</button> <button class="ghost" data-cast="del" data-i="${i}" title="Remove from the list">✕</button></span></li>`).join('')}</ul>` : '<p class="note">No saved people yet.</p>'}
         <div class="modal-actions"><button class="primary" data-cast="new">＋ Create a person</button><span class="spacer"></span><button class="ghost" data-cast="export">Export</button><button class="ghost" data-cast="import">Import</button><input type="file" id="cast-file" accept=".json,application/json" hidden></div>
         <div class="note">Cast members arrive by train like any newcomer and are marked ★ on the leaderboards. Click one to follow them.</div></div>`;
+    el.onchange = e => { if (e.target.id === 'cast-alert') { try { localStorage.setItem(ALERT_KEY, e.target.value); } catch (err) { /* storage unavailable */ } } };
     el.onclick = e => {
       const b = e.target.closest('[data-cast]');
       if (!b) return;

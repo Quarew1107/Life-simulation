@@ -7,7 +7,7 @@
   const esc = U.esc;
   const UI = LES.UI = { tab: 'person', lbMode: 'alive', feedFilter: 'all', last: {}, feedSeqShown: 0 };
 
-  const FEED_FILTERS = [['all', 'All'], ['goal', 'Goals'], ['wealth', 'Wealth'], ['biz', 'Business'], ['career', 'Career'], ['edu', 'Education'], ['family', 'Family'], ['luck', 'Luck'], ['migration', 'Migration'], ['crime', 'Crime'], ['politics', 'Politics'], ['death', 'Deaths'], ['economy', 'Economy']];
+  const FEED_FILTERS = [['all', 'All'], ['cast', '★ Cast'], ['goal', 'Goals'], ['wealth', 'Wealth'], ['biz', 'Business'], ['career', 'Career'], ['edu', 'Education'], ['family', 'Family'], ['luck', 'Luck'], ['migration', 'Migration'], ['crime', 'Crime'], ['politics', 'Politics'], ['death', 'Deaths'], ['economy', 'Economy']];
   const CAT_ICON = { wealth: '💰', biz: '🏪', career: '💼', edu: '🎓', family: '👪', luck: '🎲', death: '🕯️', economy: '📊', money: '💵', life: '🧭', goal: '🎯', migration: '🚆', crime: '🚨', politics: '🏛️' };
   const SLOT_NAMES = ['Day shift · 08:00–15:12', 'Evening · 15:40–22:24'];
 
@@ -435,7 +435,7 @@
     const rows = [];
     for (let i = w.feed.length - 1; i >= 0 && rows.length < 250; i--) {
       const e = w.feed[i];
-      if (f !== 'all' && !(e.cat === f || (f === 'wealth' && e.cat === 'money'))) continue;
+      if (f === 'cast' ? !(e.pid >= 0 && w.people[e.pid].custom) : f !== 'all' && !(e.cat === f || (f === 'wealth' && e.cat === 'money'))) continue;
       const name = e.pid >= 0 ? `<span class="nm">${esc(P.name(w.people[e.pid]))}</span> — ` : '';
       rows.push(`<div class="feed-row imp${e.imp}" data-pid="${e.pid}"><span class="when">${U.fmtMonthYear(e.day)}</span><span>${CAT_ICON[e.cat] || '•'}</span><span class="txt">${name}${esc(e.text)}</span></div>`);
     }
@@ -569,6 +569,7 @@
     const news = w.feed.filter(e => e.seq > UI.feedSeqShown), fresh = news.filter(e => e.imp >= 2);
     if (w.feed.length) UI.feedSeqShown = Math.max(UI.feedSeqShown, w.feed[w.feed.length - 1].seq || 0);
     for (const e of news) LES.Audio.onEvent(e, UI.app);
+    if (UI.castAlerts) UI.castAlerts(UI.app);
     for (const e of fresh.slice(-3)) {
       const name = e.pid >= 0 ? `<b>${esc(P.name(w.people[e.pid]))}</b> — ` : '';
       UI.toast(`${CAT_ICON[e.cat] || ''} ${name}${esc(e.text)}`, U.fmtDate(e.day), e.pid, e.imp >= 3);
