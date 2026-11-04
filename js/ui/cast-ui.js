@@ -5,18 +5,30 @@
   const U = LES.U, C = LES.C, P = LES.P, UI = LES.UI, esc = U.esc;
   const $ = id => document.getElementById(id);
   const KEY = 'les-cast-roster';
-  const load = () => { try { const x = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(x) ? x : []; } catch (e) { return []; } };
+  // Every saved person has an id (for partner and parent links); older lists get one here.
+  const uid = () => `c${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
+  const load = () => {
+    let x = [];
+    try { x = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; }
+    if (!Array.isArray(x)) return [];
+    for (const s of x) { if (!s.id) s.id = uid(); if (!Array.isArray(s.parents)) s.parents = []; if (s.partner === undefined) s.partner = ''; }
+    return x;
+  };
   const save = list => { try { localStorage.setItem(KEY, JSON.stringify(list)); } catch (e) { /* storage unavailable */ } };
   UI.castRoster = load;
 
   const RELS = [['', 'As usual for their community'], ['islam', 'Islam'], ['buddhism', 'Buddhism'], ['christianity', 'Christianity'], ['hinduism', 'Hinduism'], ['none', 'No religion']];
   const STYLES = [[0, 'Short hair'], [1, 'Long hair'], [2, 'Bun'], [3, 'Tudung (headscarf)']];
+  const GLASSES = [[0, 'None'], [1, 'Dark frames'], [2, 'Gold frames']];
+  const BEARDS = [[0, 'None'], [1, 'Stubble'], [2, 'Moustache'], [3, 'Full beard']];
+  const HATS = [[0, 'None'], [1, 'Songkok'], [2, 'Kopiah (white cap)'], [3, 'Cap'], [4, 'Turban']];
   const slider = (id, label, v, max) => `<label class="cast-sl"><span>${esc(label)}</span><input type="range" id="${id}" min="0" max="${max}" step="${max > 10 ? 1 : 0.1}" value="${v}"><b id="${id}-v">${v}</b></label>`;
   const sel = (id, opts, v) => `<select id="${id}">${opts.map(([k, l]) => `<option value="${k}" ${String(k) === String(v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
   const colour = (id, v) => `<input type="color" id="${id}" value="${v}">`;
 
   UI.openCastCreator = function (idx) {
-    const roster = load(), spec = idx >= 0 && roster[idx] ? JSON.parse(JSON.stringify(roster[idx])) : LES.Cast.blank();
+    const roster = load(), spec = idx >= 0 && roster[idx] ? JSON.parse(JSON.stringify(roster[idx])) : Object.assign(LES.Cast.blank(), { id: uid() });
+    const others = roster.filter(o => o.id !== spec.id);
     const card = $('modal-card');
     card.classList.add('wide');
     card.innerHTML = `<h1>${idx >= 0 ? 'Edit' : 'Create'} a person</h1><p class="lead">Design anyone you like. Once in town they follow the same rules as everyone else: their choices are still weighted dice rolls.</p>
@@ -25,7 +37,7 @@
           <div class="field"><label>First name</label><input id="c-first" type="text" maxlength="30" value="${esc(spec.first)}"></div>
           <div class="field"><label>Family name</label><input id="c-last" type="text" maxlength="30" value="${esc(spec.last)}"></div>
           <div class="field"><label>Sex</label>${sel('c-sex', [['F', 'Female'], ['M', 'Male']], spec.sex)}</div>
-          <div class="field"><label>Age</label><input id="c-age" type="number" min="18" max="90" value="${spec.age}"></div>
+          <div class="field"><label>Age</label><input id="c-age" type="number" min="0" max="90" value="${spec.age}"></div>
           <div class="field"><label>Ethnicity</label>${sel('c-eth', C.ETHNICITIES.map(e => [e, C.ETHNIC_NAMES[e]]), spec.eth)}</div>
           <div class="field"><label>Religion</label>${sel('c-rel', RELS, spec.rel)}</div>
           <div class="field"><label>Qualification</label>${sel('c-qual', LES.Cast.QUALS, spec.qual)}</div>
@@ -37,8 +49,15 @@
         <div class="card"><h3>Looks</h3><div class="cast-looks">
           <label>Skin ${colour('c-skin', spec.look.skin)}</label><label>Hair ${colour('c-hair', spec.look.hair)}</label>
           <label>Shirt ${colour('c-shirt', spec.look.shirt)}</label><label>Trousers ${colour('c-pants', spec.look.pants)}</label>
-          <label>Headscarf ${colour('c-scarf', spec.look.scarf)}</label><label>Hair style ${sel('c-style', STYLES, spec.look.style)}</label></div>
+          <label>Headscarf ${colour('c-scarf', spec.look.scarf)}</label><label>Hair style ${sel('c-style', STYLES, spec.look.style)}</label>
+          <label>Glasses ${sel('c-glasses', GLASSES, spec.look.glasses || 0)}</label><label>Beard ${sel('c-beard', BEARDS, spec.look.beard || 0)}</label>
+          <label>Headwear ${sel('c-hat', HATS, spec.look.hat || 0)}</label><label>Cap / turban ${colour('c-hatc', spec.look.hatColour || '#1d3557')}</label></div>
           <canvas id="c-preview" width="120" height="150"></canvas></div>
+        <div class="card"><h3>Family <small class="muted">within your cast</small></h3><div class="form-grid">
+          <div class="field"><label>Partner</label>${sel('c-partner', [['', 'None'], ...others.map(o => [o.id, `${o.first} ${o.last} (${o.sex === 'M' ? 'man' : 'woman'}, ${o.age})`])], spec.partner)}<div class="help">They arrive and live together as a couple (a man and a woman, as for every couple in town).</div></div>
+          <div class="field"><label>Parent</label>${sel('c-par1', [['', 'None'], ...others.map(o => [o.id, `${o.first} ${o.last} (${o.age})`])], spec.parents[0] || '')}</div>
+          <div class="field"><label>Second parent</label>${sel('c-par2', [['', 'None'], ...others.map(o => [o.id, `${o.first} ${o.last} (${o.age})`])], spec.parents[1] || '')}<div class="help">Under 18? They need a parent from your cast, at least 12 years older, and arrive in their care.</div></div>
+        </div><div class="msgs" id="c-msgs"></div></div>
       </div>
       <div class="modal-actions"><button class="ghost" id="c-random">🎲 Random</button><span class="spacer"></span><button class="ghost" id="c-cancel">Cancel</button><button class="ghost" id="c-save">Save to my cast</button><button class="primary" id="c-add">Save and add to town</button></div>`;
     $('modal').classList.remove('hidden');
@@ -46,17 +65,34 @@
       first: $('c-first').value.trim() || 'Nameless', last: $('c-last').value.trim(), sex: $('c-sex').value, age: Number($('c-age').value) || 25, eth: $('c-eth').value, rel: $('c-rel').value,
       relig: Number($('c-relig').value), qual: $('c-qual').value, strategy: $('c-strat').value, cash: Math.max(0, Number($('c-cash').value) || 0),
       att: C.ATTR.map((_, i) => Number($(`c-a${i}`).value)), pers: Object.fromEntries(C.PERS.map(k => [k, Number($(`c-p-${k}`).value)])), famDesire: Number($('c-fam').value),
-      look: { skin: $('c-skin').value, hair: $('c-hair').value, shirt: $('c-shirt').value, pants: $('c-pants').value, scarf: $('c-scarf').value, style: Number($('c-style').value) },
+      look: Object.assign({}, spec.look, { skin: $('c-skin').value, hair: $('c-hair').value, shirt: $('c-shirt').value, pants: $('c-pants').value, scarf: $('c-scarf').value, style: Number($('c-style').value),
+        glasses: Number($('c-glasses').value), beard: Number($('c-beard').value), hat: Number($('c-hat').value), hatColour: $('c-hatc').value }),
+      id: spec.id, partner: $('c-partner').value, parents: [...new Set([$('c-par1').value, $('c-par2').value].filter(Boolean))],
     });
+    // Friendly checks on the family links (the engine also ignores impossible ones).
+    const problems = s => {
+      const out = [], o = id => others.find(x => x.id === id), pt = o(s.partner);
+      if (pt && pt.sex === s.sex) out.push('Partners in town are a man and a woman: this partner will be ignored.');
+      if (s.age < 18 && !s.parents.some(id => o(id) && o(id).age >= Math.max(18, s.age + 12))) out.push('Under 18 without a parent from your cast (at least 12 years older): they will arrive as an 18-year-old.');
+      return out;
+    };
     const preview = () => {
       const cv = $('c-preview'), g = cv.getContext('2d'), s = read();
       g.fillStyle = '#5f8a45'; g.fillRect(0, 0, cv.width, cv.height); g.imageSmoothingEnabled = false;
       const spr = LES.Sprites.person(s.look, s.age >= 60 ? 'elder' : 'adult', 0, null, 'front');
       g.drawImage(spr, 30, 15, spr.width * 6, spr.height * 6);
       for (const el of card.querySelectorAll('.cast-sl input')) $(`${el.id}-v`).textContent = el.value;
+      $('c-msgs').innerHTML = problems(s).map(t => `<div class="msg warn">⚠️ ${esc(t)}</div>`).join('');
     };
     card.oninput = preview; card.onchange = preview; preview();
-    const store = () => { const list = load(), s = read(); if (idx >= 0 && list[idx]) list[idx] = s; else list.push(s); save(list); return s; };
+    // Saving keeps partner links two-way (and drops a partner's old link).
+    const store = () => {
+      const list = load(), s = read();
+      for (const o of list) { if (o.id !== s.id && o.partner === s.id && o.id !== s.partner) o.partner = ''; if (o.id === s.partner) o.partner = s.id; }
+      const i = list.findIndex(o => o.id === s.id);
+      if (i >= 0) list[i] = s; else list.push(s);
+      save(list); return s;
+    };
     $('c-cancel').onclick = () => $('modal').classList.add('hidden');
     $('c-save').onclick = () => { store(); $('modal').classList.add('hidden'); UI.renderLeaders(true); };
     $('c-add').onclick = () => { const s = store(); $('modal').classList.add('hidden'); UI.addCast(s); };
@@ -72,11 +108,17 @@
     };
   };
 
+  // Add someone with their household (partner, children, parents from your cast); the
+  // arrival is recorded so a replay brings them on the same day.
   UI.addCast = function (spec) {
     const app = UI.app, w = app.world;
     if (!w || w.ended) return;
-    try { const p = LES.Cast.add(w, spec); app.select(p.id, true); UI.toast(`★ ${esc(P.name(p))} arrived in ${esc(LES.townName(w))}`); }
-    catch (e) { console.error(e); UI.toast(`Could not add ${esc(spec.first)}: ${esc(e.message)}`); }
+    const group = LES.Cast.householdOf(load(), load().find(o => o.id === spec.id) || spec);
+    try {
+      const people = LES.Cast.arrive(w, group), p = people[group.findIndex(o => o.id === spec.id)] || people[0];
+      app.select(p.id, true);
+      UI.toast(`★ ${esc(P.name(p))} arrived in ${esc(LES.townName(w))}${people.length > 1 ? ` with ${people.length - 1} family member${people.length > 2 ? 's' : ''}` : ''}`);
+    } catch (e) { console.error(e); UI.toast(`Could not add ${esc(spec.first)}: ${esc(e.message)}`); }
     UI.renderLeaders(true);
   };
 

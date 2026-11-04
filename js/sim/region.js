@@ -21,7 +21,8 @@
   LES.regionFounders = cfg => [1, 0.6, 0.4].slice(0, Math.max(1, Number(cfg.towns) || 1)).map(k => Math.max(20, Math.round(cfg.founders * k)));
   LES.makeRegion = function (cfg) {
     const n = LES.regionFounders(cfg);
-    return new Region(cfg, n.map((f, i) => ({ name: LES.TOWN_NAMES[i], townName: LES.TOWN_NAMES[i], founders: f, seed: i ? `${cfg.seed}~${i + 1}` : cfg.seed, townType: cfg[`town${i + 1}Type`] || 'mixed' })));
+    return new Region(cfg, n.map((f, i) => ({ name: LES.TOWN_NAMES[i], townName: LES.TOWN_NAMES[i], founders: f, seed: i ? `${cfg.seed}~${i + 1}` : cfg.seed, townType: cfg[`town${i + 1}Type`] || 'mixed',
+      cast: (cfg.cast || []).filter(s => (s.town || 0) === i) })));
   };
 
   class Region {
