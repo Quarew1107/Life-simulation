@@ -298,7 +298,9 @@
         if (rem > 0) rem--;
         if (h.away) {
           L.spend(p, 'cash', 'ABROAD', amt); // heir lives abroad: the share follows them
-          h.away.wealth += amt;
+          const there = h.away.town !== undefined && w.region ? w.region.towns[h.away.town].people[h.away.id] : null;
+          if (there && there.alive) w.region.towns[h.away.town].ledger.pay('ABROAD', there, P.isAdult(w.region.towns[h.away.town], there) ? 'cash' : 'trust', amt); // heir in a sister town
+          else h.away.wealth += amt;
         } else {
           L.move(p, 'cash', h, P.isAdult(w, h) ? 'cash' : 'trust', amt);
         }
