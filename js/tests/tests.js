@@ -485,19 +485,22 @@
     check('Officials hold their council job', ['treasurer', 'community'].every(r => !g.officials[r] || g.officials[r].id < 0 || w.people[g.officials[r].id].job.jobId === r));
     check('Bank Negara keeps the OPR within 1.75-3.75%', g.opr >= 0.0175 - 1e-9 && g.opr <= 0.0375 + 1e-9 && g.oprHist.length >= 10);
     check('Service quality is measured', g.eduQ >= 0.4 && g.eduQ <= 1.3 && g.healthQ >= 0.4 && w.mortAdj > 0.9 && w.mortAdj < 1.11);
-    // A private school: built on an empty lot, staffed and paid by its owner.
-    const owner = w.living.filter(q => q.adult && !q.inst && q.manages < 0).sort((a, b) => b.cash - a.cash)[0];
-    w.ledger.pay('GENESIS', owner, 'cash', w.px(4e6));
-    const lots = w.town.lots.filter(id => !w.town.buildings[id].built).length, hadSchool = (w.town.kinds.privschool || []).length;
-    F.startBusiness(w, owner, { type: LES.C.BIZ_BY_ID.privschool, skill: 5 }, { mc: owner.mcost, risk: 0.3 });
-    const sch = w.biz[w.biz.length - 1];
-    check('A private school is built on an empty lot', w.town.buildings[sch.place].kind === 'privschool' && (w.town.lots.filter(id => !w.town.buildings[id].built).length === lots - 1 || hadSchool > 0)); // or it takes over an empty school building
-    await runDays(w, 75);
-    const staff = w.living.filter(p => p.job && p.job.biz === sch.id);
+    // A private school: built on an empty lot, staffed and paid by its owner (a fresh town
+    // that still has empty lots).
+    const ws = new LES.World({ seed: 'fisc-school', founders: 200, freezeLaws: 'yes' });
+    await runDays(ws, 40);
+    const owner = ws.living.filter(q => q.adult && !q.inst && q.manages < 0).sort((a, b) => b.cash - a.cash)[0];
+    ws.ledger.pay('GENESIS', owner, 'cash', ws.px(4e6));
+    const lots = ws.town.lots.filter(id => !ws.town.buildings[id].built).length, hadSchool = (ws.town.kinds.privschool || []).length;
+    F.startBusiness(ws, owner, { type: LES.C.BIZ_BY_ID.privschool, skill: 5 }, { mc: owner.mcost, risk: 0.3 });
+    const sch = ws.biz[ws.biz.length - 1];
+    check('A private school is built on an empty lot', ws.town.buildings[sch.place].kind === 'privschool' && (ws.town.lots.filter(id => !ws.town.buildings[id].built).length === lots - 1 || hadSchool > 0)); // or it takes over an empty school building
+    await runDays(ws, 75);
+    const staff = ws.living.filter(p => p.job && p.job.biz === sch.id);
     check('It hires its own teachers, who are paid by the school', staff.length > 0 && staff.every(p => p.job.jobId === 'teacher' && !SV.lineOf(p.job)) && (sch.payrollLast > 0 || sch.payrollNow > 0), `${staff.length} staff`);
-    F.closeBiz(w, sch, 'closed (test)', false);
-    check('When it closes, its staff lose their jobs', w.living.every(p => !(p.job && p.job.biz === sch.id)));
-    check('Money check after the school closes', w.checkInvariants().length === 0, w.checkInvariants().slice(0, 2).join(' | '));
+    F.closeBiz(ws, sch, 'closed (test)', false);
+    check('When it closes, its staff lose their jobs', ws.living.every(p => !(p.job && p.job.biz === sch.id)));
+    check('Money check after the school closes', ws.checkInvariants().length === 0, ws.checkInvariants().slice(0, 2).join(' | '));
     // Police capacity: fewer officers -> a stretched force.
     const keep = g.officers;
     g.officers = 0; const thin = LES.Crime.capacity(w); g.officers = Math.max(10, keep * 5); const full = LES.Crime.capacity(w); g.officers = keep;
