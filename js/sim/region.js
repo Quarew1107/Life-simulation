@@ -13,7 +13,8 @@
   'use strict';
   const U = LES.U, P = LES.P, F = LES.Finance;
   LES.MAX_TOWNS = 3;
-  LES.TOWN_NAMES = ['Bandar Rezeki', 'Pekan Damai', 'Kuala Sentosa'];
+  LES.TOWN_NAMES = []; // from the country pack (town.townNames)
+  LES.Countries.on('town names', K => { LES.TOWN_NAMES.length = 0; LES.TOWN_NAMES.push(...K.town.townNames); });
   LES.townName = w => (w && (w.townName || (w.cfg && w.cfg.townName))) || LES.C.TOWN_NAME;
 
   // Founders per town for the "towns" setting: the first town gets the founding population,

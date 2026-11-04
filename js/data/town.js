@@ -17,11 +17,11 @@
   // N train station, G gateway square (bus depot, memorial), L empty lot (the town grows here)
   // e private school and h private hospital (built on an empty lot by a resident's business)
   LES.MAP_SIZES = {
-    kampung: { name: 'Kampung', cols: 6, rows: 5, suggest: 'up to ~60 founders', maxFounders: 60 },
-    pekan: { name: 'Pekan', cols: 9, rows: 6, suggest: '60-250 founders', maxFounders: 250 },
-    bandar: { name: 'Bandar', cols: 12, rows: 9, suggest: '250-700 founders', maxFounders: 700 },
-    bandaraya: { name: 'Bandaraya', cols: 18, rows: 12, suggest: '700-2,000 founders', maxFounders: 2000 },
-    metropolis: { name: 'Metropolis', cols: 26, rows: 18, suggest: '2,000-5,000+ founders', maxFounders: 1e9 },
+    kampung: { cols: 6, rows: 5, suggest: 'up to ~60 founders', maxFounders: 60 },
+    pekan: { cols: 9, rows: 6, suggest: '60-250 founders', maxFounders: 250 },
+    bandar: { cols: 12, rows: 9, suggest: '250-700 founders', maxFounders: 700 },
+    bandaraya: { cols: 18, rows: 12, suggest: '700-2,000 founders', maxFounders: 2000 },
+    metropolis: { cols: 26, rows: 18, suggest: '2,000-5,000+ founders', maxFounders: 1e9 },
   };
   LES.MAP_ALIASES = { small: 'kampung', medium: 'pekan', large: 'bandar' }; // older settings
   LES.MAP_ORDER = ['kampung', 'pekan', 'bandar', 'bandaraya', 'metropolis'];
@@ -30,12 +30,12 @@
   // How many blocks of each district a town of n blocks gets (facilities scale with size).
   // Town types: a different mix of districts and of the jobs on offer. 'mixed' = the normal town.
   LES.TOWN_TYPES = {
-    mixed: { name: 'Mixed town' },
-    capital: { name: 'Business city', q: { O: 2, H: 1.5, M: 1.5, Y: 1.5 }, jobs: { accountant: 1.8, banker: 1.8, manager: 1.8, sales: 1.5, softdev: 1.5, citycorp: 0.5 } },
-    industrial: { name: 'Industrial town', q: { I: 2.5, W: 2, Y: 0.5, Z: 0.5 }, jobs: { factory: 2.2, construction: 1.8, rider: 1.6, engineer: 1.8, mechanic: 1.6, electrician: 1.6 } },
-    university: { name: 'University town', q: { U: 2, E: 2, H: 1.5, D: 1.3 }, jobs: { softdev: 1.8, retail: 1.3, chef: 1.3 } },
-    resort: { name: 'Coastal resort', q: { V: 2, Y: 2, D: 1.5, P: 1.5, I: 0.5 }, jobs: { chef: 2, retail: 1.6, cleaner: 1.6, sales: 1.4, factory: 0.5 } },
-    farming: { name: 'Farming kampung', q: { O: 0.5, I: 0.7, Y: 0.5 }, homes: { K: 0.25, A: 0.15, F: 0.2, T: 0.25, C: 0.1, B: 0.05 }, jobs: { construction: 1.4, factory: 1.3, cleaner: 1.3, banker: 0.5, softdev: 0.5 } },
+    mixed: {},
+    capital: { q: { O: 2, H: 1.5, M: 1.5, Y: 1.5 }, jobs: { accountant: 1.8, banker: 1.8, manager: 1.8, sales: 1.5, softdev: 1.5, citycorp: 0.5 } },
+    industrial: { q: { I: 2.5, W: 2, Y: 0.5, Z: 0.5 }, jobs: { factory: 2.2, construction: 1.8, rider: 1.6, engineer: 1.8, mechanic: 1.6, electrician: 1.6 } },
+    university: { q: { U: 2, E: 2, H: 1.5, D: 1.3 }, jobs: { softdev: 1.8, retail: 1.3, chef: 1.3 } },
+    resort: { q: { V: 2, Y: 2, D: 1.5, P: 1.5, I: 0.5 }, jobs: { chef: 2, retail: 1.6, cleaner: 1.6, sales: 1.4, factory: 0.5 } },
+    farming: { q: { O: 0.5, I: 0.7, Y: 0.5 }, homes: { K: 0.25, A: 0.15, F: 0.2, T: 0.25, C: 0.1, B: 0.05 }, jobs: { construction: 1.4, factory: 1.3, cleaner: 1.3, banker: 0.5, softdev: 0.5 } },
   };
   LES.districtQuota = function (n, varied, type) {
     const q = {
@@ -139,65 +139,7 @@
   };
 
   // Building descriptions (shown when a building is clicked).
-  LES.KIND_INFO = {
-    kampung: 'Wooden kampung house with rooms for rent. The cheapest housing in town.',
-    flat: 'PPR low-cost flats. Affordable homes for working families.',
-    terrace: 'A row of terrace houses. Comfortable middle-class homes.',
-    condo: 'Condominium tower with pool and gym. Upper-middle-class living.',
-    bungalow: 'A bungalow on the hill. Home of the wealthy.',
-    mamak: 'Open 24 hours. Where people meet friends, gossip and fall in love.',
-    hawker: 'Hawker centre. Cheap food, food stalls and delivery gigs.',
-    university: 'Universiti Rezeki: degrees in Arts, Business, Engineering, Medicine and Masters.',
-    kolej: 'Kolej Vokasional: vocational certificates for skilled trades.',
-    library: 'Public library: self-study, tuition gigs and freelance work.',
-    hall: 'Dewan Komuniti: public speaking club and community events.',
-    hq: 'Headquarters tower of one of the richest companies in town.',
-    office: 'Office tower: sales, accounting and management jobs; home to bigger companies.',
-    bank: 'Bank: business loans and bank officer jobs.',
-    bursa: 'Bursa Rezeki stock exchange. Click to open the stock market.',
-    mall: 'Shopping mall: retail and cleaning jobs, promoter and e-hailing gigs.',
-    shoplot: 'Shoplot unit for a small business.',
-    hospital: 'Hospital: doctors, nurses and treatment for the sick and injured.',
-    lake: 'A lake: a walk round the shore, fishing off the jetty, picnics. Not built on.',
-    hill: 'A forested hill with a trail and a viewpoint at the top. Not built on.',
-    forest: 'A forest reserve with a waterfall and a rock pool. Not built on.',
-    privschool: 'A private school, owned by a resident. Fee-paying families send their children here; the owner pays the teachers.',
-    privhosp: 'A private hospital, owned by a resident. Richer patients pay more for quicker care; the owner pays the doctors and nurses.',
-    school: 'Sekolah: where children spend their days.',
-    factory: 'Kilang: factory operator and engineer jobs.',
-    workshop: 'Bengkel: mechanics and repair gigs.',
-    warehouse: 'Gudang: despatch riders and logistics.',
-    construction: 'Construction site: hard, risky labour.',
-    park: 'Taman Tasik: lake park for running and socialising.',
-    gym: 'Stadium & gym: workouts and sports training.',
-    techhub: 'Tech Hub: software jobs and startups.',
-    welfare: 'Rumah Kebajikan: welfare home for children without guardians.',
-    padi: 'Padi fields.',
-    lot: 'Empty land. New buildings appear here when the town gets crowded.',
-    depot: 'Bus depot and the town gateway. Newcomers arrive here.',
-    memorial: 'Memorial garden. A lantern for every founder who has passed away.',
-    cinema: 'Panggung wayang: movies. Mid-tier entertainment.',
-    karaoke: 'Karaoke & bar: drinks and songs with friends. Mid-tier entertainment.',
-    bowling: 'Bowling alley. Mid-tier entertainment.',
-    futsal: 'Futsal court: cheap games with friends. Low-tier sport and leisure.',
-    finedine: 'Fine-dining restaurant. High-tier: expensive, very satisfying, a place to be seen.',
-    lounge: 'Sky lounge on the rooftop. High-tier nightlife where the well-off network.',
-    spa: 'Spa & wellness centre. High-tier relaxation that melts stress away.',
-    golf: 'Golf & country club. The most exclusive venue in town: members only, where deals are made.',
-    station: 'Stesen Keretapi: trains to the big city. Newcomers arrive and leavers depart here; commuters ride to city jobs.',
-    rail: 'Railway line to the big city.',
-    masjid: 'Masjid: Friday prayers, the zakat and infaq fund, Ramadan and Hari Raya.',
-    tokong: 'Chinese temple (Buddhist and Taoist): prayers, offerings and the temple welfare fund.',
-    kuil: 'Hindu temple: prayers, Deepavali and the temple welfare fund.',
-    gereja: 'Church: Sunday service, tithes and the church welfare fund.',
-    police: 'Balai Polis: the police station. Patrol cars go out from here; arrest chances depend on police strength.',
-    court: "Mahkamah: the magistrates' court. Most cases end in conviction; a lawyer helps those who can pay.",
-    prison: 'Penjara: the prison. Inmates lose their jobs; a record makes hiring harder and reoffending likelier.',
-    jail: 'Lokap: the police lock-up. Suspects wait here on remand until the court hears their case.',
-    townhall: "Dewan Bandaraya: the town hall, office of the elected leader. The treasury collects taxes and pays for police, aid and services.",
-    padang: 'Padang: the town field, where election rallies gather.',
-    rehab: 'Pusat Pemulihan: drug rehabilitation (AADK-style). Many relapse after release.',
-  };
+  LES.KIND_INFO = {}; // descriptions from the country pack (town.kindInfo)
 
   // Adds a building to a town (kept as a closure on town.add for the block fillers).
   LES.townAdder = function (town) {
@@ -281,69 +223,69 @@
     block.code = code;
     switch (code) {
       case 'K': for (const yy of [1, 6]) for (const xx of [1, 5, 9]) home('kampung', xx, yy, 3, 3, 0, 4); break;
-      case 'A': for (const xx of [1, 5, 9]) home('kampung', xx, 1, 3, 3, 0, 4); at('padi', 'Sawah Padi', 1, 5, 12, 5, { decor: true }); break;
+      case 'A': for (const xx of [1, 5, 9]) home('kampung', xx, 1, 3, 3, 0, 4); at('padi', BN.padi, 1, 5, 12, 5, { decor: true }); break;
       case 'F': home('flat', 1, 1, 5, 9, 1, 40); home('flat', 8, 1, 5, 9, 1, 40); break;
       case 'T': for (const yy of [1, 5, 9]) home('terrace', 1, yy, 12, 2, 2, 12); break;
       case 'C': for (const xx of [1, 5, 9]) home('condo', xx, 1, 3, 9, 3, 40); break;
       case 'B': for (const [xx, yy] of [[1, 1], [8, 1], [1, 6], [8, 6]]) home('bungalow', xx, yy, 5, 4, 4, 6); break;
       case 'O':
-        at('office', 'Menara Rezeki', 1, 0, 4, 10);
-        if (!town.byKind.bursa) { at('bank', 'Bank', 6, 1, 4, 4); at('bursa', 'Bursa', 6, 6, 7, 4); }
-        else { at('office', 'Menara Sentral', 6, 0, 4, 10); at('bank', 'Bank', 11, 1, 3, 4); }
+        at('office', BN.office, 1, 0, 4, 10);
+        if (!town.byKind.bursa) { at('bank', BN.bank, 6, 1, 4, 4); at('bursa', BN.bursa, 6, 6, 7, 4); }
+        else { at('office', BN.office2, 6, 0, 4, 10); at('bank', BN.bank, 11, 1, 3, 4); }
         break;
-      case 'H': at('techhub', 'Tech Hub', 1, 0, 4, 10); shop(6, 1); shop(10, 1); shop(6, 6); shop(10, 6); break;
+      case 'H': at('techhub', BN.techhub, 1, 0, 4, 10); shop(6, 1); shop(10, 1); shop(6, 6); shop(10, 6); break;
       case 'S': for (const yy of [1, 6]) for (const xx of [1, 5, 9]) shop(xx, yy); break;
-      case 'M': at('mall', 'Rezeki Mall', 1, 1, 6, 9); shop(8, 1); shop(8, 6); break;
-      case 'D': at('mamak', 'Mamak 24J', 1, 1, 5, 4); at('hawker', 'Hawker Centre', 7, 1, 7, 5); at('mamak', 'Mamak Corner', 1, 6, 5, 4); break;
-      case 'U': at('university', 'Universiti Rezeki', 1, 1, 13, 9); break;
-      case 'E': at('kolej', 'Kolej Vokasional', 1, 1, 6, 5); at('library', 'Library', 8, 1, 6, 5); at('hall', 'Dewan Komuniti', 1, 7, 6, 4); break;
-      case 'Q': at('hospital', 'Hospital', 1, 1, 7, 8); at('school', 'Sekolah', 9, 1, 5, 8); break;
-      case 'P': at('park', 'Taman Tasik', 0, 0, 8, 11); at('gym', 'Stadium & Gym', 9, 1, 5, 6); break;
-      case 'I': at('factory', 'Kilang', 1, 1, 12, 8); break;
-      case 'W': at('workshop', 'Bengkel', 1, 0, 6, 4); at('warehouse', 'Gudang', 8, 0, 6, 4); at('construction', 'Tapak Binaan', 0, 6, 14, 4); break;
-      case 'R': at('welfare', 'Rumah Kebajikan', 1, 1, 6, 3); home('flat', 8, 1, 5, 9, 1, 40); break;
-      case 'G': at('depot', 'Bus Depot', 1, 1, 6, 4); at('memorial', 'Taman Kenangan', 8, 1, 6, 8); break;
-      case 'X': at('hq', block.hqName || 'Menara', 4, 0, 6, 10); at('park', 'Plaza', 0, 0, 3, 11, { decor: true }); break;
-      case 'e': at('privschool', block.hqName || 'Private School', 1, 0, 9, 7); at('padang', 'Field', 1, 7, 12, 4, { decor: true }); break; // private school with a sports field
-      case 'h': at('privhosp', block.hqName || 'Private Hospital', 4, 0, 10, 9); at('park', 'Garden', 0, 0, 3, 11, { decor: true }); break;
+      case 'M': at('mall', BN.mall, 1, 1, 6, 9); shop(8, 1); shop(8, 6); break;
+      case 'D': at('mamak', BN.mamak, 1, 1, 5, 4); at('hawker', BN.hawker, 7, 1, 7, 5); at('mamak', BN.mamak2, 1, 6, 5, 4); break;
+      case 'U': at('university', BN.university, 1, 1, 13, 9); break;
+      case 'E': at('kolej', BN.kolej, 1, 1, 6, 5); at('library', BN.library, 8, 1, 6, 5); at('hall', BN.hall, 1, 7, 6, 4); break;
+      case 'Q': at('hospital', BN.hospital, 1, 1, 7, 8); at('school', BN.school, 9, 1, 5, 8); break;
+      case 'P': at('park', BN.park, 0, 0, 8, 11); at('gym', BN.gym, 9, 1, 5, 6); break;
+      case 'I': at('factory', BN.factory, 1, 1, 12, 8); break;
+      case 'W': at('workshop', BN.workshop, 1, 0, 6, 4); at('warehouse', BN.warehouse, 8, 0, 6, 4); at('construction', BN.construction, 0, 6, 14, 4); break;
+      case 'R': at('welfare', BN.welfare, 1, 1, 6, 3); home('flat', 8, 1, 5, 9, 1, 40); break;
+      case 'G': at('depot', BN.depot, 1, 1, 6, 4); at('memorial', BN.memorial, 8, 1, 6, 8); break;
+      case 'X': at('hq', block.hqName || BN.hq, 4, 0, 6, 10); at('park', BN.plaza, 0, 0, 3, 11, { decor: true }); break;
+      case 'e': at('privschool', block.hqName || BN.privschool, 1, 0, 9, 7); at('padang', BN.field, 1, 7, 12, 4, { decor: true }); break; // private school with a sports field
+      case 'h': at('privhosp', block.hqName || BN.privhosp, 4, 0, 10, 9); at('park', BN.garden, 0, 0, 3, 11, { decor: true }); break;
       case 'V':
-        at('cinema', 'Panggung Wayang', 1, 1, 6, 5, { venue: true });
-        at('karaoke', 'Karaoke & Bar', 8, 1, 6, 4, { venue: true });
-        at('bowling', 'Bowling', 1, 7, 6, 4, { venue: true });
-        at('futsal', 'Futsal', 8, 6, 6, 5, { venue: true });
+        at('cinema', BN.cinema, 1, 1, 6, 5, { venue: true });
+        at('karaoke', BN.karaoke, 8, 1, 6, 4, { venue: true });
+        at('bowling', BN.bowling, 1, 7, 6, 4, { venue: true });
+        at('futsal', BN.futsal, 8, 6, 6, 5, { venue: true });
         break;
       case 'Y':
-        at('finedine', 'Restoran Mewah', 1, 1, 6, 4, { venue: true });
-        at('lounge', 'Sky Lounge', 9, 0, 4, 10, { venue: true });
-        at('spa', 'Spa & Wellness', 1, 6, 6, 4, { venue: true });
+        at('finedine', BN.finedine, 1, 1, 6, 4, { venue: true });
+        at('lounge', BN.lounge, 9, 0, 4, 10, { venue: true });
+        at('spa', BN.spa, 1, 6, 6, 4, { venue: true });
         break;
       case 'J': // places of worship
-        at('masjid', 'Masjid Jamek', 1, 1, 7, 9);
-        at('tokong', 'Tokong Tian Hou', 9, 0, 5, 4);
-        at('kuil', 'Kuil Sri Murugan', 9, 4, 5, 4);
-        at('gereja', 'Gereja St. Mary', 9, 8, 5, 3);
+        at('masjid', BN.masjid, 1, 1, 7, 9);
+        at('tokong', BN.tokong, 9, 0, 5, 4);
+        at('kuil', BN.kuil, 9, 4, 5, 4);
+        at('gereja', BN.gereja, 9, 8, 5, 3);
         break;
       case 'j': // justice: police station, magistrates' court, prison, drug rehabilitation centre
-        at('police', 'Balai Polis', 0, 0, 4, 4);
-        at('jail', 'Lokap', 4, 0, 3, 4);
-        at('court', 'Mahkamah', 8, 0, 6, 4);
-        at('prison', 'Penjara', 0, 5, 9, 6);
-        at('rehab', 'Pusat Pemulihan', 10, 5, 4, 6);
+        at('police', BN.police, 0, 0, 4, 4);
+        at('jail', BN.jail, 4, 0, 3, 4);
+        at('court', BN.court, 8, 0, 6, 4);
+        at('prison', BN.prison, 0, 5, 9, 6);
+        at('rehab', BN.rehab, 10, 5, 4, 6);
         break;
       case 'g': // the town hall and the padang where rallies are held
-        at('townhall', 'Dewan Bandaraya', 1, 1, 8, 8);
-        at('padang', 'Padang', 10, 0, 4, 11, { decor: true });
+        at('townhall', BN.townhall, 1, 1, 8, 8);
+        at('padang', BN.padang, 10, 0, 4, 11, { decor: true });
         break;
-      case 'Z': at('golf', 'Kelab Golf Rezeki', 0, 0, 14, 11, { venue: true }); break;
+      case 'Z': at('golf', BN.golf, 0, 0, 14, 11, { venue: true }); break;
       case 'N':
-        at('station', 'Stesen Keretapi', 3, 4, 9, 5);
+        at('station', BN.station, 3, 4, 9, 5);
         at('rail', '', 0, 1, 14, 2, { decor: true, rail: true });
         break;
       case 'L': { const lot = at('lot', '', 0, 0, 14, 11, { decor: true }); town.lots.push(lot.id); break; }
       // Scenery (never built on). With functional scenery these are free outdoor places to go.
-      case 'k': at('lake', R2pick(block, ['Tasik Biru', 'Tasik Cermin', 'Tasik Seri', 'Tasik Damai']), 0, 0, 14, 11, { scenery: true }); break;
-      case 'm': at('hill', R2pick(block, ['Bukit Hijau', 'Bukit Tinggi', 'Bukit Kabus', 'Bukit Bintang']), 0, 0, 14, 11, { scenery: true }); break;
-      case 'f': at('forest', R2pick(block, ['Hutan Simpan', 'Air Terjun Lata', 'Hutan Lipur']), 0, 0, 14, 11, { scenery: true }); break;
+      case 'k': at('lake', R2pick(block, SCENERY_NAMES.lake), 0, 0, 14, 11, { scenery: true }); break;
+      case 'm': at('hill', R2pick(block, SCENERY_NAMES.hill), 0, 0, 14, 11, { scenery: true }); break;
+      case 'f': at('forest', R2pick(block, SCENERY_NAMES.forest), 0, 0, 14, 11, { scenery: true }); break;
       default: break;
     }
   };
@@ -595,10 +537,10 @@
     const nx = town.roadsX.length, ny = town.roadsY.length;
     const rect = (x0, y0, x1, y1) => [{ x: cx(x0), y: cy(y0) }, { x: cx(x1), y: cy(y0) }, { x: cx(x1), y: cy(y1) }, { x: cx(x0), y: cy(y1) }];
     const defs = [
-      { name: 'Laluan 1', colour: '#e63946', pts: rect(0, 0, nx - 2, ny - 2) },
-      { name: 'Laluan 2', colour: '#2a9d8f', pts: rect(Math.floor(nx / 4), Math.floor(ny / 4), Math.min(nx - 1, Math.floor(nx * 3 / 4) + 1), Math.min(ny - 1, Math.floor(ny * 3 / 4))) },
+      { name: `${BUS_LINE} 1`, colour: '#e63946', pts: rect(0, 0, nx - 2, ny - 2) },
+      { name: `${BUS_LINE} 2`, colour: '#2a9d8f', pts: rect(Math.floor(nx / 4), Math.floor(ny / 4), Math.min(nx - 1, Math.floor(nx * 3 / 4) + 1), Math.min(ny - 1, Math.floor(ny * 3 / 4))) },
     ];
-    if (nx >= 9) defs.push({ name: 'Laluan 3', colour: '#f4a261', pts: rect(Math.floor(nx / 2), 0, nx - 1, ny - 1) });
+    if (nx >= 9) defs.push({ name: `${BUS_LINE} 3`, colour: '#f4a261', pts: rect(Math.floor(nx / 2), 0, nx - 1, ny - 1) });
     return defs.map((d, li) => {
       const pts = d.pts, segs = [];
       let len = 0;
@@ -637,4 +579,15 @@
     }
     return { x: line.segs[0].a.x, y: line.segs[0].a.y, dir: 1 };
   };
+
+  // ---- National names (buildings, scenery, map sizes, town types, descriptions) from the country pack ----
+  const BN = {}, SCENERY_NAMES = {};
+  let BUS_LINE = '';
+  LES.Countries.require('town.buildings', 'town.scenery', 'town.busLine', 'town.mapSizeNames', 'town.townTypeNames', 'town.kindInfo', 'town.townNames');
+  LES.Countries.on('town', K => {
+    const N = K.town, set = (o, src) => { for (const k of Object.keys(o)) delete o[k]; Object.assign(o, src); };
+    set(BN, N.buildings); set(SCENERY_NAMES, N.scenery); BUS_LINE = N.busLine; set(LES.KIND_INFO, N.kindInfo);
+    for (const k of Object.keys(LES.MAP_SIZES)) LES.MAP_SIZES[k].name = N.mapSizeNames[k];
+    for (const k of Object.keys(LES.TOWN_TYPES)) LES.TOWN_TYPES[k].name = N.townTypeNames[k];
+  });
 })(globalThis.LES = globalThis.LES || {});

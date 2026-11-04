@@ -218,7 +218,7 @@ Cast members follow the normal rules; flagged with a star on leaderboards.
   'flat' or 'meansTested'); new mechanics only run when a pack switches them on. `cfg.country`
   defaults to 'my'; option values like 'malaysia' become 'national' with a save upgrade.
 - 4a steps: (1) Malaysia fingerprints + pre-move save fixture [DONE: `countryTests` in tests.js,
-  `js/tests/fixtures.js`]; (2) registry, cfg.country, guard [DONE]; (3) people and content; (4) taxes,
+  `js/tests/fixtures.js`]; (2) registry, cfg.country, guard [DONE]; (3) people and content [DONE: content.js keeps engine data, my.js `content` and `town` hold titles, pay, prices, names, ethnic mixes, stocks, building names and descriptions]; (4) taxes,
   finance, government; (5) society, festivals, events, calibration; (6) art, every RM literal, benchmark.
 - 4b UK: England's rules with UK statistics; Universal Credit (taper), Child Benefit, State Pension,
   Pension Credit floor, workplace pension (5% + 3%, market returns, access at 57), student loans (Plan 5),
