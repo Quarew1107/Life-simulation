@@ -106,47 +106,10 @@
       this.clampCam();
     }
 
+    // The pre-drawn map lives in tiles (js/render/tiles.js): this just points them at the town.
     buildStatic() {
-      const town = this.town, T = town.T, W = town.W * T, H = town.H * T;
-      const R = new LES.RNG('decor');
-      const cv = document.createElement('canvas');
-      cv.width = W; cv.height = H;
-      const g = cv.getContext('2d');
-      g.imageSmoothingEnabled = false;
-      LES.Art.beginLights();
-      LES.Art.drawGround(g, town, R);
-
-      // Occupancy grid for placing trees
-      const busy = new Uint8Array(town.W * town.H);
-      const mark = (x, y) => { if (x >= 0 && y >= 0 && x < town.W && y < town.H) busy[y * town.W + x] = 1; };
-      // No trees on roads, pavements, the river or along dropped road pieces (greenways have their own).
-      for (let j = 0; j < town.rows; j++) for (let x = 0; x < town.W; x++) if (!town.layout || LES.hasH(town, j, LES.townColOf(town, x))) for (let y = town.roadsY[j] - 1; y <= town.roadsY[j] + 2; y++) mark(x, y);
-      for (let c = 0; c < town.cols; c++) for (let y = 0; y < town.H; y++) for (let x = town.roadsX[c] - 1; x <= town.roadsX[c] + 2; x++) mark(x, y);
-      if (town.layout && town.layout.river >= 0) { const c = town.layout.river, x0 = town.colX[c] + 14 + town.layout.padX[c]; for (let y = 0; y < town.H; y++) for (let x = x0 - 1; x <= x0 + town.layout.gapX[c]; x++) mark(x, y); }
-      if (town.layout && town.layout.edge.size) { const e = town.layout.edge; for (let y = 0; y < town.H; y++) for (let x = 0; x < town.W; x++) if (e.side === 'e' ? x >= town.W - e.size - 1 : y >= town.H - e.size - 1) mark(x, y); }
-      // Spare plot ground has its own car parks and playgrounds: keep random trees off it.
-      if (town.layout) for (const bl of town.blocks) if (bl.px !== undefined && bl.code !== 'L') for (let x = bl.px; x < bl.px + bl.pw; x++) for (let y = bl.py; y < bl.py + bl.ph; y++) if (x < bl.x || x >= bl.x + 14 || y < bl.y || y >= bl.y + 11) mark(x, y);
-      if (town.layout) for (let j = 0; j < town.rows; j++) for (let x = 0; x < town.W; x++) if (!LES.hasH(town, j, LES.townColOf(town, x))) for (let y = town.roadsY[j] - 1; y <= town.roadsY[j] + 2; y++) mark(x, y);
-      for (const b of town.buildings) {
-        if (b.kind === 'lot' && !b.built && !(b.block && b.block.wild)) continue; // trees may grow on empty grass lots (wild lots draw their own)
-        for (let x = b.x - 1; x <= b.x + b.w; x++) for (let y = b.y - 1; y <= b.y + b.h + 1; y++) mark(x, y);
-      }
-      // Back-to-front so taller buildings overlap the ones behind them.
-      const order = town.buildings.slice().sort((a, b) => (a.y + a.h) - (b.y + b.h) || a.id - b.id);
-      for (const b of order) LES.Art.drawBuilding(g, b, R);
-      LES.Art.drawGreenery(g, town, busy, R);
-      // Bus stops (shelter on the sidewalk) and the town gateway arch
-      for (const line of town.busLines) for (const st of line.stops) {
-        const sx = st.pt.x + 18, sy = st.pt.y - 26;
-        rect(g, sx, sy, 12, 3, '#3d5a80'); rect(g, sx + 1, sy + 3, 1, 7, '#666'); rect(g, sx + 10, sy + 3, 1, 7, '#666');
-        rect(g, sx - 3, sy - 4, 3, 14, line.colour);
-      }
-      const gw = town.gateway;
-      rect(g, gw.x + 4, gw.y - 20, 4, 40, 'rgba(0,0,0,0.25)'); rect(g, gw.x + 2, gw.y - 22, 4, 40, '#8b5a2b'); rect(g, gw.x + 2, gw.y - 26, 70, 9, '#b23a48'); rect(g, gw.x + 2, gw.y - 26, 70, 1, '#d9606d');
-      g.font = `7px ${FONT}`; g.fillStyle = '#ffe9a8'; g.textBaseline = 'top';
-      g.fillText('SELAMAT DATANG', gw.x + 5, gw.y - 25);
-      this.bg = cv;
-      this.lights = LES.Ambience.buildLights(town, LES.Art.takeLights());
+      if (!this.tiles) this.tiles = new LES.MapTiles();
+      this.tiles.setTown(this.town, this.w ? this.w.townVersion : 0);
       this.bgVersion = this.w ? this.w.townVersion : 0;
     }
 
@@ -345,7 +308,7 @@
 
     frame(t, fast, now) {
       const g = this.ctx, w = this.w;
-      if (!w || !this.bg) return;
+      if (!w || !this.tiles) return;
       if (this.bgVersion !== w.townVersion) { this.buildStatic(); this.anim.clear(); }
       if (this.follow && this.selectedId >= 0) {
         const p = w.people[this.selectedId];
@@ -357,7 +320,10 @@
       const s = this.z * this.dpr;
       g.setTransform(s, 0, 0, s, -this.cx * s, -this.cy * s);
       g.imageSmoothingEnabled = false;
-      g.drawImage(this.bg, 0, 0);
+      const vw = this.vw / this.z, vh = this.vh / this.z;
+      // Paint missing tiles on screen first, then fill the overview, a few at a time.
+      this.tiles.work(fast ? 4 : 7, this.tiles.need(this.cx, this.cy, vw, vh, this.z));
+      this.tiles.draw(g, this.cx, this.cy, vw, vh, this.z);
       this.drawShops(g);
       if (w.crime) this.drawTurf(g, w);
       if (w.gov) this.drawCivic(g, w, now);
