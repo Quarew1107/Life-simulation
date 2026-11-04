@@ -10,7 +10,7 @@
   S.VERSION = 1;
 
   // Classes that can appear inside a world, restored with their prototype.
-  const classes = () => ({ World: LES.World, RNG: LES.RNG, Ledger: LES.Ledger, WhySlot: LES.Actions.WhySlot });
+  const classes = () => ({ World: LES.World, RNG: LES.RNG, Ledger: LES.Ledger, WhySlot: LES.Actions.WhySlot, Region: LES.Region });
 
   // Content-table objects are saved as a path ("JOBS.3") rather than copied.
   let contentIdx = null;
@@ -62,7 +62,7 @@
       return name ? { t: 'c', c: name, v } : { t: 'o', v };
     }
     const root = ref(world);
-    return { app: 'LES', version: S.VERSION, saved: new Date().toISOString(), day: world.day, seed: world.cfg.seed, root, table };
+    return { app: 'LES', version: S.VERSION, saved: new Date().toISOString(), day: world.day, seed: (world.cfg || world.base).seed, root, table };
   };
 
   S.decode = function (data) {
@@ -102,6 +102,10 @@
       else throw new Error(`Save: unknown function ${f.name}`);
     }
     const w = val(data.root);
+    if (LES.Region && w instanceof LES.Region) { // a region of towns: reconnect each town to it
+      w.towns.forEach((t, i) => { t.afterLoad(); LES.Region.attach(t, w, i, t.townName); });
+      return w;
+    }
     if (!(w instanceof LES.World)) throw new Error('Save: file does not contain a world.');
     w.afterLoad();
     return w;

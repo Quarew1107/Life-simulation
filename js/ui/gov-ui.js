@@ -23,7 +23,7 @@
     const changed = key => { for (let i = g.lawLog.length - 1; i >= 0; i--) if (g.lawLog[i].key === key) return g.lawLog[i]; return null; };
     const days = g.electionDay - w.day;
     el.innerHTML = `
-      <div class="card"><h3>${esc(title)} of ${esc(C.TOWN_NAME)}</h3>
+      <div class="card"><h3>${esc(title)} of ${esc(LES.townName(w))}</h3>
         ${pres ? `<div class="grid2"><div><span class="muted">${esc(title)}</span><span>${UI.plink(w, pres.id)}</span></div><div><span class="muted">Leaning</span><span>${lean(pres)}</span></div>
           <div><span class="muted">In office since</span><span>${U.fmtMonthYear(g.termStart)} (term ${g.terms[pres.id] || 1})</span></div><div><span class="muted">Approval</span><span class="${g.approval < 40 ? 'neg' : g.approval >= 60 ? 'pos' : ''}">${g.approval}%</span></div></div>` : '<p class="note">The office is vacant: a by-election is coming.</p>'}
         <div class="note">${g.campaign ? `🗳️ Campaign under way: polling day ${U.fmtDate(g.electionDay)}.` : `Next election ${U.fmtMonthYear(g.electionDay)} (${Math.max(0, Math.round(days / 30))} months).`} ${g.scandals ? `${g.scandals} corruption scandal${g.scandals > 1 ? 's' : ''} so far.` : ''}</div>

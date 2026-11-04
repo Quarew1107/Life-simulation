@@ -35,6 +35,8 @@
     identityVoting: 'moderate', // none | moderate | strong: weight of shared ethnicity / religion in voting
     freezeLaws: 'no',         // yes = laws stay at their starting values (elections still happen)
     stopOnWinner: 'no',
+    towns: '1',               // 1-3 towns in one region (js/sim/region.js)
+    removeLimits: 'no',       // yes = allow bigger populations (slower)
     // Scenario (js/sim/scenarios.js) and its options
     scenario: 'none',         // none | equal | reset | eternal | eduban | pandemic | robots | lawless | island | clans
     eqKids: 'yes',            // Born Equal: children are born equal too
@@ -111,6 +113,8 @@
     // ---- Advanced ----
     { group: 'Base rules', key: 'preset', label: 'Rules', type: 'select', options: [['malaysia', 'Malaysia today (calibrated to DOSM data)'], ['classic', 'Classic (original harsh rules)'], ['custom', 'Custom']], help: 'Fills the settings below. Malaysia: welfare on, ~1.6 children per woman, ~75-year life expectancy.' },
     { group: 'Town & map', key: 'mapSize', label: 'Map size', type: 'select', options: [['auto', 'Auto (suggested from population)'], ['kampung', 'Kampung - up to ~60 founders'], ['pekan', 'Pekan - 60-250 founders'], ['bandar', 'Bandar - 250-700 founders'], ['bandaraya', 'Bandaraya - 700-2,000 founders'], ['metropolis', 'Metropolis - 2,000-5,000+ founders']], help: 'Bigger maps have more homes, shops, venues, bus lines and land to grow on.' },
+    { group: 'Town & map', key: 'towns', label: 'Towns in the region', type: 'select', options: [['1', 'One town'], ['2', 'Two towns'], ['3', 'Three towns']], help: 'Extra towns get about 60% and 40% of the founding population. They share one economy and stock exchange, and people move between them.' },
+    { group: 'Town & map', key: 'removeLimits', label: 'Remove population limits', type: 'select', options: [['no', 'No (keeps the simulation smooth)'], ['yes', 'Yes (big worlds run slowly)']], help: 'Normally all towns together may start with at most 1,500 people.' },
     { group: 'Town & map', key: 'layout', label: 'Street layout', type: 'select', options: [['varied', 'Varied (avenues, a river, superblocks)'], ['grid', 'Grid (original equal blocks)']], help: 'Varied layouts change with the seed.' },
     { group: 'Goal', key: 'goalRM', label: 'Wealth goal (RM)', type: 'int', min: 10000, max: 1e12 },
     { group: 'Goal', key: 'goalMode', label: 'Goal measured in', type: 'select', options: [['real', 'Year-1 money (adjusted for inflation)'], ['nominal', "That year's ringgit (nominal)"]], help: 'Real keeps the goal equally hard across generations.' },
@@ -177,9 +181,12 @@
     if (!Array.isArray(hw) || hw.length !== 3 || hw.some(x => !isNum(x) || x < 0) || Math.abs(hw[0] + hw[1] + hw[2] - 1) > 1e-6) blockers.push('Hiring weights must be 3 non-negative numbers summing to 1.');
     if (cfg.shiftsPerMonth > 28) blockers.push('Work shifts per month cannot exceed 28 (shortest month).');
     if (isNum(cfg.inflMin) && isNum(cfg.inflMax) && cfg.inflMin > cfg.inflMax) blockers.push('Inflation min must be <= inflation max.');
+    const totalFounders = LES.regionFounders ? LES.regionFounders(cfg).reduce((a, b) => a + b, 0) : cfg.founders;
+    if (cfg.towns !== '1' && cfg.removeLimits !== 'yes' && totalFounders > 1500) blockers.push(`All towns together would start with ${totalFounders} people; the limit is 1,500 (lower the population or turn on "Remove population limits").`);
 
     if (!blockers.length) {
       if (cfg.goalRM > 1e9) warnings.push('A goal above RM1 billion will very likely never be reached.');
+      if (cfg.towns !== '1' && totalFounders > 800) warnings.push(`Several towns with ${totalFounders} founders in all will run noticeably slower.`);
       if (cfg.founders > 1500) warnings.push('Very large populations run slower (120 years can take 10-15 minutes at MAX); people are drawn as dots when zoomed out.');
       else if (cfg.founders > 300) warnings.push('Large populations can grow past 1,000 people and slow down the visual mode.');
       if (cfg.fertility === 'high' && cfg.horizonYears > 150) warnings.push('High birth rate over a long horizon may produce a very large population.');

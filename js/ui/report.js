@@ -276,7 +276,7 @@ ${g.officials ? `<div class="card"><b>City council at the end</b><table>${LES.Co
       ${[['Winner', prev.winner, a.awards[0] && w.winner ? esc(P.name(w.people[w.winner.pid])) : 'none'], ['Richest peak', prev.richest, a.top[0] ? U.fmtMoney(a.top[0].peakReal) : '—'], ['Final median wealth', prev.median, U.fmtMoney(h[h.length - 1].median)], ['Population at end', prev.pop, h[h.length - 1].pop], ['Businesses failed', prev.failed, w.stats.bizFailed]].map(([k, x, y]) => `<tr><td>${k}</td><td>${esc(x)}</td><td>${y}</td></tr>`).join('')}</table>
       <p class="note">Changed settings: ${Object.keys(cfg).filter(k => JSON.stringify(cfg[k]) !== JSON.stringify(prev.cfg[k])).map(esc).join(', ') || 'none (only randomness)'}.</p></section>` : '';
     return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Simulation Report – ${esc(C.TOWN_NAME)}</title>
+<title>Simulation Report – ${esc(LES.townName(w))}</title>
 <style>
 :root{--bg:#f6f3ec;--fg:#1d232b;--muted:#5d6875;--card:#fff;--line:#e3ddd0;--acc:#b8862b}
 @media (prefers-color-scheme:dark){:root{--bg:#11161c;--fg:#e8edf2;--muted:#94a3b4;--card:#18212b;--line:#2a3542;--acc:#f2c14e}}
@@ -293,7 +293,7 @@ svg.chart{width:100%;height:auto;color:var(--fg)}table{border-collapse:collapse;
 button{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer}
 @media print{button{display:none}}
 </style></head><body><main>
-<h1>${esc(C.TOWN_NAME)} — ${a.years}-year simulation report</h1>
+<h1>${esc(LES.townName(w))} — ${a.years}-year simulation report</h1>
 <div class="sub">Seed “${esc(cfg.seed)}” · ${cfg.founders} founders · ${esc(LES.MAP_SIZES[w.mapSize].name)} map · generated ${esc(U.fmtDate(Math.max(0, w.lastDay)))} ${w.ended ? '(finished)' : '(in progress)'}</div>
 <p><button onclick="(function(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([document.documentElement.outerHTML],{type:'text/html'}));a.download='les-report-${esc(cfg.seed).replace(/[^a-z0-9-]/gi, '_')}.html';a.click();})()">Download this report</button> <button onclick="print()">Print / PDF</button></p>
 <div class="kpis">

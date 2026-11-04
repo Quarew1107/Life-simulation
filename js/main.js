@@ -43,9 +43,21 @@
   app.newWorld = function (cfg) {
     if (app.world && app.world.lastDay > 365) { try { app.prevSummary = LES.Report.summary(app.world); } catch (e) { console.error(e); } }
     let w;
-    try { w = new LES.World(cfg); } catch (e) { showError(`Could not create world: ${e.message}`); console.error(e); return false; }
+    try {
+      if (cfg.towns && cfg.towns !== '1') { app.region = LES.makeRegion(cfg); w = app.region.towns[0]; } // several towns
+      else { app.region = null; w = new LES.World(cfg); }
+    } catch (e) { showError(`Could not create world: ${e.message}`); console.error(e); return false; }
     app.useWorld(w);
     return true;
+  };
+  // Switch which town the map and panels show (a region keeps running all of them).
+  app.selectTown = function (i) {
+    const R = app.region;
+    if (!R || !R.towns[i] || R.towns[i] === app.world) return;
+    app.world = R.towns[i];
+    app.selected = -1; app._rich.t = 0; UI.feedSeqShown = 0;
+    app.renderer.setWorld(app.world); app.renderer.selectedId = -1; app.renderer.follow = false;
+    UI.update(true);
   };
 
   // Show a world (new or loaded): reset selection, camera, feed and audio.
@@ -74,7 +86,7 @@
     const wasPaused = app.paused;
     app.paused = true; renderSpeed();
     try {
-      const text = LES.Save.toJSON(w);
+      const text = LES.Save.toJSON(app.region || w); // a region saves all its towns
       let blob = new Blob([text], { type: 'application/json' }), ext = 'json';
       if (typeof CompressionStream === 'function') {
         blob = await new Response(blob.stream().pipeThrough(new CompressionStream('gzip'))).blob();
@@ -97,10 +109,12 @@
         if (typeof DecompressionStream !== 'function') throw new Error('This browser cannot open compressed saves.');
         bytes = new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
       }
-      const w = LES.Save.fromJSON(new TextDecoder().decode(bytes));
-      const errs = w.checkInvariants();
+      const loaded = LES.Save.fromJSON(new TextDecoder().decode(bytes));
+      const errs = loaded.checkInvariants();
       if (errs.length) throw new Error(`the saved world failed its consistency checks (${errs[0]})`);
       app.prevSummary = null;
+      app.region = loaded instanceof LES.Region ? loaded : null;
+      const w = app.region ? app.region.towns[0] : loaded;
       app.useWorld(w);
       app.paused = true; renderSpeed();
       LES.Setup.close();
@@ -153,9 +167,9 @@
   function safeStep() {
     const w = app.world;
     try {
-      w.step();
+      if (app.region) app.region.step(); else w.step();
       if (w.date.lastOfMonth && w.date.month % 3 === 2) {
-        const errs = w.checkInvariants();
+        const errs = app.region ? app.region.checkInvariants() : w.checkInvariants();
         if (errs.length) { console.error('Invariant violations', errs); showError(`Consistency check failed on ${U.fmtDate(w.lastDay)}: ${errs[0]}`); }
       }
     } catch (e) {

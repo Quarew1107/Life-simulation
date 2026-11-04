@@ -32,6 +32,8 @@
     $('side').addEventListener('click', e => {
       const act = e.target.closest('[data-act]');
       if (act) { app.action(act.dataset.act, act.dataset); return; }
+      const xl = e.target.closest('[data-xtown]'); // the same person or family in another town
+      if (xl) { e.preventDefault(); app.selectTown(Number(xl.dataset.xtown)); app.select(Number(xl.dataset.xid), true); return; }
       const link = e.target.closest('[data-pid]');
       if (link) { app.select(Number(link.dataset.pid), true); }
     });
@@ -86,6 +88,17 @@
     const day = Math.max(0, w.lastDay);
     $('date-text').textContent = U.fmtDate(day);
     $('time-text').textContent = w.lastDay < 0 ? 'Not started' : app.fast ? `${app.speedLabel()} · fast-forward` : LES.clockAt(app.dayFrac);
+    const sub = $('town-sub'); if (sub && sub.textContent !== LES.townName(w)) sub.textContent = LES.townName(w);
+    const R = app.region, ts = $('town-switch');
+    ts.classList.toggle('hidden', !R);
+    if (R) {
+      const key = R.towns.map(t => `${t.counts.living}`).join(',') + w.townIdx;
+      if (ts.dataset.key !== key) {
+        ts.dataset.key = key;
+        ts.innerHTML = R.towns.map((t, i) => `<button data-town="${i}" class="${t === w ? 'on' : ''}" title="Show ${U.esc(t.townName)}">${U.esc(t.townName)} <small>${t.counts.living}</small></button>`).join('');
+        for (const b of ts.querySelectorAll('button')) b.onclick = () => app.selectTown(Number(b.dataset.town));
+      }
+    }
     const scn = LES.Scenarios.current(w), sb = $('scn-badge');
     sb.classList.toggle('hidden', !scn);
     if (scn && sb.dataset.id !== scn.id) { sb.dataset.id = scn.id; sb.innerHTML = `${LES.icon(scn.icon, 14)} ${U.esc(scn.name)}`; sb.title = `Scenario: ${scn.name}. ${scn.short}`; }
@@ -141,7 +154,7 @@
     const stratCol = C.STRATEGY_COLORS[p.strategy];
     let status;
     if (!p.alive) status = `🕯️ Died aged ${age} (${esc(p.causeOfDeath)}) on ${U.fmtDate(p.deathDay)}`;
-    else if (p.away) status = `✈️ Living outside ${C.TOWN_NAME} (left for ${esc(p.away.reason)})`;
+    else if (p.away) status = `✈️ Living outside ${LES.townName(w)} (left for ${esc(p.away.reason)})`;
     else if (p.plan && p.plan.length) {
       const s = p.plan[app.dayFrac * 1440 < LES.SLOT_B ? 0 : 1] || p.plan[0];
       status = `${A.ICONS[s.act] || '•'} ${esc(s.label)}`;
@@ -252,6 +265,12 @@
     html += UI.societyCard ? UI.societyCard(w, p) : '';
     html += UI.crimeCard ? UI.crimeCard(w, p) : '';
     html += UI.politicsCard ? UI.politicsCard(w, p) : '';
+    if (app.region && ((p.away && p.away.town !== undefined) || (p.xlinks && p.xlinks.length))) { // links to the same family in other towns
+      const R = app.region, rows = [];
+      if (p.away && p.away.town !== undefined) rows.push(`<li>Now lives in <a href="#" data-xtown="${p.away.town}" data-xid="${p.away.id}">${U.esc(R.towns[p.away.town].townName)}</a></li>`);
+      for (const x of p.xlinks || []) { const q = R.towns[x.town].people[x.id]; if (q) rows.push(`<li>${x.rel === 'self' ? 'Moved here from' : x.rel === 'parent' ? 'Parent in' : 'Child in'} <a href="#" data-xtown="${x.town}" data-xid="${x.id}">${U.esc(R.towns[x.town].townName)}</a>${x.rel === 'self' ? '' : `: ${U.esc(P.name(q))}`}</li>`); }
+      html += `<div class="card"><h3>Other towns</h3><ul class="list-plain xlinks">${rows.join('')}</ul></div>`;
+    }
     if (p.clan && LES.Scenarios.CLAN_BY_ID[p.clan]) { const cl = LES.Scenarios.CLAN_BY_ID[p.clan]; html += `<div class="card"><h3>Clan <small class="muted">Five Clans scenario</small></h3><p><span style="color:${cl.colour}">■</span> <b>${U.esc(cl.name)}</b> (${U.esc(cl.en)}): born with a gift for ${C.ATTR_NAMES[cl.attr].toLowerCase()}.</p></div>`; }
     if (p.adult) {
       html += `<div class="card tiers"><h3>Lifestyle <small class="muted">${U.fmtMoney(p.mcost)}/month incl. children</small></h3>
@@ -347,7 +366,7 @@
     const young = w.living.filter(p => p.alive && p.adult && P.age(w, p) < 21).slice(0, 3);
     const ent = w.living.filter(p => p.alive && p.strategy === 'ENT').slice(0, 2);
     const pick = arr => arr.map(p => `<li><span>${UI.plink(w, p.id)} <span class="muted">${Math.floor(P.age(w, p))} · ${C.STRATEGY_NAMES[p.strategy]}</span></span><span>${U.fmtMoney(p.nw)}</span></li>`).join('');
-    return `<div class="card"><h3>Welcome to ${C.TOWN_NAME}</h3>
+    return `<div class="card"><h3>Welcome to ${LES.townName(w)}</h3>
       <p style="margin:0 0 6px">${w.cfg.founders} strangers each try to reach <b class="gold">${U.fmtMoney(w.goal)}</b>. Nobody is controlled — every choice is a weighted dice roll from their personality, strategy, needs and money.</p>
       <p class="muted" style="margin:0">Click anyone on the map, or pick someone below. Press <b>Space</b> to play/pause, <b>1–6</b> for speed.</p></div>
       <div class="card"><h3>Richest right now</h3><ul class="list-plain">${pick(rich)}</ul></div>
