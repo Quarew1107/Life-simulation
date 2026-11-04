@@ -11,7 +11,11 @@ Double-click **`Start Simulation.bat`**, or open `index.html` in Edge or Chrome.
 2. **Your town.** The six settings people change most: founding population (the map size follows), years to simulate, starting wealth, economic cycles, crime and the world seed (🎲 picks a random one).
 3. **Advanced settings** (folded away): everything else, in groups for base rules, town and map, goal, economy and prices, people and families, society and religion, crime and justice, and government. Changing a base rule switches the rules to Custom.
 
-**My Cast:** Leaders tab → **★ My cast** → *Create a person*. Choose a name, sex, age, ethnicity, religion and devotion, qualification, strategy, money, the six abilities, personality and looks (with a live preview), then add them to the town: they arrive by train and live by the same rules as everyone else. Saved people stay in your browser (export/import as a file) and the list shows how each is doing; they carry a ★ on the leaderboards.
+**My Cast:** Leaders tab → **★ My cast** → *Create a person*. Choose a name, sex, age (from a baby to 90), ethnicity, religion and devotion, qualification, strategy, money, the six abilities, personality and looks (glasses, beard and headwear included, with a live preview).
+- **Family:** link people in your cast as partners (a man and a woman, as for every couple in town) or as parent and child. A household arrives together: partners share a home, and children under 18 come in their parents' care (the abilities you set are their potential).
+- **Founders:** on the setup screen, *★ My cast as founders* starts the town with the people you tick (their household comes too; with several towns, choose each person's town).
+- **During a run:** *Add to town* brings them by train. Arrivals are recorded, so *Replay with a change* brings them back on the same day with the same history.
+- Saved people stay in your browser (export/import as a file); in town they carry a ★ on the leaderboards. Everyone else gets glasses, beards and headwear too, by a fixed rule from their age, sex and community (looks only, no effect on the simulation).
 
 **Scenery:** varied towns are a little bigger than before, and the extra blocks are lakes, forested hills and forest reserves with waterfalls that nobody builds on. By default people jog, picnic and hike there, and homes next to them are calmer (Advanced → *Lakes, hills and forests* to make them scenery only).
 
