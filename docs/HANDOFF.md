@@ -59,10 +59,18 @@ economy, comparison card, save/load. Next, in this order:
    (`UI.castAlerts` in cast-ui.js watches cast members' logs; level in localStorage `les-cast-alerts`:
    major/all/off; sounds via `LES.Audio.onEvent(e, app, true, true)`), the Events "★ Cast" filter, map stars
    and the report's "Your cast" section are DONE: section 4.4 is complete.
-   FOUND (not fixed, owner to decide): a household head whose affordable housing tier equals the default
-   (tier 1) never gets a home (`F.reviewTiers` only moves when the tier changes): ~38 of 100 founders
-   have homeId -1 for good. Present since the original engine; fixing it changes every history and the
-   stored Classic fingerprints. Cast households are given a home explicitly.
+   FIXED (owner approved, Nov 2026): a household head whose affordable housing tier equalled the default
+   (tier 1) never got a home (`F.reviewTiers` only moved people whose tier changed): ~38 of 100 founders
+   had homeId -1 for good, since the original engine. Heads without a home now always get one. This
+   changed every history, so the stored Classic fingerprints in `foundationTests` were re-recorded once
+   (old values noted there). Also fixed: loading a save re-applied the laws and recalculated everyone's
+   monthly costs (`GV.upgrade` -> `applyLaws(w, false)` now), so a loaded world could drift from the saved
+   one.
+   Calibration (tools/calibration.html, 3 seeds x 80 years) before -> after the fix: Gini 0.67 -> 0.59
+   (target 0.39), public revenue per person RM2,739 -> RM1,416 a month (target RM815), median wage
+   RM3,734 -> RM3,539 (RM3,000), prisoners 397 -> 305 per 100k (256), index crime 109 -> 93 (170), TFR
+   1.49 -> 1.70 (1.6), life expectancy 75.0 -> 73.4 (75.3). Gini and revenue were already off before the
+   fix (ROADMAP's "all targets in band" is out of date): a job for the Phase 6 calibration pass.
 4. 4.1 chunked static map layer, 4.5 countries, 4.6 polish.
 
 ## 2. Done so far
