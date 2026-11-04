@@ -328,3 +328,11 @@ button.primary { border-radius: 6px; box-shadow: 3px 3px 0 #7d5f17; }
 .goal-now { display: flex; gap: 10px; align-items: center; margin-bottom: 6px; }
 .goal-ic { font-size: 22px; width: 34px; height: 34px; display: grid; place-items: center; background: #141b23; border: 1px solid var(--line); border-radius: 8px; }
 #lb-mode.seg.wrap button { font-size: 11px; padding: 5px 8px; }
+/* My Cast creator */
+.cast-grid { display: grid; grid-template-columns: 1.3fr 1fr 0.8fr; gap: 10px; }
+.cast-sl { display: grid; grid-template-columns: 110px 1fr 34px; align-items: center; gap: 6px; font-size: 12px; margin: 3px 0; }
+.cast-sl b { text-align: right; font-weight: 600; }
+.cast-looks { display: grid; grid-template-columns: 1fr; gap: 5px; font-size: 12px; }
+.cast-looks label { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+#c-preview { display: block; margin: 10px auto 0; border-radius: 6px; image-rendering: pixelated; }
+@media (max-width: 900px) { .cast-grid { grid-template-columns: 1fr; } }

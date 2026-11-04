@@ -580,6 +580,9 @@
     const mv = R.moves[0], [fromId, toId] = mv.pairs[0], a = R.towns[mv.from].people[fromId], b = R.towns[mv.to].people[toId];
     check('A mover is the same person in the new town, linked back to the old one', a.first === b.first && a.birthDay === b.birthDay && a.away.town === mv.to && b.xlinks[0].id === fromId);
     check('Town types change the district mix', (() => { const k = t => { const w2 = new LES.World(Object.assign({}, LES.DEFAULTS, { seed: 'tt', founders: 120, town1Type: t })); return w2.town.blocks.filter(b => b.code === 'I').length; }; return k('industrial') > k('mixed'); })());
+    const cw = new LES.World({ seed: 'cast-t', founders: 40 }), spec = Object.assign(LES.Cast.blank(), { first: 'Test', last: 'Person', att: [9, 1, 5, 5, 5, 5], cash: 77000, qual: 'BACH_BUS' });
+    const cp = LES.Cast.add(cw, spec);
+    check('My Cast: a custom person arrives with the chosen abilities, money and degree', cp.custom && cp.first === 'Test' && cp.att[0] === 9 && cp.quals[0] === 'BACH_BUS' && cp.cash === cw.px(77000) && cw.checkInvariants().length === 0);
     const R2 = mk(), R3 = mk();
     for (let d = 0; d < 2 * 365; d++) { R2.step(); R3.step(); }
     check('Same seed -> same region history', R2.hash() === R3.hash());

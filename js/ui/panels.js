@@ -387,8 +387,9 @@
   };
 
   // ---------------- Leaderboard ----------------
-  UI.renderLeaders = function () {
+  UI.renderLeaders = function (force) {
     const app = UI.app, w = app.world;
+    if (UI.lbMode === 'cast' && UI.renderCast) { UI.renderCast(force); return; } // My cast (js/ui/cast-ui.js)
     const q = $('search').value.trim().toLowerCase();
     let list;
     if (q) list = w.people.filter(p => P.name(p).toLowerCase().includes(q)).sort((a, b) => (b.alive - a.alive) || (b.nw - a.nw)).slice(0, 60);
@@ -419,7 +420,7 @@
       <div class="lb-row ${p.id === app.selected ? 'sel' : ''}" data-pid="${p.id}">
         <span class="rank ${i < 3 && !q ? 'top' : ''}">${q ? '' : i + 1}</span>
         <span class="dot" style="background:${C.STRATEGY_COLORS[p.strategy]}" title="${C.STRATEGY_NAMES[p.strategy]}"></span>
-        <span><div class="nm">${esc(P.name(p))}${p.alive ? '' : ' <span class="muted">†</span>'}</div>
+        <span><div class="nm">${p.custom ? '<span class="pos" title="Your cast">★</span> ' : ''}${esc(P.name(p))}${p.alive ? '' : ' <span class="muted">†</span>'}</div>
           <div class="sub">${Math.floor(P.age(w, p))} yrs · ${p.goal ? `${LES.Goals.DEFS[p.goal.id].icon} ${LES.Goals.DEFS[p.goal.id].name}` : C.STRATEGY_NAMES[p.strategy]} · via ${UI.mainSource(p)}${p.gen ? ` · gen ${p.gen}` : ''}</div></span>
         <span class="val">${val(p)}</span>
       </div>`).join('') || '<p class="muted">Nobody matches.</p>';
