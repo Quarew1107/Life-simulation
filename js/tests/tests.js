@@ -761,6 +761,47 @@
     check('The tile cache stays under its memory cap and keeps the tiles on screen', small.bytes <= 8 * 1048576 && [...keep].every(k => small.cache.has(k)), `${(small.bytes / 1048576).toFixed(1)} MB`);
   }
 
+  // Country packs (js/data/countries/): moving Malaysia into its pack must change nothing.
+  // Fingerprints recorded from the code before the move (Nov 2026, commit c0bb584).
+  async function countryTests() {
+    print('--- Countries (Malaysia pack fingerprints) ---', 'info');
+    const MY = {
+      'my-default': '9381afc48a75fe84f313d17c3b07c2ac/4e83df96', 'my-options': 'ebdf7095ec4dd4f9b61c7f53cc3e8ebc/60329a7c',
+      'my-pandemic-lawless': 'ec6c1f0a2b8815fd4a1f658976a199ca/753079c0', 'my-clans': 'dad42cbcb73f021b6187674938b1489d/ba6ebd6b',
+      'my-region': 'b495fc0cc72406b997b9263068ac1d7b/1446da57|df40270e95862a096fbcf18074fe4e2a/b4341cfb|bec63c796b6fbe7b2f66ede517369097/40cf5843',
+      'my-save': '93a0eff009e13bbf0631071fc098447a',
+    };
+    const REPORT = { 'my-default': '9208d902', 'my-pandemic-lawless': '814397fa', 'my-region': 'adaf99d2' };
+    const D = LES.DEFAULTS, base = { founders: 80, migration: 'normal' };
+    const cases = {
+      'my-default': () => new LES.World(Object.assign({}, D, base, { seed: 'my-1' })),
+      'my-options': () => new LES.World(Object.assign({}, D, base, { seed: 'my-2', drugPolicy: 'treatment', leaderTitle: 'datuk', interfaith: 'free', ethnicMix: 'classic', fertility: 'normal', education: 'expensive', wealthDist: 'unequal' })),
+      'my-pandemic-lawless': () => new LES.World(Object.assign({}, D, base, { seed: 'my-3', scenario: 'pandemic', pandemicYear: '5', crime: 'lawless' })),
+      'my-clans': () => new LES.World(Object.assign({}, D, base, { seed: 'my-4', scenario: 'clans' })),
+      'my-region': () => new LES.Region(Object.assign({}, D, { seed: 'my-5', migration: 'normal', towns: '3' }), [{ founders: 60 }, { founders: 40, seed: 'my-5b' }, { founders: 30, seed: 'my-5c' }]),
+    };
+    // State plus every text people and the feed see (names, job titles, log lines), so a moved label shows up too.
+    const textOf = w => LES.hashString(w.people.map(p => `${p.first} ${p.last}|${p.eth}|${p.rel || ''}|${p.job ? p.job.title || p.job.jobId : ''}|` + p.log.map(e => e.text).join('~')).join('#') + w.feed.map(e => e.text).join('~'))[0].toString(16);
+    const one = w => `${w.stableHash()}/${textOf(w)}`;
+    const hashOf = x => x.towns ? x.towns.map(one).join('|') : one(x);
+    for (const k of Object.keys(cases)) {
+      const x = cases[k]();
+      const days = (k === 'my-pandemic-lawless' ? 6 : 4) * 365;
+      for (let d = 0; d < days && !x.ended; d++) { x.step(); if (d % 1500 === 0) await yieldUI(); }
+      check(`Malaysia pack reproduces the engine before the move (${k})`, hashOf(x) === MY[k], hashOf(x));
+      if (LES.Report && REPORT[k] !== undefined) { // the end-of-run report shows most labels (browser only)
+        const r = LES.hashString(LES.Report.html(x.towns ? x.towns[0] : x).replace(/\d{1,2}:\d{2}(:\d{2})?|\d{4}-\d{2}-\d{2}/g, ''))[0].toString(16);
+        check(`Its report reads exactly as before (${k})`, r === REPORT[k], r);
+      }
+    }
+    // A save written before the move loads and continues to the same history.
+    if (globalThis.LES_FIXTURES && LES_FIXTURES.mySave) {
+      const w = LES.Save.fromJSON(LES_FIXTURES.mySave);
+      await runDays(w, 365);
+      check('A Malaysia save from before the move loads and continues identically', w.stableHash() === MY['my-save'], w.stableHash());
+    } else check('The pre-move save fixture is present', false);
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -777,6 +818,7 @@
       await scenarioTests();
       await regionTests();
       await castTests();
+      await countryTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -788,6 +830,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, tileTests };
+  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

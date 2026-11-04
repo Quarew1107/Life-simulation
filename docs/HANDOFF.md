@@ -1,7 +1,7 @@
 # Handoff: state of the project and what to do next
 
 Written so a new developer (or a new Claude session) can continue without the earlier
-conversation. Branch: `main-4bf9gf` on `Quarew1107/Life-simulation`. Last update: Nov 2026.
+conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2026.
 
 ## 1. How the project works (read first)
 - Plain JavaScript, no build step, runs from `index.html` opened as a file (file://). Every
@@ -207,6 +207,42 @@ mid-run as newcomers by train (record additions in cfg/save so replays match). N
 Cast members follow the normal rules; flagged with a star on leaderboards.
 
 ### 4.5 Countries
+**Approved plan (Nov 2026, owner accepted every recommendation):**
+- Pack format: `js/data/countries/countries.js` (registry: register/get/validate/use) and one file per
+  country (`my.js`, then `uk.js`). `LES.Countries.use(code)` writes the pack's values into the tables
+  the engine already reads (C.JOBS, FS.PIT_BANDS, S.RELIGIONS, CO.ROLES, GV.LAWS, Cal.TARGETS,
+  C.STOCKS...) when a world is created, so hot paths do not change; `w.country` plus a one-line guard
+  at the start of `World.step` re-applies the pack if another world switched it. Engine-only data (ids,
+  weights, difficulty, places) stays shared; packs give the national columns per id. Rules are data where
+  possible (bands, reliefs, payroll contributions, retirement scheme, property-tax model, welfare model
+  'flat' or 'meansTested'); new mechanics only run when a pack switches them on. `cfg.country`
+  defaults to 'my'; option values like 'malaysia' become 'national' with a save upgrade.
+- 4a steps: (1) Malaysia fingerprints + pre-move save fixture [DONE: `countryTests` in tests.js,
+  `js/tests/fixtures.js`]; (2) registry, cfg.country, guard; (3) people and content; (4) taxes,
+  finance, government; (5) society, festivals, events, calibration; (6) art, every RM literal, benchmark.
+- 4b UK: England's rules with UK statistics; Universal Credit (taper), Child Benefit, State Pension,
+  Pension Credit floor, workplace pension (5% + 3%, market returns, access at 57), student loans (Plan 5),
+  council tax bands and business rates, VAT, NI, corporation tax marginal relief, dividend allowance, IHT
+  40% above GBP325k, fuel duty as revenue; council posts Director of Finance (Section 151 officer),
+  Chief Superintendent, Director of Communities; Mayor default, 4-year terms; Bank Rate; no GLCs, a
+  council investment fund; census 2021 groups and religions; UK festivals; UK buildings, moors, canal,
+  weather, daylight by latitude and bare winter trees; fictional town Rexbury and Albion Exchange
+  (Fernlea Bank, Copperfield Grocers, Brackwater Utilities, Northlight Telecom, Larkspur Pharma,
+  Ironvale Energy, Saltmarsh Homes, Wrenfield Tech; check none is real before use).
+- Cross-country decisions: goal scaled by median wage and rounded (UK GBP100M); money display from the
+  pack through the fast hand-written formatter (keys like goalRM keep their names; check the pixel font
+  has the currency sign); calibration: demography and labour in band, crime within twice the band,
+  Gini and revenue reported and fixed in Phase 6; measure gross and disposable Gini, compare with each
+  statistics office's headline; crime compared on modelled offences from police-recorded counts, each
+  country's own clearance definition; institutions (corruption, police effectiveness) as a few sourced
+  pack values; UK starts with a mild realistic wealth gap by group (ONS Wealth and Assets Survey) with an
+  equal-start option, Malaysia unchanged for now; Classic stays Malaysia-only (picker hidden); country
+  dropdown on the main setup page, "Malaysia today" becomes "Today's rules"; one country per region,
+  a cast member from another country arrives as an immigrant.
+- Testing without Node: `python tools/edge.py tests.html "await LES_TESTS.countryTests(), document.getElementById('out').textContent"`
+  (headless Edge via the DevTools protocol; full suite: `LES_TESTS.runAll()` with a 600 s timeout).
+
+Original notes:
 First move everything Malaysia-specific into a country pack (`js/data/countries/my.js`:
 currency, prices, wages, taxes in `js/sim/fiscal.js`, welfare, B40/M40/T20 labels, religions and
 festivals, names, ethnic mix, stocks, government posts and laws, art palette, calibration

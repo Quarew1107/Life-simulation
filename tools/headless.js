@@ -68,6 +68,7 @@ if (mode === 'hash') {
   const out = { textContent: '', appendChild(el) { this.textContent += el.textContent; process.stdout.write(el.textContent); } };
   globalThis.document = { getElementById: () => out, createElement: () => ({ className: '', textContent: '' }), title: '' };
   globalThis.window = globalThis; globalThis.location = { search: '' };
+  vm.runInThisContext(fs.readFileSync(path.join(ROOT, 'tests', 'fixtures.js'), 'utf8'), { filename: 'fixtures.js' });
   vm.runInThisContext(fs.readFileSync(path.join(ROOT, 'tests', 'tests.js'), 'utf8'), { filename: 'tests.js' });
   const which = args.only ? args.only.split(',') : null;
   (async () => {
