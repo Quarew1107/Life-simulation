@@ -19,7 +19,7 @@
   LES.regionFounders = cfg => [1, 0.6, 0.4].slice(0, Math.max(1, Number(cfg.towns) || 1)).map(k => Math.max(20, Math.round(cfg.founders * k)));
   LES.makeRegion = function (cfg) {
     const n = LES.regionFounders(cfg);
-    return new Region(cfg, n.map((f, i) => ({ name: LES.TOWN_NAMES[i], townName: LES.TOWN_NAMES[i], founders: f, seed: i ? `${cfg.seed}~${i + 1}` : cfg.seed })));
+    return new Region(cfg, n.map((f, i) => ({ name: LES.TOWN_NAMES[i], townName: LES.TOWN_NAMES[i], founders: f, seed: i ? `${cfg.seed}~${i + 1}` : cfg.seed, townType: cfg[`town${i + 1}Type`] || 'mixed' })));
   };
 
   class Region {
@@ -61,6 +61,30 @@
       const L = this.lead;
       if (L.date.lastOfMonth) this.monthClose();
       this.commuteDay();
+      this.pandemicSpread();
+    }
+
+    // The north-east monsoon is one weather system: a bad year floods every town at risk.
+    monsoon(day) {
+      if (this._monsoonDay !== day) { this._monsoonDay = day; this._monsoonHit = this.rng.next() < 0.35; }
+      return this._monsoonHit;
+    }
+
+    // Pandemic scenario: commuters and visitors carry the virus between towns.
+    pandemicSpread() {
+      if (this.base.scenario !== 'pandemic') return;
+      const R = this.rng, ill = this.towns.map(w => (w.scn && !w.scn.over ? w.scn.infected || 0 : 0));
+      const total = ill.reduce((a, b) => a + b, 0);
+      if (!total) return;
+      this.towns.forEach((w, i) => {
+        const s = w.scn;
+        if (!s || s.over || w.day < s.start || w.ended) return;
+        const outside = total - ill[i], com = w.living.filter(p => p.job && p.job.commuteTo !== undefined).length;
+        if (outside > 0 && R.next() < Math.min(0.3, 0.004 * outside * (1 + com / 5))) {
+          const q = w.living[Math.floor(R.next() * w.living.length)];
+          if (q && q.alive && !q.inf && !(q.immune > w.day)) { q.inf = w.day + 10; s.infected++; s.cases++; s.imported = (s.imported || 0) + 1; }
+        }
+      });
     }
 
     // ---- Commuting: some private job openings in one town are advertised in its sister

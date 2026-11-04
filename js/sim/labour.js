@@ -17,7 +17,7 @@
     const lambda = w.cfg.vacancyRate * w.counts.adults / 100 / 30 * w.macro().vacMult * (w.boost ? w.boost.vac : 1) * (w.shock ? w.shock.vac : 1);
     const n = R.poisson(lambda);
     for (let i = 0; i < n; i++) {
-      const j = C.JOBS[R.weighted(C.JOB_FREQ)];
+      const j = C.JOBS[R.weighted(w.jobFreq || C.JOB_FREQ)];
       const salary = Math.round(w.px(j.salary * U.clamp(R.normal(1, 0.12), 0.7, 1.5) * w.macro().wageMult) / 1000) * 1000;
       const days = R.int(w.cfg.vacancyDaysMin, w.cfg.vacancyDaysMax);
       if (w.gov && LES.Services.PUBLIC_JOBS.has(j.id)) { R.pick(w.town.kinds[j.place]); continue; } // the town and private employers post these

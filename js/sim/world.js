@@ -22,7 +22,10 @@
       if (this.cfg.scenario && this.cfg.scenario !== 'none') this.rng.scenario = new LES.RNG(`${this.cfg.seed}|scenario`);
       const ms = this.cfg.mapSize === 'auto' ? LES.suggestMapSize(this.cfg.founders) : this.cfg.mapSize;
       this.mapSize = LES.MAP_ALIASES[ms] || ms;
-      this.town = LES.buildTown(this.mapSize, this.cfg.seed, this.cfg.layout);
+      const type = this.cfg.townType || this.cfg.town1Type || 'mixed';
+      this.town = LES.buildTown(this.mapSize, this.cfg.seed, this.cfg.layout, type === 'mixed' ? undefined : type);
+      const tt = LES.TOWN_TYPES[type];
+      if (tt && tt.jobs) this.jobFreq = C.JOBS.map(j => j.freq * (tt.jobs[j.id] || 1)); // the job mix of this kind of town
       this.townVersion = 0;
       this.day = 0;
       this.lastDay = -1;

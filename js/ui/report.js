@@ -222,6 +222,19 @@
 </div></section>`;
   }
 
+  function regionSection(w) {
+    const R = w.region;
+    if (!R) return '';
+    const com = R.commuters();
+    const rows = R.towns.map((t, i) => {
+      const h = t.history[t.history.length - 1] || {}, inn = R.moves.filter(m => m.to === i).reduce((s, m) => s + m.n, 0), out = R.moves.filter(m => m.from === i).reduce((s, m) => s + m.n, 0);
+      const type = LES.TOWN_TYPES[t.cfg.townType || t.cfg.town1Type || 'mixed'];
+      return `<tr><td>${esc(t.townName)}${t === w ? ' (this report)' : ''}</td><td>${esc(type ? type.name : '')}</td><td>${t.counts.living}</td><td>${U.fmtMoney(h.median || 0)}</td><td>${h.unemployed !== undefined ? (h.unemployed / Math.max(1, h.unemployed + h.employed + h.owners) * 100).toFixed(1) + '%' : ''}</td><td>${com[i]}</td><td>${inn} / ${out}</td></tr>`;
+    }).join('');
+    return `<section><h2>The region</h2><table><tr><th>Town</th><th>Type</th><th>People</th><th>Median wealth</th><th>Unemployment</th><th>Commuting out</th><th>Moved in / out</th></tr>${rows}</table>
+<p class="note">${R.moves.length} household moves between the towns and ${R.commutePosts || 0} job openings advertised across town lines. The towns share one economy, one stock exchange and one monsoon. This report covers ${esc(w.townName)}; switch towns in the top bar for the others.</p></section>`;
+  }
+
   function scenarioSection(w, svgChart) {
     const s = LES.Scenarios.current(w);
     if (!s) return '';
@@ -314,6 +327,7 @@ ${compare}
 <section><h2>Factors and peak wealth</h2><table><tr><th>Factor</th><th>Rank correlation with peak wealth</th></tr>${(a.factors || []).map(f => `<tr><td>${esc(f.name)}</td><td>${f.r.toFixed(2)} (${corrWord(f.r)})</td></tr>`).join('')}</table>
 <p class="note">Spearman rank correlation over adults who reached 30. Correlation is not causation: traits also affect who studies, who starts businesses and who has children.</p></section>
 ${a.strat ? `<section><h2>Strategies</h2><table><tr><th>Starting strategy</th><th>People</th><th>Median peak wealth</th><th>In top 10</th><th>Business failures</th></tr>${a.strat.map(s => `<tr><td>${C.STRATEGY_NAMES[s.s]}</td><td>${s.n}</td><td>${U.fmtMoney(s.med)}</td><td>${s.inTop}</td><td>${s.fail}</td></tr>`).join('')}</table></section>` : ''}
+${regionSection(w)}
 ${scenarioSection(w, svgChart)}
 ${societySection(w)}
 ${crimeSection(w)}
