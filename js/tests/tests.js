@@ -509,6 +509,63 @@
     check('Classic engine: no fiscal state, old income tax', !c.gov && !c.taxPx && LES.Labour.incomeTax(c, LES.U.RM(9000)) > 0);
   }
 
+  async function scenarioTests() {
+    print('--- Scenarios ---', 'info');
+    const SC = LES.Scenarios, P = LES.P;
+    const make = (id, extra) => new LES.World(Object.assign({ seed: `scn-${id}`, founders: 60, scenario: id }, SC.BY_ID[id].cfg || {}, extra || {}));
+    check('Every scenario has a valid setup and a description', SC.LIST.length >= 9 && SC.LIST.every(s => s.name && s.short && s.desc && s.watch.length && LES.validateConfig(Object.assign({}, LES.DEFAULTS, s.cfg || {}, { scenario: s.id })).blockers.length === 0));
+    const none = new LES.World({ seed: 'scn-none', founders: 40 });
+    check('No scenario: no scenario state', !none.scn && !none.flags && !SC.current(none));
+    // Born Equal
+    const eq = make('equal');
+    const f = eq.people;
+    check('Born Equal: same money, abilities, no degrees, no EPF', f.every(p => p.cash === f[0].cash && p.att.every(a => a === 5) && !p.quals.length && p.epf === 0));
+    let errs = [];
+    await runDays(eq, 3 * 365, wx => { if (!errs.length && wx.date.lastOfMonth) errs = wx.checkInvariants(); });
+    check('Born Equal: 3 years, money check holds and inequality appears', !errs.length && eq.history[eq.history.length - 1].gini > 0.05, errs.slice(0, 2).join(' | '));
+    // Great Reset
+    const rs = make('reset');
+    await runDays(rs, 2 * 365);
+    SC.state(rs).next = rs.day;
+    await runDays(rs, 1);
+    const ad = rs.living.filter(p => p.alive && p.adult && !p.away), cashes = ad.map(p => p.cash);
+    check('Great Reset: businesses sold and cash shared equally', SC.state(rs).resets.length === 1 && !rs.biz.some(b => b.open && b.foundedDay < SC.state(rs).resets[0].day) && Math.max(...cashes) - Math.min(...cashes) < rs.px(1000), `${Math.min(...cashes)}..${Math.max(...cashes)}`);
+    check('Great Reset: money check after the reset', rs.checkInvariants().length === 0, rs.checkInvariants().slice(0, 2).join(' | '));
+    // Eternal Life
+    const et = make('eternal', { startAgeMin: 50, startAgeMax: 60 });
+    const att0 = et.people.map(p => p.att.slice());
+    await runDays(et, 4 * 365);
+    check('Eternal Life: no ageing decline, no retirement, no old-age mortality', et.flags.noAgeing && et.cfg.mortMult === 0 && et.people.every(p => !p.retired) && et.people.every((p, i) => !p.alive || p.att[1] >= att0[i][1] - 1e-9 || p.injuredUntil > 0));
+    // Education Ban
+    const eb = make('eduban');
+    await runDays(eb, 365);
+    check('Education Ban: nobody studying, schools closed, no teachers employed by the town', eb.flags.noCourses && eb.flags.noSchool && eb.living.every(p => !p.enrol) && (!eb.gov || eb.gov.staff.teacher.target === 0));
+    // Pandemic
+    const pd = make('pandemic', { founders: 120 });
+    Object.assign(SC.state(pd), { start: 20, end: 20 + 3 * 365, vaxDay: 20 + 365 });
+    errs = [];
+    await runDays(pd, 400, wx => { if (!errs.length && wx.date.lastOfMonth) errs = wx.checkInvariants(); });
+    check('Pandemic: the virus spreads, and the money check holds', SC.state(pd).cases > 3 && !errs.length, `${SC.state(pd).cases} cases ${errs.slice(0, 2).join(' | ')}`);
+    // Robot Age
+    const rb = make('robots', { robotYear: '0', robotSpeed: 'fast' });
+    await runDays(rb, 3 * 365);
+    const exposed = LES.C.JOB_BY_ID.factory, tries = 400; let blocked = 0;
+    for (let i = 0; i < tries; i++) if (!LES.Systems.all().find(x => x.id === 'scn-robots').jobOk(rb, exposed)) blocked++;
+    check('Robot Age: automation rises and exposed jobs stop being posted', SC.state(rb).a > 0.1 && blocked > tries * 0.1, `a=${SC.state(rb).a.toFixed(2)} blocked ${blocked}/${tries}`);
+    // Lawless Town, Isolated Island, Five Clans
+    const lw = make('lawless');
+    check('Lawless Town: lawless crime and 2 officers per 1,000', lw.cfg.crime === 'lawless' && (!lw.gov || lw.gov.laws.police === '2'));
+    const is = make('island');
+    check('Isolated Island: no migration, no commuter jobs, dearer imports', is.cfg.migration === 'off' && is.people.every(p => !p.job || !LES.C.JOB_BY_ID[p.job.jobId].commute) && is.costMult.food > 1);
+    const cl = make('clans', { founders: 80 });
+    await runDays(cl, 3 * 365);
+    const kids = cl.people.filter(p => p.parents.length);
+    check('Five Clans: everyone belongs to a clan and children take a parent\'s clan', cl.people.every(p => SC.CLAN_BY_ID[p.clan]) && kids.every(k => k.parents.some(id => cl.people[id].clan === k.clan)), `${kids.length} children`);
+    // Save/load with a scenario.
+    const w2 = LES.Save.decode(LES.Save.encode(rb));
+    check('Save/load keeps the scenario state', w2.scn && w2.scn.a === rb.scn.a && w2.stableHash() === rb.stableHash());
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -522,6 +579,7 @@
       await crimeTests();
       await govTests();
       await fiscalTests();
+      await scenarioTests();
       await determinism();
       await invariantSweep(3, 60);
     } catch (err) {
@@ -532,6 +590,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests };
+  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

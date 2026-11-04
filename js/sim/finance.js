@@ -10,6 +10,7 @@
   F.tierCost = function (w, cat, t) {
     let base = U.RM(C.TIERS[cat][t].cost) * w.price;
     if (w.taxPx) base *= w.taxPx[cat][t]; // sales-tax law (GST vs SST)
+    if (w.costMult) base *= w.costMult[cat]; // scenario price changes (e.g. an island imports everything)
     return Math.round(cat === 'housing' ? base * w.rentMult[t] : base);
   };
   F.childCost = (w, p) => Math.round(U.RM(C.CHILD_COST + C.CHILD_COST_PER_HOUSING * p.tiers.housing) * w.price * (w.taxPx ? w.taxPx.child : 1));
@@ -401,11 +402,11 @@
     const sizeF = 1 + Math.log10(Math.max(1, b.scale / U.RM(t.scale0)));
     const mgmtF = 0.8 + 0.2 * Math.min(1, b.mgmt / 12);
     const skillF = (1 + t.skillSpread * (skill - 5) / 5 / sizeF) * mgmtF;
-    const demand = Math.pow(m.bizDemand, t.cyclical) * (w.boost ? w.boost.biz : 1);
+    const demand = Math.pow(m.bizDemand, t.cyclical) * (w.boost ? w.boost.biz : 1) * (w.shock ? w.shock.biz : 1);
     const shock = Math.exp(U.clamp(R.normal(0, t.sigma), -3, 3));
     const revenue = Math.max(0, Math.round(b.scale * price * demand * skillF * shock));
     const interest = Math.round(b.debt * (w.gov ? LES.Fiscal.loanRate(w) : 0.06) / 12);
-    let opCost = Math.round((b.scale * t.costRatio + U.RM(t.fixed)) * price);
+    let opCost = Math.round((b.scale * t.costRatio + U.RM(t.fixed)) * price * (w.shock ? w.shock.cost : 1));
     let townRev = 0;
     if (t.staff) { // private services: staff wages were paid directly; fees from residents already arrived
       opCost = Math.max(Math.round(opCost * 0.3), opCost - (b.payrollNow || 0));

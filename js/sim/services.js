@@ -46,7 +46,8 @@
     const pol = w.policy, af = w.gov.afford || 1, k = pop / 1000;
     const hs = SV.HEALTH[pol.health] || SV.HEALTH.malaysia;
     const n = (per, min) => Math.max(min, Math.round(per * k * af));
-    return { police: n(pol.policePer1000, 1), teacher: n(SV.SCHOOLS[pol.schools] || 12, 1), nurse: n(hs[0], 1), doctor: n(hs[1], pop >= 150 ? 1 : 0) };
+    const banned = w.flags && w.flags.noCourses; // Education Ban scenario: no schools to staff
+    return { police: n(pol.policePer1000, 1), teacher: banned ? 0 : n(SV.SCHOOLS[pol.schools] || 12, 1), nurse: n(hs[0], 1), doctor: n(hs[1], pop >= 150 ? 1 : 0) };
   };
 
   const staffOf = (w, jobId, bizId) => w.living.filter(p => p.alive && p.job && p.job.jobId === jobId && (bizId === undefined ? !(p.job.biz >= 0) : p.job.biz === bizId));
@@ -102,6 +103,7 @@
 
   // ---- Private businesses: placement, closure ----
   SV.canStart = function (w, t) {
+    if (t.id === 'privschool' && w.flags && w.flags.noCourses) return false;
     if (t.maxPer && w.biz.filter(b => b.open && b.type === t.id).length >= Math.floor(w.counts.living / t.maxPer)) return false;
     if (t.build) return w.town.lots.some(id => !w.town.buildings[id].built) || SV.vacantBuilding(w, t) !== undefined;
     return true;

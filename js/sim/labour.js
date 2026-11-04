@@ -14,13 +14,14 @@
     }
     w.vacancies = still;
 
-    const lambda = w.cfg.vacancyRate * w.counts.adults / 100 / 30 * w.macro().vacMult * (w.boost ? w.boost.vac : 1);
+    const lambda = w.cfg.vacancyRate * w.counts.adults / 100 / 30 * w.macro().vacMult * (w.boost ? w.boost.vac : 1) * (w.shock ? w.shock.vac : 1);
     const n = R.poisson(lambda);
     for (let i = 0; i < n; i++) {
       const j = C.JOBS[R.weighted(C.JOB_FREQ)];
       const salary = Math.round(w.px(j.salary * U.clamp(R.normal(1, 0.12), 0.7, 1.5) * w.macro().wageMult) / 1000) * 1000;
       const days = R.int(w.cfg.vacancyDaysMin, w.cfg.vacancyDaysMax);
       if (w.gov && LES.Services.PUBLIC_JOBS.has(j.id)) { R.pick(w.town.kinds[j.place]); continue; } // the town and private employers post these
+      if (w.sys.jobOk.length && !w.sys.jobOk.every(s => s.jobOk(w, j))) { R.pick(w.town.kinds[j.place]); continue; } // e.g. automated away (scenarios)
       w.vacancies.push({ id: w.nextVacId++, job: j, salary, openDay: day, closeDay: day + days, applicants: [], appSet: new Set(), place: R.pick(w.town.kinds[j.place]) });
       w.stats.vacOpened++;
     }
@@ -175,7 +176,7 @@
         } else if (shifts >= target) {
           job.warnings = Math.max(0, job.warnings - 1);
         }
-        if (R.next() < m.layoff * (1.6 - perf) && !(w.gov && LES.Services.lineOf(job))) { L.endJob(w, p, 'laid off'); continue; } // public servants are not laid off by the business cycle
+        if (R.next() < m.layoff * (1.6 - perf) * (w.shock ? w.shock.layoff : 1) && !(w.gov && LES.Services.lineOf(job))) { L.endJob(w, p, 'laid off'); continue; } // public servants are not laid off by the business cycle
         // Voluntary quits: stressed, impatient people sometimes walk out.
         const quit = 0.002 + 0.012 * Math.max(0, p.stress - 60) / 40 * (1.3 - p.pers.pat / 100);
         if (R.next() < quit) { L.endJob(w, p, p.stress > 70 ? 'burnt out' : 'resigned'); continue; }
@@ -230,7 +231,7 @@
         }
         job.perfOk = 0; job.perfN = 0;
       }
-      if (age >= 60 && !p.retired) {
+      if (age >= 60 && !p.retired && !(w.flags && w.flags.noRetire)) {
         const pRet = age >= 70 ? 1 : 0.2 + 0.15 * (age - 60);
         if (R.next() < pRet) {
           p.retired = true;

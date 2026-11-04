@@ -23,6 +23,7 @@
       <div id="date-text">1 Jan Y1</div>
       <div id="time-text" class="muted">06:00</div>
     </div>
+    <div id="scn-badge" class="hidden"></div>
     <div id="regime" class="badge">Normal economy</div>
     <div id="mood" class="infl"></div>
     <div id="speed" class="speed" role="group" aria-label="Simulation speed"></div>
@@ -57,14 +58,14 @@
     </section>
     <aside id="side">
       <nav id="tabs">
-        <button data-tab="person" class="active">Person</button>
-        <button data-tab="leaders">Leaders</button>
-        <button data-tab="feed">Events</button>
-        <button data-tab="place">Place</button>
-        <button data-tab="stats">Stats</button>
-        <button data-tab="society">Society</button>
-        <button data-tab="crime">Crime</button>
-        <button data-tab="gov">Gov't</button>
+        <button data-tab="person" data-icon="user" title="The selected person" class="active"><span>Person</span></button>
+        <button data-tab="leaders" data-icon="trophy" title="Leaderboards and search"><span>Leaders</span></button>
+        <button data-tab="feed" data-icon="notes" title="What is happening in town"><span>Events</span></button>
+        <button data-tab="place" data-icon="building" title="The selected building"><span>Place</span></button>
+        <button data-tab="stats" data-icon="chart" title="Town statistics and charts"><span>Stats</span></button>
+        <button data-tab="society" data-icon="users" title="Class, ethnicity and religion"><span>Society</span></button>
+        <button data-tab="crime" data-icon="shield" title="Crime, police and justice"><span>Crime</span></button>
+        <button data-tab="gov" data-icon="flag" title="Government, council and treasury"><span>Gov't</span></button>
       </nav>
       <div id="tab-person" class="tab active"></div>
       <div id="tab-leaders" class="tab">
@@ -110,6 +111,7 @@
 <script src="js/sim/services.js"></script>
 <script src="js/sim/fiscal.js"></script>
 <script src="js/sim/council.js"></script>
+<script src="js/sim/scenarios.js"></script>
 <script src="js/sim/world.js"></script>
 <script src="js/sim/save.js"></script>
 <script src="js/sim/calibration.js"></script>
@@ -117,6 +119,7 @@
 <script src="js/render/sprites.js"></script>
 <script src="js/render/ambience.js"></script>
 <script src="js/render/renderer.js"></script>
+<script src="js/ui/icons.js"></script>
 <script src="js/ui/charts.js"></script>
 <script src="js/ui/panels.js"></script>
 <script src="js/ui/places.js"></script>
