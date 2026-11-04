@@ -6,6 +6,7 @@
   LES.DEFAULTS = {
     // Normal settings (defaults = the Malaysia preset; see LES.PRESETS)
     preset: 'malaysia',       // malaysia | classic | custom (setup-screen shortcut, recorded in reports)
+    country: 'my',            // country pack (js/data/countries/): my
     seed: 'rezeki-1',
     founders: 100,
     startAgeMin: 18,
@@ -166,6 +167,7 @@
   LES.validateConfig = function (cfg) {
     const blockers = [], warnings = [];
     const isNum = x => typeof x === 'number' && Number.isFinite(x);
+    if (LES.Countries && !LES.Countries.get(LES.Countries.of(cfg))) blockers.push(`Country: unknown country pack "${cfg.country}".`);
     for (const m of LES.SETTINGS_META) {
       const v = cfg[m.key];
       if (m.type === 'int' || m.type === 'num') {
