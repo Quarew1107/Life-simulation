@@ -116,7 +116,7 @@
       holders++;
       if (p.alive && !p.away) LES.P.log(w, p, `${s.def.name} went bust; shares became worthless`, 'money', 0);
     }
-    w.pushFeed({ day: w.day, pid: -1, text: `${s.def.name} (${s.tk}) collapsed and was delisted from Bursa Rezeki${holders ? `; ${holders} residents lost their shares` : ''}`, cat: 'economy', imp: 2 });
+    w.pushFeed({ day: w.day, pid: -1, text: `${s.def.name} (${s.tk}) collapsed and was delisted from ${LES.Countries.pack.names.exchange}${holders ? `; ${holders} residents lost their shares` : ''}`, cat: 'economy', imp: 2 });
     const used = new Set(mk.stocks.map(x => x.tk));
     const pool = C.IPO_POOL.filter(d => !used.has(d.tk) && !(mk.retired || []).includes(d.tk));
     const base = pool.length ? R.pick(pool) : C.IPO_POOL[0];
@@ -128,7 +128,7 @@
     s.price = Math.round(U.RM(def.price0) * w.price);
     s.fund = s.price; s.trend = Math.log(s.price); s.dev = 0; s.netEma = 0; s.hist = [];
     mk.byTk[s.tk] = s;
-    w.pushFeed({ day: w.day, pid: -1, text: `New listing: ${def.name} (${s.tk}) IPO on Bursa Rezeki at ${U.fmtPrice(s.price)} per share`, cat: 'economy', imp: 1 });
+    w.pushFeed({ day: w.day, pid: -1, text: `New listing: ${def.name} (${s.tk}) IPO on ${LES.Countries.pack.names.exchange} at ${U.fmtPrice(s.price)} per share`, cat: 'economy', imp: 1 });
   };
 
   M.monthly = function (w) {

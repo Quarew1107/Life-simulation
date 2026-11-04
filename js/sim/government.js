@@ -22,29 +22,11 @@
 
   // ---- Laws: options, the left-right (econ: + = lower taxes, smaller state) and
   // conservative-liberal (soc: + = liberal) direction of each option, and who gains.
-  GV.LAWS = [
-    { key: 'incomeTax', name: 'Income tax', def: 'normal', options: [['low', 'Low (bands x0.6)'], ['normal', 'Malaysian bands'], ['high', 'High (bands x1.5)']], econ: { low: 1, normal: 0, high: -1 } },
-    { key: 'corpTax', name: 'Corporate tax', def: '24', options: [['17', '17%'], ['24', '24% (Malaysia)'], ['30', '30%']], econ: { 17: 0.8, 24: 0, 30: -0.8 } },
-    { key: 'minWage', name: 'Minimum wage', def: '1700', options: [['1200', 'RM1,200'], ['1700', 'RM1,700 (Malaysia 2025)'], ['2500', 'RM2,500']], econ: { 1200: 0.8, 1700: 0, 2500: -0.9 } },
-    { key: 'cashAid', name: 'Cash aid for B40 households', def: '100', options: [['0', 'None'], ['100', 'RM100/month (STR-style)'], ['300', 'RM300/month']], econ: { 0: 0.7, 100: 0, 300: -0.8 } },
-    { key: 'ubi', name: 'Universal basic income', def: '0', options: [['0', 'None'], ['500', 'RM500/month for every adult']], econ: { 0: 0.3, 500: -1.3 } },
-    { key: 'estateTax', name: 'Inheritance tax', def: '0', options: [['0', 'None (Malaysia since 1991)'], ['0.2', '20% above RM100k'], ['0.5', '50% above RM100k']], econ: { 0: 0.5, 0.2: -0.5, 0.5: -1.2 } },
-    { key: 'police', name: 'Police force', def: '4', options: [['2', '2 officers per 1,000'], ['4', '4 per 1,000 (Malaysia)'], ['7', '7 per 1,000']], soc: { 2: 0.5, 4: 0, 7: -0.8 }, econ: { 2: 0.3, 4: 0, 7: -0.3 } },
-    { key: 'drugPolicy', name: 'Drug policy', def: 'malaysia', options: [['malaysia', 'Rehab first, prison for repeat'], ['punitive', 'Punitive (prison)'], ['treatment', 'Treatment first'], ['decriminalised', 'Decriminalised use']], soc: { malaysia: -0.2, punitive: -1, treatment: 0.5, decriminalised: 1 } },
-    { key: 'uniFees', name: 'University fees', def: 'subsidised', options: [['free', 'Free'], ['subsidised', 'Subsidised'], ['expensive', 'Full fees (x2.5)']], econ: { free: -0.8, subsidised: 0, expensive: 0.8 } },
-    { key: 'recordCheck', name: 'Criminal record checks in hiring', def: 'allowed', options: [['allowed', 'Allowed'], ['banned', 'Banned (fair chance)']], soc: { allowed: -0.3, banned: 0.7 } },
-    { key: 'affirm', name: 'Affirmative action', def: 'group', options: [['none', 'None'], ['need', 'Need-based (B40)'], ['group', 'Bumiputera preference']], econ: { none: 0.4, need: -0.4, group: 0 }, soc: { none: 0.3, need: 0.2, group: -0.4 } },
-    { key: 'barBan', name: 'Bars and alcohol', def: 'open', options: [['open', 'Allowed (taxed)'], ['ban', 'Banned']], soc: { open: 0.3, ban: -0.6 } },
-    { key: 'fuelSubsidy', name: 'Fuel subsidy', def: 'targeted', options: [['none', 'None (market prices)'], ['targeted', 'Targeted RON95 subsidy (Malaysia)'], ['blanket', 'Blanket subsidy for everyone']], econ: { none: 0.7, targeted: 0, blanket: -0.6 } },
-    { key: 'salesTax', name: 'Sales tax', def: 'sst', options: [['sst', 'SST (sales 5-10%, service 8%)'], ['gst6', 'GST 6% on most goods and services']], econ: { sst: 0.2, gst6: -0.3 } },
-    { key: 'schools', name: 'Public schools', def: 'malaysia', options: [['lean', '9 teachers per 1,000'], ['malaysia', '12 per 1,000 (Malaysia)'], ['generous', '16 per 1,000']], econ: { lean: 0.5, malaysia: 0, generous: -0.5 } },
-    { key: 'health', name: 'Public healthcare', def: 'malaysia', options: [['lean', 'Lean (2.5 nurses, 1 doctor per 1,000)'], ['malaysia', 'Malaysia (3.5 nurses, 1.5 doctors)'], ['generous', 'Generous (5 nurses, 2.2 doctors)']], econ: { lean: 0.5, malaysia: 0, generous: -0.5 } },
-  ];
+  GV.LAWS = []; // the country pack's law catalogue (gov.laws): key, name, default, options, effects on the economy and society
   GV.LAW_BY_KEY = {};
-  for (const l of GV.LAWS) GV.LAW_BY_KEY[l.key] = l;
   GV.optName = (key, v) => { const o = GV.LAW_BY_KEY[key].options.find(x => x[0] === v); return o ? o[1] : v; };
   const EDU_MULT = { free: 0, subsidised: 1, expensive: 2.5 };
-  GV.MY_POLICE = 4; // PDRM: 136,503 personnel for ~34.3 million people (2025)
+  GV.MY_POLICE = 4; // police officers per 1,000 people in the country (gov.policePer1000; Malaysia: PDRM 136,503 for ~34.3m)
 
   GV.policyOf = function (laws) {
     return {
@@ -183,7 +165,7 @@
     const SV = LES.Services, hs = v => SV.HEALTH[v] || SV.HEALTH.malaysia;
     const cost = {
       cashAid: v => Number(v) * ts.b40, ubi: v => Number(v) * ts.adults, police: v => Number(v) * ts.pop / 1000 * 3400, uniFees: v => (v === 'free' ? 650 * ts.adults * 0.03 : 0),
-      schools: v => SV.SCHOOLS[v] * ts.pop / 1000 * 4300, health: v => (hs(v)[0] * 3800 + hs(v)[1] * 12400) * ts.pop / 1000,
+      schools: v => SV.SCHOOLS[v] * ts.pop / 1000 * SP.teacher, health: v => (hs(v)[0] * SP.nurse + hs(v)[1] * SP.doctor) * ts.pop / 1000,
       salesTax: v => (v === 'gst6' ? -0.03 : 0) * rev * 3, // GST brings in more money
       fuelSubsidy: v => LES.Fiscal.FUEL[v].cost * 600 * ts.adults * 0.6,
     }[key];
@@ -203,7 +185,7 @@
   const axis = (law, v, ax) => (law[ax] && law[ax][v] !== undefined ? law[ax][v] : 0);
 
   // ---- Elections ----
-  const TITLES = { president: 'President', mayor: 'Mayor', datuk: 'Datuk Bandar' };
+  const TITLES = {}; // gov.leaderTitles
   GV.title = w => TITLES[w.cfg.leaderTitle] || 'President';
   const COLOURS = ['#e63946', '#3a86ff', '#2a9d8f', '#f4a261', '#8338ec'];
 
@@ -588,4 +570,15 @@
     if (!w.bizTypes) w.bizTypes = C.BIZ.concat(C.BIZ_SERVICES);
     applyLaws(w, false);
   };
+
+  // ---- Laws, leader titles and police strength from the country pack ----
+  let SP = null; // monthly cost of a teacher, nurse and doctor (pay + employer contributions), for voters' sense of the bill
+  LES.Countries.require('gov.laws', 'gov.leaderTitles', 'gov.policePer1000', 'gov.servicePay');
+  LES.Countries.on('government', K => {
+    GV.LAWS.length = 0; for (const l of K.gov.laws) GV.LAWS.push(l);
+    for (const k of Object.keys(GV.LAW_BY_KEY)) delete GV.LAW_BY_KEY[k];
+    for (const l of GV.LAWS) GV.LAW_BY_KEY[l.key] = l;
+    for (const k of Object.keys(TITLES)) delete TITLES[k]; Object.assign(TITLES, K.gov.leaderTitles);
+    GV.MY_POLICE = K.gov.policePer1000; SP = K.gov.servicePay;
+  });
 })(globalThis.LES = globalThis.LES || {});

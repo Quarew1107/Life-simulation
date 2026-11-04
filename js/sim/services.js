@@ -25,8 +25,13 @@
     nurse: { job: 'nurse', place: 'hospital', line: 'health' },
     doctor: { job: 'doctor', place: 'hospital', line: 'health' },
   };
-  SV.SCHOOLS = { lean: 9, malaysia: 12, generous: 16 };        // teachers per 1,000 residents
-  SV.HEALTH = { lean: [2.5, 1], malaysia: [3.5, 1.5], generous: [5, 2.2] }; // nurses, doctors per 1,000
+  SV.SCHOOLS = {}; // teachers per 1,000 residents for each schools law (services.schools of the country pack)
+  SV.HEALTH = {};  // nurses and doctors per 1,000 for each healthcare law (services.health)
+  LES.Countries.require('services.schools', 'services.health');
+  LES.Countries.on('services', K => {
+    for (const k of Object.keys(SV.SCHOOLS)) delete SV.SCHOOLS[k]; Object.assign(SV.SCHOOLS, K.services.schools);
+    for (const k of Object.keys(SV.HEALTH)) delete SV.HEALTH[k]; Object.assign(SV.HEALTH, K.services.health);
+  });
   SV.PUBLIC_JOBS = new Set(['teacher', 'nurse', 'doctor']);
   SV.PRIVATE_FEE_SHARE = 0.12; // families pay private-school fees only below this share of income
   SV.PRIVATE_SEATS = 15;       // pupils per private-school teacher

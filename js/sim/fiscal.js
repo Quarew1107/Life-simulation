@@ -23,7 +23,7 @@
   const FS = LES.Fiscal = {};
 
   // ---- Personal income tax ----
-  FS.PIT_BANDS = [[5000, 0], [20000, 0.01], [35000, 0.03], [50000, 0.06], [70000, 0.11], [100000, 0.19], [400000, 0.25], [600000, 0.26], [2000000, 0.28], [Infinity, 0.3]];
+  FS.PIT_BANDS = []; // tax.incomeBands of the country pack (annual, Year-1 money)
   FS.annualPIT = function (ch) {
     let tax = 0, lo = 0;
     for (const [hi, r] of FS.PIT_BANDS) { if (ch > lo) tax += (Math.min(ch, hi) - lo) * r; lo = hi; }
@@ -33,39 +33,36 @@
   FS.annualTaxOn = function (w, p, gross) {
     let kids = 0;
     if (p) for (const id of p.careOf) { const c = w.people[id]; if (c.alive && !c.adult) kids += 1 / Math.max(1, c.caregivers.length); }
-    const ch = Math.max(0, gross - 9000 - Math.min(4000, 0.11 * gross) - 2000 * kids);
+    const ch = Math.max(0, gross - TX.personalRelief - Math.min(TX.retirementRelief.cap, TX.retirementRelief.rate * gross) - TX.childRelief * kids);
     let tax = FS.annualPIT(ch) * (w.policy ? w.policy.incomeTaxMult : 1);
-    if (ch <= 35000) tax = Math.max(0, tax - 400);
+    if (ch <= TX.rebate.upTo) tax = Math.max(0, tax - TX.rebate.amount);
     return tax;
   };
   // Monthly deduction (PCB) on one payment of gross pay (sen).
   FS.pcb = (w, p, gross) => Math.round(U.RM(FS.annualTaxOn(w, p, gross / 100 / w.price * 12) / 12) * w.price);
 
   // ---- Company tax ----
-  FS.SME_BANDS = [[150000, 0.15], [600000, 0.17], [Infinity, 0.24]];
+  FS.SME_BANDS = []; // tax.companyBands
   FS.corpTax = function (w, b, profit) {
     if (profit <= 0) return 0;
     const top = w.policy ? w.policy.corpTax : C.CORP_TAX, annual = profit * 12 / 100 / w.price;
     let tax = 0;
-    if ((b.lastRevenue || 0) * 12 / 100 / w.price > 50e6) tax = annual * top;
-    else { let lo = 0; for (const [hi, r] of FS.SME_BANDS) { if (annual > lo) tax += (Math.min(annual, hi) - lo) * r * top / 0.24; lo = hi; } }
+    if ((b.lastRevenue || 0) * 12 / 100 / w.price > TX.largeCompanyRevenue) tax = annual * top;
+    else { let lo = 0; for (const [hi, r] of FS.SME_BANDS) { if (annual > lo) tax += (Math.min(annual, hi) - lo) * r * top / TX.companyRefRate; lo = hi; } }
     return Math.round(U.RM(tax / 12) * w.price);
   };
 
   // ---- Consumption taxes (inside prices) ----
-  FS.RATES = {
-    sst: { food: [0, 0, 0.03, 0.08], transport: [0, 0.04, 0.05, 0.08], leisure: [0, 0.06, 0.08, 0.08], child: 0.02, other: 0.05 },
-    gst6: { food: [0, 0.02, 0.04, 0.06], transport: [0, 0.05, 0.06, 0.06], leisure: [0, 0.06, 0.06, 0.06], child: 0.04, other: 0.06 },
-  };
-  FS.ASSESSMENT = 0.03;     // assessment tax as a share of rent (homes and business premises)
-  FS.EMPLOYER_CORP = 0.05;  // company tax of outside employers, as a share of their wage bill
-  FS.EIS = 0.002;           // Employment Insurance: 0.2% from the worker and 0.2% from the employer
-  FS.FEDERAL_SHARE = { 'company tax (town firms)': 0.7, 'dividend tax': 0.5 }; // sent on to the federal government
+  FS.RATES = {}; // tax.salesTax: rate by spending category for each sales-tax law
+  // From the pack (tax.*): assessment = property tax as a share of rent (homes and business premises);
+  // employerCorp = company tax of outside employers as a share of their wage bill; eis = employment
+  // insurance from the worker and from the employer; federalShare = parts sent on to the national government.
+  FS.ASSESSMENT = 0; FS.EMPLOYER_CORP = 0; FS.EIS = 0; FS.FEDERAL_SHARE = {};
   // Price multipliers of the sales-tax law relative to SST (content prices include SST).
   // Fuel subsidy: content prices assume today's targeted RON95 subsidy (RM1.99 a litre against
   // ~RM2.60 unsubsidised; fuel is about a quarter of vehicle costs). px = price multiplier on
   // vehicle costs; cost = the treasury's bill as a share of vehicle spending.
-  FS.FUEL = { none: { px: 1.075, cost: 0 }, targeted: { px: 1, cost: 0.06 }, blanket: { px: 0.98, cost: 0.085 } };
+  FS.FUEL = {}; // tax.fuel
   FS.priceMult = function (law, fuel) {
     const R = FS.RATES[law] || FS.RATES.sst, S = FS.RATES.sst, out = {}, fx = (FS.FUEL[fuel] || FS.FUEL.targeted).px;
     for (const cat of ['food', 'transport', 'leisure']) out[cat] = S[cat].map((r, i) => (1 + R[cat][i]) / (1 + r) * (cat === 'transport' && i >= 1 ? fx : 1));
@@ -105,10 +102,10 @@
   // The 2% tax on dividends above RM100k a year (Budget 2025).
   FS.dividendTax = function (w, p, part, acct) {
     if (!w.gov || part <= 0) return;
-    const before = p.divYr || 0, lim = w.px(100000);
+    const before = p.divYr || 0, lim = w.px(TX.dividend.above);
     p.divYr = before + part;
     const over = Math.max(0, p.divYr - Math.max(lim, before));
-    if (over > 0) FS.collect(w, p, acct, Math.round(over * 0.02), 'dividend tax');
+    if (over > 0) FS.collect(w, p, acct, Math.round(over * TX.dividend.rate), 'dividend tax');
   };
 
   // Zakat paid to the religious council is rebated against income tax paid that year.
@@ -138,9 +135,9 @@
     sales += inPrice(Math.max(0, merch - base), R.other); // luxuries, outings, repairs, celebrations...
     for (const b of w.biz) if (b.open) assess += U.RM(b.typeDef.fixed) * w.price * FS.ASSESSMENT;
     const k = FS.compliance(w);
-    FS.collect(w, L.sec.MERCHANT, 'bal', sales * k, law === 'gst6' ? 'GST' : 'SST');
+    FS.collect(w, L.sec.MERCHANT, 'bal', sales * k, TX.salesTaxNames[law]);
     FS.collect(w, L.sec.MERCHANT, 'bal', assess * (0.5 + 0.5 * k), 'assessment tax');
-    FS.collect(w, L.sec.EMPLOYER, 'bal', g.month.privWages * FS.EMPLOYER_CORP * (w.policy.corpTax / 0.24) * k, 'company tax (employers)');
+    FS.collect(w, L.sec.EMPLOYER, 'bal', g.month.privWages * FS.EMPLOYER_CORP * (w.policy.corpTax / TX.companyRefRate) * k, 'company tax (employers)');
     g.lastMerchant = L.sec.MERCHANT.bal;
     if (fuel > 0) LES.Gov.payOut(w, L.sec.MERCHANT, 'bal', fuel, 'fuel subsidies');
     g.lastMerchant = L.sec.MERCHANT.bal;
@@ -210,7 +207,7 @@
     const avgRev = FS.avgRevenue(w);
     const pres = g.president >= 0 ? w.people[g.president] : null;
     if (pres && pres.alive && !pres.away) {
-      const s = payOut(w, pres, 'cash', U.clamp(avgRev * 0.02, w.px(3000), w.px(20000)), 'leader');
+      const s = payOut(w, pres, 'cash', U.clamp(avgRev * GK.leaderPay.share, w.px(GK.leaderPay.min), w.px(GK.leaderPay.max)), 'leader');
       pres.earned.wages += s; pres.monthIncome += s;
     }
 
@@ -272,24 +269,24 @@
   FS.reserveTarget = w => 3 * Math.max(w.px(5000), w.gov.last ? w.gov.last.spendTotal : 0);
 
   // ---- Yearly: Bank Negara, EPF dividends, fund returns, GLC listings, tax year ----
-  FS.MY_OPR = 0.0275; // Bank Negara Overnight Policy Rate (cut to 2.75% in July 2025)
+  FS.MY_OPR = 0; // the central bank's usual policy rate (bank.policyRate; Malaysia: OPR 2.75% since July 2025)
   FS.year = function (w, R) {
     const g = w.gov, L = w.ledger;
     // OPR: a smoothed Taylor-style rule on inflation and the business cycle.
     const target = FS.MY_OPR + 1.0 * (w.infl - 0.02) + (w.regime === 'growth' ? 0.0025 : w.regime === 'recession' ? -0.0075 : 0);
-    const next = U.clamp(Math.round((0.5 * g.opr + 0.5 * target) / 0.0025) * 0.0025, Math.max(0.0175, g.opr - 0.005), Math.min(0.0375, g.opr + 0.005));
-    if (Math.abs(next - g.opr) > 1e-9) w.pushFeed({ day: w.day, pid: -1, text: `Bank Negara ${next > g.opr ? 'raised' : 'cut'} the OPR to ${(next * 100).toFixed(2)}%`, cat: 'economy', imp: 1 });
+    const next = U.clamp(Math.round((0.5 * g.opr + 0.5 * target) / 0.0025) * 0.0025, Math.max(BK.floor, g.opr - 0.005), Math.min(BK.ceiling, g.opr + 0.005));
+    if (Math.abs(next - g.opr) > 1e-9) w.pushFeed({ day: w.day, pid: -1, text: `${NM.centralBank} ${next > g.opr ? 'raised' : 'cut'} the ${NM.policyRate} to ${(next * 100).toFixed(2)}%`, cat: 'economy', imp: 1 });
     g.opr = next;
     g.oprHist.push({ day: w.day, opr: next });
     w.infl = U.clamp(w.infl - 0.2 * (next - FS.MY_OPR), w.cfg.inflMin / 100, w.cfg.inflMax / 100); // tighter money cools prices
     // EPF dividend on retirement savings (KWSP: ~5.5-6.3% in recent years).
-    const div = w.regime === 'growth' ? 0.063 : w.regime === 'recession' ? 0.045 : 0.055;
+    const div = RT.dividend[w.regime] || RT.dividend.normal;
     for (const p of w.living) if (p.alive && !p.away && p.epf > 0) L.pay('MARKET', p, 'epf', Math.round(p.epf * div));
     // The fund pays 4% of its value to the treasury each year.
     const fv = FS.fundValue(w);
     if (fv > 0) {
-      const amt = FS.drawFund(w, fv * 0.04);
-      if (amt) g.month.rev['Khazanah returns'] = (g.month.rev['Khazanah returns'] || 0) + amt;
+      const amt = FS.drawFund(w, fv * FD.payout);
+      if (amt) g.month.rev[NM.fundReturns] = (g.month.rev[NM.fundReturns] || 0) + amt;
     }
     // Mature public finances: government-linked companies list on Bursa Rezeki.
     const years = w.day / 365, listed = w.mkt.stocks.filter(s => s.def.glc).length;
@@ -302,7 +299,7 @@
     const mk = w.mkt, price = Math.round(U.RM(def.price0) * w.price);
     const s = { tk: def.tk, def, price, shares: def.sharesM * 1e6, hist: [], flowToday: 0, grossToday: 0, volEma: U.RM(5000), netEma: 0, fund: price, dev: 0, townBuy: 0, townSell: 0, lastRet: 0 };
     mk.stocks.push(s); mk.byTk[s.tk] = s;
-    w.pushFeed({ day: w.day, pid: -1, text: `${def.name} (${def.tk}), a government-linked company (${def.blurb}), listed on Bursa Rezeki at ${U.fmtPrice(price)}; dividend yield about ${Math.round(def.div * 100)}%`, cat: 'economy', imp: 2 });
+    w.pushFeed({ day: w.day, pid: -1, text: `${def.name} (${def.tk}), a government-linked company (${def.blurb}), listed on ${NM.exchange} at ${U.fmtPrice(price)}; dividend yield about ${Math.round(def.div * 100)}%`, cat: 'economy', imp: 2 });
   };
 
   // Quarterly GLC dividends to residents and to the fund.
@@ -341,4 +338,18 @@
     const R = FS.RATES[law], F = LES.Finance, t = p.tiers, base = c => F.tierCost(w, c, t[c]) / (w.taxPx ? w.taxPx[c][t[c]] : 1) / w.price / 100;
     return base('food') * R.food[t.food] + base('transport') * R.transport[t.transport] + base('leisure') * R.leisure[t.leisure];
   };
+
+  // ---- National tax schedule, central bank, retirement scheme and fund from the country pack ----
+  let TX = null, BK = null, RT = null, FD = null, GK = null, NM = null;
+  LES.Countries.require('tax.incomeBands', 'tax.personalRelief', 'tax.retirementRelief', 'tax.childRelief', 'tax.rebate', 'tax.companyBands',
+    'tax.companyRefRate', 'tax.largeCompanyRevenue', 'tax.salesTax', 'tax.salesTaxNames', 'tax.assessment', 'tax.employerCorp', 'tax.eis',
+    'tax.federalShare', 'tax.fuel', 'tax.dividend', 'bank.policyRate', 'bank.floor', 'bank.ceiling', 'retirement.dividend', 'fund.payout',
+    'gov.leaderPay', 'names.centralBank', 'names.policyRate', 'names.fundReturns', 'names.exchange');
+  LES.Countries.on('fiscal', K => {
+    TX = K.tax; BK = K.bank; RT = K.retirement; FD = K.fund; GK = K.gov; NM = K.names;
+    const list = (a, src) => { a.length = 0; for (const x of src) a.push(x); }, into = (o, src) => { for (const k of Object.keys(o)) delete o[k]; Object.assign(o, src); };
+    list(FS.PIT_BANDS, TX.incomeBands); list(FS.SME_BANDS, TX.companyBands); into(FS.RATES, TX.salesTax); into(FS.FUEL, TX.fuel);
+    into(FS.FEDERAL_SHARE, TX.federalShare); FS.ASSESSMENT = TX.assessment; FS.EMPLOYER_CORP = TX.employerCorp; FS.EIS = TX.eis;
+    FS.MY_OPR = BK.policyRate;
+  });
 })(globalThis.LES = globalThis.LES || {});
