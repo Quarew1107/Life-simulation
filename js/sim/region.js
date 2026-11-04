@@ -6,7 +6,9 @@
 // - moving between towns: households that decide to leave a town may move to a sister
 //   town instead of leaving the region, choosing by its jobs, rent and attractiveness
 // Interactions use the region's own RNG and a fixed order, so results stay reproducible.
-// (Commuting, shopping and spillovers are planned next: see docs/HANDOFF.md.)
+// - commuting, shopping, one monsoon, the Pandemic travelling between towns
+// - gangs spreading: chapters in sister towns that send part of their takings home, and
+//   gang members who move keep a tie to their old gang (gangSpread)
 (function (LES) {
   'use strict';
   const U = LES.U, P = LES.P, F = LES.Finance;
@@ -125,6 +127,72 @@
       this.towns.forEach((w, i) => { w.regionDemand = U.clamp(Math.pow(pops[i] / avg, 0.12), 0.9, 1.1); });
       this.settleMoves();
       this.followDeaths();
+      this.gangSpread();
+    }
+
+    // ---- Gangs across towns ----
+    // 1. Chapters send 20% of their takings home; when the parent gang breaks up they go
+    //    their own way. Money crosses via each town's ABROAD account (like movers' savings).
+    // 2. A rich gang that can no longer gain turf at home may open a chapter in the sister
+    //    town with the most young jobless people and the thinnest police, run by a local.
+    // 3. A gang member who moved keeps a tie for three years and may start a chapter of the
+    //    old gang (or join one that already exists) in the new town.
+    gangSpread() {
+      const R = this.rng, CR = LES.Crime, towns = this.towns;
+      if (!CR) return;
+      const parentOf = g => { const A = towns[g.parent.town]; return A && A.crime ? A.crime.gangs[g.parent.gang] : null; };
+      const seed = (A, pg, B, ch) => { // start-up money from the parent gang
+        const amt = Math.min(Math.floor(pg.cash * 0.25), A.px(20000));
+        if (amt > 0 && A.ledger.move(pg, 'cash', A.ledger.sec.ABROAD, 'bal', amt)) B.ledger.pay('ABROAD', ch, 'cash', amt);
+        (pg.chapters = pg.chapters || []).push({ town: B.townIdx, gang: ch.id });
+        A.pushFeed({ day: A.day, pid: -1, text: `${pg.name} opened a chapter in ${B.townName}`, cat: 'crime', imp: 2 });
+      };
+      for (const B of towns) {
+        if (!B.crime || B.ended) continue;
+        for (const g of B.crime.gangs) {
+          if (!g.alive || !g.parent) continue;
+          const pg = parentOf(g), A = towns[g.parent.town];
+          if (!pg || !pg.alive) {
+            g.formerParent = g.parent.name; g.parent = null;
+            B.pushFeed({ day: B.day, pid: -1, text: `${g.name} now runs on its own: ${g.formerParent} is gone`, cat: 'crime', imp: 1 });
+            continue;
+          }
+          const amt = Math.min(g.cash, Math.floor(Math.max(0, (g.take || 0) - (g.sent || 0)) * 0.2));
+          g.sent = g.take || 0;
+          if (amt > 0 && B.ledger.move(g, 'cash', B.ledger.sec.ABROAD, 'bal', amt)) { A.ledger.pay('ABROAD', pg, 'cash', amt); pg.tribute = (pg.tribute || 0) + amt; g.paid = (g.paid || 0) + amt; }
+        }
+      }
+      for (const A of towns) {
+        if (!A.crime || A.ended) continue;
+        for (const g of A.crime.gangs) {
+          if (!CR.wantsToExpand(A, g) || R.next() >= 0.05) continue;
+          const room = towns.filter(B => B !== A && !B.ended && CR.roomForGang(B) && !CR.chapterIn(B, A.townIdx, g.id));
+          if (!room.length) continue;
+          const appeal = B => { // young people without work or study, against police strength
+            let young = 0, idle = 0;
+            for (const p of B.living) if (p.alive && p.adult && !p.inst && P.age(B, p) < 30) { young++; if (!p.job && !p.enrol && p.manages < 0) idle++; }
+            return (0.05 + idle / Math.max(1, young)) / Math.max(0.3, CR.policeFactor(B));
+          };
+          const B = room.map(t => ({ t, s: appeal(t) })).sort((a, b) => b.s - a.s || a.t.townIdx - b.t.townIdx)[0].t;
+          const ch = CR.foundChapter(B, { town: A.townIdx, gang: g.id, name: g.name, colour: g.colour, townName: A.townName }, R, null);
+          if (ch) seed(A, g, B, ch);
+        }
+      }
+      for (const B of towns) {
+        if (!B.crime || B.ended) continue;
+        for (const p of B.living) {
+          const tie = p.cr && p.cr.tie;
+          if (!tie) continue;
+          const A = towns[tie.town], pg = A && A.crime ? A.crime.gangs[tie.gang] : null;
+          if (!pg || !pg.alive || B.day - tie.day > 3 * 365) { p.cr.tie = null; continue; }
+          if (!p.alive || !p.adult || p.away || p.inst || p.cr.gang >= 0 || !(p.cr.rec > 0 || p.cr.t > 0.03) || P.age(B, p) >= 45 || R.next() >= 0.08) continue;
+          const ch = CR.chapterIn(B, A.townIdx, pg.id);
+          if (ch) { CR.joinGang(B, ch, p); p.cr.tie = null; continue; }
+          if (!CR.roomForGang(B)) continue;
+          const made = CR.foundChapter(B, { town: A.townIdx, gang: pg.id, name: pg.name, colour: pg.colour, townName: A.townName }, R, p);
+          if (made) { p.cr.tie = null; seed(A, pg, B, made); }
+        }
+      }
     }
 
     // ---- Moving between towns ----
@@ -138,7 +206,8 @@
       const best = others.map(t => ({ t, s: score(t) })).sort((a, b) => b.s - a.s || a.t.townIdx - b.t.townIdx)[0];
       if (R.next() >= U.clamp(0.35 + 0.25 * best.s, 0.2, 0.85)) return; // otherwise they leave the region
       this.pending = this.pending || [];
-      this.pending.push({ from: w.townIdx, to: best.t.townIdx, ids: group.map(p => p.id), reason });
+      const gangs = group.map(p => (p.cr && p.cr.gang >= 0 ? p.cr.gang : -1)); // members keep a tie to their gang
+      this.pending.push({ from: w.townIdx, to: best.t.townIdx, ids: group.map(p => p.id), reason, gangs });
     }
 
     settleMoves() {
@@ -177,7 +246,11 @@
         for (const sys of B.sys.personCreated) sys.personCreated(B, c, c.adult ? 'adult' : 'child');
         for (const k of ['rel', 'relig', 'clan']) if (s[k] !== undefined) c[k] = s[k]; // keep who they are
         if (s.pol && c.pol) { c.pol.econ = s.pol.econ; c.pol.soc = s.pol.soc; }
-        if (s.cr && c.cr) { c.cr.rec = s.cr.rec; c.cr.offences = s.cr.offences; c.cr.addict = s.cr.addict; c.cr.user = s.cr.user; }
+        if (s.cr && c.cr) {
+          c.cr.rec = s.cr.rec; c.cr.offences = s.cr.offences; c.cr.addict = s.cr.addict; c.cr.user = s.cr.user;
+          const gi = mv.gangs ? mv.gangs[mv.ids.indexOf(s.id)] : -1;
+          if (gi >= 0 && c.adult) c.cr.tie = { town: A.townIdx, gang: gi, day: B.day };
+        }
         const amt = Math.max(0, Math.round(s.away.wealth));
         B.ledger.pay('ABROAD', c, c.adult ? 'cash' : 'trust', amt);
         s.away.wealth = 0; s.away.town = B.townIdx; s.away.id = c.id; s.nw = 0;

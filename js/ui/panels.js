@@ -442,6 +442,7 @@
 
   // ---------------- Stats ----------------
   // Side-by-side comparison of the towns in a region, with the flows between them.
+  const gangCell = t => { if (!t.crime) return '–'; const c = LES.Crime.gangCount(t); return `${c.live}${c.chapters ? ` <small class="muted">(${c.chapters} ch.)</small>` : ''}`; };
   UI.regionCard = function (w) {
     const R = UI.app.region;
     if (!R) return '';
@@ -450,9 +451,9 @@
       const wages = a.filter(p => p.job).map(p => p.job.salary).sort((x, y) => x - y);
       const inn = moves.filter(m => m.to === i).reduce((s, m) => s + m.n, 0), out = moves.filter(m => m.from === i).reduce((s, m) => s + m.n, 0);
       const crime = t.crime ? Math.round(LES.Crime.rates(t).index) : null;
-      return `<tr class="${t === w ? 'on' : ''}"><td><a href="#" data-xtown="${i}" data-xid="-1">${U.esc(t.townName)}</a></td><td>${t.counts.living}</td><td>${h.unemployed !== undefined ? (h.unemployed / Math.max(1, h.unemployed + h.employed + h.owners) * 100).toFixed(1) + '%' : '–'}</td><td>${wages.length ? U.fmtMoney(U.quantile(wages, 0.5)) : '–'}</td><td>${U.fmtMoney(h.median || 0)}</td><td>${t.rentMult ? Math.round(t.rentMult[1] * 100) : 100}</td><td>${crime === null ? '–' : crime}</td><td>${com[i]}</td><td>+${inn} / −${out}</td></tr>`;
+      return `<tr class="${t === w ? 'on' : ''}"><td><a href="#" data-xtown="${i}" data-xid="-1">${U.esc(t.townName)}</a></td><td>${t.counts.living}</td><td>${h.unemployed !== undefined ? (h.unemployed / Math.max(1, h.unemployed + h.employed + h.owners) * 100).toFixed(1) + '%' : '–'}</td><td>${wages.length ? U.fmtMoney(U.quantile(wages, 0.5)) : '–'}</td><td>${U.fmtMoney(h.median || 0)}</td><td>${t.rentMult ? Math.round(t.rentMult[1] * 100) : 100}</td><td>${crime === null ? '–' : crime}</td><td>${gangCell(t)}</td><td>${com[i]}</td><td>+${inn} / −${out}</td></tr>`;
     }).join('');
-    return `<div class="card"><h3>Towns in the region</h3><div style="overflow-x:auto"><table class="cmp region-cmp"><tr><th>Town</th><th>Pop.</th><th>Jobless</th><th>Pay</th><th>Wealth</th><th>Rent</th><th>Crime</th><th title="Residents working in another town">Comm.</th><th title="People who moved in / out">In/out</th></tr>${rows}</table></div>
+    return `<div class="card"><h3>Towns in the region</h3><div style="overflow-x:auto"><table class="cmp region-cmp"><tr><th>Town</th><th>Pop.</th><th>Jobless</th><th>Pay</th><th>Wealth</th><th>Rent</th><th>Crime</th><th title="Active gangs (chapters of a gang from another town)">Gangs</th><th title="Residents working in another town">Comm.</th><th title="People who moved in / out">In/out</th></tr>${rows}</table></div>
       <div class="note">One economy and one stock exchange. Households move to the town that suits them better (jobs, rent, prospects), and job openings that find nobody at home are advertised in the other towns, so people commute. Pay and wealth are medians; rent is an index (100 = normal); crime is index crimes per 100k a year; Comm. = residents who work in another town. Click a town to show it.</div></div>`;
   };
 

@@ -146,7 +146,7 @@
       }
       v.stress = Math.min(100, v.stress + 18); v.happy = Math.max(0, v.happy - 6);
       v.cr.fear = Math.min(1, v.cr.fear + 0.35); v.cr.victim++;
-      if (p.cr.gang >= 0 && gain > 0) { const g = st.gangs[p.cr.gang]; if (g && g.alive) w.ledger.move(p, 'cash', g, 'cash', Math.round(gain * 0.3)); }
+      if (p.cr.gang >= 0 && gain > 0) { const g = st.gangs[p.cr.gang], cut = Math.round(gain * 0.3); if (g && g.alive && w.ledger.move(p, 'cash', g, 'cash', cut)) g.take = (g.take || 0) + cut; }
       st.victimsByClass[v.cls || '-'] = (st.victimsByClass[v.cls || '-'] || 0) + 1;
     }
     p.cr.offences++;
@@ -278,7 +278,7 @@
         const g = state(w).gangs[dealer.cr.gang];
         const toGang = Math.round(paid * 0.5);
         w.ledger.move(p, 'cash', dealer, 'cash', paid - toGang);
-        if (g) w.ledger.move(p, 'cash', g, 'cash', toGang); else w.ledger.move(p, 'cash', dealer, 'cash', toGang);
+        if (g) { w.ledger.move(p, 'cash', g, 'cash', toGang); g.take = (g.take || 0) + toGang; } else w.ledger.move(p, 'cash', dealer, 'cash', toGang);
         dealer.cr.dealt = (dealer.cr.dealt || 0) + paid;
       } else w.ledger.spend(p, 'cash', 'MERCHANT', paid); // bought from outside town
     }
@@ -305,10 +305,10 @@
   const blockOf = (w, p) => (p.homeId >= 0 ? LES.townBlockAt(w.town, w.town.buildings[p.homeId].x, w.town.buildings[p.homeId].y) : null);
   function gangsMonth(w, R) {
     const st = state(w), t = w.town;
-    const maxGangs = 1 + Math.floor(t.blocks.length / 60);
+    const maxGangs = CR.maxGangs(w);
     // Formation: offenders and the tempted, led by someone charismatic and bold.
     if (st.gangs.filter(g => g.alive).length < maxGangs && R.next() < 0.0015 * K(w)) {
-      const pool = w.living.filter(p => p.adult && free(p) && p.cr && p.cr.gang < 0 && (p.cr.rec > 0 || p.cr.t > 0.03) && P.age(w, p) < 45);
+      const pool = recruitPool(w);
       if (pool.length >= 3) {
         const leader = pool.reduce((a, b) => (b.att[C.CHA] + b.pers.risk / 20 > a.att[C.CHA] + a.pers.risk / 20 ? b : a));
         const hb = t.buildings[leader.homeId] || t.buildings[0];
@@ -335,7 +335,7 @@
         const bl = LES.townBlockAt(t, t.buildings[b.place].x, t.buildings[b.place].y);
         if (!g.turf.includes(t.blocks.indexOf(bl))) continue;
         const amt = Math.min(b.cash, Math.round(Math.max(0, b.lastRevenue || 0) * 0.02));
-        if (amt > 0) { w.ledger.move(b, 'cash', g, 'cash', amt); st.protection += amt; }
+        if (amt > 0) { w.ledger.move(b, 'cash', g, 'cash', amt); st.protection += amt; g.take = (g.take || 0) + amt; }
       }
       // Recruit young people with few prospects who live on the turf.
       if (g.members.length < 12 && R.next() < 0.5) {
@@ -380,6 +380,56 @@
     }
   }
   const dist = (t, p, b) => { const h = t.buildings[p.homeId]; return h ? Math.abs(h.x - b.x) + Math.abs(h.y - b.y) : 1e9; };
+  CR.maxGangs = w => 1 + Math.floor(w.town.blocks.length / 60);
+  // People a new gang can be built from: offenders and the tempted, under 45.
+  const recruitPool = w => w.living.filter(p => p.adult && free(p) && p.cr && p.cr.gang < 0 && (p.cr.rec > 0 || p.cr.t > 0.03) && P.age(w, p) < 45);
+  CR.recruitPool = recruitPool;
+
+  // ---------- Gangs across towns (used by LES.Region) ----------
+  // A chapter is an ordinary gang in a sister town, run by a local, that carries its
+  // parent's name and colour and sends part of its takings home (Region.gangSpread).
+  CR.roomForGang = w => !!w.crime && w.crime.gangs.filter(g => g.alive).length < CR.maxGangs(w);
+  // An established gang (4+ members, RM4k in funds, 2+ years old) that cannot gain turf
+  // at home (more turf needs RM20k per block it holds, and a free block next to it)
+  // looks further afield.
+  CR.wantsToExpand = (w, g) => {
+    if (!g.alive || g.parent || g.members.length < 4 || g.cash < w.px(4000) || w.day - g.founded < 730) return false;
+    const canGrow = g.turf.length < 6 && g.cash > w.px(20000) * g.turf.length && adjacentBlocks(w.town, g.turf).some(i => !w.crime.gangs.some(o => o.alive && o.turf.includes(i)));
+    return !canGrow;
+  };
+  CR.chapterIn = (w, town, gangId) => (w.crime ? w.crime.gangs.find(g => g.alive && g.parent && g.parent.town === town && g.parent.gang === gangId) : null);
+  // parent = { town, gang, name, colour, townName }; leader = a local who brought the tie,
+  // or null for the most charismatic, boldest local offender. R = the region's RNG.
+  CR.foundChapter = function (w, parent, R, leader) {
+    const t = w.town, pool = recruitPool(w).filter(p => p !== leader);
+    if (!leader) {
+      if (pool.length < 3) return null;
+      leader = pool.reduce((a, b) => (b.att[C.CHA] + b.pers.risk / 20 > a.att[C.CHA] + a.pers.risk / 20 ? b : a));
+      pool.splice(pool.indexOf(leader), 1);
+    }
+    if (!pool.length) return null;
+    const hb = t.buildings[leader.homeId] || t.buildings[0], bl = blockOf(w, leader);
+    const others = pool.sort((a, b) => dist(t, a, hb) - dist(t, b, hb) || a.id - b.id).slice(0, R.int(1, 3));
+    const st = state(w), g = {
+      id: st.gangs.length, name: `${parent.name} (${LES.townName(w)} chapter)`, colour: parent.colour, leader: leader.id, members: [], cash: 0,
+      turf: bl ? [t.blocks.indexOf(bl)] : [], founded: w.day, alive: true, crimes: 0, peak: 0,
+      parent: { town: parent.town, gang: parent.gang, name: parent.name, townName: parent.townName },
+    };
+    st.gangs.push(g);
+    for (const q of [leader, ...others]) join(w, g, q);
+    w.pushFeed({ day: w.day, pid: leader.id, text: `${parent.name} from ${parent.townName} opened a chapter here, led by ${P.name(leader)}`, cat: 'crime', imp: 2 });
+    return g;
+  };
+  CR.joinGang = (w, g, p) => join(w, g, p);
+  // Active gangs in a town, and how many of them are chapters of a gang elsewhere.
+  CR.gangCount = w => { const live = w.crime ? w.crime.gangs.filter(g => g.alive) : []; return { live: live.length, chapters: live.filter(g => g.parent).length }; };
+  // "Chapter of ... in ..." / "Chapters in ..." for the Crime tab.
+  CR.linkText = function (w, g) {
+    if (g.parent) return `chapter of ${g.parent.name} (${g.parent.townName})`;
+    if (g.formerParent) return `split from ${g.formerParent}`;
+    const R = w.region, live = (g.chapters || []).filter(c => R && R.towns[c.town] && R.towns[c.town].crime && R.towns[c.town].crime.gangs[c.gang] && R.towns[c.town].crime.gangs[c.gang].alive);
+    return live.length ? `chapters in ${[...new Set(live.map(c => R.towns[c.town].townName))].join(', ')}` : '';
+  };
   function adjacentBlocks(t, turf) {
     const out = [];
     for (const i of turf) { const b = t.blocks[i]; for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const c = b.c + dc, r = b.r + dr; if (c >= 0 && r >= 0 && c < t.cols && r < t.rows) { const k = r * t.cols + c; if (!turf.includes(k) && !out.includes(k)) out.push(k); } } }
@@ -513,8 +563,8 @@
       }
     },
     hash(w, parts) {
-      for (const p of w.people) if (p.cr) parts.push(p.cr.rec, p.cr.gang, p.inst ? p.inst.until : '-', Math.round(p.cr.addict));
-      for (const g of w.crime.gangs) parts.push(g.cash, g.members.length);
+      for (const p of w.people) if (p.cr) { parts.push(p.cr.rec, p.cr.gang, p.inst ? p.inst.until : '-', Math.round(p.cr.addict)); if (p.cr.tie) parts.push('tie', p.cr.tie.town, p.cr.tie.gang); }
+      for (const g of w.crime.gangs) { parts.push(g.cash, g.members.length); if (g.parent) parts.push('ch', g.parent.town, g.parent.gang); }
     },
   };
   LES.Systems.register(sys);
