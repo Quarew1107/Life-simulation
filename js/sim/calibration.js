@@ -21,21 +21,24 @@
   };
   Cal.MIN_EDU_N = 20; // fewer adults 25-64 than this: the share is not shown
   const money = x => `${LES.Countries.pack.money.symbol}${Math.round(x * LES.Countries.scale())}`; // engine units -> real money
+  // Each measure with its definition (C05): what is counted, out of whom, over what period, the smallest sample
+  // shown, and whether it is defined like the official figure (`comparable`; `note` says how it differs).
   const DEFS = {
-    tfr: { label: 'Children per woman', fmt: x => x.toFixed(2) },
-    e0: { label: 'Life expectancy at birth (yrs)', fmt: x => x.toFixed(1) },
-    unemp: { label: 'Unemployment rate', fmt: U.fmtPct },
-    medWage: { label: 'Median monthly wage (Year-1 $)', fmt: money },
-    hhGini: { label: 'Household income Gini', fmt: x => x.toFixed(2) },
-    starve: { label: 'Deaths from starvation (share)', fmt: U.fmtPct },
+    tfr: { label: 'Children per woman (period TFR)', fmt: x => x.toFixed(2), num: 'births to women 15-49 in the last 10 years, by 5-year age band', den: 'person-years lived by women in each band while in town', obs: 'last 10 years', minN: 30, comparable: true, note: 'Sum of age-specific birth rates, as statistics offices compute the TFR. Completed family size of women 45+ is shown separately.' },
+    e0: { label: 'Life expectancy at birth (yrs)', fmt: x => x.toFixed(1), num: 'deaths by 5-year age band', den: 'person-years lived in town', obs: 'last 10-40 years', minN: 30, comparable: true, note: 'Period life table; unstable with few deaths.' },
+    unemp: { label: 'Not working, share of eligible adults', fmt: U.fmtPct, num: 'adults under 64 without a job, study, business or retirement, not in an institution', den: 'those + employed + business owners', obs: 'monthly, last 10 years', minN: 0, comparable: false, note: 'Not the labour-force definition: it does not ask whether people are looking for work and available, so it is a proxy for the official unemployment rate.' },
+    medWage: { label: 'Median monthly wage (Year-1 $)', fmt: money, num: 'contract monthly pay of each employed person (before tax)', den: 'employed people', obs: 'end of run', minN: 20, comparable: true, note: 'Contract pay, not pay actually earned after missed shifts.' },
+    hhGini: { label: 'Household income Gini (gross, smoothed)', fmt: x => x.toFixed(2), num: 'smoothed monthly income of household heads plus partners, before tax', den: 'households', obs: 'end of run', minN: 20, comparable: true, note: 'Gross income averaged over recent months (not disposable income, not wealth).' },
+    starve: { label: 'Deaths from starvation (share)', fmt: U.fmtPct, num: 'deaths from starvation', den: 'all deaths', obs: 'whole run', minN: 0, comparable: true },
     // Crime rates are compared at the "Realistic" scale (the town's rate divided by the intensity).
-    crimeIdx: { label: 'Index crime per 100k (realistic scale)', fmt: x => x.toFixed(0) },
-    drugUsers: { label: 'Drug users per 100k (realistic scale)', fmt: x => x.toFixed(0) },
-    prison: { label: 'Prisoners per 100k (realistic scale)', fmt: x => x.toFixed(0) },
-    clearance: { label: 'Share of crimes solved', fmt: U.fmtPct },
-    revenue: { label: 'Public revenue per person / month (Year-1 $)', fmt: money },
-    tertiary: { label: 'Adults 25-64 with tertiary education (ISCED 5+)', fmt: U.fmtPct }, // C02: highest credential, see Cal.eduLevel
+    crimeIdx: { label: 'Index crime per 100k (realistic scale)', fmt: x => x.toFixed(0), num: 'modelled offences recorded in a year', den: 'residents', obs: 'yearly after year 5', minN: 0, comparable: true, note: 'Only the offence types the engine models.' },
+    drugUsers: { label: 'Drug users per 100k (realistic scale)', fmt: x => x.toFixed(0), num: 'current drug users', den: 'residents', obs: 'each December after year 5', minN: 0, comparable: true },
+    prison: { label: 'Prisoners per 100k (realistic scale)', fmt: x => x.toFixed(0), num: 'people serving a prison sentence', den: 'residents', obs: 'each December after year 5', minN: 0, comparable: true, note: 'Prison only: people held in the police lock-up awaiting court and people in rehab are counted separately.' },
+    clearance: { label: 'Share of crimes solved', fmt: U.fmtPct, num: 'crimes with an arrest', den: 'crimes committed', obs: 'whole run', minN: 30, comparable: false, note: 'Arrests per crime committed, not the official charge or clearance rate (definitions differ by country).' },
+    revenue: { label: 'Public revenue per person / month (Year-1 $)', fmt: money, num: 'revenue collected in each month (Year-1 money)', den: 'residents in that same month', obs: 'mean of the last 12 months', minN: 0, comparable: false, note: 'The town government collects taxes that nationally go to several levels of government; compare with care.' },
+    tertiary: { label: 'Adults 25-64 with tertiary education (ISCED 5+)', fmt: U.fmtPct, num: 'adults 25-64 whose highest credential is ISCED 5 or higher', den: 'adults 25-64 in town', obs: 'end of run', minN: 20, comparable: true }, // C02
   };
+  Cal.DEFS = DEFS;
 
   // Period life expectancy from deaths and person-years lived in the last `years` years
   // (people who were away from town are left out of the exposure).
@@ -67,14 +70,16 @@
 
   Cal.measure = function (w) {
     const r = { seed: w.cfg.seed, years: Math.floor(w.day / 365), pop: w.counts.living };
-    // Completed fertility of women born in town who reached 45.
+    // Period TFR from age-specific birth rates (C05); completed family size of women born here who reached 45.
+    const pt = Cal.periodTfr(w, 10);
+    r.tfr = pt.births >= DEFS.tfr.minN ? pt.tfr : NaN; r.n = { tfr: pt.births };
     const women = w.people.filter(p => p.sex === 'F' && p.parents.length && !p.migrant && P.age(w, p) >= 45);
-    r.tfr = women.length >= 5 ? women.reduce((s, p) => s + p.children.length, 0) / women.length : NaN;
+    r.completedFert = women.length >= 5 ? women.reduce((s, p) => s + p.children.length, 0) / women.length : NaN; r.n.completedFert = women.length;
     r.e0 = lifeExpectancy(w, Math.min(40, Math.max(10, r.years)));
     const h = w.history.slice(-120);
     r.unemp = h.length ? h.reduce((s, x) => s + x.unemployed / Math.max(1, x.unemployed + x.employed + x.owners), 0) / h.length : NaN;
     const wages = w.living.filter(p => p.alive && p.job).map(p => p.job.salary / w.price / 100).sort((a, b) => a - b);
-    r.medWage = wages.length ? U.quantile(wages, 0.5) : NaN;
+    r.medWage = wages.length >= DEFS.medWage.minN ? U.quantile(wages, 0.5) : NaN; r.n.medWage = wages.length;
     // Household gross income: heads plus partners (monthly income average).
     const hh = [];
     for (const p of w.living) {
@@ -83,7 +88,7 @@
       if (p.partnerId !== null) inc += w.people[p.partnerId].incomeEMA;
       hh.push(inc);
     }
-    r.hhGini = U.gini(hh);
+    r.hhGini = hh.length >= DEFS.hhGini.minN ? U.gini(hh) : NaN; r.n.hhGini = hh.length;
     const prime = w.living.filter(p => p.alive && !p.away && P.age(w, p) >= 25 && P.age(w, p) < 65);
     r.tertiaryN = prime.length; r.tertiaryHits = prime.filter(p => Cal.eduLevel(p) >= 5).length; // each person once, by the highest credential
     r.tertiary = prime.length >= Cal.MIN_EDU_N ? r.tertiaryHits / prime.length : NaN;
@@ -93,10 +98,52 @@
       const k = LES.Crime.INTENSITY[w.cfg.crime] || 1, rows = w.history.filter(x => x.cr && x.day > 5 * 365 && U.dayToDate(x.day).month === 11);
       const avg = f => (rows.length ? rows.reduce((s, x) => s + f(x.cr), 0) / rows.length / k : NaN);
       r.crimeIdx = avg(c => c.index); r.drugUsers = avg(c => c.users); r.prison = avg(c => c.prison);
-      r.clearance = w.crime.crimesTotal ? w.crime.solvedTotal / w.crime.crimesTotal : NaN;
+      r.custody = avg(c => c.custody || 0); // police lock-up awaiting court (not prison)
+      r.clearance = w.crime.crimesTotal >= DEFS.clearance.minN ? w.crime.solvedTotal / w.crime.crimesTotal : NaN; r.n.clearance = w.crime.crimesTotal;
     }
-    if (w.gov && w.gov.revHist.length) r.revenue = U.sum(w.gov.revHist.slice(-12)) / Math.min(12, w.gov.revHist.length) / w.price / 100 / Math.max(1, w.counts.living);
+    if (w.gov && w.gov.revHist.length) {
+      const rv = Cal.revenuePerPerson(w.gov.revHist, w.gov.revBase, w.price, w.counts.living);
+      r.revenue = rv.value; r.revenueApprox = rv.approx; // approx: an older save without each month's population
+    }
+    r.n.tertiary = r.tertiaryN;
     return r;
+  };
+
+  // Revenue per person per month in Year-1 money (C05): each month's revenue over THAT month's residents and price
+  // level, averaged over the last 12 months. Older saves have no monthly base: the last month's residents and
+  // price are used instead and the result is marked approximate.
+  Cal.revenuePerPerson = function (revHist, revBase, priceNow, popNow) {
+    const n = Math.min(12, revHist.length);
+    if (!n) return { value: NaN, approx: false };
+    const rev = revHist.slice(-n), base = revBase && revBase.length >= n ? revBase.slice(-n) : null;
+    if (!base) return { value: U.sum(rev) / n / priceNow / 100 / Math.max(1, popNow), approx: true };
+    let s = 0;
+    for (let i = 0; i < n; i++) s += rev[i] / (Math.max(1, base[i][0]) * base[i][1] * 100);
+    return { value: s / n, approx: false };
+  };
+
+  // Period total fertility rate over the last `years`: births to women in 5-year age bands 15-49 divided by the
+  // person-years those women lived in town in each band, times 5, summed. Women away from town are left out.
+  Cal.periodTfr = function (w, years) {
+    const end = w.day, start = Math.max(0, end - years * 365), B = new Float64Array(7), E = new Float64Array(7);
+    let births = 0;
+    for (const p of w.people) {
+      if (p.sex !== 'F' || p.away) continue;
+      const from = Math.max(start, p.arrivedDay !== null && p.arrivedDay !== undefined ? p.arrivedDay : p.birthDay), to = Math.min(end, p.deathDay !== null ? p.deathDay : end);
+      for (let b = 0; b < 7; b++) {
+        const lo = p.birthDay + (15 + 5 * b) * 365, hi = lo + 5 * 365, ov = Math.min(to, hi) - Math.max(from, lo);
+        if (ov > 0) E[b] += ov / 365;
+      }
+      for (const id of p.children) {
+        const c = w.people[id];
+        if (!c || c.birthDay < start || c.birthDay > end || c.birthDay < from) continue;
+        const a = (c.birthDay - p.birthDay) / 365, b = Math.floor((a - 15) / 5);
+        if (b >= 0 && b < 7) { B[b]++; births++; }
+      }
+    }
+    let tfr = 0;
+    for (let b = 0; b < 7; b++) if (E[b] > 0) tfr += 5 * B[b] / E[b];
+    return { tfr, births };
   };
 
   Cal.status = (k, v) => {
@@ -114,6 +161,10 @@
       const v = vals.length ? U.sum(vals) / vals.length : NaN;
       lines.push(`${t.label.padEnd(46)} sim ${String(Number.isFinite(v) ? t.fmt(v) : 'n/a').padStart(8)}   target ${String(t.fmt(t.target)).padStart(8)}   ${Cal.status(k, v)}`);
     }
+    const cf = rows.map(r => r.completedFert).filter(Number.isFinite);
+    if (cf.length) lines.push(`${'(Completed children per woman, 45+)'.padEnd(46)} sim ${(U.sum(cf) / cf.length).toFixed(2).padStart(8)}   (not a TFR; shown for comparison)`);
+    for (const k of Object.keys(Cal.TARGETS)) if (DEFS[k].comparable === false) lines.push(`Note on ${Cal.TARGETS[k].label}: ${DEFS[k].note}`);
+    if (rows.some(r => r.revenueApprox)) lines.push('Note: revenue per person is approximate for a save made before each month\'s population was recorded.');
     if (rows[0] && rows[0].years < 60) lines.push('Note: fewer than 60 years simulated, so life expectancy and children per woman are not meaningful yet.');
     return lines.join('\n');
   };
@@ -123,7 +174,7 @@
     const sym = pack.money.symbol;
     for (const k of Object.keys(DEFS)) {
       const d = DEFS[k], t = pack.calibration[k];
-      Cal.TARGETS[k] = { label: d.label.replace('$', sym), target: t.target, band: t.band, fmt: d.fmt, src: t.src };
+      Cal.TARGETS[k] = { label: d.label.replace('$', sym), target: t.target, band: t.band, fmt: d.fmt, src: t.src, comparable: d.comparable !== false, note: d.note || '', num: d.num, den: d.den, obs: d.obs };
     }
   });
 })(globalThis.LES = globalThis.LES || {});

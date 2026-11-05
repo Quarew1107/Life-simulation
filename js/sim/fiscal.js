@@ -440,6 +440,7 @@
     }
     const rev = U.sum(Object.values(m.rev)), spend = U.sum(Object.values(m.spend));
     g.revHist.push(rev); if (g.revHist.length > 24) g.revHist.shift();
+    (g.revBase = g.revBase || []).push([w.counts.living, w.price]); if (g.revBase.length > 24) g.revBase.shift(); // (C05: each month's residents and prices, for reporting only)
     g.last = { rev: m.rev, spend: m.spend, revTotal: rev, spendTotal: spend, saved: m.saved, fund: FS.fundValue(w), federal: m.federal || 0 };
     g.month = FS.newMonth();
   };

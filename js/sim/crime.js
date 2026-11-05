@@ -552,9 +552,9 @@
       for (const m of st.hist) for (const t in m) yr[t] = (yr[t] || 0) + m[t];
       const months = Math.max(1, st.hist.length), ann = x => x * 12 / months;
       const index = CR.INDEX.reduce((s, t) => s + (yr[t] || 0), 0);
-      let prisoners = 0, rehab = 0, users = 0, gangMembers = 0;
-      for (const p of w.living) { if (!p.alive || !p.cr) continue; if (p.inst) (p.inst.kind === 'rehab' ? rehab++ : prisoners++); if (p.cr.user) users++; if (p.cr.gang >= 0) gangMembers++; }
-      row.cr = { index: per(ann(index)), murder: per(ann(yr.murder || 0)), scam: per(ann(yr.scam || 0)), prison: per(prisoners), rehab, users: per(users), prisoners, gangs: st.gangs.filter(g => g.alive).length, gangMembers,
+      let prisoners = 0, rehab = 0, custody = 0, users = 0, gangMembers = 0; // C05: prison, police lock-up (remand) and rehab apart
+      for (const p of w.living) { if (!p.alive || !p.cr) continue; if (p.inst) (p.inst.kind === 'rehab' ? rehab++ : p.inst.kind === 'remand' ? custody++ : prisoners++); if (p.cr.user) users++; if (p.cr.gang >= 0) gangMembers++; }
+      row.cr = { index: per(ann(index)), murder: per(ann(yr.murder || 0)), scam: per(ann(yr.scam || 0)), prison: per(prisoners), custody: per(custody), rehab, users: per(users), prisoners, gangs: st.gangs.filter(g => g.alive).length, gangMembers,
         cert: st.certainty === undefined ? 0.5 : st.certainty, cap: CR.capacity(w), unemp: st.town ? st.town.unemp : 0 };
     },
 

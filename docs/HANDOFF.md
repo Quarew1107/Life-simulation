@@ -94,6 +94,17 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
   Fixed on the way: a payout when the investor owned 100% divided by zero. Known limits: the minority buyout
   when someone moves away still pays 70% of value (unchanged); the report's inheritance share still counts cash
   only (stakes are now in the estate records and the log line). Next: C05.
+- C05 DONE (reporting only, no rule changes, fingerprints identical): `Cal.DEFS` is the metric-definition map
+  (num, den, obs, minN, comparable, note); `Cal.TARGETS` carries it; the calibration table prints notes for
+  non-comparable measures and the report's official table flags them. Revenue: `g.revBase` stores each month's
+  [residents, price] next to `revHist`; `Cal.revenuePerPerson` averages revenue_m / (residents_m x price_m) over
+  12 months (older saves: last-month fallback marked approximate). TFR is now the period TFR from age-specific
+  rates over 10 years (`Cal.periodTfr`, min 30 births); completed family size of women 45+ is `completedFert`
+  (shown, not a target). Crime rows: `prison` = sentenced prisoners only, `custody` = police lock-up (remand),
+  rehab apart. 'Unemployment' is labelled 'Not working, share of eligible adults' (not the labour-force
+  definition: no search/availability test). Clearance = arrests per crime (not comparable). Low samples -> NaN
+  (medWage 20, Gini 20 households, clearance 30 crimes). `statsDefTests` (8); 272/272 pass. Not yet re-measured
+  over 80 years. Next: C06.
 All work is committed and pushed. Latest (Nov 2026): countries stop at Malaysia, the UK (4.5), the United States
 (4.6) and China (4.7): the owner skipped UAE, Mexico and South Africa. Phase 6 (section 4.8) step 6.1, the shared
 calibration fixes, is done; next is 6.2 (report sections, the town newspaper, compare-with-normal runs), then 6.3. The full suite runs in
