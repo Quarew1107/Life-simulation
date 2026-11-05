@@ -21,6 +21,9 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
 
 ## 0. Where to pick up (status at the end of the last session)
 **Blueprint work (Nov 2026, `Idea/LES_*_2026-11-05.md`, branch `dev/blueprint-2026-11`, not pushed):**
+Status: C00-C11 done (C07 and C09c deferred, optional). Rules versions: 1 Classic and older saves, 2 C03, 3 C04b,
+4 C06 (today's rules). Open owner decisions: UK/US prison and UK crime retune; Malaysia life expectancy (see C11).
+Next step: decide those two, or merge `dev/blueprint-2026-11` into `main`.
 - C00 baseline on c2a3032 (clean tree apart from the two untracked Idea docs). No Node here: run the harness
   checks in headless Edge (`python tools/edge.py tests.html "<js>"`). Full suite 229/229 (359 s; one earlier
   attempt hung idle in the harness and timed out, not reproduced). Hash, 1500 days, 100 founders: today's rules
@@ -170,6 +173,37 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
   education and businesses, recorded luck; read-only, with a not-a-cause note). C09b follow-up:
   `w.intervention.applied` counts every Fate (the event log keeps 200). Report-text fingerprints re-recorded
   (old values in the test comment). `explainTests` (8). 312/312 pass.
+- C11 DONE (release verification, Nov 2026, on the target laptop: Ryzen 5 8645HS, 16 GB, RTX 4050, Windows
+  Balanced power plan, headless Edge 156 without GPU, so map drawing is NOT measured). Fix found: calibration
+  runs (`tools/calibration.html`, `headless.js calib`) built `{ country: 'uk' }` worlds on Malaysia's DEFAULTS
+  (mortMult 1.9, outside market, inflation range), unlike the setup screen, which applies the pack's defaults.
+  New `Calibration.config(extra)` applies them in both tools (measurement only; games and fingerprints unchanged;
+  Malaysia's defaults equal DEFAULTS). Earlier non-Malaysia calibration numbers taken with the browser tool
+  should be read with this in mind.
+  Calibration, 3 seeds x 80 years, 150 founders, realistic crime, laws fixed (in band unless listed):
+  MY life expectancy 71.6 (75.3, warn), prisoners 306 (256); UK crime 3,288 (2,000, warn), prisoners 273 (142,
+  off), tertiary 33% (52%, warn: UK short-cycle ISCED 5 courses are not modelled); US prisoners 995 (540, off);
+  CN tertiary 34% (20%, off: a young town against the whole 25-64 stock), drug users 125 (64, warn), prisoners 194
+  (120, warn), revenue ¥2,981 (¥2,000, warn: the town collects taxes of several levels of government), period TFR
+  n/a (under 30 births; completed 1.06). Decisions for the owner (rule changes, not made here): (1) UK/US prison
+  and UK crime were already high after C06 (fewer graduates); a per-pack `crimeTuning` retune (sentencing share or
+  length) should first be confirmed at 500 founders x 5 seeds, since 273 per 100k is about one prisoner in a
+  town of 300; (2) Malaysia's mortMult 1.9 now gives 71.6 years (illness at 45-64 and 'natural causes'): a retune
+  towards ~1.5 changes today's-rules fingerprints, so it needs approval and a rulesRev note.
+  Benchmarks (simulated days per second, step p50/p99/max in ms; heap from performance.memory is quantised in
+  headless Edge and not usable): 100 founders x 30 y x 3 seeds 1,665-2,318 d/s (median 1,799), 0.3-0.5/1.6/9;
+  500 x 20 y x 2 seeds 265-293 d/s, 3.1-3.4/8.7/17; 1,000 x 10 y 125 d/s, 7.6/16.9/26; 3-town region (280) x 20 y
+  495 d/s; compare run of a 30-year world 12.5 s; report 10-55 ms; save 7 MB (100 founders, 30 y) to 24 MB
+  (120-year archive) and 32-41 MB (1,000 founders, 20 y / 3 towns of 1,000), save+load under 0.5 s. RAM of all
+  headless Edge processes over 1,000 founders x 20 y then 3 towns x 1,000 x 20 y: median 1.3 GB, peak 1.5 GB.
+  Soak: 120 years (100 founders) with invariants every 5 years clean, 1,440 paper issues (cap 1,500), feed 800;
+  population 119 -> 24 at the horizon with Malaysia's TFR ~1.6 and low migration (demography, not a defect).
+  Same seed twice (today's rules and Classic): identical `hash()` and `stableHash()`; every save resumed
+  identically 30 days later; Classic and Malaysia-pack fingerprints unchanged. Browser (in-app pane): every tab,
+  newspaper, report, rename (an HTML-like name shows as text everywhere), Fate confirmation, save and load
+  (day, hash, name, sandbox flag, Fate count, rulesRev 4 kept), no console errors. C07 and C09c stay deferred: no
+  correctness gap (the report's mobility uses lifetime peak wealth, not one month, and already says inherited
+  stakes are not receipts; the gift is purely additive). Full suite 313/313.
 All work is committed and pushed. Latest (Nov 2026): countries stop at Malaysia, the UK (4.5), the United States
 (4.6) and China (4.7): the owner skipped UAE, Mexico and South Africa. Phase 6 (section 4.8) step 6.1, the shared
 calibration fixes, is done; next is 6.2 (report sections, the town newspaper, compare-with-normal runs), then 6.3. The full suite runs in

@@ -1268,6 +1268,8 @@
   async function statsDefTests() {
     print('--- Statistics definitions (C05) ---', 'info');
     const Cal = LES.Calibration, D = LES.DEFAULTS;
+    const uk = Cal.config({ country: 'uk', founders: 150 }), my = Cal.config({ founders: 150 });
+    check("A calibration run uses the chosen country's own defaults, as the setup screen does (C11)", uk.mortMult === LES.Countries.get('uk').defaults.mortMult && uk.mortMult !== D.mortMult && uk.founders === 150 && Cal.config({ country: 'uk', mortMult: 1.3 }).mortMult === 1.3 && Object.keys(my).every(k => k === 'founders' || my[k] === D[k]));
     const rev = [], base = [];
     for (let i = 0; i < 10; i++) { rev.push(300000 * 100); base.push([300, 1]); }
     for (let i = 0; i < 2; i++) { rev.push(150000 * 100); base.push([150, 1]); }
