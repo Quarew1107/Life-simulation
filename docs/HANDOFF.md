@@ -44,6 +44,15 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
   for tertiary. Malaysia's target source now says it is the labour force with diplomas, which the sim lacks.
   No behaviour change (fingerprints identical). `eduLevelTests` (5); 242/242 pass. Not re-measured over 80 years
   (no tuning in this card): the old 74%/64%/72%/56% figures counted vocational-only people too. Next: C03.
+- C03 DONE: `A.catProb(cfg, gap, risk)` caps the chance of a catastrophe after a failed risky task AFTER the risk
+  multiplier (`clamp((catBase + catGap x gap^2) x RISK_MULT, min(catBase, cap), cap)`, non-finite -> cap);
+  `A.taskOdds` gives success, catastrophe-if-failed and overall catastrophe (= failure x conditional) for
+  explanations. Versioned by the new cfg `rulesRev` (DEFAULTS and today's rules 2; Classic 1;
+  `LES.upgradeConfig` sets 1 for older saves; no setup-screen field). Validator: catCap 0-1, 0 <= catBase <= catCap,
+  catGap >= 0. At default settings the old rule never exceeded the cap (96,898 risky failures over 2 x 1,500 days
+  + 30 years: highest 0.0151, none changed), so all fingerprints and C00 hashes are identical; it differed only
+  for heavy work with a gap above ~3.7 or custom catGap/catCap. `catCapTests` (6); 248/248 pass. Next: C04a
+  (estate design checkpoint: present the design before coding).
 All work is committed and pushed. Latest (Nov 2026): countries stop at Malaysia, the UK (4.5), the United States
 (4.6) and China (4.7): the owner skipped UAE, Mexico and South Africa. Phase 6 (section 4.8) step 6.1, the shared
 calibration fixes, is done; next is 6.2 (report sections, the town newspaper, compare-with-normal runs), then 6.3. The full suite runs in
