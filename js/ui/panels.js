@@ -197,6 +197,7 @@
           <button class="ghost ${LES.Spectator.mark(p.id) && !LES.Spectator.mark(p.id).family ? 'on' : ''}" data-act="bookmark" title="Bookmark this person (kept in this browser for this seed)">Bookmark</button>
           <button class="ghost ${LES.Spectator.mark(p.id) && LES.Spectator.mark(p.id).family ? 'on' : ''}" data-act="bookmarkFamily" title="Bookmark this person with partner, parents and children">Bookmark family</button>
           ${p.alive ? '<button class="ghost" data-act="celebrate" title="Confetti on the map (just for show)">Celebrate</button>' : ''}` : ''}
+          ${p.alive && LES.God ? '<button class="ghost" data-act="fate" title="Sandbox: end this person&#39;s life (asks first; marks the world as intervened)">Fate…</button>' : ''}
           <button class="ghost" data-act="deselect">Close</button>
         </div>
 

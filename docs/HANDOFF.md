@@ -138,6 +138,24 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
   card (`app.action` spotlight / bookmark / bookmarkFamily / celebrate). `spectatorTests` (3): 1,000 actions with
   drawing during a 3,000-day run leave `w.hash()` and `stableHash()` identical to an untouched twin. 293/293 pass.
   Next: C09b (Sandbox Fate; C04b is done) or C07.
+- C09b DONE: `js/sim/god.js` (`LES.God`), the only state-changing God Mode action. Person card -> 'Fate…' ->
+  confirmation window (`app.askFate`: age, town, partner, shares, children in care / sole carer, heirs, business
+  run, job; 'Save a copy first'). `God.requestFate(w, id)` resolves a sister-town resident to that town
+  (`Region.where`), refuses the dead, people abroad and a second pending request, and queues an immutable command
+  `{ id, kind:'FATE', target, requestedDay, status }` in `w.intervention.pending`. `World.step` calls `God.apply`
+  at the start of the day (before `refreshLiving`, never mid-loop): each target is re-checked (dead / moved away ->
+  `skipped` with a reason), else `p.fate = id` and the normal `w.die(p, 'Fate (sandbox intervention)')` runs
+  (job, partner, guardians, `settleEstate`, business succession; nothing is spliced or settled by hand). Commands
+  move to `w.intervention.events` (last 200) and `modified` marks the world Sandbox: the report shows a banner,
+  `Calibration.measure` sets `intervened` and leaves Fate deaths out of life expectancy (exposure still counted).
+  The state is plain world data, so pending commands survive save/load and run once. Worlds never touched have no
+  `w.intervention`: fingerprints unchanged. `fateTests` (11): owner/parent with heirs (one estate record, every
+  living child an heir, family links kept), duplicate and dead-target refusals, sole carer -> guardian or welfare,
+  died-before-execution skipped, save with Fate pending == unsaved twin (`stableHash`), report/statistics label,
+  sister-town resident. Limits: no undo; a Fate'd person's partner inherits nothing (existing estate rule: children
+  only); the intervention log is not shown as its own list (the feed and the person's life log carry it).
+  The report banner is joined to the line before it so untouched reports read byte-for-byte as before.
+  304/304 pass. Next: C09c (optional gift, deferred) or C07.
 All work is committed and pushed. Latest (Nov 2026): countries stop at Malaysia, the UK (4.5), the United States
 (4.6) and China (4.7): the owner skipped UAE, Mexico and South Africa. Phase 6 (section 4.8) step 6.1, the shared
 calibration fixes, is done; next is 6.2 (report sections, the town newspaper, compare-with-normal runs), then 6.3. The full suite runs in

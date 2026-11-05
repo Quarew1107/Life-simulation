@@ -55,7 +55,7 @@
         const ov = Math.min(a1, hi) - Math.max(a0, lo);
         if (ov > 0) E[b] += ov / 365;
       }
-      if (p.deathDay !== null && p.deathDay >= start) D[Math.min(bands - 1, Math.floor((p.deathDay - birth) / 365 / 5))]++;
+      if (p.deathDay !== null && p.deathDay >= start && !p.fate) D[Math.min(bands - 1, Math.floor((p.deathDay - birth) / 365 / 5))]++;
     }
     let alive = 1, e0 = 0;
     for (let b = 0; b < bands; b++) {
@@ -106,6 +106,7 @@
       r.revenue = rv.value; r.revenueApprox = rv.approx; // approx: an older save without each month's population
     }
     r.n.tertiary = r.tertiaryN;
+    r.intervened = !!(LES.God && LES.God.intervened(w)); // a sandbox world (C09b): not a research run
     return r;
   };
 
@@ -175,6 +176,7 @@
     const cf = rows.map(r => r.completedFert).filter(Number.isFinite);
     if (cf.length) lines.push(`${'(Completed children per woman, 45+)'.padEnd(46)} sim ${(U.sum(cf) / cf.length).toFixed(2).padStart(8)}   (not a TFR; shown for comparison)`);
     for (const k of Object.keys(Cal.TARGETS)) if (DEFS[k].comparable === false) lines.push(`Note on ${Cal.TARGETS[k].label}: ${DEFS[k].note}`);
+    if (rows.some(r => r.intervened)) lines.push('Note: a sandbox world with interventions (Fate): not a controlled research run; Fate deaths are left out of life expectancy.');
     if (rows.some(r => r.revenueApprox)) lines.push('Note: revenue per person is approximate for a save made before each month\'s population was recorded.');
     if (rows[0] && rows[0].years < 60) lines.push('Note: fewer than 60 years simulated, so life expectancy and children per woman are not meaningful yet.');
     return lines.join('\n');
