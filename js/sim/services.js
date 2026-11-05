@@ -198,7 +198,7 @@
       const ded = Math.min(bill, Math.max(0, w.px(plan.deductible) - p.med.ded));
       own = Math.min(ded + Math.round((bill - ded) * plan.coins), Math.max(0, w.px(plan.oopMax) - p.med.oop));
       p.med.ded += ded; p.med.oop += own;
-      if (p.cover === 'medicaid' || p.cover === 'medicare') w.gov.month.healthSub = (w.gov.month.healthSub || 0) + Math.max(0, bill - own);
+      if (plan.public || p.cover === 'medicaid' || p.cover === 'medicare') w.gov.month.healthSub = (w.gov.month.healthSub || 0) + Math.max(0, bill - own);
     }
     const paid = Math.min(Math.max(0, p.cash), own);
     if (paid > 0) L.spend(p, 'cash', 'HEALTH', paid);

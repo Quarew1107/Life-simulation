@@ -240,7 +240,62 @@
     return pl;
   }
 
+  // ---- Appointed leaders (pack gov.appointed: China): no elections. The province appoints the leader
+  // and reviews them every few years on growth, stability (approval), debt and scandals: kept,
+  // moved on (promotion, or rotation after two terms) or removed. The leader still picks an agenda.
+  const APPOINT = () => LES.Countries.pack.gov.appointed;
+  GV.appointed = () => !!APPOINT();
+  const vacancyText = () => (APPOINT() ? 'the province will appoint a successor' : 'a by-election is called');
+  function appoint(w, why) {
+    const g = w.gov, R = w.rng.gov, ts = townStats(w);
+    const pool = w.living.filter(p => eligible(w, p) && P.age(w, p) >= 35 && P.age(w, p) <= 62 && !(p.cr && p.cr.rec) && p.id !== g.president);
+    if (!pool.length) { g.president = -1; g.electionDay = w.day + 365; return; }
+    const score = p => 0.6 * (p.att[C.INT] - 5) + 0.8 * n01(p.pers.resp) + (p.quals.some(P.isBachelor) ? 0.8 : 0) + 0.25 * (p.job ? p.job.level || 1 : 0)
+      + (p.job && LES.Services.lineOf(p.job) ? 0.5 : 0) + (g.officials && Object.values(g.officials).some(o => o && o.id === p.id) ? 0.7 : 0) - 0.04 * Math.abs(P.age(w, p) - 50) + R.normal(0, 0.6);
+    let best = null, bs = -Infinity;
+    for (const p of pool) { const s = score(p); if (s > bs) { bs = s; best = p; } }
+    best.pol = best.pol || leanings(w, best, R);
+    const pl = platform(w, best, ts, R, polls(w, ts, R));
+    g.elections.push({ day: w.day, cands: [{ id: best.id, name: P.name(best), colour: COLOURS[0], votes: 0, platform: pl, incumbent: false }], eligible: 0, voted: 0, by: { cls: {}, rel: {}, eth: {} }, winner: best.id, appointed: why });
+    if (g.elections.length > 40) g.elections.shift();
+    g.president = best.id; g.terms[best.id] = 1; g.termStart = w.day; g.scandalsAtStart = g.scandals;
+    g.agenda = Object.entries(pl).map(([key, v]) => ({ key, v }));
+    g.approval = 55; g.scandal = 0; g.campaign = null;
+    for (const p of w.living) if (p.pol) p.pol.incStart = p.incomeEMA / w.price;
+    g.electionDay = w.day + Math.round(w.cfg.termYears * 365);
+    P.log(w, best, `Appointed ${GV.title(w)} of ${LES.townName(w)} by the province`, 'politics', 3);
+    w.pushFeed({ day: w.day, pid: best.id, text: `The province appointed ${P.name(best)} as ${GV.title(w)} (${why})`, cat: 'politics', imp: 3 });
+    w.townVersion++;
+    if (LES.Council && g.officials) LES.Council.reshuffle(w);
+  }
+  function review(w) {
+    const g = w.gov, R = w.rng.gov, A = APPOINT(), pres = g.president >= 0 ? w.people[g.president] : null;
+    if (!pres || !eligible(w, pres)) { appoint(w, g.elections.length ? 'the post was vacant' : 'the first leader of the city'); return; }
+    let now = 0, then = 0;
+    for (const p of w.living) if (p.adult && p.pol && p.pol.incStart !== undefined) { now += Math.max(0, p.incomeEMA) / w.price; then += Math.max(0, p.pol.incStart); }
+    const growth = then > 0 ? now / then - 1 : 0, debt = g.debt / Math.max(w.px(2e4), LES.Fiscal.avgRevenue(w) * 12);
+    const scandals = g.scandals - (g.scandalsAtStart || 0);
+    const s = 3 * growth + (g.approval - 50) / 25 - Math.max(0, debt - 0.5) - 2 * scandals + R.normal(0, 0.4);
+    g.reviews = g.reviews || []; g.reviews.push({ day: w.day, id: pres.id, score: Math.round(s * 100) / 100 }); if (g.reviews.length > 40) g.reviews.shift();
+    const name = P.name(pres), terms = g.terms[pres.id] || 1;
+    if (s < -0.5) {
+      P.log(w, pres, `Removed as ${GV.title(w)} after a poor review by the province`, 'politics', 3);
+      appoint(w, `${name} was removed after a poor review`);
+    } else if (terms >= A.maxTerms || (s > 1 && R.next() < 0.4)) {
+      const up = s > 1;
+      P.log(w, pres, up ? 'Promoted to a post in the provincial government' : `Moved on after ${terms} terms as ${GV.title(w)}`, 'politics', 3);
+      appoint(w, up ? `${name} was promoted to the province` : `${name} moved on after ${terms} terms`);
+    } else {
+      g.terms[pres.id] = terms + 1; g.termStart = w.day; g.scandalsAtStart = g.scandals;
+      for (const p of w.living) if (p.pol) p.pol.incStart = p.incomeEMA / w.price;
+      g.electionDay = w.day + Math.round(w.cfg.termYears * 365);
+      P.log(w, pres, `Kept as ${GV.title(w)} after the province's review`, 'politics', 2);
+      w.pushFeed({ day: w.day, pid: pres.id, text: `The province kept ${name} as ${GV.title(w)} after a ${w.cfg.termYears}-year review`, cat: 'politics', imp: 2 });
+    }
+  }
+
   function startCampaign(w) {
+    if (APPOINT()) { review(w); return; } // no elections: an appointment or a review
     const g = w.gov, R = w.rng.gov, ts = townStats(w);
     const cands = pickCandidates(w, R);
     if (!cands.length) { g.electionDay += 365; return; }
@@ -483,7 +538,7 @@
     death(w, p) { // the office falls vacant at once; officials are replaced next month
       const g = w.gov;
       if (g.president === p.id) {
-        w.pushFeed({ day: w.day, pid: p.id, text: `${GV.title(w)} ${P.name(p)} died in office; a by-election is called`, cat: 'politics', imp: 2 });
+        w.pushFeed({ day: w.day, pid: p.id, text: `${GV.title(w)} ${P.name(p)} died in office; ${vacancyText()}`, cat: 'politics', imp: 2 });
         g.president = -1; g.agenda = [];
         if (!g.campaign) { g.electionDay = w.day + 60; startCampaign(w); }
       }
@@ -529,7 +584,7 @@
       if (g.campaign && w.day > g.electionDay) tally(w, true); // (a campaign that ran past polling day)
       const pres = g.president >= 0 ? w.people[g.president] : null;
       if (pres && (!pres.alive || pres.away || (pres.inst && pres.inst.kind === 'prison'))) { // the office falls vacant
-        w.pushFeed({ day: w.day, pid: pres.id, text: `The office of ${GV.title(w)} is vacant (${!pres.alive ? 'died' : pres.away ? 'moved away' : 'in prison'}); a by-election is called`, cat: 'politics', imp: 2 });
+        w.pushFeed({ day: w.day, pid: pres.id, text: `The office of ${GV.title(w)} is vacant (${!pres.alive ? 'died' : pres.away ? 'moved away' : 'in prison'}); ${vacancyText()}`, cat: 'politics', imp: 2 });
         g.president = -1; g.agenda = [];
         if (!g.campaign) { g.electionDay = w.day + 60; startCampaign(w); }
       }

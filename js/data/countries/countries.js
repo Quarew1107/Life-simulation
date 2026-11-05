@@ -46,7 +46,7 @@
     'content.biz.*.capital|scale0|cap|fixed|fee', 'content.venues.*.cost', 'content.stocks.*.price0', 'content.glcStocks.*.price0',
     'tax.incomeBands.*.0', 'tax.personalRelief', 'tax.retirementRelief.cap', 'tax.childRelief', 'tax.rebate.amount|upTo',
     'tax.companyBands.*.0', 'tax.largeCompanyRevenue', 'tax.dividend.above', 'tax.estateAllowance', 'tax.allowanceTaper.from',
-    'tax.ni.employee.from|to', 'tax.ni.employer.from', 'tax.councilTax.byTier.*', 'tax.stateBands.*.0',
+    'tax.ni.employee.from|to', 'tax.ni.employer.from|to', 'tax.ni.floor', 'tax.councilTax.byTier.*', 'tax.stateBands.*.0',
     'tax.credits.eitc.*.max|outFrom', 'tax.credits.marriedExtra', 'tax.credits.ctc.amount|refundable|phaseFrom',
     'gov.leaderPay.min|max', 'gov.servicePay.*', 'gov.trainCost',
     'society.bottom40Max|top20Min|hardship|nisab', 'events.flood.relief', 'events.tornado.damage.*',
@@ -54,6 +54,7 @@
     'welfare.jobLoss.cap|flat', 'welfare.uc.child|workAllowance', 'welfare.uc.capital.lower|upper|per250',
     'welfare.childBenefit.first|other|taperFrom|taperTo', 'welfare.statePension.weekly', 'welfare.pensionCredit.weekly',
     'welfare.snap.max|perPerson|assets|stdDeduction', 'welfare.socialSecurity.bends.*', 'welfare.socialSecurity.cap|max|typical', 'welfare.tanf.amount',
+    'welfare.pension.avgWage|resident', 'welfare.dibao.urban|rural', 'welfare.childcare.monthly', 'welfare.migrantSchool',
     'education.loans.threshold', 'education.pell.max|incomeLimit',
     'health.fpl.base|perPerson', 'health.plans.*.premium|familyPremium|deductible|oopMax', 'services.charges.minor',
   ];

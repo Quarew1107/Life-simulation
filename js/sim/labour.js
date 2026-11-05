@@ -148,7 +148,7 @@
     const R = w.rng.outcome;
     p.lastEnrollTry = w.day;
     p.energy -= 8;
-    const bar = w.gov && course.id !== 'VOC' ? 1.0 : 0; // public university places are competitive (UPU)
+    const bar = (w.gov && course.id !== 'VOC' ? 1.0 : 0) + (LES.China && LES.China.on() ? LES.China.examBar(w, p, course) : 0); // public university places are competitive (UPU, gaokao)
     const acc = U.sigmoid((p.att[C.INT] - course.minInt - bar) * 1.5);
     if (R.next() >= acc) {
       P.log(w, p, `Application to ${course.name} rejected`, 'edu', 0);
@@ -238,8 +238,9 @@
         }
         job.perfOk = 0; job.perfN = 0;
       }
-      if (age >= 60 && !p.retired && !(w.flags && w.flags.noRetire)) {
-        const pRet = age >= 70 ? 1 : 0.2 + 0.15 * (age - 60);
+      const cnRet = LES.China && LES.China.on(), ra = cnRet ? LES.China.retireAge(w, p) : 60; // China: the 2025 reform's ages
+      if (age >= ra && !p.retired && !(w.flags && w.flags.noRetire)) {
+        const pRet = cnRet ? (job && job.si ? 1 : 0.3 + 0.15 * (age - ra)) : age >= 70 ? 1 : 0.2 + 0.15 * (age - 60); // (jobs with social insurance end at the statutory age)
         if (R.next() < pRet) {
           p.retired = true;
           if (p.job) L.endJob(w, p, 'retired');

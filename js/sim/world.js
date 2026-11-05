@@ -156,6 +156,7 @@
       if (cfg.wealthDist === 'equal') rm = 10000;
       else if (cfg.wealthDist === 'moderate') rm = lognormal(8000, 1.0);
       else rm = R.next() < 0.1 ? lognormal(300000, 1.2) : lognormal(3000, 1.0);
+      if (LES.China && LES.China.on()) { p.hukou = LES.China.assign(this, p); if (cfg.groupWealth !== 'equal' && cfg.wealthDist !== 'equal') rm *= LES.China.wealthGap(p); } // China: by hukou
       const gap = C.START_WEALTH; // history: some groups start with less (country pack; the average stays the same)
       if (gap && cfg.groupWealth !== 'equal' && cfg.wealthDist !== 'equal' && gap[p.eth]) rm *= gap[p.eth] / mix.keys.reduce((s, k, i) => s + mix.w[i] * (gap[k] || 1), 0) * U.sum(mix.w);
       const source = p.migrant ? 'ABROAD' : 'GENESIS';
