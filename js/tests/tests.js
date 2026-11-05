@@ -781,7 +781,7 @@
       'my-save': '93a0eff009e13bbf0631071fc098447a',
     };
     // 4a.6: the report names the drug policy instead of printing its key; 4b.1: a Country row in the settings table and "Today's rules".
-    const REPORT = { 'my-default': '6d4336bf', 'my-pandemic-lawless': '53df8f5a', 'my-region': '1373d1e7' }; // C10 (report text only, engine fingerprints unchanged): 'How to read this', softer cause wording (before: caaeab0d, b9679882, 5a42d376). C08: a 'Town name' row in the settings table (before: 552b2b16, bca4204f, 821ba9a8). C06: new histories (rules revision 4). // C01 (report text only, engine fingerprints unchanged): tie-aware Spearman, n/a values, inheritance wording. Before C01: f66c05b8, 62c7b2a, cb8afa3d. Phase 6.2: official figures, work and business, the paper; // 4b.3: a 'Starting wealth by group' row; Phase 6: new histories and a 'Business and job markets' row
+    const REPORT = { 'my-default': 'a1efec66', 'my-pandemic-lawless': '4c41e7c2', 'my-region': '1ec4fc54' }; // C07 (report text only): sustained-mobility status and the four wealth origins (before: 6d4336bf, 53df8f5a, 1373d1e7). // C10 (report text only, engine fingerprints unchanged): 'How to read this', softer cause wording (before: caaeab0d, b9679882, 5a42d376). C08: a 'Town name' row in the settings table (before: 552b2b16, bca4204f, 821ba9a8). C06: new histories (rules revision 4). // C01 (report text only, engine fingerprints unchanged): tie-aware Spearman, n/a values, inheritance wording. Before C01: f66c05b8, 62c7b2a, cb8afa3d. Phase 6.2: official figures, work and business, the paper; // 4b.3: a 'Starting wealth by group' row; Phase 6: new histories and a 'Business and job markets' row
     const D = LES.DEFAULTS, base = { founders: 80, migration: 'normal' };
     const cases = {
       'my-default': () => new LES.World(Object.assign({}, D, base, { seed: 'my-1' })),
@@ -1453,6 +1453,39 @@
     check('A sandbox world is marked in the comparison and the report', sb.sandbox && /a sandbox world/.test(CMP.table(sb, cur, 'x')) && /sandbox world changed by you/.test(R.html(w)) && w.intervention.applied === 1);
   }
 
+  // C07: sustained mobility from income averaged over years, ranked within birth cohorts (research only).
+  async function mobilityTests() {
+    print('--- Sustained mobility (C07) ---', 'info');
+    const S = LES.Society, D = LES.DEFAULTS;
+    // 1. Recording reads only: a twin world with the recorder switched off ends identically.
+    const rec = S.recordWindows, a = new LES.World(Object.assign({}, D, { seed: 'c07', founders: 80 }));
+    for (let d = 0; d < 365 * 3; d++) a.step();
+    S.recordWindows = () => {};
+    let b; try { b = new LES.World(Object.assign({}, D, { seed: 'c07', founders: 80 })); for (let d = 0; d < 365 * 3; d++) b.step(); } finally { S.recordWindows = rec; }
+    check('Recording the mobility windows changes nothing in the simulation (hash and stable fingerprint)', a.hash() === b.hash() && a.stableHash() === b.stableHash() && a.people.some(p => p.mob) && !b.people.some(p => p.mob));
+    // 2. Synthetic cohort: one month's spike cannot lift a low earner out of the bottom fifth.
+    const fake = (i, oi, ai) => ({ birthDay: 0, deathDay: null, mob: { o: { inc: oi * 72, nw: 0, n: 72, full: true }, a: { inc: ai, nw: 0, n: 132, full: true } } });
+    const people = [];
+    for (let i = 0; i < 59; i++) people.push(fake(i, 100 + i, (100 + i) * 132));
+    people.push(fake(59, 50, 50 * 131 + 1000)); // 131 ordinary months at 50, one month at 1,000 (above everyone's average)
+    const fw = { day: 365 * 45, people };
+    const r = S.sustainedMobility(fw), spike = people[59];
+    check('A one-month income spike does not decide the adult rank (the average over ages 30-40 does)', r.enough && r.n === 60 && r.matrix[0][0] >= 1 && r.corr > 0.9);
+    check('Fewer than 30 complete records in a birth decade: not measured, with the reason', S.sustainedMobility({ day: fw.day, people: people.slice(0, 20) }).enough === false && S.sustainedMobility({ day: fw.day, people: people.slice(0, 20) }).status.smallCohort === 20);
+    // 3. An older save (no records yet): windows that began before recording are never filled in after the fact.
+    const o = new LES.World(Object.assign({}, D, { seed: 'c07o', founders: 80 }));
+    for (let d = 0; d < 365; d++) o.step();
+    delete o.mobSince; for (const p of o.people) delete p.mob;
+    for (let d = 0; d < 400; d++) o.step();
+    const recs = o.people.filter(p => p.mob).flatMap(p => Object.entries(p.mob).map(([k, v]) => ({ p, k, v })));
+    check('After loading an older save, a window already under way is marked incomplete, never back-filled', recs.length > 0 && recs.every(({ p, k, v }) => v.full === (p.birthDay + (k === 'o' ? S.WIN.origin[0] : S.WIN.adult[0]) * 365 >= o.mobSince)) && recs.some(x => !x.v.full));
+    // 4. A real run: the report says either the measure or why it cannot be measured yet.
+    const w = new LES.World(Object.assign({}, D, { seed: 'c07r', founders: 120 }));
+    for (let d = 0; d < 365 * 50; d++) { w.step(); if (d % 1500 === 0) await yieldUI(); }
+    const html = LES.Report ? LES.Report.html(w) : '';
+    check('After 50 years the report shows sustained mobility or says why it is not measurable yet, and names the four wealth origins', !LES.Report || (/Sustained mobility/.test(html) && /four different things/.test(html)), JSON.stringify(S.sustainedMobility(w).status));
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -1485,6 +1518,7 @@
       await spectatorTests();
       await fateTests();
       await explainTests();
+      await mobilityTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -1496,6 +1530,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, tileTests };
+  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

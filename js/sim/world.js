@@ -559,6 +559,7 @@
       });
       const row = this.history[this.history.length - 1];
       for (const s of this.sys.snapshot) s.snapshot(this, row);
+      LES.Society.recordWindows(this); // research windows for sustained mobility (C07): reads only, no random numbers
     }
 
     // ---------------- Verification ----------------
