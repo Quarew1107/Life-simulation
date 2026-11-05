@@ -396,6 +396,61 @@
     logY: true,
     report: w => clanTable(w),
   });
+  // =====================================================================
+  // Aristocracy vs Meritocracy (Phase 6.3): the same town under two opposite rules for getting ahead.
+  define({
+    id: 'aristo', name: 'Aristocracy vs Meritocracy', icon: 'trophy',
+    short: 'Noble houses with old money, or equal starts and taxed inheritance.',
+    desc: 'Aristocracy: a tenth of the founders are noble houses holding most of the money; nobles marry nobles, their connections help them get hired, children inherit the title and there is no inheritance tax. Meritocracy: every founder starts with the same money, university is free, inheritance above the allowance is taxed at 90% and hiring looks only at ability. Run both on one seed and compare.',
+    watch: ['How much of the top 10%\'s wealth was inherited', 'Whether the noble houses stay on top for generations', 'Which world grows richer, and which is more equal'],
+    cfg: { aristoMode: 'aristocracy' },
+    hooks: {
+      init(w) {
+        const r = R(w), L = w.ledger, st = SC.state(w), founders = w.people.filter(p => p.alive && p.adult);
+        st.mode = w.cfg.aristoMode;
+        if (st.mode === 'meritocracy') {
+          const want = w.px(10000);
+          for (const p of founders) { if (p.cash > want) L.spend(p, 'cash', 'GENESIS', p.cash - want); else if (p.cash < want) L.pay('GENESIS', p, 'cash', want - p.cash); p.nw = P.netWorth(w, p); p.peakNw = p.nw; }
+        } else {
+          const n = Math.max(2, Math.round(founders.length / 10)), pool = founders.slice();
+          for (let i = 0; i < n && pool.length; i++) pool.splice(Math.floor(r.next() * pool.length), 1)[0].noble = true;
+          const nobles = founders.filter(p => p.noble), commons = founders.filter(p => !p.noble);
+          let take = 0;
+          for (const p of commons) { const t = Math.round(Math.max(0, p.cash) * 0.6); if (t > 0 && L.move(p, 'cash', nobles[take % nobles.length], 'cash', t)) take++; }
+          for (const p of nobles) P.log(w, p, `Head of the noble House of ${p.last}`, 'family', 2);
+          for (const p of founders) { p.nw = P.netWorth(w, p); p.peakNw = p.nw; }
+        }
+        for (const p of founders) { LES.Finance.reviewTiers(w, p); p.mcost = LES.Finance.monthlyCost(w, p); }
+      },
+      personCreated(w, p, how) { if (how === 'child' && p.parents.some(id => w.people[id] && w.people[id].noble)) p.noble = true; },
+      day(w) { // inheritance tax: none for the aristocracy, 90% above the allowance in the meritocracy
+        if (w.policy) w.policy.estateTax = w.cfg.aristoMode === 'meritocracy' ? 0.9 : 0;
+        if (w.gov && w.cfg.aristoMode === 'meritocracy' && w.gov.laws.uniFees !== 'free') LES.Gov.setLaw(w, 'uniFees', 'free', 'scenario'); // free university
+      },
+      hireWeight(w, p) {
+        if (w.cfg.aristoMode === 'meritocracy') return 0.8 + 0.04 * (U.sum(p.att) / 6); // ability only: records and favours count less
+        return p.noble ? 1.35 : 1; // connections
+      },
+      coupleWeight: (w, a, b) => (w.cfg.aristoMode === 'aristocracy' && (!!a.noble !== !!b.noble) ? 0.35 : 1),
+    },
+    snap: w => ({ top10: topShare(w), inh: inheritedShare(w), noble: nobleTop(w) }),
+    status(w) {
+      return `${w.cfg.aristoMode === 'meritocracy' ? 'Meritocracy' : 'Aristocracy'} · the richest 10% hold <b>${Math.round(topShare(w) * 100)}%</b> of wealth · inherited share of their peak wealth <b>${Math.round(inheritedShare(w) * 100)}%</b>${w.cfg.aristoMode === 'aristocracy' ? ` · nobles in the top 10: <b>${Math.round(nobleTop(w) * 100)}%</b>` : ''}`;
+    },
+    series: h => [{ label: 'Top 10% share %', color: '#ff8c42', data: h.map(r => [r.day / 365, (r.scn ? r.scn.top10 : 0) * 100]) }, { label: 'Inherited share of the top 10% %', color: '#b892ff', data: h.map(r => [r.day / 365, (r.scn ? r.scn.inh : 0) * 100]) }, { label: 'Nobles among the top 10% %', color: '#f2c14e', data: h.map(r => [r.day / 365, (r.scn ? r.scn.noble : 0) * 100]) }],
+    report(w) {
+      const ad = adults(w), nob = ad.filter(p => p.noble), com = ad.filter(p => !p.noble);
+      return w.cfg.aristoMode === 'aristocracy' ? `<table class="cmp"><tr><th></th><th>Nobles</th><th>Commoners</th></tr><tr><td>Adults</td><td>${nob.length}</td><td>${com.length}</td></tr><tr><td>Median net worth</td><td>${U.fmtMoney(median(nob.map(p => p.nw)))}</td><td>${U.fmtMoney(median(com.map(p => p.nw)))}</td></tr><tr><td>Median income</td><td>${U.fmtMoney(median(nob.map(p => p.incomeEMA)))}</td><td>${U.fmtMoney(median(com.map(p => p.incomeEMA)))}</td></tr><tr><td>With a degree</td><td>${nob.length ? Math.round(nob.filter(p => p.quals.some(P.isBachelor)).length / nob.length * 100) : 0}%</td><td>${com.length ? Math.round(com.filter(p => p.quals.some(P.isBachelor)).length / com.length * 100) : 0}%</td></tr></table>`
+        : `<p>Inheritance tax collected: ${U.fmtMoney(w.gov ? w.gov.estateTaxTotal : 0)}. Run the same seed as an Aristocracy to compare.</p>`;
+    },
+  });
+  // Share of the richest tenth's peak wealth that came from inheritance; nobles among the richest ten.
+  function inheritedShare(w) {
+    const top = adults(w).sort((a, b) => b.nw - a.nw).slice(0, Math.max(1, Math.round(adults(w).length / 10)));
+    const peak = U.sum(top.map(p => Math.max(1, p.peakNw))), inh = U.sum(top.map(p => Math.min(Math.max(1, p.peakNw), p.earned.inherit || 0)));
+    return peak > 0 ? inh / peak : 0;
+  }
+  function nobleTop(w) { const top = adults(w).sort((a, b) => b.nw - a.nw).slice(0, 10); return top.length ? top.filter(p => p.noble).length / top.length : 0; }
   function clanTable(w) {
     const ad = adults(w);
     return `<table class="cmp"><tr><th>Clan (gift)</th><th>Adults</th><th>Median net worth</th><th>Median income</th><th>Millionaires</th></tr>${SC.CLANS.map(c => { const g = ad.filter(p => p.clan === c.id); return `<tr><td><span style="color:${c.colour}">■</span> ${c.name} <span class="muted">(${C.ATTR_NAMES[c.attr].toLowerCase()})</span></td><td>${g.length}</td><td>${U.fmtMoney(median(g.map(p => p.nw)))}</td><td>${U.fmtMoney(median(g.map(p => p.incomeEMA)))}</td><td>${g.filter(p => p.nw >= w.px(1e6)).length}</td></tr>`; }).join('')}</table>`;

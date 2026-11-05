@@ -776,7 +776,7 @@
       'my-save': '93a0eff009e13bbf0631071fc098447a',
     };
     // 4a.6: the report names the drug policy instead of printing its key; 4b.1: a Country row in the settings table and "Today's rules".
-    const REPORT = { 'my-default': '9410742e', 'my-pandemic-lawless': '20090ec5', 'my-region': '620fc04a' }; // 4b.3: a 'Starting wealth by group' row; Phase 6: new histories and a 'Business and job markets' row
+    const REPORT = { 'my-default': 'f66c05b8', 'my-pandemic-lawless': '62c7b2a', 'my-region': 'cb8afa3d' }; // Phase 6.2: official figures, work and business, the paper; // 4b.3: a 'Starting wealth by group' row; Phase 6: new histories and a 'Business and job markets' row
     const D = LES.DEFAULTS, base = { founders: 80, migration: 'normal' };
     const cases = {
       'my-default': () => new LES.World(Object.assign({}, D, base, { seed: 'my-1' })),
@@ -1048,6 +1048,48 @@
     check('The books still balance', w.checkInvariants().length === 0, w.checkInvariants().join('; '));
   }
 
+  // Phase 6.2-6.3: the town newspaper, comparison runs, Aristocracy vs Meritocracy, report sections.
+  async function phase6Tests() {
+    print('--- Newspaper, comparisons, Aristocracy vs Meritocracy ---', 'info');
+    const D = LES.DEFAULTS, w = new LES.World(Object.assign({}, D, { seed: 'p6-news', founders: 70 }));
+    for (let d = 0; d < 365 * 3; d++) { w.step(); if (d % 1500 === 0) await yieldUI(); }
+    const is = w.news.issues;
+    check('The paper comes out every month, numbered, with at most six stories', is.length === 36 && is.every((x, i) => x.no === i + 1 && x.stories.length <= 6), `${is.length} issues`);
+    const named = is.flatMap(x => x.stories).filter(st => st.pid >= 0);
+    check('Stories about a person name them', named.length > 0 && named.every(st => st.text.includes(w.people[st.pid].first) || st.text.includes(w.people[st.pid].last)), named.slice(0, 2).map(x => x.text).join(' | '));
+    check('Each country has its own paper', LES.News.name(w) === 'Berita Rezeki' && LES.Countries.get('uk').names.newspaper && LES.Countries.get('us').names.newspaper && LES.Countries.get('cn').names.newspaper);
+    const w2 = LES.Save.fromJSON(LES.Save.toJSON(w));
+    for (let d = 0; d < 40; d++) { w.step(); w2.step(); }
+    check('The archive is saved and keeps growing after loading', w2.news.issues.length === 37 && w2.stableHash() === w.stableHash() && LES.News.issueAt(w2, 400) === 12, `${w2.news.issues.length}`);
+    if (LES.NewsUI) check('A front page draws from an issue', /paper-mast/.test(LES.NewsUI.frontPage(w, 5)) && /Berita Rezeki/.test(LES.NewsUI.frontPage(w, 5)));
+    // Comparisons
+    const CMP = LES.Compare;
+    if (CMP) {
+      check('Today\'s rules compare with Classic, anything else with today\'s rules', CMP.target(w.cfg) === 'classic' && CMP.target(Object.assign({}, w.cfg, { scenario: 'pandemic' })) === 'national' && CMP.config(w.cfg).country === 'my' && CMP.config(Object.assign({}, w.cfg, { crime: 'off' })).crime === LES.PRESETS.national.values.crime);
+      const small = new LES.World(Object.assign({}, D, { seed: 'p6-cmp', founders: 40, scenario: 'equal' }));
+      for (let d = 0; d < 365; d++) small.step();
+      const base = await CMP.run(small);
+      check('A comparison world runs to the same day under the other rules', base.years === 1 && base.pop > 20 && base.seed === 'p6-cmp' && small.cfg.scenario === 'equal' && LES.Countries.active === 'my', JSON.stringify({ y: base.years, pop: base.pop }));
+    }
+    // Aristocracy vs Meritocracy
+    const ar = new LES.World(Object.assign({}, D, { seed: 'p6-ar', founders: 80, scenario: 'aristo', aristoMode: 'aristocracy' }));
+    const fo = ar.people.filter(p => p.adult), nob = fo.filter(p => p.noble), cash = q => q.reduce((a, p) => a + p.cash, 0);
+    check('Aristocracy: a tenth of the founders are noble and hold most of the money', nob.length >= 6 && nob.length <= 10 && cash(nob) > cash(fo) * 0.5, `${nob.length} nobles, ${Math.round(cash(nob) / cash(fo) * 100)}%`);
+    for (let d = 0; d < 365 * 6; d++) { ar.step(); if (d % 1500 === 0) await yieldUI(); }
+    const kids = ar.people.filter(p => p.parents.length && p.parents.some(id => ar.people[id].noble));
+    check('Children of nobles are noble; no inheritance tax', kids.every(c => c.noble) && ar.policy.estateTax === 0, `${kids.length} noble children`);
+    const me = new LES.World(Object.assign({}, D, { seed: 'p6-me', founders: 80, scenario: 'aristo', aristoMode: 'meritocracy' }));
+    const c0 = me.people.filter(p => p.adult).map(p => p.cash);
+    check('Meritocracy: every founder starts with the same money', c0.every(x => x === c0[0]));
+    for (let d = 0; d < 365 * 3; d++) me.step();
+    check('Meritocracy: free university and a 90% inheritance tax', me.gov.laws.uniFees === 'free' && me.policy.estateTax === 0.9 && /inherited share/.test(LES.Scenarios.BY_ID.aristo.status(me)));
+    check('Both worlds keep their books balanced', ar.checkInvariants().length === 0 && me.checkInvariants().length === 0, ar.checkInvariants().concat(me.checkInvariants()).join('; '));
+    if (LES.Report) {
+      const html = LES.Report.html(ar);
+      check('The report has the new sections', ['Against official figures', 'Work and business', 'a front page a decade', 'Aristocracy vs Meritocracy'].every(t => html.includes(t)));
+    }
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -1069,6 +1111,7 @@
       await usTests();
       await cnTests();
       await marketTests();
+      await phase6Tests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -1080,6 +1123,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, tileTests };
+  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

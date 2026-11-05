@@ -343,3 +343,19 @@ button.primary { border-radius: 6px; box-shadow: 3px 3px 0 #7d5f17; }
 .cast-pick { display: flex; align-items: center; gap: 6px; margin: 4px 0; font-size: 13px; flex-wrap: wrap; }
 .cast-pick .cast-town { margin-left: auto; font-size: 12px; }
 .cast-alerts { display: flex; align-items: center; gap: 8px; font-size: 12px; margin: 2px 0 8px; color: var(--muted); }
+
+/* Town newspaper (js/ui/news-ui.js) */
+.paper { background: #f4efe2; color: #1f1d1a; border-radius: 6px; padding: 14px 18px; font-family: Georgia, 'Times New Roman', serif; }
+.paper-mast { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 3px double #1f1d1a; padding-bottom: 6px; margin-bottom: 10px; font-size: 12px; }
+.paper-mast b { font: 700 28px/1.1 Georgia, serif; letter-spacing: .5px; text-align: center; flex: 1; }
+.paper.compact .paper-mast b { font-size: 18px; }
+.paper small { text-transform: uppercase; letter-spacing: 1px; font: 700 10px Inter, system-ui, sans-serif; color: #8a2c1f; }
+.paper-h { font: 700 22px/1.25 Georgia, serif; margin: 2px 0 10px; }
+.paper.compact .paper-h { font-size: 17px; }
+.paper-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px 16px; border-top: 1px solid #b9b09b; padding-top: 8px; }
+.paper-story p { margin: 2px 0; font-size: 14px; line-height: 1.35; }
+.paper [data-pid] { cursor: pointer; }
+.paper [data-pid]:hover .paper-h, .paper [data-pid]:hover p { text-decoration: underline; }
+.paper-box { margin-top: 12px; border-top: 1px solid #b9b09b; padding-top: 8px; font-size: 13px; }
+.paper-box table { width: 100%; border-collapse: collapse; } .paper-box td { padding: 2px 4px; border-bottom: 1px dotted #c9c0aa; } .paper-box td:last-child { text-align: right; }
+#minimap { position: absolute; right: 12px; bottom: 44px; border: 2px solid var(--line); border-radius: 6px; box-shadow: 0 4px 14px rgba(0,0,0,.4); cursor: crosshair; z-index: 5; image-rendering: pixelated; display: none; }

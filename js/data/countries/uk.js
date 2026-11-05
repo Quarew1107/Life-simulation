@@ -369,7 +369,7 @@
       exchangeShort: 'Albion',
       retirement: 'workplace pension',
       antiCorruption: 'Serious Fraud Office',
-      lockdown: 'Lockdown',
+      newspaper: 'The Rexbury Chronicle', lockdown: 'Lockdown',
     },
     // Taxes (Year-1 GBP a year). HMRC 2026/27, England: personal allowance GBP12,570 (lost GBP1 per GBP2
     // above GBP100k); 20% / 40% / 45%; National Insurance 8% (2% above GBP50,270) for workers and 15% above
@@ -611,6 +611,7 @@
       haze: { doy: 200, chance: 0.25, days: 10, name: 'Heatwave', text: 'Heatwave: the hot weeks are hard on the old and the very young' },
     },
     calibration: {
+      tertiary: { target: 0.52, band: 0.1, src: 'OECD Education at a Glance 2024: 52% of 25-64 year-olds with tertiary education' },
       tfr: { target: 1.41, band: 0.35, src: 'ONS Births in England and Wales 2024 (TFR 1.41)' },
       e0: { target: 81, band: 3, src: 'ONS National life tables 2022-2024 (men 79.1, women 83.0)' },
       unemp: { target: 0.05, band: 0.015, src: 'ONS Labour Force Survey, 2026 (~5%)' },

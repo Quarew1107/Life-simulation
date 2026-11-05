@@ -30,8 +30,20 @@
     'map': 'M4 20h2v2H2V6h2v14Zm12 0h2v2h-4v-2h-2v-2h2V8h-2V6h4v14Zm-8 0H6v-2h2v2Zm12 0h-2v-2h2v2ZM10 4h2v2h-2v10h2v2H8V4H6V2h4v2Zm12 14h-2V4h-2V2h4v16ZM6 6H4V4h2v2Zm12 0h-2V4h2v2Z',
     'human': 'M10 2h4v4h-4zM3 7h18v2H3zm6 2h2v7H9zm4 0h2v7h-2zm-4 7h2v6H9zm4 0h2v6h-2zm-2-2h2v2h-2z',
     'teach': 'M3 2h4v4H3zM2 8h12v2H2zm7-4h11v2H9zm1 10h10v2H10z M2 9h6v7H2zm0 7h2v4H2zm4 0h2v4H6zM20 6h2v8h-2z',
+    // Drawn for this project (same 24x24 pixel grid):
+    'news': 'M2 4h18v2H2zm0 14h20v2H2zM2 6h2v12H2zm16 0h2v6h-2zm2 4h2v8h-2zM6 8h4v4H6zm6 0h4v2h-4zm0 4h4v2h-4zM6 14h10v2H6z',
+    'save': 'M3 3h15v2H3zm0 16h18v2H3zM3 5h2v14H3zm16 2h2v12h-2zm-1-2h2v2h-2zM7 5h2v4H7zm6 0h2v4h-2zM7 9h8v2H7zm0 4h10v2H7zm0 2h2v4H7zm8 0h2v4h-2z',
+    'plus': 'M11 4h2v16h-2zM4 11h16v2H4z',
+    'minus': 'M4 11h16v2H4z',
+    'expand': 'M3 3h6v2H5v4H3zm12 0h6v6h-2V5h-4zM3 15h2v4h4v2H3zm16 0h2v6h-6v-2h4z',
+    'volume': 'M3 9h4v6H3zm4-2h2v10H7zm2-2h2v14H9zm2-2h2v18h-2zm4 6h2v6h-2zm4-3h2v12h-2z',
+    'volume-x': 'M3 9h4v6H3zm4-2h2v10H7zm2-2h2v14H9zm2-2h2v18h-2zm4 6h2v2h-2zm4 0h2v2h-2zm-2 2h2v2h-2zm-2 2h2v2h-2zm4 0h2v2h-2z',
+    'film': 'M2 5h20v2H2zm0 12h20v2H2zM2 7h2v10H2zm18 0h2v10h-2zM6 9h2v2H6zm0 4h2v2H6zm10-4h2v2h-2zm0 4h2v2h-2zm-6-2h4v2h-4z',
+    'compare': 'M3 4h7v2H3zm0 14h7v2H3zM3 6h2v12H3zm5 0h2v12H8zm6-2h7v2h-7zm0 14h7v2h-7zm0-12h2v12h-2zm5 0h2v12h-2zm-8 5h2v2h-2z',
     'calendar': 'M5 4h14v2H5zm0 16h14v2H5zM3 10h2v10H3zm0-4h2v2H3zm16 0h2v2h-2zm0 4h2v10h-2zM3 8h18v2H3zm12-6h2v2h-2zM7 2h2v2H7z',
   };
+  // The sound button shows on/off as an icon.
+  LES.iconOnly = (el, name, size = 18) => { if (el) el.innerHTML = LES.icon(name, size); };
   LES.icon = (name, size = 16, cls = '') => (P[name] ? `<svg class="px-icon ${cls}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${P[name]}"/></svg>` : '');
   // Put an icon in front of every element marked data-icon (tab buttons and so on).
   LES.decorateIcons = function (root) {

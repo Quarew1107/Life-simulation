@@ -23,6 +23,7 @@
     prison: { label: 'Prisoners per 100k (realistic scale)', fmt: x => x.toFixed(0) },
     clearance: { label: 'Share of crimes solved', fmt: U.fmtPct },
     revenue: { label: 'Public revenue per person / month (Year-1 $)', fmt: money },
+    tertiary: { label: 'Adults 25-64 with a diploma or degree', fmt: U.fmtPct }, // Phase 6
   };
 
   // Period life expectancy from deaths and person-years lived in the last `years` years
@@ -72,6 +73,8 @@
       hh.push(inc);
     }
     r.hhGini = U.gini(hh);
+    const prime = w.living.filter(p => p.alive && !p.away && P.age(w, p) >= 25 && P.age(w, p) < 65);
+    r.tertiary = prime.length ? prime.filter(p => p.quals.length).length / prime.length : NaN;
     const dead = w.people.filter(p => !p.alive && p.causeOfDeath);
     r.starve = dead.length ? dead.filter(p => p.causeOfDeath === 'starvation').length / dead.length : 0;
     if (w.crime) { // averaged over the yearly history rows after year 5, scaled back to "Realistic"

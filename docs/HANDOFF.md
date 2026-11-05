@@ -401,6 +401,18 @@ Meritocracy, pixel UI icons, a mini-map)
     continues identically; `marketTests` (6 checks). 216 tests pass. Benchmark: new 2.77-2.91 s vs old
     2.97-3.15 s (fewer businesses).
   - Not done (smaller): graduate share, class mobility; UK prisoners.
+- 6.2 DONE: town newspaper (`js/sim/news.js` system 'news' files an issue a month into `w.news.issues`, saved;
+  `js/ui/news-ui.js` window from Events → Newspaper; pack `names.newspaper`); comparison runs (`js/ui/compare.js`:
+  same seed and length under today's rules, or Classic when already on today's rules; Stats tab and end
+  dialog; also in the report); report sections: against official figures (from year 10), work and business,
+  each country's own rules, a front page a decade.
+- 6.3 DONE: Aristocracy vs Meritocracy scenario (`aristo`, option `aristoMode`), mini-map (`js/ui/minimap.js`),
+  pixel icons for the top bar and map buttons (new paths in icons.js). 229 tests pass.
+- LEFT: graduates. New calibration measure `tertiary` (adults 25-64 with a diploma or degree) is far too high:
+  Malaysia 74% (29%), UK 64% (52%), US 72% (51%), China 56% (20%). Founders get VOC with 30% chance on top of
+  degrees (`World.makeAdult`) and enrolment is easy (`L.enroll` bar): tune both per pack (calibrated only).
+  Also class mobility, UK prisoners (207 vs 142), China revenue in old shrinking towns. Benchmark not re-run
+  after 6.2/6.3 (presentation only, plus a monthly newspaper filing).
 
 ## 5. Useful resources (checked)
 - pixelarticons (MIT) already vendored in `js/ui/icons.js` (licence in `docs/licenses/`).
