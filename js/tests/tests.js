@@ -776,7 +776,7 @@
       'my-save': '93a0eff009e13bbf0631071fc098447a',
     };
     // 4a.6: the report names the drug policy instead of printing its key; 4b.1: a Country row in the settings table and "Today's rules".
-    const REPORT = { 'my-default': 'f66c05b8', 'my-pandemic-lawless': '62c7b2a', 'my-region': 'cb8afa3d' }; // Phase 6.2: official figures, work and business, the paper; // 4b.3: a 'Starting wealth by group' row; Phase 6: new histories and a 'Business and job markets' row
+    const REPORT = { 'my-default': '445f0e50', 'my-pandemic-lawless': '389a9630', 'my-region': '18479e2' }; // C01 (report text only, engine fingerprints unchanged): tie-aware Spearman, n/a values, inheritance wording. Before C01: f66c05b8, 62c7b2a, cb8afa3d. Phase 6.2: official figures, work and business, the paper; // 4b.3: a 'Starting wealth by group' row; Phase 6: new histories and a 'Business and job markets' row
     const D = LES.DEFAULTS, base = { founders: 80, migration: 'normal' };
     const cases = {
       'my-default': () => new LES.World(Object.assign({}, D, base, { seed: 'my-1' })),
@@ -1090,6 +1090,25 @@
     }
   }
 
+  // C01: tie-aware Spearman and honest wording about inheritance in the report.
+  async function reportStatsTests() {
+    print('--- Report statistics (C01) ---', 'info');
+    const R = LES.Report;
+    if (!R || !R.spearman) { check('The report module is loaded', false); return; }
+    const near = (a, b) => a !== null && Math.abs(a - b) < 1e-9;
+    check('Tied ranks share their average rank', JSON.stringify(R.rankWithTies([1, 1, 2, 3])) === '[1.5,1.5,3,4]' && JSON.stringify(R.rankWithTies([3, 1, 3, 3])) === '[3,1,3,3]');
+    check('Spearman with ties: [1,1,2,3] vs [1,2,3,4] = 0.948683298', near(R.spearman([1, 1, 2, 3], [1, 2, 3, 4], 2), 0.9486832980505138), String(R.spearman([1, 1, 2, 3], [1, 2, 3, 4], 2)));
+    check('Reordering the rows gives the same result', near(R.spearman([2, 1, 3, 1], [3, 2, 4, 1], 2), 0.9486832980505138));
+    check('Perfect and reversed orders give 1 and -1', near(R.spearman([1, 2, 3, 4, 5], [2, 4, 6, 8, 10], 2), 1) && near(R.spearman([1, 2, 3, 4, 5], [5, 4, 3, 2, 1], 2), -1));
+    check('A constant series has no correlation (null)', R.spearman([5, 5, 5, 5, 5, 5, 5, 5], [1, 2, 3, 4, 5, 6, 7, 8]) === null && R.spearman([1, 2, 3, 4, 5, 6, 7, 8], [2, 2, 2, 2, 2, 2, 2, 2]) === null);
+    check('Too few pairs give null; missing values are dropped', R.spearman([1, 2, 3], [1, 2, 3]) === null && near(R.spearman([1, NaN, 2, 3, 4], [1, 9, 2, 3, 4], 2), 1));
+    const w = new LES.World(Object.assign({}, LES.DEFAULTS, { seed: 'c01', founders: 60 }));
+    for (let d = 0; d < 365 * 12; d++) { w.step(); if (d % 1500 === 0) await yieldUI(); }
+    const a = R.analyse(w), html = R.html(w);
+    check('Every factor has a correlation in [-1, 1] or n/a', a.factors.length > 0 && a.factors.every(f => f.r === null || (f.r >= -1 - 1e-12 && f.r <= 1 + 1e-12)), a.factors.map(f => f.r === null ? 'n/a' : f.r.toFixed(2)).join(' '));
+    check('The report no longer calls anyone self-made; it says what inheritance measures', !/self-made/i.test(html) && /recorded cash inheritance and gifts/i.test(html) && /not proof of cause|not causes/i.test(html));
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -1112,6 +1131,7 @@
       await cnTests();
       await marketTests();
       await phase6Tests();
+      await reportStatsTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -1123,6 +1143,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, tileTests };
+  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

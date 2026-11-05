@@ -14,19 +14,35 @@
     return (h[lo] && h[lo].price) || 1;
   }
 
-  // Spearman rank correlation.
-  function spearman(xs, ys) {
-    const n = xs.length;
-    if (n < 8) return 0;
-    const rank = a => { const idx = a.map((v, i) => [v, i]).sort((x, y) => x[0] - y[0]); const r = new Array(n); idx.forEach(([, i], k) => { r[i] = k; }); return r; };
-    const rx = rank(xs), ry = rank(ys);
-    let d2 = 0;
-    for (let i = 0; i < n; i++) d2 += (rx[i] - ry[i]) ** 2;
-    return 1 - 6 * d2 / (n * (n * n - 1));
-  }
+  // Spearman rank correlation with ties: tied values share the average of their ranks, then the Pearson
+  // correlation of the ranks. Pairs with a missing value are dropped; null when fewer than `minN` pairs remain
+  // or either side is constant (no correlation can be measured). Row order never changes the result.
+  R.rankWithTies = function (a) {
+    const idx = a.map((v, i) => [v, i]).sort((x, y) => x[0] - y[0] || x[1] - y[1]), r = new Array(a.length);
+    for (let i = 0; i < idx.length;) {
+      let j = i;
+      while (j + 1 < idx.length && idx[j + 1][0] === idx[i][0]) j++;
+      const avg = (i + j) / 2 + 1; // 1-based positions i+1..j+1
+      for (let k = i; k <= j; k++) r[idx[k][1]] = avg;
+      i = j + 1;
+    }
+    return r;
+  };
+  R.spearman = function (xs, ys, minN = 8) {
+    const x = [], y = [];
+    for (let i = 0; i < xs.length; i++) if (Number.isFinite(xs[i]) && Number.isFinite(ys[i])) { x.push(xs[i]); y.push(ys[i]); }
+    const n = x.length;
+    if (n < minN) return null;
+    const rx = R.rankWithTies(x), ry = R.rankWithTies(y), m = (n + 1) / 2;
+    let sxy = 0, sxx = 0, syy = 0;
+    for (let i = 0; i < n; i++) { const a = rx[i] - m, b = ry[i] - m; sxy += a * b; sxx += a * a; syy += b * b; }
+    return sxx > 0 && syy > 0 ? sxy / Math.sqrt(sxx * syy) : null;
+  };
+  const spearman = R.spearman;
+  const rTxt = r => (r === null ? 'n/a' : r.toFixed(2));
   const median = a => (a.length ? U.median(a) : 0);
   const pct = x => `${Math.round(x * 100)}%`;
-  const corrWord = r => (Math.abs(r) < 0.1 ? 'almost no' : Math.abs(r) < 0.25 ? 'a weak' : Math.abs(r) < 0.45 ? 'a moderate' : 'a strong') + (r >= 0 ? ' positive' : ' negative');
+  const corrWord = r => (r === null ? 'no measurable' : (Math.abs(r) < 0.1 ? 'almost no' : Math.abs(r) < 0.25 ? 'a weak' : Math.abs(r) < 0.45 ? 'a moderate' : 'a strong') + (r >= 0 ? ' positive' : ' negative'));
 
   // Collect per-person outcome rows (adults who reached 30).
   R.collect = function (w) {
@@ -40,7 +56,7 @@
       const earnedTotal = Math.max(1, e.wages + e.gigs + e.business + e.invest + e.interest + e.inherit + e.gifts + e.luck + e.welfare);
       rows.push({
         p, age, peakReal, logW: Math.log10(Math.max(1000, peakReal)),
-        inheritShare: (e.inherit + e.gifts) / earnedTotal,
+        inheritShare: (e.inherit + e.gifts) / earnedTotal, // recorded cash inheritance and gifts / tracked lifetime receipts (inherited business stakes are not counted)
         strategy: p.stratHist.length ? p.stratHist[0].strategy : p.strategy,
         finalStrategy: p.strategy,
         qual: p.quals.includes('MED') ? 'Medicine' : p.quals.includes('MASTER') ? "Master's" : p.quals.some(P.isBachelor) ? 'Bachelor' : p.quals.includes('VOC') ? 'Vocational' : 'None',
@@ -66,7 +82,7 @@
     if (winner) {
       const wr = rows.find(r => r.p === winner);
       const biz = w.biz.filter(b => b.founderId === winner.id);
-      out.paras.push(`<b>${esc(P.name(winner))}</b> was the first to reach the ${U.fmtMoney(w.goal)} goal, in Year ${U.dayToDate(w.winner.day).year} at age ${w.winner.age}. Their path: ${C.STRATEGY_NAMES[wr ? wr.strategy : winner.strategy]} strategy at the start${winner.stratHist.length > 1 ? `, later ${C.STRATEGY_NAMES[winner.strategy]}` : ''}; ${biz.length ? `founded ${biz.length} business${biz.length > 1 ? 'es' : ''} (${biz.map(b => esc(b.name)).slice(0, 3).join(', ')}) with ${biz.reduce((s, b) => s + b.booms, 0)} breakthrough${biz.reduce((s, b) => s + b.booms, 0) === 1 ? '' : 's'}` : 'no businesses'}; ${wr && wr.inheritShare > 0.2 ? `${pct(wr.inheritShare)} of their lifetime income came from inheritance or gifts` : 'almost entirely self-made'}.`);
+      out.paras.push(`<b>${esc(P.name(winner))}</b> was the first to reach the ${U.fmtMoney(w.goal)} goal, in Year ${U.dayToDate(w.winner.day).year} at age ${w.winner.age}. Their path: ${C.STRATEGY_NAMES[wr ? wr.strategy : winner.strategy]} strategy at the start${winner.stratHist.length > 1 ? `, later ${C.STRATEGY_NAMES[winner.strategy]}` : ''}; ${biz.length ? `founded ${biz.length} business${biz.length > 1 ? 'es' : ''} (${biz.map(b => esc(b.name)).slice(0, 3).join(', ')}) with ${biz.reduce((s, b) => s + b.booms, 0)} breakthrough${biz.reduce((s, b) => s + b.booms, 0) === 1 ? '' : 's'}` : 'no businesses'}; ${wr ? `recorded cash inheritance and gifts were ${pct(wr.inheritShare)} of their tracked lifetime receipts (inherited business stakes are not counted)` : 'no record of their receipts'}.`);
     } else {
       out.paras.push(`Nobody reached the ${U.fmtMoney(w.goal)} goal in ${years} years. The richest person ever was <b>${richest ? esc(P.name(richest.p)) : '—'}</b> with a peak of ${richest ? U.fmtMoney(richest.peakReal) : '—'} in Year-1 money — ${richest ? (richest.peakReal / w.goal * 100).toFixed(1) : 0}% of the goal. In this world the goal was out of reach: a salary alone cannot get there, and only rare business breakthroughs come close.`);
     }
@@ -91,11 +107,12 @@
     const factors = [];
     C.ATTR_NAMES.forEach((name, i) => factors.push({ name, r: spearman(rows.map(r => r.p.pot[i]), ys) }));
     C.PERS.forEach(k => factors.push({ name: C.PERS_NAMES[k], r: spearman(rows.map(r => r.p.pers[k]), ys) }));
-    factors.sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
+    factors.sort((a, b) => (b.r === null ? -1 : Math.abs(b.r)) - (a.r === null ? -1 : Math.abs(a.r)));
     out.factors = factors;
-    if (rows.length >= 8) {
-      const f = factors.slice(0, 3);
-      out.paras.push(`<b>What mattered most?</b> Among ${rows.length} adults who reached 30, peak wealth had ${corrWord(f[0].r)} link with <b>${f[0].name}</b> (r = ${f[0].r.toFixed(2)}), ${corrWord(f[1].r)} link with ${f[1].name} (${f[1].r.toFixed(2)}) and ${corrWord(f[2].r)} link with ${f[2].name} (${f[2].r.toFixed(2)}). ${Math.abs(f[0].r) < 0.25 ? 'No single trait strongly predicted success — circumstances and luck dominated.' : ''}`);
+    out.factorsN = rows.length;
+    const f = factors.filter(x => x.r !== null).slice(0, 3);
+    if (f.length === 3) {
+      out.paras.push(`<b>Strongest associations in this run.</b> Among ${rows.length} adults who reached 30, peak wealth had ${corrWord(f[0].r)} association with <b>${f[0].name}</b> (rank correlation ${rTxt(f[0].r)}), ${corrWord(f[1].r)} one with ${f[1].name} (${rTxt(f[1].r)}) and ${corrWord(f[2].r)} one with ${f[2].name} (${rTxt(f[2].r)}). ${Math.abs(f[0].r) < 0.25 ? 'No single trait was strongly associated with success: circumstances and luck dominated.' : ''} These are associations inside one simulated town, not proof of cause; compare several seeds.`);
     }
 
     // 4. Education
@@ -108,7 +125,7 @@
     if (top10.length) {
       const inh = median(top10.map(r => r.inheritShare));
       const luckyTop = top10.filter(r => r.p.log.some(x => /windfall|breakthrough/i.test(x.text))).length;
-      out.paras.push(`<b>Inheritance and luck.</b> For the 10 richest, a median ${pct(inh)} of lifetime income came from inheritance or gifts. ${luckyTop} of the top 10 had a windfall or a business breakthrough, against ${st.booms} breakthroughs and ${st.windfalls} windfalls in the whole town. ${luckyTop >= 6 ? 'Luck was a big part of the biggest fortunes.' : 'Most top fortunes were built without a single lucky break.'}`);
+      out.paras.push(`<b>Inheritance and luck.</b> For the 10 richest, recorded cash inheritance and gifts were a median ${pct(inh)} of their tracked lifetime receipts (inherited business stakes are not counted). ${luckyTop} of the top 10 had a windfall or a business breakthrough, against ${st.booms} breakthroughs and ${st.windfalls} windfalls in the whole town. ${luckyTop >= 6 ? 'Luck was a big part of the biggest fortunes.' : 'Most top fortunes were built without a single lucky break.'}`);
     }
 
     // 6. Social mobility
@@ -121,7 +138,7 @@
       kids.forEach((r, i) => { if (q(parentW, parentW[i]) === 0) { poor++; if (q(childW, childW[i]) >= 3) poorToRich++; } });
       const mob = spearman(parentW, childW);
       out.mobility = { n: kids.length, corr: mob, poor, poorToRich };
-      out.paras.push(`<b>Social mobility.</b> ${kids.length} people born in town reached 30. Their wealth had ${corrWord(mob)} link with their parents' wealth (r = ${mob.toFixed(2)}). ${poor ? `${poorToRich} of ${poor} children from the poorest fifth of families climbed into the top two-fifths.` : ''}`);
+      out.paras.push(`<b>Social mobility.</b> ${kids.length} people born in town reached 30. Their wealth had ${corrWord(mob)} association with their parents' wealth (rank correlation ${rTxt(mob)}). ${poor ? `${poorToRich} of ${poor} children from the poorest fifth of families climbed into the top two-fifths.` : ''}`);
     }
 
     // 7. Economy & migration
@@ -136,13 +153,13 @@
     const achieved = G.IDS.map(id => ({ id, n: st.goalsAchieved[id] || 0 })).sort((a, b) => b.n - a.n);
     const totalGoals = U.sum(achieved.map(x => x.n));
     const living = rows.filter(r => r.p.alive && !r.p.away);
-    const moneyHappy = living.length >= 8 ? spearman(living.map(r => r.p.nw), living.map(r => r.p.happy)) : 0;
+    const moneyHappy = spearman(living.map(r => r.p.nw), living.map(r => r.p.happy));
     out.goals = achieved;
     out.moneyHappy = moneyHappy;
     if (totalGoals) {
       const top = achieved.filter(x => x.n).slice(0, 3).map(x => `${G.DEFS[x.id].icon} ${G.DEFS[x.id].name.toLowerCase()} (${x.n})`).join(', ');
       const neverRich = adults.filter(p => p.goalsDone.length && p.peakNw / w.price < U.RM(1e6)).length;
-      out.paras.push(`<b>Life goals.</b> Residents achieved ${totalGoals} personal goals; the most common were ${top}. ${neverRich} people achieved at least one goal without ever becoming millionaires. Today's adults have ${corrWord(moneyHappy)} link between wealth and happiness (r = ${moneyHappy.toFixed(2)}) — ${moneyHappy < 0.25 ? 'money bought little happiness here; family, health and leisure mattered more' : 'money did help, mostly through better homes, leisure and less stress'}.`);
+      out.paras.push(`<b>Life goals.</b> Residents achieved ${totalGoals} personal goals; the most common were ${top}. ${neverRich} people achieved at least one goal without ever becoming millionaires. Today's adults have ${corrWord(moneyHappy)} association between wealth and happiness (rank correlation ${rTxt(moneyHappy)}) — ${moneyHappy === null || moneyHappy < 0.25 ? 'money bought little happiness here; family, health and leisure mattered more' : 'money did help, mostly through better homes, leisure and less stress'}.`);
     }
 
     // Hall of Fame
@@ -156,7 +173,7 @@
     if (fittest) award('Fittest', rowOf(fittest), `strength/endurance/agility ${((fittest.att[C.STR] + fittest.att[C.END] + fittest.att[C.AGI]) / 3).toFixed(1)}`);
     award('Richest ever', richest, richest && `peak ${U.fmtMoney(richest.peakReal)}`);
     const selfMade = sorted.find(r => r.inheritShare < 0.05);
-    award('Most self-made', selfMade, selfMade && `peak ${U.fmtMoney(selfMade.peakReal)}, under 5% inherited`);
+    award('Richest with little recorded inheritance', selfMade, selfMade && `peak ${U.fmtMoney(selfMade.peakReal)}; recorded cash inheritance and gifts under 5% of receipts`);
     const comeback = rows.filter(r => r.failures > 0 || r.p.log.some(x => /bankrupt/i.test(x.text))).sort((a, b) => b.peakReal - a.peakReal)[0];
     award('Biggest comeback', comeback, comeback && `${comeback.failures} failed business${comeback.failures === 1 ? '' : 'es'}, still peaked at ${U.fmtMoney(comeback.peakReal)}`);
     const serial = rows.slice().sort((a, b) => b.founded - a.founded)[0];
@@ -400,9 +417,9 @@ ${paperSection(w)}
 <section><h2>Hall of Fame</h2><div class="grid">${a.awards.map(x => `<div class="card award"><b>${esc(x.title)}</b><div>${esc(x.name)}</div><div class="note">${esc(x.why || '')}</div></div>`).join('')}</div></section>
 <section><h2>Notable lives</h2><div class="grid">${a.bios.map(b => `<div class="card bio"><b>${esc(P.name(b.p))}</b> <span class="note">${b.p.alive ? `${Math.floor(P.age(w, b.p))} years old` : `died aged ${Math.floor(P.age(w, b.p))}`} · ${C.STRATEGY_NAMES[b.p.strategy]}${b.p.migrant ? ' · migrant' : ''}</span><ul>${b.events.map(e => `<li><span class="note">Y${U.dayToDate(e.day).year}</span> ${esc(e.text)}</li>`).join('')}</ul></div>`).join('')}</div></section>
 <section><h2>Life goals achieved</h2><table><tr><th>Goal</th><th>Times achieved</th></tr>${(a.goals || []).map(g => `<tr><td>${LES.Goals.DEFS[g.id].icon} ${esc(LES.Goals.DEFS[g.id].name)}</td><td>${g.n}</td></tr>`).join('')}</table>
-<p class="note">Everyone has a personal life goal (money, a dream home, family, happiness, fitness, career, education, helping others or a dynasty). Wealth vs happiness among living adults: rank correlation ${(a.moneyHappy || 0).toFixed(2)}.</p></section>
-<section><h2>Factors and peak wealth</h2><table><tr><th>Factor</th><th>Rank correlation with peak wealth</th></tr>${(a.factors || []).map(f => `<tr><td>${esc(f.name)}</td><td>${f.r.toFixed(2)} (${corrWord(f.r)})</td></tr>`).join('')}</table>
-<p class="note">Spearman rank correlation over adults who reached 30. Correlation is not causation: traits also affect who studies, who starts businesses and who has children.</p></section>
+<p class="note">Everyone has a personal life goal (money, a dream home, family, happiness, fitness, career, education, helping others or a dynasty). Wealth vs happiness among living adults: rank correlation ${rTxt(a.moneyHappy === undefined ? null : a.moneyHappy)}.</p></section>
+<section><h2>Factors and peak wealth</h2><table><tr><th>Factor</th><th>Rank correlation with peak wealth</th></tr>${(a.factors || []).map(f => `<tr><td>${esc(f.name)}</td><td>${rTxt(f.r)} (${corrWord(f.r)})</td></tr>`).join('')}</table>
+<p class="note">Spearman rank correlation (tied values share their average rank) over ${a.factorsN || 0} adults who reached 30; n/a = too few people or no variation. These are associations in this simulated town, not causes: traits also affect who studies, who starts businesses and who has children. Check several seeds.</p></section>
 ${a.strat ? `<section><h2>Strategies</h2><table><tr><th>Starting strategy</th><th>People</th><th>Median peak wealth</th><th>In top 10</th><th>Business failures</th></tr>${a.strat.map(s => `<tr><td>${C.STRATEGY_NAMES[s.s]}</td><td>${s.n}</td><td>${U.fmtMoney(s.med)}</td><td>${s.inTop}</td><td>${s.fail}</td></tr>`).join('')}</table></section>` : ''}
 ${castSection(w)}
 ${regionSection(w)}
@@ -410,7 +427,7 @@ ${scenarioSection(w, svgChart)}
 ${societySection(w)}
 ${crimeSection(w)}
 ${govSection(w)}
-<section><h2>Top 20 fortunes</h2><table><tr><th>#</th><th>Name</th><th>Peak (Y1 money)</th><th>Strategy</th><th>Education</th><th>Inherited share</th><th>Status</th></tr>${a.top.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(P.name(r.p))}</td><td>${U.fmtMoney(r.peakReal)}</td><td>${C.STRATEGY_NAMES[r.strategy]}</td><td>${r.qual}</td><td>${pct(r.inheritShare)}</td><td>${r.p.alive ? (r.p.away ? 'moved away' : 'alive') : 'died ' + Math.floor(r.age)}</td></tr>`).join('')}</table></section>
+<section><h2>Top 20 fortunes</h2><table><tr><th>#</th><th>Name</th><th>Peak (Y1 money)</th><th>Strategy</th><th>Education</th><th>Recorded cash inherited or gifted</th><th>Status</th></tr>${a.top.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(P.name(r.p))}</td><td>${U.fmtMoney(r.peakReal)}</td><td>${C.STRATEGY_NAMES[r.strategy]}</td><td>${r.qual}</td><td>${pct(r.inheritShare)}</td><td>${r.p.alive ? (r.p.away ? 'moved away' : 'alive') : 'died ' + Math.floor(r.age)}</td></tr>`).join('')}</table></section>
 <section><h2>What you can try next</h2><ul>
 <li><b>Replay this world with one change</b> (same seed): New world → change one setting → Start. The next report compares both runs.</li>
 <li><b>Try a different seed</b> with the same settings to see how much of this result was luck.</li>
