@@ -528,6 +528,7 @@
           label(this.selectedId, '#3ec7b5', P.name(w.people[this.selectedId]));
         }
       }
+      if (LES.Spectator) LES.Spectator.draw(this, g, w); // spotlight, bookmarks, confetti (read only)
     }
 
     // Flood water on the flooded blocks, and campaign flags along the roads before an election.

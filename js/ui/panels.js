@@ -193,8 +193,13 @@
         <div class="p-actions">
           ${p.alive ? `<button class="ghost ${app.renderer.follow ? 'on' : ''}" data-act="follow">${app.renderer.follow ? 'Following' : 'Follow'}</button>` : ''}
           <button class="ghost ${app.pinned === p.id ? 'on' : ''}" data-act="${app.pinned === p.id ? 'unpin' : 'pin'}" title="Pin this person, then select someone else to compare">${app.pinned === p.id ? 'Pinned' : 'Compare'}</button>
+          ${LES.Spectator ? `<button class="ghost ${LES.Spectator.spotlight === p.id ? 'on' : ''}" data-act="spotlight" title="Dim the map around this person (spectator tools only watch: nothing in the simulation changes)">Spotlight</button>
+          <button class="ghost ${LES.Spectator.mark(p.id) && !LES.Spectator.mark(p.id).family ? 'on' : ''}" data-act="bookmark" title="Bookmark this person (kept in this browser for this seed)">Bookmark</button>
+          <button class="ghost ${LES.Spectator.mark(p.id) && LES.Spectator.mark(p.id).family ? 'on' : ''}" data-act="bookmarkFamily" title="Bookmark this person with partner, parents and children">Bookmark family</button>
+          ${p.alive ? '<button class="ghost" data-act="celebrate" title="Confetti on the map (just for show)">Celebrate</button>' : ''}` : ''}
           <button class="ghost" data-act="deselect">Close</button>
         </div>
+
       </div>
       <div class="card">
         <h3>Net worth <small class="muted">peak ${U.fmtMoney(p.peakNw)}</small></h3>
@@ -393,6 +398,12 @@
   UI.renderLeaders = function (force) {
     const app = UI.app, w = app.world;
     if (UI.lbMode === 'cast' && UI.renderCast) { UI.renderCast(force); return; } // My cast (js/ui/cast-ui.js)
+    if (UI.lbMode === 'marks' && LES.Spectator) { // bookmarks (spectator tools)
+      LES.Spectator.sync(w);
+      const ms = LES.Spectator.marks.filter(m => w.people[m.id]);
+      $('lb-list').innerHTML = ms.length ? ms.map(m => { const p = w.people[m.id]; return `<div class="lb-row ${p.id === app.selected ? 'sel' : ''}" data-pid="${p.id}"><span class="rank">🔖</span><span class="dot" style="background:${C.STRATEGY_COLORS[p.strategy]}"></span><span><div class="nm">${esc(P.name(p))}${m.family ? ' <span class="muted">+ family</span>' : ''}</div><div class="sub">${Math.floor(P.age(w, p))} yrs · bookmarked Y${U.dayToDate(m.day).year}</div></span><span class="val">${p.alive ? (p.away ? 'away' : U.fmtMoney(p.nw)) : 'died'}</span></div>`; }).join('') : '<p class="note">No bookmarks yet. Select someone and press Bookmark (or Bookmark family). Bookmarks are kept in this browser for this seed.</p>';
+      return;
+    }
     const q = $('search').value.trim().toLowerCase();
     let list;
     if (q) list = w.people.filter(p => P.name(p).toLowerCase().includes(q)).sort((a, b) => (b.alive - a.alive) || (b.nw - a.nw)).slice(0, 60);

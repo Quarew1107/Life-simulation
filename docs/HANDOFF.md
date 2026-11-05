@@ -131,6 +131,13 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
   issues keep the name of their day; the newspaper's title is the country pack's. Report-text fingerprints
   re-recorded (a 'Town name' settings row). `townNameTests` (8): rename on day 100 -> identical `w.hash()` on day
   1,000, save/load, escaping, Unicode, region. 290/290 pass. Next: C07 (optional), C09a.
+- C09a DONE: `js/ui/spectator.js` (`LES.Spectator`): Spotlight (dims the map around one person), Bookmark person or
+  family (partner, parents, children; ribbons on the map; Leaders -> Bookmarks list; saved in localStorage per
+  country + seed, never in the world or save), Celebrate (confetti from a fixed pattern, no random numbers). Follow
+  is the renderer's existing camera follow. Drawn from `Renderer.drawLabels` (read only); buttons on the person
+  card (`app.action` spotlight / bookmark / bookmarkFamily / celebrate). `spectatorTests` (3): 1,000 actions with
+  drawing during a 3,000-day run leave `w.hash()` and `stableHash()` identical to an untouched twin. 293/293 pass.
+  Next: C09b (Sandbox Fate; C04b is done) or C07.
 All work is committed and pushed. Latest (Nov 2026): countries stop at Malaysia, the UK (4.5), the United States
 (4.6) and China (4.7): the owner skipped UAE, Mexico and South Africa. Phase 6 (section 4.8) step 6.1, the shared
 calibration fixes, is done; next is 6.2 (report sections, the town newspaper, compare-with-normal runs), then 6.3. The full suite runs in
