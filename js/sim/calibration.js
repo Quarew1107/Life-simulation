@@ -72,7 +72,7 @@
     const r = { seed: w.cfg.seed, years: Math.floor(w.day / 365), pop: w.counts.living };
     // Period TFR from age-specific birth rates (C05); completed family size of women born here who reached 45.
     const pt = Cal.periodTfr(w, 10);
-    r.tfr = pt.births >= DEFS.tfr.minN ? pt.tfr : NaN; r.n = { tfr: pt.births };
+    r.tfr = pt.births >= DEFS.tfr.minN ? pt.tfr : NaN; r.n = { tfr: pt.births }; r.tfrParts = { B: Array.from(pt.B), E: Array.from(pt.E) }; // (pooled over seeds in Cal.table)
     const women = w.people.filter(p => p.sex === 'F' && p.parents.length && !p.migrant && P.age(w, p) >= 45);
     r.completedFert = women.length >= 5 ? women.reduce((s, p) => s + p.children.length, 0) / women.length : NaN; r.n.completedFert = women.length;
     r.e0 = lifeExpectancy(w, Math.min(40, Math.max(10, r.years)));
@@ -122,6 +122,16 @@
     return { value: s / n, approx: false };
   };
 
+  // Period TFR from several seeds: births and person-years added up band by band (one town is too small).
+  Cal.pooledTfr = function (rows) {
+    const B = new Array(7).fill(0), E = new Array(7).fill(0);
+    let births = 0;
+    for (const r of rows) if (r.tfrParts) for (let b = 0; b < 7; b++) { B[b] += r.tfrParts.B[b]; E[b] += r.tfrParts.E[b]; births += r.tfrParts.B[b]; }
+    if (births < DEFS.tfr.minN) return NaN;
+    let tfr = 0;
+    for (let b = 0; b < 7; b++) if (E[b] > 0) tfr += 5 * B[b] / E[b];
+    return tfr;
+  };
   // Period total fertility rate over the last `years`: births to women in 5-year age bands 15-49 divided by the
   // person-years those women lived in town in each band, times 5, summed. Women away from town are left out.
   Cal.periodTfr = function (w, years) {
@@ -143,7 +153,7 @@
     }
     let tfr = 0;
     for (let b = 0; b < 7; b++) if (E[b] > 0) tfr += 5 * B[b] / E[b];
-    return { tfr, births };
+    return { tfr, births, B, E };
   };
 
   Cal.status = (k, v) => {
@@ -158,7 +168,8 @@
     const lines = [`Calibration over ${rows.length} seed(s), ${rows[0] ? rows[0].years : 0} years (${LES.Countries.pack.name} targets)`];
     for (const k of Object.keys(Cal.TARGETS)) {
       const t = Cal.TARGETS[k], vals = rows.map(r => r[k]).filter(Number.isFinite);
-      const v = vals.length ? U.sum(vals) / vals.length : NaN;
+      let v = vals.length ? U.sum(vals) / vals.length : NaN;
+      if (k === 'tfr') v = Cal.pooledTfr(rows); // small towns: births and exposure pooled over the seeds
       lines.push(`${t.label.padEnd(46)} sim ${String(Number.isFinite(v) ? t.fmt(v) : 'n/a').padStart(8)}   target ${String(t.fmt(t.target)).padStart(8)}   ${Cal.status(k, v)}`);
     }
     const cf = rows.map(r => r.completedFert).filter(Number.isFinite);

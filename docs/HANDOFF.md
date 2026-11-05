@@ -103,8 +103,10 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
   (shown, not a target). Crime rows: `prison` = sentenced prisoners only, `custody` = police lock-up (remand),
   rehab apart. 'Unemployment' is labelled 'Not working, share of eligible adults' (not the labour-force
   definition: no search/availability test). Clearance = arrests per crime (not comparable). Low samples -> NaN
-  (medWage 20, Gini 20 households, clearance 30 crimes). `statsDefTests` (8); 272/272 pass. Not yet re-measured
-  over 80 years. Next: C06.
+  (medWage 20, Gini 20 households, clearance 30 crimes). A single small town rarely has 30 births in 10 years, so
+  `Cal.table` pools births and exposure over seeds (`Cal.pooledTfr`, `r.tfrParts`). 80 years x 3 seeds: Malaysia
+  period TFR 1.54 (target 1.6; completed 1.37), revenue RM577, tertiary 47% (degrees only, target 29%); China
+  revenue ¥3,170 (barely changed: real growth, not the old denominator), tertiary 53% (20%). Next: C06.
 All work is committed and pushed. Latest (Nov 2026): countries stop at Malaysia, the UK (4.5), the United States
 (4.6) and China (4.7): the owner skipped UAE, Mexico and South Africa. Phase 6 (section 4.8) step 6.1, the shared
 calibration fixes, is done; next is 6.2 (report sections, the town newspaper, compare-with-normal runs), then 6.3. The full suite runs in
