@@ -53,6 +53,31 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
   + 30 years: highest 0.0151, none changed), so all fingerprints and C00 hashes are identical; it differed only
   for heavy work with a gap above ~3.7 or custom catGap/catCap. `catCapTests` (6); 248/248 pass. Next: C04a
   (estate design checkpoint: present the design before coding).
+- C04a DESIGN (awaiting owner approval; no code yet). Verified on HEAD: `Fa.settleEstate` (family.js) liquidates
+  investments, EPF and trust, pays study debt only, taxes CASH only, splits cash equally (sen remainder by heir id;
+  away heirs via ABROAD: a sister-town mirror or `h.away.wealth`), then gives business shares to LOCAL heirs only.
+  Reproduced: a 60% owner whose children all live away -> the other owner went 40% -> 100% for free (RM102k of
+  stake); the children got nothing. A sole owner with no local heir -> the firm is closed. US medical debt is left
+  on the dead person (dropped, not written off). Idempotent today only through `World.die`'s alive guard.
+  Decision: cash-settlement with equalisation (blueprint alternative B), not portable cross-town ownership (A
+  would need owner references through distribute, sale, closure, migration, return moves and cross-town deaths).
+  Under a new `rulesRev` 3 (Classic and older saves keep the current code):
+  1. Value the estate: cash after liquidation + Sum(stake x b.equity). Debts: study, then medical where the pack has
+     it; unpaid -> `L.writeOffs`. Tax base = net estate incl. equity (pack relief, e.g. UK business relief, if
+     approved); tax funded from cash first, then by selling part of the stake to the outside investor.
+  2. Entitlement q = net / heirs (integer sen). Remote heirs get estate cash first; any shortfall is met by selling
+     that slice of the stake to an outside investor at the price below, paid via the existing ABROAD route. Local
+     heirs share the remaining cash and stake so each gets q (fractions exact to 1e-9).
+  3. Outside investor = new `b.outsideShare` (default 0): `F.distribute` pays its part to MARKET; managers stay local;
+     new invariant: sum(local shares) + outsideShare = 1 for every open firm.
+  4. No heirs: cash to ESTATE (as now); the stake goes to the outside investor (other owners unchanged); a sole-owner
+     firm with no heirs is sold with `F.sellBiz` (proceeds to ESTATE) instead of closed.
+  5. `p.estateSettled` flag + one `w.estates` record per death: cash, equity value and stake per heir, tax, debts.
+  Tests E-01..E-12 (blueprint 4.7) as fixtures in a new `estateTests`. Changed: family.js settleEstate (rev 3
+  branch), finance.js distribute + invariant, world.js checkInvariants; save field `b.outsideShare`.
+  Open policy questions for the owner: buyout price (recommend full valuation; the migration buyout uses 70%);
+  equity in the tax base (recommend yes, UK with its business relief); medical debt from the estate (recommend
+  yes, US); spouse share (recommend none, as now).
 All work is committed and pushed. Latest (Nov 2026): countries stop at Malaysia, the UK (4.5), the United States
 (4.6) and China (4.7): the owner skipped UAE, Mexico and South Africa. Phase 6 (section 4.8) step 6.1, the shared
 calibration fixes, is done; next is 6.2 (report sections, the town newspaper, compare-with-normal runs), then 6.3. The full suite runs in
