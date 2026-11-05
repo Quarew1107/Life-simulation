@@ -781,7 +781,7 @@
       'my-save': '93a0eff009e13bbf0631071fc098447a',
     };
     // 4a.6: the report names the drug policy instead of printing its key; 4b.1: a Country row in the settings table and "Today's rules".
-    const REPORT = { 'my-default': 'caaeab0d', 'my-pandemic-lawless': 'b9679882', 'my-region': '5a42d376' }; // C08: a 'Town name' row in the settings table (before: 552b2b16, bca4204f, 821ba9a8). C06: new histories (rules revision 4). // C01 (report text only, engine fingerprints unchanged): tie-aware Spearman, n/a values, inheritance wording. Before C01: f66c05b8, 62c7b2a, cb8afa3d. Phase 6.2: official figures, work and business, the paper; // 4b.3: a 'Starting wealth by group' row; Phase 6: new histories and a 'Business and job markets' row
+    const REPORT = { 'my-default': '6d4336bf', 'my-pandemic-lawless': '53df8f5a', 'my-region': '1373d1e7' }; // C10 (report text only, engine fingerprints unchanged): 'How to read this', softer cause wording (before: caaeab0d, b9679882, 5a42d376). C08: a 'Town name' row in the settings table (before: 552b2b16, bca4204f, 821ba9a8). C06: new histories (rules revision 4). // C01 (report text only, engine fingerprints unchanged): tie-aware Spearman, n/a values, inheritance wording. Before C01: f66c05b8, 62c7b2a, cb8afa3d. Phase 6.2: official figures, work and business, the paper; // 4b.3: a 'Starting wealth by group' row; Phase 6: new histories and a 'Business and job markets' row
     const D = LES.DEFAULTS, base = { founders: 80, migration: 'normal' };
     const cases = {
       'my-default': () => new LES.World(Object.assign({}, D, base, { seed: 'my-1' })),
@@ -1428,6 +1428,29 @@
     } else check('Test needs someone who moved to the sister town', false);
   }
 
+  // C10: comparisons and reports say what kind of evidence they are.
+  async function explainTests() {
+    print('--- Explaining results (C10) ---', 'info');
+    const D = LES.DEFAULTS, CMP = LES.Compare, R = LES.Report;
+    const w = new LES.World(Object.assign({}, D, { seed: 'c10', founders: 60 }));
+    for (let d = 0; d < 365 * 2; d++) w.step();
+    const cur = CMP.summary(w), t = CMP.table(cur, Object.assign({}, cur, { country: 'Testland', rules: 'Classic (original rules)', rev: 1 }), 'Classic rules');
+    check('The comparison names country, rules and rules version, years and the sample size', t.includes(LES.Countries.pack.name) && t.includes('rules version 4') && t.includes('rules version 1') && t.includes('Years simulated') && t.includes('sample size'));
+    check('It says it is a same-seed world comparison, not a matched experiment, and that one pair cannot prove a cause', /same-seed world comparison/.test(t) && /not a matched experiment/.test(t) && /cannot prove/.test(t));
+    check('A short run shows "insufficient data", not a blank or zero, and is warned about', /insufficient data \(under 10 years\)/.test(t) && /Fewer than 20 years/.test(t) && /nobody yet/.test(t) && CMP.table(Object.assign({}, cur, { revenue: undefined }), cur, 'x').includes('no government'));
+    check('Different countries are warned about (amounts are in different currencies)', /different countries/.test(t) && !/different countries/.test(CMP.table(cur, cur, 'x')));
+    const h0 = w.hash(), adult = w.living.find(p => p.alive && p.adult), ws = R.wealthStory(w, adult);
+    check('"What shaped their wealth" lists recorded facts with a not-a-cause note, and reading it changes nothing', ws.lines.length >= 3 && /^Start: /.test(ws.lines[0]) && /not a proven cause/.test(ws.note) && w.hash() === h0);
+    const html = R.html(w);
+    check('The report explains correlation versus cause and the sample size, without the old causal claims', /How to read this/.test(html) && /does not prove that one caused the other/.test(html) && !/produced the most top-10/.test(html) && !/money bought little happiness/.test(html) && !/what these settings changed/.test(html));
+    const small = new LES.World(Object.assign({}, D, { seed: 'c10s', founders: 20 }));
+    for (let d = 0; d < 200; d++) small.step();
+    check('A town with fewer than 30 adults over 30 is flagged as too small for firm conclusions', /Too few people for firm conclusions/.test(R.html(small)));
+    LES.God.requestFate(w, adult.id); w.step();
+    const sb = CMP.summary(w);
+    check('A sandbox world is marked in the comparison and the report', sb.sandbox && /a sandbox world/.test(CMP.table(sb, cur, 'x')) && /sandbox world changed by you/.test(R.html(w)) && w.intervention.applied === 1);
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -1459,6 +1482,7 @@
       await townNameTests();
       await spectatorTests();
       await fateTests();
+      await explainTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -1470,6 +1494,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, tileTests };
+  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

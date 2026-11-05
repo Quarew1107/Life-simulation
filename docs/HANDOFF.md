@@ -156,6 +156,20 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
   only); the intervention log is not shown as its own list (the feed and the person's life log carry it).
   The report banner is joined to the line before it so untouched reports read byte-for-byte as before.
   304/304 pass. Next: C09c (optional gift, deferred) or C07.
+- C10 DONE (wording and display only; engine fingerprints unchanged). Compare (`js/ui/compare.js`): header rows
+  for country, rules (`CMP.rulesName`: scenario / preset / custom) with rules version, years, adults (sample size)
+  and 'Changed by you (God Mode Fate)'; `CMP.note`: a same-seed world comparison is not a matched experiment
+  (draws diverge once rules differ; one pair cannot prove a cause), plus warnings for different countries
+  (currencies), < 20 years, < 100 adults, sandbox. Blank results say 'insufficient data (under 10 years)'; no
+  winner says 'nobody yet' while running. Report: a 'How to read this' paragraph first in 'Why it turned out this
+  way' (N adults 30+, years, correlation is not cause, rules are assumptions, 'too few people' under 30, sandbox);
+  softened claims (strategy groups self-select; graduates also have more ability and family money; groups under 5
+  too small; 'recorded lucky break'; 'richer adults were (not much) happier' instead of what money 'bought');
+  previous-run comparison notes that chance also differs. Person card: 'What shaped their wealth'
+  (`Report.wealthStory`: start, strongest inherited potential with rank among adults, receipts by source,
+  education and businesses, recorded luck; read-only, with a not-a-cause note). C09b follow-up:
+  `w.intervention.applied` counts every Fate (the event log keeps 200). Report-text fingerprints re-recorded
+  (old values in the test comment). `explainTests` (8). 312/312 pass.
 All work is committed and pushed. Latest (Nov 2026): countries stop at Malaysia, the UK (4.5), the United States
 (4.6) and China (4.7): the owner skipped UAE, Mexico and South Africa. Phase 6 (section 4.8) step 6.1, the shared
 calibration fixes, is done; next is 6.2 (report sections, the town newspaper, compare-with-normal runs), then 6.3. The full suite runs in
