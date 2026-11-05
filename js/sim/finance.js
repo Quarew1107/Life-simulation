@@ -357,11 +357,14 @@
     amount = Math.min(Math.round(amount), b.cash);
     if (amount <= 0) return;
     const ids = Object.keys(b.shares).map(Number).sort((x, y) => x - y);
-    if (!ids.length) { L.spend(b, 'cash', 'ESTATE', amount); return; }
+    const out = b.outsideShare || 0; // the outside investor's part (rules revision 3 estates) leaves town
+    if (out > 0) { const o = ids.length && out < 1 - 1e-9 ? Math.floor(amount * out) : amount; L.spend(b, 'cash', 'MARKET', o); amount -= o; if (amount <= 0) return; }
+    if (!ids.length) { if (amount > 0) L.spend(b, 'cash', 'ESTATE', amount); return; }
+    const k = out > 0 ? 1 / (1 - out) : 1; // residents' fractions of what is left
     let paid = 0;
     for (const id of ids) {
       const p = w.people[id];
-      const part = Math.floor(amount * b.shares[id]);
+      const part = Math.floor(amount * b.shares[id] * k);
       L.move(b, 'cash', p, P.isAdult(w, p) ? 'cash' : 'trust', part);
       p.earned.business += part;
       if (kind === 'dividend' && w.gov) LES.Fiscal.dividendTax(w, p, part, P.isAdult(w, p) ? 'cash' : 'trust');

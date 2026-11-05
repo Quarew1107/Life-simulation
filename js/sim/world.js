@@ -592,8 +592,9 @@
         total += b.cash;
         if (!Number.isInteger(b.cash) || b.cash < 0) errs.push(`Biz${b.id} cash=${b.cash}`);
         if (b.open) {
-          const s = Object.values(b.shares).reduce((a, x) => a + x, 0);
+          const s = Object.values(b.shares).reduce((a, x) => a + x, 0) + (b.outsideShare || 0);
           if (Math.abs(s - 1) > 1e-6) errs.push(`Biz${b.id} shares sum ${s}`);
+          if (b.outsideShare < 0 || b.outsideShare > 1 + 1e-9) errs.push(`Biz${b.id} outside share ${b.outsideShare}`);
           for (const k of Object.keys(b.shares)) if (!this.people[Number(k)].alive) errs.push(`Biz${b.id} dead shareholder`);
           if (!Number.isFinite(b.scale) || !Number.isFinite(b.equity)) errs.push(`Biz${b.id} non-finite values`);
         } else if (b.cash !== 0) errs.push(`closed Biz${b.id} holds cash`);
@@ -601,7 +602,10 @@
       if (total !== 0) errs.push(`Ledger imbalance: ${total} sen`);
       for (const e of this.estates) {
         const dist = U.sum(e.amounts);
-        if (e.heirs.length && dist !== e.total) errs.push(`Estate of P${e.decedent}: ${dist} != ${e.total}`);
+        if (e.rev === 3) { // cash paid must match exactly; cash + stake value must match the estate within rounding
+          if (e.heirs.length && dist !== e.cash) errs.push(`Estate of P${e.decedent}: cash ${dist} != ${e.cash}`);
+          if (e.heirs.length && Math.abs(dist + U.sum(e.equity) - e.total) > e.heirs.length * (e.stakes.length + 2)) errs.push(`Estate of P${e.decedent}: value ${dist + U.sum(e.equity)} != ${e.total}`);
+        } else if (e.heirs.length && dist !== e.total) errs.push(`Estate of P${e.decedent}: ${dist} != ${e.total}`);
       }
       if (!Number.isFinite(this.mkt.idx) || this.mkt.stocks.some(st => !Number.isFinite(st.price)) || !Number.isFinite(this.price)) errs.push('market/prices not finite');
       for (const s of this.sys.invariants) s.invariants(this, errs);

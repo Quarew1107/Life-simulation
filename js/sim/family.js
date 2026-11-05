@@ -267,6 +267,7 @@
   // Estate at death (FSD 8.5): liquidate, pay debts, split equally between surviving
   // biological children (minors' shares go to trust), remainder sen by child ID.
   Fa.settleEstate = function (w, p) {
+    if (w.cfg.rulesRev >= 3) return Fa.settleEstateV3(w, p); // C04b: equal value for every child, stakes in the estate
     const L = w.ledger;
     if (p.away) {
       // Died abroad: the wealth they took with them comes back as their estate.
@@ -333,6 +334,119 @@
       if (!Object.keys(b.shares).length) { F.closeBiz(w, b, 'closed after the owner died with no heirs', false); continue; }
       if (b.managerId === p.id) { b.managerId = -1; F.pickManager(w, b); }
     }
+    p.manages = -1;
+  };
+
+  // Rules revision 3 (C04b, owner-approved design): the whole estate is valued and shared equally in VALUE.
+  // 1. Liquidate investments, pension and trust (as before). 2. Debts: study, then medical (US); what the estate
+  // cannot pay is written off. 3. Value business stakes at the current valuation (b.equity). 4. Inheritance tax
+  // on cash + stakes (pack tax.estateBusinessRelief: the UK's relief on business property) above the allowance,
+  // paid from cash, then by selling part of a stake to the outside investor. 5. Every living child is entitled to
+  // the same value: children living away are paid in cash (estate cash first, then stake slices sold to the
+  // outside investor at full valuation, b.outsideShare); children in town share the rest of the cash and the
+  // stakes equally. 6. No children: cash to ESTATE, stakes to the outside investor; a firm with no other
+  // resident owner is sold. Settled once per person (p.estateSettled); one record per death in w.estates.
+  Fa.settleEstateV3 = function (w, p) {
+    if (p.estateSettled) return;
+    p.estateSettled = true;
+    const L = w.ledger, K = LES.Countries.pack;
+    if (p.away) { L.pay('ABROAD', p, 'cash', Math.round(p.away.wealth)); p.away = null; }
+    F.raiseCash(w, p, P.invValue(w, p) + 1, 'estate');
+    p.inv = { idx: 0, st: {}, cost: 0 };
+    if (p.epf > 0) L.move(p, 'epf', p, 'cash', p.epf);
+    if (p.trust > 0) L.move(p, 'trust', p, 'cash', p.trust);
+    const debts = { study: 0, medical: 0, writtenOff: 0 };
+    const settle = (key, sector) => {
+      const owed = p.debt[key] || 0;
+      if (owed <= 0) return;
+      const pay = Math.min(Math.max(0, p.cash), owed);
+      if (pay > 0) L.spend(p, 'cash', sector, pay);
+      debts[key] = pay; debts.writtenOff += owed - pay; L.writeOffs += owed - pay;
+      p.debt[key] = 0;
+    };
+    settle('study', 'BANK');
+    settle('medical', 'HEALTH'); p.medCollect = false;
+
+    const stakes = Object.keys(p.shares).map(Number).sort((a, b) => a - b).map(id => ({ b: w.biz[id], frac: p.shares[id] })).filter(s => s.b && s.b.open);
+    const stakeValue = () => stakes.reduce((a, s) => a + Math.round(s.frac * Math.max(0, s.b.equity)), 0);
+    // Sell up to `want` sen of stakes to the outside investor at full valuation; returns the cash raised.
+    const sellStakes = want => {
+      let got = 0;
+      for (const s of stakes) {
+        if (got >= want) break;
+        const eq = Math.max(0, s.b.equity);
+        if (eq <= 0 || s.frac <= 0) continue;
+        const f = Math.min(s.frac, (want - got) / eq), cash = Math.round(f * eq);
+        if (cash <= 0) continue;
+        s.frac -= f; s.b.outsideShare = (s.b.outsideShare || 0) + f;
+        s.b.shares[p.id] = s.frac; p.shares[s.b.id] = s.frac; // keep both share maps in step
+        L.pay('MARKET', p, 'cash', cash);
+        got += cash;
+      }
+      return got;
+    };
+
+    let tax = 0;
+    if (w.policy && w.policy.estateTax > 0) {
+      const BR = K.tax.estateBusinessRelief, eq = stakeValue();
+      const taxedEq = BR ? Math.max(0, eq - w.px(BR.full)) * BR.taxShare : eq;
+      tax = Math.round(Math.max(0, Math.max(0, p.cash) + taxedEq - w.px(K.tax.estateAllowance || 1e5)) * w.policy.estateTax);
+      if (tax > p.cash) sellStakes(tax - p.cash);
+      tax = Math.min(tax, Math.max(0, p.cash)); // never more than the estate can pay
+      if (tax > 0) { L.spend(p, 'cash', 'TAX', tax); if (w.gov) { w.gov.estateTaxTotal += tax; LES.Fiscal.tag(w, 'inheritance tax', tax); } }
+    }
+
+    const heirs = p.children.map(id => w.people[id]).filter(c => c.alive).sort((a, b) => a.id - b.id);
+    const net = Math.max(0, p.cash) + stakeValue();
+    const record = { day: w.day, decedent: p.id, total: net, heirs: heirs.map(h => h.id), amounts: [], equity: [], stakes: [], tax, debts, rev: 3 };
+    const give = (h, amt) => {
+      if (amt <= 0) return;
+      if (h.away) {
+        L.spend(p, 'cash', 'ABROAD', amt); // the share follows a child who lives away
+        const there = h.away.town !== undefined && w.region ? w.region.towns[h.away.town].people[h.away.id] : null;
+        if (there && there.alive) w.region.towns[h.away.town].ledger.pay('ABROAD', there, P.isAdult(w.region.towns[h.away.town], there) ? 'cash' : 'trust', amt);
+        else h.away.wealth += amt;
+      } else L.move(p, 'cash', h, P.isAdult(w, h) ? 'cash' : 'trust', amt);
+      h.earned.inherit += amt;
+    };
+
+    const local = heirs.filter(h => !h.away), remote = heirs.filter(h => h.away);
+    if (heirs.length) {
+      const q = Math.floor(net / heirs.length); // each child's value in sen
+      if (!local.length) sellStakes(Math.max(0, net - p.cash)); // nobody in town can hold the stakes
+      else if (remote.length && remote.length * q > p.cash) sellStakes(remote.length * q - p.cash);
+      const c0 = p.cash, cashNow = Math.max(0, p.cash), remotePay = remote.length ? Math.min(q, Math.floor(cashNow / remote.length)) : 0;
+      for (const h of remote) give(h, remotePay);
+      const left = Math.max(0, p.cash), each = local.length ? Math.floor(left / local.length) : 0;
+      let rem = left - each * local.length;
+      const got = new Map(remote.map(h => [h.id, remotePay]));
+      for (const h of local) { const amt = each + (rem > 0 ? 1 : 0); if (rem > 0) rem--; give(h, amt); got.set(h.id, amt); }
+      record.cash = c0 - p.cash; // measured from the account, checked against the per-heir amounts
+      for (const h of heirs) {
+        const cashGot = got.get(h.id), eqGot = h.away ? 0 : stakes.reduce((a, s) => a + Math.round(s.frac / local.length * Math.max(0, s.b.equity)), 0);
+        record.amounts.push(cashGot); record.equity.push(eqGot);
+        if (cashGot + eqGot >= w.px(1000)) P.log(w, h, `Inherited ${U.fmtMoney(cashGot + eqGot)} from ${P.name(p)}${eqGot > 0 ? ` (${U.fmtMoney(eqGot)} of it in business stakes)` : ''}`, 'family', cashGot + eqGot >= w.px(1e6) ? 2 : 1);
+      }
+    }
+    if (p.cash > 0) L.spend(p, 'cash', 'ESTATE', p.cash); // no children (or sen left over)
+
+    for (const s of stakes) {
+      const b = s.b, others = Object.keys(b.shares).filter(id => Number(id) !== p.id).length;
+      record.stakes.push({ biz: b.id, frac: s.frac, to: local.length ? 'children in town' : others ? 'outside investor' : 'sold' });
+      if (!local.length && !others) { // nobody in town will own it: the estate sells the firm (the investor is paid its part)
+        F.sellBiz(w, b, 'sold by the estate: no owner living in town');
+        if (p.trust > 0) L.move(p, 'trust', p, 'cash', p.trust); // (a dead owner's sale money lands in trust)
+        continue;
+      }
+      delete p.shares[b.id]; delete b.shares[p.id];
+      if (s.frac > 0) {
+        if (local.length) for (const h of local) { h.shares[b.id] = (h.shares[b.id] || 0) + s.frac / local.length; b.shares[h.id] = h.shares[b.id]; }
+        else b.outsideShare = (b.outsideShare || 0) + s.frac; // no child: the outside investor takes the stake, other owners keep theirs
+      }
+      if (b.managerId === p.id) { b.managerId = -1; F.pickManager(w, b); }
+    }
+    if (p.cash > 0) L.spend(p, 'cash', 'ESTATE', p.cash); // a sale with no children: proceeds to the estate sector
+    w.estates.push(record);
     p.manages = -1;
   };
 })(globalThis.LES = globalThis.LES || {});

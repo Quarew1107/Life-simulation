@@ -419,6 +419,8 @@
       dividend: { above: 500, rate: 0.0875 },
       zakatRebate: false,
       estateAllowance: 325000,
+      // Business relief from 6 April 2026: 100% on the first GBP1M of business property, 50% above (rules revision 3 estates).
+      estateBusinessRelief: { full: 1000000, taxShare: 0.5 },
     },
     // Bank of England Bank Rate 3.75% (held September 2026).
     bank: { policyRate: 0.0375, floor: 0.0025, ceiling: 0.0525 },

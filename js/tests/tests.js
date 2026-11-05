@@ -1137,7 +1137,7 @@
   async function catCapTests() {
     print('--- Catastrophe cap (C03) ---', 'info');
     const A = LES.Actions, D = LES.DEFAULTS, rev1 = Object.assign({}, D, { rulesRev: 1 }), near = (a, b) => Math.abs(a - b) < 1e-12;
-    check('Rules revision 2 for new worlds; Classic and older saves keep revision 1', D.rulesRev === 2 && LES.PRESETS.classic.values.rulesRev === 1 && LES.upgradeConfig({}).rulesRev === 1);
+    check('Rules revision 2 or later for new worlds; Classic and older saves keep revision 1', D.rulesRev >= 2 && LES.PRESETS.classic.values.rulesRev === 1 && LES.upgradeConfig({}).rulesRev === 1);
     check('Heavy work, ability gap 5: revision 1 went past the cap (3.4%), revision 2 stops at 2%', near(A.catProb(rev1, 5, 'heavy'), 0.03375) && near(A.catProb(D, 5, 'heavy'), D.catCap), `${A.catProb(rev1, 5, 'heavy')} / ${A.catProb(D, 5, 'heavy')}`);
     check('Below the cap nothing changes (no gap, light physical work, the multiplier still applies)', near(A.catProb(D, 0, 'physical'), D.catBase) && near(A.catProb(D, 0, 'heavy'), D.catBase * 2.5) && near(A.catProb(D, 2, 'heavy'), A.catProb(rev1, 2, 'heavy')));
     const vals = []; for (const gap of [0, 0.5, 1, 2, 4, 8, 50, 1e6]) for (const risk of ['physical', 'heavy', 'unknown']) vals.push(A.catProb(D, gap, risk));
@@ -1147,6 +1147,116 @@
     check('Overall catastrophe chance = failure chance x chance after a failure; success is unchanged', near(o.cat, (1 - o.success) * o.catIfFail) && near(o.success, A.successProb(w, p, J.w, J.diff + 4, 0)) && o.catIfFail <= D.catCap);
     const bad = c => LES.validateConfig(Object.assign({}, D, c)).blockers.length > 0;
     check('Settings check the catastrophe values', bad({ catCap: 1.5 }) && bad({ catBase: 0.05 }) && bad({ catGap: -1 }) && !bad({}));
+  }
+
+  // C04b: estates settled in equal value (rules revision 3), blueprint 4.7 cases E-01..E-12.
+  async function estateTests() {
+    print('--- Estates (C04b, rules revision 3) ---', 'info');
+    const D = LES.DEFAULTS, F = LES.Finance, Fa = LES.Family, P = LES.P;
+    const town = async (seed, years, extra) => { const w = new LES.World(Object.assign({}, D, { seed, founders: 150 }, extra || {})); for (let d = 0; d < 365 * years; d++) { w.step(); if (d % 1500 === 0) await yieldUI(); } return w; };
+    const near = (a, b, tol) => Math.abs(a - b) <= (tol || 2);
+    // Strip a person to a known estate: no investments, pension, trust or shares; exactly `cash`.
+    const strip = (w, p, cash) => {
+      const L = w.ledger;
+      if (P.invValue(w, p) > 0) F.raiseCash(w, p, P.invValue(w, p) + 1, 'test');
+      p.inv = { idx: 0, st: {}, cost: 0 };
+      if (p.epf > 0) L.spend(p, 'epf', 'GENESIS', p.epf);
+      if (p.trust > 0) L.spend(p, 'trust', 'GENESIS', p.trust);
+      for (const k of Object.keys(p.shares)) { const b = w.biz[Number(k)]; if (b.open) F.sellBiz(w, b, 'test'); }
+      if (p.cash > cash) L.spend(p, 'cash', 'GENESIS', p.cash - cash); else if (p.cash < cash) L.pay('GENESIS', p, 'cash', cash - p.cash);
+      p.debt.study = 0; p.debt.medical = 0;
+    };
+    // A firm owned 60/40 by `other` and `p`, valued at `equity`.
+    const firm = (w, p, other, equity) => {
+      const b = w.biz.find(x => x.open && x.managerId !== p.id && !Object.keys(x.shares).some(k => Number(k) === p.id));
+      for (const k of Object.keys(b.shares)) { delete w.people[Number(k)].shares[b.id]; if (w.people[Number(k)].manages === b.id) w.people[Number(k)].manages = -1; }
+      b.shares = { [other.id]: 0.6, [p.id]: 0.4 }; other.shares[b.id] = 0.6; p.shares[b.id] = 0.4; b.outsideShare = 0;
+      b.managerId = other.id; other.manages = b.id; b.equity = equity;
+      return b;
+    };
+    check('New worlds settle estates under rules revision 3; Classic and older saves keep the old settlement', D.rulesRev === 3 && LES.PRESETS.classic.values.rulesRev === 1 && LES.upgradeConfig({}).rulesRev === 1);
+
+    // E-01: RM240k cash, RM40k study debt, 40% of a RM900k firm, 3 children (one away), 20% tax above RM100k.
+    const w = await town('est-1', 35);
+    const dad = w.living.find(p => p.alive && p.adult && p.children.filter(id => w.people[id].alive && w.people[id].adult && !w.people[id].away && w.people[id].manages < 0).length >= 3);
+    if (!dad) { check('E-01 needs a parent with three adult children in this town', false); return; }
+    const kids = dad.children.map(id => w.people[id]).filter(c => c.alive && c.adult && !c.away && c.manages < 0).slice(0, 3);
+    for (const c of dad.children.map(id => w.people[id])) if (c.alive && !kids.includes(c)) c.alive = false; // only the three count as heirs here
+    strip(w, dad, w.px(240000)); dad.debt.study = w.px(40000);
+    const other = w.living.find(p => p.alive && p.adult && p !== dad && !kids.includes(p) && p.manages < 0);
+    const b = firm(w, dad, other, w.px(900000));
+    for (const c of kids) for (const k of Object.keys(c.shares)) { const bb = w.biz[Number(k)]; if (bb.open && bb !== b) F.sellBiz(w, bb, 'test'); }
+    const away = kids[2], awayCash = away.cash; LES.Ledger && 0;
+    w.ledger.spend(away, 'cash', 'GENESIS', away.cash); away.away = { wealth: 0 }; // lives in another place now
+    w.policy.estateTax = 0.2;
+    const tax0 = w.gov.estateTaxTotal, cash0 = kids.map(c => c.cash), n0 = w.estates.length;
+    w.die(dad, 'test');
+    const rec = w.estates[w.estates.length - 1], val = c => Math.round((b.shares[c.id] || 0) * b.equity) + (c.away ? c.away.wealth : c.cash - cash0[kids.indexOf(c)]);
+    check('E-01: tax RM92,000 on cash plus the business stake, after the RM40,000 debt', near(w.gov.estateTaxTotal - tax0, w.px(92000)), `${(w.gov.estateTaxTotal - tax0) / 100}`);
+    check('E-01: every child receives RM156,000 of value, the child living away included', kids.every(c => near(val(c), w.px(156000), 50)) && near(away.away.wealth, w.px(156000), 4) && near(rec.total, w.px(468000), 3) && w.estates.length === n0 + 1, kids.map(c => val(c) - w.px(156000)).join(' / ') + ' sen off');
+    check('E-04: the other owner keeps exactly 60%; the outside investor holds the slice sold for the child away', near(b.shares[other.id], 0.6, 1e-12) && near(b.outsideShare, 48000 / 900000, 1e-6) && b.shares[dad.id] === undefined && near(Object.values(b.shares).reduce((a, x) => a + x, 0) + b.outsideShare, 1, 1e-9), `${b.outsideShare}`);
+    check('E-02: children are grouped by the parent who died (equal value, whoever the other parent is)', rec.heirs.length === 3 && near(val(kids[0]), val(kids[1]), 4));
+    // E-09: a second settlement does nothing.
+    const before = JSON.stringify([w.ledger.sec.TAX.bal, w.ledger.sec.ESTATE.bal, kids.map(c => c.cash), away.away.wealth]);
+    Fa.settleEstate(w, dad); w.die(dad, 'again');
+    check('E-09: settling the same death twice changes nothing', before === JSON.stringify([w.ledger.sec.TAX.bal, w.ledger.sec.ESTATE.bal, kids.map(c => c.cash), away.away.wealth]) && w.estates.length === n0 + 1);
+
+    // E-05: no children; E-06: worthless firm; E-07: tax larger than the cash; E-08: debt order.
+    const w2 = await town('est-2', 30);
+    const free = () => w2.living.find(p => p.alive && p.adult && p.alive && !p.away && p.manages < 0 && !Object.keys(p.shares).length && p.children.every(id => !w2.people[id].alive) && !p.inst);
+    const lone = free(); strip(w2, lone, w2.px(50000));
+    const o2 = w2.living.find(p => p.alive && p.adult && p !== lone && p.manages < 0 && !p.inst), b2 = firm(w2, lone, o2, w2.px(300000));
+    const est0 = w2.ledger.sec.ESTATE.bal;
+    w2.die(lone, 'test');
+    check('E-05: no children: the cash goes to the estate sector, the other owner keeps 60%, the outside investor takes the 40%', near(b2.shares[o2.id], 0.6, 1e-12) && near(b2.outsideShare, 0.4, 1e-12) && b2.managerId === o2.id && near(w2.ledger.sec.ESTATE.bal - est0, w2.px(50000)));
+    const poor = free(); strip(w2, poor, w2.px(1000)); poor.debt.study = w2.px(5000); poor.debt.medical = w2.px(3000);
+    const wo0 = w2.ledger.writeOffs; w2.die(poor, 'test');
+    const r2 = w2.estates[w2.estates.length - 1];
+    check('E-08: debts are paid in order (study, then medical) and the rest is written off, never passed on', near(r2.debts.study, w2.px(1000)) && r2.debts.medical === 0 && near(w2.ledger.writeOffs - wo0, w2.px(7000), 4) && poor.debt.medical === 0 && r2.total === 0, JSON.stringify(r2.debts) + ' wo ' + (w2.ledger.writeOffs - wo0) + ' total ' + r2.total);
+    const parent = w2.living.find(p => p.alive && p.adult && p.manages < 0 && !p.inst && !Object.keys(p.shares).length && p.children.some(id => w2.people[id].alive && !w2.people[id].away));
+    strip(w2, parent, w2.px(20000));
+    const o3 = w2.living.find(p => p.alive && p.adult && p !== parent && p.manages < 0 && !p.inst && !parent.children.includes(p.id)), b3 = firm(w2, parent, o3, 0);
+    const heirs3 = parent.children.map(id => w2.people[id]).filter(c => c.alive);
+    const c3 = heirs3.map(c => c.cash + c.trust + (c.away ? c.away.wealth : 0));
+    w2.die(parent, 'test');
+    check('E-06: a worthless firm: the children share only the cash, nobody ends up below zero', heirs3.every((c, i) => c.cash + c.trust + (c.away ? c.away.wealth : 0) >= c3[i]) && heirs3.every(c => c.cash >= 0 && c.trust >= 0) && near(Object.values(b3.shares).reduce((a, x) => a + x, 0) + (b3.outsideShare || 0), 1, 1e-9));
+    const rich = w2.living.find(p => p.alive && p.adult && p.manages < 0 && !p.inst && !Object.keys(p.shares).length && p.children.some(id => w2.people[id].alive));
+    strip(w2, rich, w2.px(10000));
+    const o4 = w2.living.find(p => p.alive && p.adult && p !== rich && p.manages < 0 && !p.inst && !rich.children.includes(p.id)), b4 = firm(w2, rich, o4, w2.px(2000000));
+    w2.policy.estateTax = 0.2;
+    const t4 = w2.gov.estateTaxTotal, taxBal = w2.ledger.sec.TAX.bal;
+    w2.die(rich, 'test');
+    const due = Math.round((w2.px(10000) + w2.px(800000) - w2.px(100000)) * 0.2);
+    check('E-07: tax above the cash is paid by selling part of the stake; the tax recorded is the tax moved', near(w2.gov.estateTaxTotal - t4, due) && w2.ledger.sec.TAX.bal - taxBal >= due - 2 && rich.cash === 0 && b4.outsideShare > 0 && near(Object.values(b4.shares).reduce((a, x) => a + x, 0) + b4.outsideShare, 1, 1e-9), `${(w2.gov.estateTaxTotal - t4) / 100} vs ${due / 100}`);
+    check('Every estate record adds up: no negative amounts', w2.estates.filter(r => r.rev === 3).every(r => r.amounts.every(x => x >= 0) && r.equity.every(x => x >= 0) && r.total >= 0));
+    check('The books balance after these estates', w2.checkInvariants().length === 0, w2.checkInvariants().slice(0, 3).join('; '));
+
+    // E-03: a minor heir's cash goes into trust, not to the guardian.
+    const mom = w2.living.find(p => p.alive && p.adult && p.manages < 0 && !p.inst && p.children.some(id => w2.people[id].alive && !w2.people[id].adult && !w2.people[id].away));
+    if (mom) {
+      const minor = mom.children.map(id => w2.people[id]).find(c => c.alive && !c.adult && !c.away), tr0 = minor.trust, cs0 = minor.cash;
+      strip(w2, mom, w2.px(30000)); w2.die(mom, 'test');
+      check('E-03: a minor inherits into trust (not cash, not the guardian)', minor.trust > tr0 && minor.cash === cs0, `trust ${tr0}->${minor.trust} cash ${cs0}->${minor.cash} heirs ${w2.estates[w2.estates.length - 1].heirs.length}`);
+    } else check('E-03 needs a parent with a minor child', false);
+
+    // E-10: save after estates, reload, run 5 years: the same history, books and ownership in order.
+    const w3 = LES.Save.fromJSON(LES.Save.toJSON(w2));
+    for (let d = 0; d < 365 * 5; d++) { w2.step(); w3.step(); if (d % 1500 === 0) await yieldUI(); }
+    check('E-10: saved after estates and run 5 more years: identical, books and ownership in order', w3.stableHash() === w2.stableHash() && w3.checkInvariants().length === 0, w3.checkInvariants().slice(0, 3).join('; '));
+    // E-11: Classic keeps the old settlement (its fingerprints are checked in foundationTests).
+    const wc = new LES.World(Object.assign({}, D, LES.PRESETS.classic.values, { seed: 'est-c', founders: 40 }));
+    check('E-11: Classic uses rules revision 1 (old settlement)', wc.cfg.rulesRev === 1);
+    // E-12: an heir in a sister town is paid there; no ids left dangling.
+    const R = new LES.Region(Object.assign({}, D, { seed: 'est-r', migration: 'normal', towns: '2' }), [{ founders: 90 }, { founders: 60, seed: 'est-r2' }]);
+    let found = null;
+    for (let d = 0; d < 365 * 40 && !found; d++) { R.step(); if (d % 365 === 0) { await yieldUI(); const A = R.towns[0]; found = A.living.find(p => p.adult && !p.away && !p.inst && p.children.some(id => A.people[id].alive && A.people[id].away && A.people[id].away.town === 1)) || null; } }
+    if (found) {
+      const A = R.towns[0], kid = found.children.map(id => A.people[id]).find(c => c.alive && c.away && c.away.town === 1), mirror = R.towns[1].people[kid.away.id], m0 = mirror.cash + mirror.trust;
+      if (P.invValue(A, found) > 0) F.raiseCash(A, found, P.invValue(A, found) + 1, 'test');
+      A.ledger.pay('GENESIS', found, 'cash', A.px(60000));
+      A.die(found, 'test');
+      check('E-12: a child in the sister town is paid there; both towns balance', mirror.cash + mirror.trust > m0 && A.checkInvariants().length === 0 && R.towns[1].checkInvariants().length === 0, A.checkInvariants().concat(R.towns[1].checkInvariants()).slice(0, 3).join('; '));
+    } else check('E-12 needs a parent whose child moved to the sister town (none in 40 years)', false);
   }
 
   async function runAll() {
@@ -1174,6 +1284,7 @@
       await reportStatsTests();
       await eduLevelTests();
       await catCapTests();
+      await estateTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -1185,6 +1296,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, tileTests };
+  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);
