@@ -1283,6 +1283,8 @@
     for (let d = 0; d < 365; d++) tiny.step();
     const mt = Cal.measure(tiny);
     check('Too few births, workers, households or crimes: no number is claimed', Number.isNaN(mt.tfr) && (mt.n.medWage >= 20 || Number.isNaN(mt.medWage)) && (mt.n.hhGini >= 20 || Number.isNaN(mt.hhGini)) && (!tiny.crime || mt.n.clearance >= 30 || Number.isNaN(mt.clearance)), JSON.stringify(mt.n));
+    const rA = { tfrParts: { B: [0, 10, 10, 0, 0, 0, 0], E: [0, 100, 100, 1, 1, 1, 1] } }, rB = { tfrParts: { B: [0, 5, 5, 0, 0, 0, 0], E: [0, 50, 50, 1, 1, 1, 1] } };
+    check('Small towns: the birth rate is pooled over seeds (births and years added up by age band)', Math.abs(Cal.pooledTfr([rA, rB]) - 5 * (15 / 150 + 15 / 150)) < 1e-12 && Number.isNaN(Cal.pooledTfr([rB])));
     const t = Cal.table([m]);
     check('The calibration table explains measures defined differently from the official ones', /Not working/.test(t) && /Note on/.test(t) && (!Number.isFinite(m.completedFert) || /Completed children per woman/.test(t)));
   }
