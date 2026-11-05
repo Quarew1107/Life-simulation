@@ -69,7 +69,7 @@
     catCap: 0.02,
     shiftsPerMonth: 20,
     vacancyRate: 2.2,
-    rulesRev: 2, // rule corrections from the 2026-11 blueprint (2: catastrophe cap after the risk multiplier, C03); Classic and older saves: 1
+    rulesRev: 3, // rule corrections from the 2026-11 blueprint (2: catastrophe cap after the risk multiplier, C03; 3: estates in equal value, C04b); Classic and older saves: 1
     econModel: 'calibrated', // calibrated: firms share a market the size of the town, wider pay spread, some jobs go to outsiders; original: the first engine
     vacancyDaysMin: 3,
     vacancyDaysMax: 30,
@@ -83,7 +83,7 @@
   // Presets fill the setup form. Classic reproduces the original engine (harsher, more
   // children, longer lives); Malaysia is calibrated to DOSM figures (tools/calibration.html).
   LES.PRESETS = {
-    national: { name: "Today's rules", values: { safetyNet: 'on', fertility: 'national', mortMult: 1.9, layout: 'varied', society: 'on', ethnicMix: 'national', crime: 'lively', government: 'on', vacancyRate: 2.2, econModel: 'calibrated', rulesRev: 2 } },
+    national: { name: "Today's rules", values: { safetyNet: 'on', fertility: 'national', mortMult: 1.9, layout: 'varied', society: 'on', ethnicMix: 'national', crime: 'lively', government: 'on', vacancyRate: 2.2, econModel: 'calibrated', rulesRev: 3 } },
     classic: { name: 'Classic (original rules)', values: { safetyNet: 'off', fertility: 'normal', mortMult: 1, layout: 'grid', society: 'off', ethnicMix: 'classic', crime: 'off', government: 'off', vacancyRate: 2.5, econModel: 'original', rulesRev: 1 } },
   };
   // Older saves and stored settings called the national option 'malaysia'.

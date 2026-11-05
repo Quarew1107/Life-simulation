@@ -45,7 +45,7 @@
     'content.tiers.*.*.cost', 'content.childCost', 'content.childCostPerHousing', 'content.simpleTaxBands.*.0',
     'content.biz.*.capital|scale0|cap|fixed|fee', 'content.venues.*.cost', 'content.stocks.*.price0', 'content.glcStocks.*.price0',
     'tax.incomeBands.*.0', 'tax.personalRelief', 'tax.retirementRelief.cap', 'tax.childRelief', 'tax.rebate.amount|upTo',
-    'tax.companyBands.*.0', 'tax.largeCompanyRevenue', 'tax.dividend.above', 'tax.estateAllowance', 'tax.allowanceTaper.from',
+    'tax.companyBands.*.0', 'tax.largeCompanyRevenue', 'tax.dividend.above', 'tax.estateAllowance', 'tax.estateBusinessRelief.full', 'tax.allowanceTaper.from',
     'tax.ni.employee.from|to', 'tax.ni.employer.from|to', 'tax.ni.floor', 'tax.councilTax.byTier.*', 'tax.stateBands.*.0',
     'tax.credits.eitc.*.max|outFrom', 'tax.credits.marriedExtra', 'tax.credits.ctc.amount|refundable|phaseFrom',
     'gov.leaderPay.min|max', 'gov.servicePay.*', 'gov.trainCost',

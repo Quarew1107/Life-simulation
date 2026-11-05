@@ -78,6 +78,22 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
   Open policy questions for the owner: buyout price (recommend full valuation; the migration buyout uses 70%);
   equity in the tax base (recommend yes, UK with its business relief); medical debt from the estate (recommend
   yes, US); spouse share (recommend none, as now).
+- C04b DONE (design approved as recommended): `Fa.settleEstateV3` when `cfg.rulesRev >= 3` (DEFAULTS and today's
+  rules 3; Classic 1; older saves 1). Debts study then medical, unpaid written off; stakes valued at `b.equity`;
+  tax on cash + stakes above the allowance (UK `tax.estateBusinessRelief`: first GBP1M exempt, half taxed above),
+  funded from cash then stake slices sold to the outside investor at full valuation; each child gets
+  floor(net / heirs): children away paid in cash (sister town via ABROAD), children in town share the rest of the
+  cash and the stakes; no children: cash to ESTATE, stakes to the investor, a firm with no resident owner left is
+  sold by the estate. `b.outsideShare` (investor's fraction): `F.distribute` pays it to MARKET first (all of it when
+  the investor owns everything), migration buyouts keep it, invariant: residents' shares + outsideShare = 1.
+  `p.estateSettled` makes settlement one-off; rev-3 records hold cash (measured from the account, checked
+  exactly), equity, stakes, tax and debts (value checked within rounding). Spouse: no share (game rule kept).
+  Tests: `estateTests` E-01..E-12 (E-01 fixture: RM92k tax, RM156k value per child within 1 sen, investor holds
+  48/900 of the firm); full suite 264/264. Fingerprints unchanged (no stake, tax or medical-debt estates in the short fixed runs);
+  60-year soaks for Malaysia, US and UK clean every quarter (460 estates: 29 with stakes, 2 taxed, 7 write-offs).
+  Fixed on the way: a payout when the investor owned 100% divided by zero. Known limits: the minority buyout
+  when someone moves away still pays 70% of value (unchanged); the report's inheritance share still counts cash
+  only (stakes are now in the estate records and the log line). Next: C05.
 All work is committed and pushed. Latest (Nov 2026): countries stop at Malaysia, the UK (4.5), the United States
 (4.6) and China (4.7): the owner skipped UAE, Mexico and South Africa. Phase 6 (section 4.8) step 6.1, the shared
 calibration fixes, is done; next is 6.2 (report sections, the town newspaper, compare-with-normal runs), then 6.3. The full suite runs in

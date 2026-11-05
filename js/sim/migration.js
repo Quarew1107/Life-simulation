@@ -98,7 +98,7 @@
           delete b.shares[a.id];
           delete a.shares[k];
           const rest = Object.keys(b.shares), sum = rest.reduce((s, id) => s + b.shares[id], 0);
-          for (const id of rest) { b.shares[id] /= sum; w.people[Number(id)].shares[b.id] = b.shares[id]; }
+          for (const id of rest) { b.shares[id] = b.shares[id] / sum * (1 - (b.outsideShare || 0)); w.people[Number(id)].shares[b.id] = b.shares[id]; } // (an outside investor keeps its part)
           if (b.managerId === a.id) { b.managerId = -1; F.pickManager(w, b); }
         }
       }
