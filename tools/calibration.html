@@ -51,7 +51,7 @@
       document.title = 'calibration done';
       return;
     }
-    const w = new LES.World(Object.assign({ seed: seeds[i] }, extra));
+    const w = new LES.World(LES.Calibration.config(Object.assign({ seed: seeds[i] }, extra))); // the country's own defaults (C11)
     const step = () => {
       const stop = Math.min(years * 365, w.day + 3650);
       while (!w.ended && w.day < stop) w.step();

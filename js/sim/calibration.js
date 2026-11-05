@@ -68,6 +68,14 @@
     return e0;
   }
 
+  // The settings a calibration run uses (C11): the chosen country's own defaults (life expectancy, outside market,
+  // inflation range, goal...), as the setup screen applies them, under any settings given explicitly. Without this a
+  // run with only { country: 'uk' } kept Malaysia's DEFAULTS (mortMult 1.9 instead of the UK's 0.85).
+  Cal.config = function (extra) {
+    const pack = LES.Countries.get((extra && extra.country) || 'my');
+    return Object.assign({}, (pack && pack.defaults) || {}, extra || {});
+  };
+
   Cal.measure = function (w) {
     const r = { seed: w.cfg.seed, years: Math.floor(w.day / 365), pop: w.counts.living };
     // Period TFR from age-specific birth rates (C05); completed family size of women born here who reached 45.

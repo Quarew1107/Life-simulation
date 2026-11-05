@@ -58,7 +58,7 @@ if (mode === 'hash') {
   const years = Number(args.years || 100);
   const rows = [];
   for (const seed of seeds) {
-    const w = new LES.World(Object.assign({ seed }, cfgExtra));
+    const w = new LES.World(LES.Calibration.config(Object.assign({ seed }, cfgExtra))); // the country's own defaults (C11)
     while (!w.ended && w.day < years * 365) w.step();
     rows.push(LES.Calibration.measure(w));
   }
