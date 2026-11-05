@@ -20,6 +20,17 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
 - Docs: `README.md` (features), `docs/ROADMAP.md` (phases, decisions, Malaysian figures).
 
 ## 0. Where to pick up (status at the end of the last session)
+**Blueprint work (Nov 2026, `Idea/LES_*_2026-11-05.md`, branch `dev/blueprint-2026-11`, not pushed):**
+- C00 baseline on c2a3032 (clean tree apart from the two untracked Idea docs). No Node here: run the harness
+  checks in headless Edge (`python tools/edge.py tests.html "<js>"`). Full suite 229/229 (359 s; one earlier
+  attempt hung idle in the harness and timed out, not reproduced). Hash, 1500 days, 100 founders: today's rules
+  base-1 9b8da9b9, base-2 36736c1e; Classic base-1 d664f679, base-2 05aa1507. Soak 60 years x 2 seeds
+  (150 founders): invariants clean every quarter, heap ~45 MB, feed capped at 800, 720 paper issues.
+  Bench 10 years x 150 founders: 5.8-6.2 s (hash a4f11506..., same as at 61fe75b; the machine was slower than
+  last session's 2.8 s). Old Malaysia save fixture continues identically (countryTests).
+  Audit findings still present on HEAD: Spearman without ties (C01), tertiary counts any qualification (C02),
+  catastrophe multiplied after the cap (C03), business shares to local heirs only (C04), revenue per current
+  person (C05), no admission capacity (C06), twins accepted separately.
 All work is committed and pushed. Latest (Nov 2026): countries stop at Malaysia, the UK (4.5), the United States
 (4.6) and China (4.7): the owner skipped UAE, Mexico and South Africa. Phase 6 (section 4.8) step 6.1, the shared
 calibration fixes, is done; next is 6.2 (report sections, the town newspaper, compare-with-normal runs), then 6.3. The full suite runs in
