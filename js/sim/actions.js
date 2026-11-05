@@ -49,14 +49,28 @@
     return U.clamp(U.sigmoid(score), cfg.successMin, cfg.successMax);
   };
 
+  // Chance of a catastrophe GIVEN a failed risky task: base + gap^2 x catGap, times the risk multiplier.
+  // Rules revision 2 (C03) caps the FINAL value at catCap; revision 1 (Classic and older saves) capped before
+  // the multiplier, so heavy work could reach 2.5 x catCap.
+  A.catProb = function (cfg, gap, risk) {
+    const mult = C.RISK_MULT[risk] || 1, raw = cfg.catBase + cfg.catGap * gap * gap;
+    if (!(cfg.rulesRev >= 2)) return U.clamp(raw, cfg.catBase, cfg.catCap) * mult;
+    const cap = U.clamp(cfg.catCap, 0, 1), v = raw * mult;
+    return Number.isFinite(v) ? U.clamp(v, Math.min(cfg.catBase, cap), cap) : cap;
+  };
+  // For explanations: chance of success, of a catastrophe after a failure, and of a catastrophe overall.
+  A.taskOdds = function (w, p, weights, difficulty, xpLevel, risk) {
+    const ps = A.successProb(w, p, weights, difficulty, xpLevel), pc = risk ? A.catProb(w.cfg, Math.max(0, difficulty - A.attrScore(p, weights)), risk) : 0;
+    return { success: ps, catIfFail: pc, cat: (1 - ps) * pc };
+  };
+
   // Success roll, then a catastrophe roll that is CONDITIONAL on failure.
   A.taskRoll = function (w, p, weights, difficulty, xpLevel, risk) {
     const R = w.rng.outcome, cfg = w.cfg;
     const ps = A.successProb(w, p, weights, difficulty, xpLevel);
     if (R.next() < ps) return { ok: true, p: ps };
     if (risk) {
-      const gap = Math.max(0, difficulty - A.attrScore(p, weights));
-      const pc = U.clamp(cfg.catBase + cfg.catGap * gap * gap, cfg.catBase, cfg.catCap) * (C.RISK_MULT[risk] || 1);
+      const pc = A.catProb(cfg, Math.max(0, difficulty - A.attrScore(p, weights)), risk);
       if (R.next() < pc) return { ok: false, cat: true, p: ps };
     }
     return { ok: false, p: ps };

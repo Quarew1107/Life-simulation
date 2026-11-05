@@ -1133,6 +1133,22 @@
     check('Too few adults: the share is not shown', Number.isNaN(Cal.measure(tiny).tertiary) && Cal.measure(tiny).tertiaryN < Cal.MIN_EDU_N);
   }
 
+  // C03: the catastrophe chance after a failed risky task respects its cap after the risk multiplier.
+  async function catCapTests() {
+    print('--- Catastrophe cap (C03) ---', 'info');
+    const A = LES.Actions, D = LES.DEFAULTS, rev1 = Object.assign({}, D, { rulesRev: 1 }), near = (a, b) => Math.abs(a - b) < 1e-12;
+    check('Rules revision 2 for new worlds; Classic and older saves keep revision 1', D.rulesRev === 2 && LES.PRESETS.classic.values.rulesRev === 1 && LES.upgradeConfig({}).rulesRev === 1);
+    check('Heavy work, ability gap 5: revision 1 went past the cap (3.4%), revision 2 stops at 2%', near(A.catProb(rev1, 5, 'heavy'), 0.03375) && near(A.catProb(D, 5, 'heavy'), D.catCap), `${A.catProb(rev1, 5, 'heavy')} / ${A.catProb(D, 5, 'heavy')}`);
+    check('Below the cap nothing changes (no gap, light physical work, the multiplier still applies)', near(A.catProb(D, 0, 'physical'), D.catBase) && near(A.catProb(D, 0, 'heavy'), D.catBase * 2.5) && near(A.catProb(D, 2, 'heavy'), A.catProb(rev1, 2, 'heavy')));
+    const vals = []; for (const gap of [0, 0.5, 1, 2, 4, 8, 50, 1e6]) for (const risk of ['physical', 'heavy', 'unknown']) vals.push(A.catProb(D, gap, risk));
+    check('Every chance is between 0 and the cap, also for huge gaps and an infinite factor', vals.every(v => v >= 0 && v <= D.catCap) && A.catProb(Object.assign({}, D, { catGap: Infinity }), 3, 'heavy') === D.catCap);
+    const w = new LES.World(Object.assign({}, D, { seed: 'c03', founders: 30 })), p = w.living.find(x => x.adult), J = LES.C.JOB_BY_ID.construction;
+    const o = A.taskOdds(w, p, J.w, J.diff + 4, 0, 'heavy');
+    check('Overall catastrophe chance = failure chance x chance after a failure; success is unchanged', near(o.cat, (1 - o.success) * o.catIfFail) && near(o.success, A.successProb(w, p, J.w, J.diff + 4, 0)) && o.catIfFail <= D.catCap);
+    const bad = c => LES.validateConfig(Object.assign({}, D, c)).blockers.length > 0;
+    check('Settings check the catastrophe values', bad({ catCap: 1.5 }) && bad({ catBase: 0.05 }) && bad({ catGap: -1 }) && !bad({}));
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -1157,6 +1173,7 @@
       await phase6Tests();
       await reportStatsTests();
       await eduLevelTests();
+      await catCapTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -1168,6 +1185,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, tileTests };
+  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

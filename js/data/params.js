@@ -69,6 +69,7 @@
     catCap: 0.02,
     shiftsPerMonth: 20,
     vacancyRate: 2.2,
+    rulesRev: 2, // rule corrections from the 2026-11 blueprint (2: catastrophe cap after the risk multiplier, C03); Classic and older saves: 1
     econModel: 'calibrated', // calibrated: firms share a market the size of the town, wider pay spread, some jobs go to outsiders; original: the first engine
     vacancyDaysMin: 3,
     vacancyDaysMax: 30,
@@ -82,14 +83,15 @@
   // Presets fill the setup form. Classic reproduces the original engine (harsher, more
   // children, longer lives); Malaysia is calibrated to DOSM figures (tools/calibration.html).
   LES.PRESETS = {
-    national: { name: "Today's rules", values: { safetyNet: 'on', fertility: 'national', mortMult: 1.9, layout: 'varied', society: 'on', ethnicMix: 'national', crime: 'lively', government: 'on', vacancyRate: 2.2, econModel: 'calibrated' } },
-    classic: { name: 'Classic (original rules)', values: { safetyNet: 'off', fertility: 'normal', mortMult: 1, layout: 'grid', society: 'off', ethnicMix: 'classic', crime: 'off', government: 'off', vacancyRate: 2.5, econModel: 'original' } },
+    national: { name: "Today's rules", values: { safetyNet: 'on', fertility: 'national', mortMult: 1.9, layout: 'varied', society: 'on', ethnicMix: 'national', crime: 'lively', government: 'on', vacancyRate: 2.2, econModel: 'calibrated', rulesRev: 2 } },
+    classic: { name: 'Classic (original rules)', values: { safetyNet: 'off', fertility: 'normal', mortMult: 1, layout: 'grid', society: 'off', ethnicMix: 'classic', crime: 'off', government: 'off', vacancyRate: 2.5, econModel: 'original', rulesRev: 1 } },
   };
   // Older saves and stored settings called the national option 'malaysia'.
   LES.RENAMED_KEYS = ['preset', 'fertility', 'ethnicMix', 'interfaith', 'drugPolicy'];
   LES.upgradeConfig = function (cfg) {
     if (cfg) for (const k of LES.RENAMED_KEYS) if (cfg[k] === 'malaysia') cfg[k] = 'national';
     if (cfg && cfg.econModel === undefined) cfg.econModel = 'original'; // saves from before Phase 6 keep the first engine
+    if (cfg && cfg.rulesRev === undefined) cfg.rulesRev = 1; // saves from before the blueprint corrections keep the old rules
     return cfg;
   };
   LES.presetOf = function (cfg) {
@@ -222,6 +224,9 @@
     for (const k of numeric) if (!isNum(cfg[k])) blockers.push(`${k}: must be a finite number.`);
     if (isNum(cfg.softmaxT) && (cfg.softmaxT < 0.05 || cfg.softmaxT > 3)) blockers.push('Decision randomness (softmaxT) must be 0.05-3.');
     if (cfg.successMin >= cfg.successMax) blockers.push('Minimum success chance must be below maximum.');
+    if (isNum(cfg.catCap) && (cfg.catCap < 0 || cfg.catCap > 1)) blockers.push('Catastrophe cap (catCap) must be 0-1.');
+    if (isNum(cfg.catBase) && isNum(cfg.catCap) && (cfg.catBase < 0 || cfg.catBase > cfg.catCap)) blockers.push('Catastrophe base chance (catBase) must be 0 up to the cap.');
+    if (isNum(cfg.catGap) && cfg.catGap < 0) blockers.push('Catastrophe gap factor (catGap) cannot be negative.');
     if (cfg.vacancyDaysMin > cfg.vacancyDaysMax) blockers.push('Vacancy open days: min must be <= max.');
     const hw = cfg.hiringWeights;
     if (!Array.isArray(hw) || hw.length !== 3 || hw.some(x => !isNum(x) || x < 0) || Math.abs(hw[0] + hw[1] + hw[2] - 1) > 1e-6) blockers.push('Hiring weights must be 3 non-negative numbers summing to 1.');
