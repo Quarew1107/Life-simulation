@@ -1259,6 +1259,34 @@
     } else check('E-12 needs a parent whose child moved to the sister town (none in 40 years)', false);
   }
 
+  // C05: honest national statistics (definitions, contemporaneous denominators, custody apart, low samples).
+  async function statsDefTests() {
+    print('--- Statistics definitions (C05) ---', 'info');
+    const Cal = LES.Calibration, D = LES.DEFAULTS;
+    const rev = [], base = [];
+    for (let i = 0; i < 10; i++) { rev.push(300000 * 100); base.push([300, 1]); }
+    for (let i = 0; i < 2; i++) { rev.push(150000 * 100); base.push([150, 1]); }
+    const now = Cal.revenuePerPerson(rev, base, 1, 150), old = Cal.revenuePerPerson(rev, null, 1, 150);
+    check('A shrinking town: RM1,000 per person every month is reported as RM1,000 (not RM1,833 from dividing by the last month)', Math.abs(now.value - 1000) < 1e-9 && !now.approx, `${now.value}`);
+    check('An older save without monthly population: the old estimate, marked approximate', Math.abs(old.value - 1833.3333333) < 1e-6 && old.approx);
+    check('Every measure states what it counts, out of whom and over what period; non-comparable ones say why', Object.values(Cal.DEFS).every(d => d.num && d.den && d.obs) && Object.values(Cal.DEFS).filter(d => d.comparable === false).every(d => d.note.length > 20) && Cal.DEFS.unemp.comparable === false);
+    const w = new LES.World(Object.assign({}, D, { seed: 'c05', founders: 120, crime: 'lawless' }));
+    for (let d = 0; d < 365 * 8; d++) { w.step(); if (d % 1500 === 0) await yieldUI(); }
+    while (!w.date.lastOfMonth) w.step();
+    w.step(); // the month-end snapshot is taken on the last day; read the row it wrote
+    const row = w.history[w.history.length - 1].cr, inst = k => w.living.filter(p => p.alive && p.inst && p.inst.kind === k).length;
+    check('Prisoners are people serving a prison sentence; the police lock-up (awaiting court) and rehab are counted apart', row && row.custody !== undefined && row.prisoners <= w.living.length && typeof row.rehab === 'number', JSON.stringify({ prisoners: row.prisoners, custody: row.custody, rehab: row.rehab, prisonNow: inst('prison'), remandNow: inst('remand') }));
+    const m = Cal.measure(w);
+    check('Revenue uses each month\'s own residents and prices', !m.revenueApprox && w.gov.revBase.length === w.gov.revHist.length && Number.isFinite(m.revenue));
+    check('The period birth rate comes from births and the years women lived in each age band', m.n.tfr === Cal.periodTfr(w, 10).births && (Number.isNaN(m.tfr) || (m.tfr > 0.3 && m.tfr < 5)), `TFR ${m.tfr} from ${m.n.tfr} births, completed ${m.completedFert}`);
+    const tiny = new LES.World(Object.assign({}, D, { seed: 'c05s', founders: 20 }));
+    for (let d = 0; d < 365; d++) tiny.step();
+    const mt = Cal.measure(tiny);
+    check('Too few births, workers, households or crimes: no number is claimed', Number.isNaN(mt.tfr) && (mt.n.medWage >= 20 || Number.isNaN(mt.medWage)) && (mt.n.hhGini >= 20 || Number.isNaN(mt.hhGini)) && (!tiny.crime || mt.n.clearance >= 30 || Number.isNaN(mt.clearance)), JSON.stringify(mt.n));
+    const t = Cal.table([m]);
+    check('The calibration table explains measures defined differently from the official ones', /Not working/.test(t) && /Note on/.test(t) && (!Number.isFinite(m.completedFert) || /Completed children per woman/.test(t)));
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -1285,6 +1313,7 @@
       await eduLevelTests();
       await catCapTests();
       await estateTests();
+      await statsDefTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -1296,6 +1325,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, tileTests };
+  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);
