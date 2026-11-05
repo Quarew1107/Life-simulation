@@ -20,8 +20,9 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
 - Docs: `README.md` (features), `docs/ROADMAP.md` (phases, decisions, Malaysian figures).
 
 ## 0. Where to pick up (status at the end of the last session)
-All work is committed and pushed. Latest (Nov 2026): the three countries the owner asked for first are complete,
-the UK (4.5), the United States (4.6) and China (4.7); stop and report before the next. The full suite runs in
+All work is committed and pushed. Latest (Nov 2026): countries stop at Malaysia, the UK (4.5), the United States
+(4.6) and China (4.7): the owner skipped UAE, Mexico and South Africa. Phase 6 (section 4.8) step 6.1, the shared
+calibration fixes, is done; next is 6.2 (report sections, the town newspaper, compare-with-normal runs), then 6.3. The full suite runs in
 headless Edge: `python tools/edge.py tests.html "await LES_TESTS.runAll(), document.getElementById('out').textContent" 900`.
 Multiple towns (4.2) is usable: setting, switcher, migration, commuting, shopping, shared
 economy, comparison card, save/load. Next, in this order:
@@ -355,7 +356,7 @@ Qiaoyun / Fengtang / Shuangmu and the Jade River Exchange; censorship and social
   (~¥2,200-2,900 a person in the first 12 years, ¥19.7k averaged over 80) show the same wealth-concentration drift
   as the UK and US (Phase 6); unemployment 1% as everywhere. Benchmark: Malaysia 150 founders x 10 years
   2.91-3.01 s new vs 2.91-2.98 s old, identical hashes. 210 tests pass.
-- NEXT: the three countries are done; stop and report. Later: UAE, Mexico, South Africa (owner's order).
+- Countries end here (owner, Nov 2026: skip UAE, Mexico and South Africa).
 
 Original notes:
 First move everything Malaysia-specific into a country pack (`js/data/countries/my.js`:
@@ -369,10 +370,37 @@ grants and load-shedding, US medical debt). Use fictional towns, exchanges and c
 Verify current figures by web search and cite official statistics offices. Currency display via
 `Intl.NumberFormat`. Pixel font is Latin-only: signs in English/pinyin/Spanish.
 
-### 4.6 Phase 6 polish
-Calibration pass (household Gini ~0.50 vs 0.39 because about one adult in five runs a
-business; graduates ~40% vs ~30%; median wage ~RM3.6k vs RM3k; mobility too fluid), report
-sections, "Berita Rezeki" newspaper, compare-with-normal-world runs.
+### 4.8 Phase 6 polish (plan approved as recommended, Nov 2026: 6.1 calibration first and pushed alone, then
+6.2 report sections, a town newspaper and compare-with-normal runs, then 6.3 extras: Aristocracy vs
+Meritocracy, pixel UI icons, a mini-map)
+- 6.1 DONE. Cause found: business revenue came from an unlimited outside 'CUSTOMER' pool, so a lucky firm grew to
+  its cap (trading up to RM22M a month) in a town of 300; its owner's household then took most income (top 10%
+  ~55-60%), company tax made revenue explode, and wages were too alike (Gini ~0.22 early). New setting
+  `econModel` ('calibrated' in DEFAULTS and the national preset; 'original' in Classic and, via
+  `LES.upgradeConfig`, in saves from before, so Classic fingerprints and old saves are unchanged):
+  - Markets: `market: [firms per 1,000 people, outside]` on each content biz type (stall 20/0, workshop 5/0,
+    retail 10/0, restaurant 5/0, trading 3/3, tech 2/15, property 2/1) in units of scale0; `F.marketSize`
+    (x `F.MARKET_K` x pack `labour.market`); `World.monthClose` sums `w.bizLoad`; `F.bizMonth` sells
+    `mf = min(1, market / total)` (inputs fall with sales, `b.marketShare`), and no growth investment above
+    saturation. Private services (staff types) are limited by `maxPer` as before.
+  - Pay: offers `L.PAY_MID` 0.85 x log-normal `L.paySd()` (0.35; pack `labour.paySd`: US 0.55, China 0.55) in
+    `L.dailyMarket` and for founders; people move to the better offers, hence the 0.85.
+  - Unemployment: `L.award` gives an opening to an outsider with chance `labour.outsideHire` (Malaysia 0.3, UK
+    0.6, US 0.45, China 0.5; `w.stats.vacOutside`). China: people past the retirement age with no job retire.
+  - Country retunes for the new economy: UK fertMult 0.57 / mortMult 0.85; US 0.75 / 1.05, `labour.market` 1.6,
+    sentence 1.2, drugUse 1.6; China fertMult 0.47, hukou coverage 0.65 / 0.4 / 0.3, `tax.ni.compliance` 0.7
+    (pay declared below the real wage), employerCorp 0.04, fund payout 0.02, crime opportunity 0.5 / sentence 0.15 /
+    drugUse 0.1. Malaysia's pack is unchanged apart from `labour`.
+  - Calibration (3 seeds x 80 years): Malaysia every measure ok (TFR 1.42, e0 74.4, unemployment 2%, pay RM3,215,
+    Gini 0.41, revenue RM578, crime 134, prisoners 260, 66% solved). UK all ok but prisoners (207, warn): Gini
+    0.39, unemployment 5%, revenue GBP1,400, pay GBP3,053. US every measure ok: Gini 0.43, unemployment 4%,
+    revenue $2,283, pay $5,473, prisoners 726. China: Gini 0.44, pay, crime, users, prisoners ok, unemployment 4%
+    (warn, it swings 4-8% between runs), revenue ¥3,321 (off): in band for the first 50 years (¥1,650-2,400),
+    then the city shrinks (TFR ~0.9, one seed to 101 people) while a few firms and the state fund keep paying.
+  - Malaysia fingerprints re-recorded once (old values noted in `countryTests`); the pre-move save still
+    continues identically; `marketTests` (6 checks). 216 tests pass. Benchmark: new 2.77-2.91 s vs old
+    2.97-3.15 s (fewer businesses).
+  - Not done (smaller): graduate share, class mobility; UK prisoners.
 
 ## 5. Useful resources (checked)
 - pixelarticons (MIT) already vendored in `js/ui/icons.js` (licence in `docs/licenses/`).

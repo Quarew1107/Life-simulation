@@ -393,6 +393,10 @@
     }
   };
 
+  // Monthly sales a kind of business can share (Year-1 sen): `market: [per 1,000 people, outside]` firms of the
+  // starting size (scale0); trading, tech and property also sell beyond the town.
+  F.MARKET_K = 1;
+  F.marketSize = (w, t) => U.RM(t.scale0) * F.MARKET_K * ((LES.Countries.pack.labour || {}).market || 1) * (t.market[0] * w.counts.living / 1000 + t.market[1]);
   F.bizMonth = function (w, b) {
     const t = b.typeDef, R = w.rng.biz, m = w.macro(), L = w.ledger, price = w.price;
     const mgr0 = b.managerId >= 0 ? w.people[b.managerId] : null;
@@ -406,9 +410,14 @@
     const skillF = (1 + t.skillSpread * (skill - 5) / 5 / sizeF) * mgmtF;
     const demand = Math.pow(m.bizDemand, t.cyclical) * (w.boost ? w.boost.biz : 1) * (w.shock ? w.shock.biz : 1) * (w.regionDemand ? w.regionDemand : 1); // shoppers from sister towns
     const shock = Math.exp(U.clamp(R.normal(0, t.sigma), -3, 3));
-    const revenue = Math.max(0, Math.round(b.scale * price * demand * skillF * shock));
+    // Calibrated markets: firms of a kind share a market that grows with the town; when together they can
+    // supply more than it buys, each sells its share (and buys fewer inputs).
+    let mf = 1;
+    if (w.bizLoad && t.market) { const M = F.marketSize(w, t), S = w.bizLoad[b.type] || b.scale; if (S > M) mf = M / S; }
+    b.marketShare = mf;
+    const revenue = Math.max(0, Math.round(b.scale * mf * price * demand * skillF * shock));
     const interest = Math.round(b.debt * (w.gov ? LES.Fiscal.loanRate(w) : 0.06) / 12);
-    let opCost = Math.round((b.scale * t.costRatio + U.RM(t.fixed)) * price * (w.shock ? w.shock.cost : 1));
+    let opCost = Math.round((b.scale * t.costRatio * (mf < 1 ? 0.4 + 0.6 * mf : 1) + U.RM(t.fixed)) * price * (w.shock ? w.shock.cost : 1));
     let townRev = 0;
     if (t.staff) { // private services: staff wages were paid directly; fees from residents already arrived
       opCost = Math.max(Math.round(opCost * 0.3), opCost - (b.payrollNow || 0));
@@ -459,7 +468,7 @@
       const div = Math.min(Math.round(netProfit * payout), b.cash - Math.round(reserve * 0.5));
       if (div > 0) F.distribute(w, b, div, 'dividend');
       const excess = b.cash - reserve;
-      if (excess > 0) {
+      if (excess > 0 && mf > 0.9) { // (no point growing into a saturated market)
         const capex = Math.round(excess * 0.5);
         L.spend(b, 'cash', 'SUPPLIER', capex);
         b.fixed += Math.round(capex * 0.5);

@@ -18,7 +18,8 @@
     const n = R.poisson(lambda);
     for (let i = 0; i < n; i++) {
       const j = C.JOBS[R.weighted(w.jobFreq || C.JOB_FREQ)];
-      const salary = Math.round(w.px(j.salary * U.clamp(R.normal(1, 0.12), 0.7, 1.5) * w.macro().wageMult) / 1000) * 1000;
+      const spread = w.cfg.econModel === 'calibrated' ? L.PAY_MID * U.clamp(Math.exp(R.normal(0, L.paySd())), 0.5, 2.4) : U.clamp(R.normal(1, 0.12), 0.7, 1.5); // pay within a job varies (log-normal)
+      const salary = Math.round(w.px(j.salary * spread * w.macro().wageMult) / 1000) * 1000;
       const days = R.int(w.cfg.vacancyDaysMin, w.cfg.vacancyDaysMax);
       if (w.gov && LES.Services.PUBLIC_JOBS.has(j.id)) { R.pick(w.town.kinds[j.place]); continue; } // the town and private employers post these
       if (w.sys.jobOk.length && !w.sys.jobOk.every(s => s.jobOk(w, j))) { R.pick(w.town.kinds[j.place]); continue; } // e.g. automated away (scenarios)
@@ -30,8 +31,10 @@
   };
 
   // FSD 6.2: qualification is the only gate; best weighted score wins.
+  L.PAY_SD = 0.35; L.PAY_MID = 0.85; // spread and middle of pay offers within a job (calibrated markets; people move to the better offers)
   L.award = function (w, v) {
     const hw = w.cfg.hiringWeights, seen = new Set(), cands = [];
+    if (w.cfg.econModel === 'calibrated' && v.applicants.length && w.rng.jobs.next() < L.outsideHire()) { w.stats.vacOutside = (w.stats.vacOutside || 0) + 1; return; } // a commuter or newcomer from outside gets it
     for (const id of v.applicants) {
       if (seen.has(id)) continue;
       seen.add(id);
@@ -240,7 +243,7 @@
       }
       const cnRet = LES.China && LES.China.on(), ra = cnRet ? LES.China.retireAge(w, p) : 60; // China: the 2025 reform's ages
       if (age >= ra && !p.retired && !(w.flags && w.flags.noRetire)) {
-        const pRet = cnRet ? (job && job.si ? 1 : 0.3 + 0.15 * (age - ra)) : age >= 70 ? 1 : 0.2 + 0.15 * (age - 60); // (jobs with social insurance end at the statutory age)
+        const pRet = cnRet ? (!job || job.si ? 1 : 0.3 + 0.15 * (age - ra)) : age >= 70 ? 1 : 0.2 + 0.15 * (age - 60); // (jobs with social insurance end at the statutory age)
         if (R.next() < pRet) {
           p.retired = true;
           if (p.job) L.endJob(w, p, 'retired');
@@ -251,7 +254,9 @@
   };
 
   // Retirement contributions (Malaysia: EPF 11% from the worker, 13% from the employer) from the country pack.
-  let RET = null;
+  let RET = null, LAB = null;
+  L.paySd = () => (LAB && LAB.paySd) || L.PAY_SD; // (pack labour.paySd: the US spreads pay more)
+  L.outsideHire = () => (LAB && LAB.outsideHire !== undefined ? LAB.outsideHire : 0.3); // share of openings that go to someone from outside town (pack labour.outsideHire)
   LES.Countries.require('retirement.employee', 'retirement.employer', 'retirement.accessAge');
-  LES.Countries.on('labour', K => { RET = K.retirement; });
+  LES.Countries.on('labour', K => { RET = K.retirement; LAB = K.labour || null; });
 })(globalThis.LES = globalThis.LES || {});

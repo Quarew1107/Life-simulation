@@ -68,6 +68,7 @@
     catCap: 0.02,
     shiftsPerMonth: 20,
     vacancyRate: 2.2,
+    econModel: 'calibrated', // calibrated: firms share a market the size of the town, wider pay spread, some jobs go to outsiders; original: the first engine
     vacancyDaysMin: 3,
     vacancyDaysMax: 30,
     hiringWeights: [0.6, 0.25, 0.15],
@@ -80,13 +81,14 @@
   // Presets fill the setup form. Classic reproduces the original engine (harsher, more
   // children, longer lives); Malaysia is calibrated to DOSM figures (tools/calibration.html).
   LES.PRESETS = {
-    national: { name: "Today's rules", values: { safetyNet: 'on', fertility: 'national', mortMult: 1.9, layout: 'varied', society: 'on', ethnicMix: 'national', crime: 'lively', government: 'on', vacancyRate: 2.2 } },
-    classic: { name: 'Classic (original rules)', values: { safetyNet: 'off', fertility: 'normal', mortMult: 1, layout: 'grid', society: 'off', ethnicMix: 'classic', crime: 'off', government: 'off', vacancyRate: 2.5 } },
+    national: { name: "Today's rules", values: { safetyNet: 'on', fertility: 'national', mortMult: 1.9, layout: 'varied', society: 'on', ethnicMix: 'national', crime: 'lively', government: 'on', vacancyRate: 2.2, econModel: 'calibrated' } },
+    classic: { name: 'Classic (original rules)', values: { safetyNet: 'off', fertility: 'normal', mortMult: 1, layout: 'grid', society: 'off', ethnicMix: 'classic', crime: 'off', government: 'off', vacancyRate: 2.5, econModel: 'original' } },
   };
   // Older saves and stored settings called the national option 'malaysia'.
   LES.RENAMED_KEYS = ['preset', 'fertility', 'ethnicMix', 'interfaith', 'drugPolicy'];
   LES.upgradeConfig = function (cfg) {
     if (cfg) for (const k of LES.RENAMED_KEYS) if (cfg[k] === 'malaysia') cfg[k] = 'national';
+    if (cfg && cfg.econModel === undefined) cfg.econModel = 'original'; // saves from before Phase 6 keep the first engine
     return cfg;
   };
   LES.presetOf = function (cfg) {
@@ -118,6 +120,7 @@
     { group: 'Goal', essential: true, key: 'horizonYears', label: 'Years to simulate', type: 'int', min: 5, max: 300, help: '120 years is about four generations.' },
     { group: 'Economy & prices', essential: true, key: 'wealthDist', label: 'Starting wealth', type: 'select', options: [['equal', 'Equal ({k:10} each)'], ['moderate', 'Moderate inequality'], ['unequal', 'High inequality (some born rich)']] },
     { group: 'Economy & prices', key: 'groupWealth', label: 'Starting wealth by group', type: 'select', options: [['realistic', 'Realistic (history: some groups start with less)'], ['equal', 'Equal start for every group']], help: 'Used where the country has official figures (UK: ONS Wealth and Assets Survey; Malaysia: no gap). Groups never differ in ability.' },
+    { group: 'Economy & prices', key: 'econModel', label: 'Business and job markets', type: 'select', options: [['calibrated', 'Calibrated: firms share a market the size of the town'], ['original', 'Original: unlimited markets (Classic)']], help: 'Calibrated: businesses of a kind split a market that grows with the population, pay varies more within a job, and some openings go to people from outside town.' },
     { group: 'Economy & prices', essential: true, key: 'economy', label: 'Economic cycles', type: 'select', options: [['stable', 'Stable'], ['normal', 'Normal cycles'], ['volatile', 'Volatile (frequent recessions)']] },
     { group: 'Crime & justice', essential: true, key: 'crime', label: 'Crime & vice', type: 'select', options: [['lively', 'Lively ({adj} rates x10)'], ['realistic', 'Realistic (rare in a small town)'], ['lawless', 'Lawless (x30)'], ['off', 'Off']], help: 'Lively makes crime visible in a small town.' },
     { group: 'Town & map', essential: true, key: 'seed', label: 'World seed', type: 'text', help: 'Same seed + same settings = the same history.' },

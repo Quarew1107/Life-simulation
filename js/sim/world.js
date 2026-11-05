@@ -165,7 +165,7 @@
       if (R.next() < (o.jobChance || 0)) {
         const eligible = C.JOBS.filter(j => P.hasCred(p, j.req));
         const j = eligible[R.weighted(eligible.map(x => x.freq * (x.req ? 3 : 1)))];
-        const salary = Math.round(this.px(j.salary * U.clamp(R.normal(1, 0.1), 0.75, 1.3)) / 1000) * 1000;
+        const salary = Math.round(this.px(j.salary * (cfg.econModel === 'calibrated' ? LES.Labour.PAY_MID * U.clamp(Math.exp(R.normal(0, LES.Labour.paySd())), 0.5, 2.4) : U.clamp(R.normal(1, 0.1), 0.75, 1.3))) / 1000) * 1000;
         const level = 1 + Math.min(2, Math.floor(Math.max(0, age - 20) / 6 * R.next() * 1.5));
         p.job = {
           jobId: j.id, title: j.title, salary: Math.round(salary * Math.pow(1.12, level - 1)), level, startDay: this.day - R.int(30, 1500),
@@ -348,6 +348,10 @@
       this.price *= Math.pow(1 + this.infl, 1 / 12);
       F.updateRent(this);
       this.growTown();
+      if (this.cfg.econModel === 'calibrated') { // what each kind of business sells this month, to share its market
+        const load = this.bizLoad = {};
+        for (const b of this.biz) if (b.open && b.typeDef.market) load[b.type] = (load[b.type] || 0) + b.scale;
+      }
       for (const b of this.biz) if (b.open) F.bizMonth(this, b);
       Lb.monthClose(this);
       for (const p of this.living) {

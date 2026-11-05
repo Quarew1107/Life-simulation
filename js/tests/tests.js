@@ -765,14 +765,18 @@
   // Fingerprints recorded from the code before the move (Nov 2026, commit c0bb584).
   async function countryTests() {
     print('--- Countries (Malaysia pack fingerprints) ---', 'info');
+    // Phase 6 (Nov 2026, owner approved): calibrated markets (firms share a town-sized market, wider pay,
+    // outside hires) changed every Malaysia history, so these were re-recorded once. Before: my-default
+    // 9381afc4.../4e83df96, my-options ebdf7095.../60329a7c, my-pandemic-lawless ec6c1f0a.../753079c0, my-clans
+    // dad42cbc.../ba6ebd6b, my-region b495fc0c...; reports 6c3f3adc, 2db065c, 2290240d. Classic is unchanged.
     const MY = {
-      'my-default': '9381afc48a75fe84f313d17c3b07c2ac/4e83df96', 'my-options': 'ebdf7095ec4dd4f9b61c7f53cc3e8ebc/60329a7c',
-      'my-pandemic-lawless': 'ec6c1f0a2b8815fd4a1f658976a199ca/753079c0', 'my-clans': 'dad42cbcb73f021b6187674938b1489d/ba6ebd6b',
-      'my-region': 'b495fc0cc72406b997b9263068ac1d7b/1446da57|df40270e95862a096fbcf18074fe4e2a/b4341cfb|bec63c796b6fbe7b2f66ede517369097/40cf5843',
+      'my-default': '84f18b75b2c06289c6a601c0829afc1f/3da2af2a', 'my-options': 'bd26ca13824a4c4d1f7159a9c5ebda41/d49639b8',
+      'my-pandemic-lawless': '3f0a222219e38f1dae58e8d4611324af/ae339d10', 'my-clans': 'cf3fc7fbbbda7db225889a0d9f58f0d5/a233679e',
+      'my-region': '7b691ae4e34b125bffe4efe84075c4cc/474c56e2|9aa64dbf9cf8b64d1728935ea7de7845/2c7a8870|cbdee295f7a0d97ee8f76128c922925a/f160d7cb',
       'my-save': '93a0eff009e13bbf0631071fc098447a',
     };
     // 4a.6: the report names the drug policy instead of printing its key; 4b.1: a Country row in the settings table and "Today's rules".
-    const REPORT = { 'my-default': '6c3f3adc', 'my-pandemic-lawless': '2db065c', 'my-region': '2290240d' }; // 4b.3: a 'Starting wealth by group' row
+    const REPORT = { 'my-default': '9410742e', 'my-pandemic-lawless': '20090ec5', 'my-region': '620fc04a' }; // 4b.3: a 'Starting wealth by group' row; Phase 6: new histories and a 'Business and job markets' row
     const D = LES.DEFAULTS, base = { founders: 80, migration: 'normal' };
     const cases = {
       'my-default': () => new LES.World(Object.assign({}, D, base, { seed: 'my-1' })),
@@ -801,7 +805,7 @@
       await runDays(w, 365);
       check('A Malaysia save from before the move loads and continues identically', w.stableHash() === MY['my-save'], w.stableHash());
       const old = JSON.stringify([w.cfg, w.gov ? w.gov.laws : {}, w.gov ? w.gov.lawLog : []]);
-      check("Its old 'malaysia' setting and law values now read 'national'", !old.includes('"malaysia"') && w.cfg.drugPolicy === 'national' && LES.presetOf(w.cfg) === 'national');
+      check("Its old 'malaysia' setting and law values now read 'national'", !old.includes('"malaysia"') && w.cfg.drugPolicy === 'national' && w.cfg.econModel === 'original'); // (Phase 6: an old save keeps the original markets, so its rules read as Custom)
     } else check('The pre-move save fixture is present', false);
 
     // The pack registry.
@@ -817,7 +821,7 @@
     const uk = new LES.World(UKd), myW = new LES.World(Object.assign({}, D, { seed: 'cty-sw', founders: 40 }));
     for (let d = 0; d < 3 * 365; d++) { uk.step(); if (d < 500) myW.step(); } // interleaved: each step re-applies its own country
     check('A UK town runs: its own people, money and rules, the books balance', uk.checkInvariants().length === 0 && uk.counts.living > 40
-      && uk.people.every(p => ['white', 'asian', 'black', 'mixed', 'other'].includes(p.eth)) && LES.U.fmtMoney(100000).startsWith('£') && uk.gov.laws.minWage === '2065',
+      && uk.people.every(p => ['white', 'asian', 'black', 'mixed', 'other'].includes(p.eth)) && LES.U.fmtMoney(100000).startsWith('£') && (uk.gov.lawLog.find(l => l.key === 'minWage') || { from: uk.gov.laws.minWage }).from === '2065', // (the UK rate at the start; a mayor may change it)
       `${uk.counts.living} people, ${uk.checkInvariants().length} invariant errors`);
     check('Running a UK town alongside changes nothing in a Malaysian one', myW.stableHash() === myAlone && myRun() === myAlone);
     const ukSave = LES.Save.toJSON(uk), ukCopy = LES.Save.fromJSON(ukSave);
@@ -978,8 +982,8 @@
     let t0 = tags(), gross = w.px(8000 / K);
     FS.onPay(w, p, { biz: -1, jobId: 'cleaner', salary: gross, startDay: 0 }, gross, 0);
     let t1 = tags(); const d = k => ((t1[k] || 0) - (t0[k] || 0)) * K;
-    check('On ¥8,000 a month: social insurance ¥840 from the worker (10.5%) and ¥2,000 from the employer (25%)',
-      near(d('social insurance'), w.px(840), 4) && near(d('social insurance (employers)'), w.px(2000), 4), `${Math.round(d('social insurance') / w.price) / 100} / ${Math.round(d('social insurance (employers)') / w.price) / 100}`);
+    check('On ¥8,000 a month (declared at 70%, ¥5,600): social insurance ¥588 from the worker (10.5%) and ¥1,400 from the employer (25%)',
+      near(d('social insurance'), w.px(588), 4) && near(d('social insurance (employers)'), w.px(1400), 4), `${Math.round(d('social insurance') / w.price) / 100} / ${Math.round(d('social insurance (employers)') / w.price) / 100}`);
     t0 = tags(); gross = w.px(2000 / K);
     FS.onPay(w, p, { biz: -1, jobId: 'cleaner', salary: gross, startDay: 0 }, gross, 0); t1 = tags();
     check('Low pay still pays social insurance on 60% of the average wage (¥4,500: ¥472.50)', near(d('social insurance'), w.px(472.5), 4), `${Math.round(d('social insurance') / w.price) / 100}`);
@@ -1023,6 +1027,27 @@
     check('Malaysia shows ringgit again afterwards', U.fmtMoney(100000) === 'RM1,000');
   }
 
+  // Phase 6: calibrated markets (firms share a market the size of the town, wider pay, outside hires).
+  async function marketTests() {
+    print('--- Calibrated markets (Phase 6) ---', 'info');
+    const F = LES.Finance, w = new LES.World(Object.assign({}, LES.DEFAULTS, { seed: 'mk-1', founders: 120 }));
+    let over = 0, months = 0;
+    for (let d = 0; d < 365 * 12; d++) {
+      w.step();
+      if (w.date.lastOfMonth && w.bizLoad) { months++; for (const t of LES.C.BIZ) if (t.market) { const sold = w.biz.filter(b => b.open && b.type === t.id).reduce((a, b) => a + b.scale * (b.marketShare === undefined ? 1 : b.marketShare), 0); if (sold > F.marketSize(w, t) * 1.05 + 1) over++; } }
+      if (d % 1500 === 0) await yieldUI();
+    }
+    check("Firms of a kind never sell more than their market (it grows with the town)", months > 100 && over === 0, `${over} months over, ${months} months`);
+    check('Some openings go to people from outside town', (w.stats.vacOutside || 0) > 0 && w.stats.hires > w.stats.vacOutside, `${w.stats.vacOutside} outside, ${w.stats.hires} hires`);
+    const pay = w.living.filter(p => p.job).map(p => Math.log(p.job.salary / LES.C.JOB_BY_ID[p.job.jobId].salary / w.price / 100)), m = pay.reduce((a, x) => a + x, 0) / pay.length;
+    const sd = Math.sqrt(pay.reduce((a, x) => a + (x - m) * (x - m), 0) / pay.length);
+    check('Pay within a job varies like real pay (log spread 0.25-0.6)', sd > 0.25 && sd < 0.6, sd.toFixed(2));
+    const top = w.biz.filter(b => b.open).map(b => b.lastRevenue / w.price / 100).sort((a, b) => b - a)[0] || 0;
+    check('No firm grows beyond what a small town can buy', top < 2e6, `biggest monthly sales ${Math.round(top)}`);
+    check('Classic rules keep the original unlimited markets', LES.PRESETS.classic.values.econModel === 'original' && LES.upgradeConfig({}).econModel === 'original' && w.cfg.econModel === 'calibrated');
+    check('The books still balance', w.checkInvariants().length === 0, w.checkInvariants().join('; '));
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -1043,6 +1068,7 @@
       await ukTests();
       await usTests();
       await cnTests();
+      await marketTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -1054,6 +1080,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, tileTests };
+  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

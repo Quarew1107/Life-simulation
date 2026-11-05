@@ -529,7 +529,7 @@
       inflMin: { help: 'UK CPI: 2015 averaged 0.0%.' },
       inflMax: { help: 'UK CPI: the 2010s ranged 0.0-4.5%; 2022 averaged 9.1%.' },
       fertility: { options: { national: 'UK today (~1.4 children per woman)' } },
-      mortMult: { help: '1 = original engine (~80-year lives), 1.1 = UK (81 years). 0 = nobody dies of old age.' },
+      mortMult: { help: '1 = original engine (~80-year lives), 0.85 = UK (81 years). 0 = nobody dies of old age.' },
       society: { options: { on: 'On (income class, religion, festivals)' } },
       ethnicMix: { options: { national: 'England & Wales 2021 (White, Asian, Black, Mixed, Other)' } },
       interfaith: { options: { national: 'Free choice (UK law)' } },
@@ -591,8 +591,10 @@
       festivalTracks: ['christmas'],
     },
     // TFR 1.41 (ONS births 2024); life expectancy ~81 (ONS national life tables 2022-2024).
-    demography: { fertMult: 0.42, mortMult: 1.1 }, // 4b.4: 80-year runs gave TFR 1.22 at 0.37 and life expectancy 80.0 at 1.1
-    defaults: { goalRM: 100000000, marketOutsideRM: 200000000, mortMult: 1.1, leaderTitle: 'mayor', termYears: 4, inflMin: 0, inflMax: 5 },
+    // Share of job openings that go to someone from outside town (Phase 6: sets unemployment).
+    labour: { outsideHire: 0.6 },
+    demography: { fertMult: 0.57, mortMult: 0.85 }, // Phase 6 markets: TFR 1.04 at 0.42 and life expectancy 77.3 at 1.1 (before: 1.52 and 80.1)
+    defaults: { goalRM: 100000000, marketOutsideRM: 200000000, mortMult: 0.85, leaderTitle: 'mayor', termYears: 4, inflMin: 0, inflMax: 5 },
     // Police-recorded crime per 100k a year, England and Wales, year ending March 2026 (~61.8m people),
     // for the offences the engine models: theft from the person, residential burglary, vehicle offences,
     // robbery (87,362), violence with injury (507,169) and homicide. Prisoners: ~88,000 (142 per 100k).
