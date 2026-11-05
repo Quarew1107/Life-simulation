@@ -34,7 +34,8 @@
   };
 
   P.age = (w, p) => ((p.deathDay !== null ? p.deathDay : w.day) - p.birthDay) / 365;
-  P.name = p => `${p.first} ${p.last}`;
+  let SFp = null, SF = null; // groups whose names are written family name first (country pack content.surnameFirst: China)
+  P.name = p => { const k = LES.Countries.pack; if (k !== SFp) { SFp = k; SF = new Set((k && k.content.surnameFirst) || []); } return SF.has(p.eth) ? `${p.last} ${p.first}` : `${p.first} ${p.last}`; };
   P.isAdult = (w, p) => p.alive && P.age(w, p) >= w.cfg.adultAge;
   P.isBachelor = q => C.BACHELORS.includes(q);
 

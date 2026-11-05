@@ -30,6 +30,7 @@
   // 1 Jan Year 1 is a Monday: dow 0 = Monday ... 4 = Friday, 6 = Sunday.
   U.dow = day => ((day % 7) + 7) % 7;
   const lunar = (day, baseDoy) => { const y = Math.floor(day / 365); return ((baseDoy - 11 * y) % 365 + 365) % 365; };
+  const lunisolar = (day, f) => { const y = Math.floor(day / 365); return f.lo + (((f.doy - f.lo - 11 * y) % 30) + 30) % 30; }; // Chinese calendar: 11 days earlier a year until a leap month brings it back (doy = Year 1's date, lo = earliest)
   const near = (doy, d, span) => ((doy - d + 365) % 365) < span;
   // Festivals: lunar ones drift ~11 days earlier each year. The list comes from the country
   // pack's `calendar` (set up by js/data/countries/countries.js); first match wins.
@@ -43,7 +44,7 @@
     // Returns the festival on this day ({ id, name }) or null.
     festival(day) {
       const doy = ((day % 365) + 365) % 365;
-      for (const f of FEST) if (near(doy, f.lunar ? lunar(day, f.doy) : f.doy, f.span)) return { id: f.id, name: f.name };
+      for (const f of FEST) if (near(doy, f.lunisolar ? lunisolar(day, f) : f.lunar ? lunar(day, f.doy) : f.doy, f.span)) return { id: f.id, name: f.name };
       return null;
     },
     // First day of a festival (when people spend and celebrate).

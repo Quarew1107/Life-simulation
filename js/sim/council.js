@@ -163,12 +163,14 @@
     if (!w.gov) return;
     const c = CO.comp(w, 'community');
     const JL = LES.Countries.pack.welfare.jobLoss; // Malaysia: EIS 40% of pay up to RM2,000; UK: New Style JSA, flat
-    p.eis = { until: w.day + JL.days, amt: Math.round((JL.flat ? w.px(JL.flat) : Math.min(job.salary * JL.share, w.px(JL.cap))) * (0.7 + 0.3 * c)) };
+    if (JL.needsSi && !job.si) return; // China: only jobs that paid unemployment insurance; 12-24 months by years paid
+    const days = JL.needsSi ? (p.siMonths >= 120 ? 730 : p.siMonths >= 60 ? 548 : JL.days) : JL.days;
+    p.eis = { until: w.day + days, amt: Math.round((JL.flat ? w.px(JL.flat) : Math.min(job.salary * JL.share, w.px(JL.cap))) * (0.7 + 0.3 * c)) };
   };
   // Public servants who retire get a pension: 1/600 of the last salary per month served, up to 60%.
   CO.onRetire = function (w, p, job) {
     const months = (w.day - job.startDay) / 30.4;
-    if (months < 120) return;
+    if (months < 120 || LES.Countries.pack.welfare.model === 'china') return; // (China: public servants draw the employees' pension)
     p.pension = Math.round(job.salary * Math.min(0.6, months / 600));
     P.log(w, p, `Receives a civil-service pension of ${U.fmtMoney(p.pension)}/mo`, 'money', 0);
   };

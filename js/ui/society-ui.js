@@ -41,6 +41,10 @@
         <table class="cmp"><tr><th>Group</th><th>Adults</th><th>Median NW</th><th>Median income</th><th>${S.short('B40')}</th><th>${S.short('T20')}</th><th>Degree</th></tr>
         ${C.ETHNICITIES.filter(k => eth[k]).map(k => { const g = eth[k]; return `<tr><td>${esc(C.ETHNIC_NAMES[k])}</td><td>${g.n}</td><td>${U.fmtMoney(g.medNw)}</td><td>${U.fmtMoney(g.medInc)}</td><td>${pct(g.b40 / g.n)}</td><td>${pct(g.t20 / g.n)}</td><td>${pct(g.uni / g.n)}</td></tr>`; }).join('')}</table>
         <div class="note">Every group starts from the same ability distributions; groups differ only in names, festivals and religion mix. Gaps that appear come from luck, family history and small samples, so check them across many seeds before reading anything into them.</div></div>
+      ${LES.China && LES.China.on() ? (() => { const hk = S.groupStats(w, 'hukou'); return `<div class="card"><h3>Hukou <small class="muted">adults alive now</small></h3>
+        <table class="cmp"><tr><th>Hukou</th><th>Adults</th><th>Median NW</th><th>Median income</th><th>${S.short('B40')}</th><th>${S.short('T20')}</th><th>Degree</th></tr>
+        ${['urban', 'rural', 'outside'].filter(k => hk[k]).map(k => { const g = hk[k]; return `<tr><td>${esc(LES.China.name(k))}</td><td>${g.n}</td><td>${U.fmtMoney(g.medNw)}</td><td>${U.fmtMoney(g.medInc)}</td><td>${pct(g.b40 / g.n)}</td><td>${pct(g.t20 / g.n)}</td><td>${pct(g.uni / g.n)}</td></tr>`; }).join('')}</table>
+        <div class="note">Rural and migrant hukou holders start poorer (NBS 2024: urban incomes are 2.34x rural ones) unless the equal start is chosen. A migrant hukou means no dibao, insurance at home, school costs and the gaokao back home; people transfer after five years of social insurance, a degree or a home.</div></div>`; })() : ''}
       <div class="card"><h3>Religion <small class="muted">${fest ? `🎉 ${esc(fest.name)} now · ` : ''}${ram ? '🌙 Ramadan · ' : ''}${h.length ? '' : ''}members and community funds</small></h3>
         <table class="cmp"><tr><th>Religion</th><th>People</th><th>Devotion</th><th>Worship visits<br><span class="muted">last month</span></th><th>Fund now</th><th>Aid given</th></tr>
         ${S.REL_KEYS.filter(k => relCount[k]).map(k => { const d = S.RELIGIONS[k], f = fundOf(k), g = rel[k], members = w.living.filter(p => p.alive && p.rel === k);
@@ -82,6 +86,10 @@
       <div><span class="muted">Given to community</span><span>${U.fmtMoney(p.donated)}</span></div>
       ${p.zakatPaid ? `<div><span class="muted">Zakat paid</span><span>${U.fmtMoney(p.zakatPaid)}</span></div>` : ''}
       ${p.aidRecv ? `<div><span class="muted">Aid received</span><span>${U.fmtMoney(p.aidRecv)}</span></div>` : ''}
+      ${p.hukou && LES.China ? `<div><span class="muted">Hukou</span><span>${esc(LES.China.name(p.hukou))}</span></div>` : ''}
+      ${p.siMonths ? `<div><span class="muted">Social insurance</span><span>${(p.siMonths / 12).toFixed(1)} years paid${p.job && p.job.si === false ? ' · <span class="neg">none in this job</span>' : ''}</span></div>` : ''}
+      ${p.cnPension ? `<div><span class="muted">Pension</span><span>${U.fmtMoney(w.px(p.cnPension))}/mo (${p.cnEmp ? 'employees' : 'residents'})</span></div>` : ''}
+      ${p.zk ? `<div><span class="muted">After the zhongkao</span><span>${p.zk === 'academic' ? 'Academic high school' : 'Vocational school'}</span></div>` : ''}
     </div></div>`;
   };
 })(globalThis.LES = globalThis.LES || {});

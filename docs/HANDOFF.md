@@ -20,7 +20,9 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
 - Docs: `README.md` (features), `docs/ROADMAP.md` (phases, decisions, Malaysian figures).
 
 ## 0. Where to pick up (status at the end of the last session)
-All work is committed and pushed; 120 tests pass (`node tools/headless.js tests`).
+All work is committed and pushed. Latest (Nov 2026): the three countries the owner asked for first are complete,
+the UK (4.5), the United States (4.6) and China (4.7); stop and report before the next. The full suite runs in
+headless Edge: `python tools/edge.py tests.html "await LES_TESTS.runAll(), document.getElementById('out').textContent" 900`.
 Multiple towns (4.2) is usable: setting, switcher, migration, commuting, shopping, shared
 economy, comparison card, save/load. Next, in this order:
 1. Finish 4.2: DONE since: town types (`LES.TOWN_TYPES`, settings town1Type-town3Type, district
@@ -310,8 +312,50 @@ medium health detail, no party names, guns as lethality only, Brightwater / Harl
   company and dividend taxes from very successful firms push the 80-year average far up (~$11,800): the same
   wealth-concentration drift as the Gini in all three countries (Phase 6). Murders are too rare to measure in
   small towns at the Realistic scale; `lethal: 4` follows the US/Malaysia gap. Benchmark unchanged.
-- NEXT: China (plan first, for approval): hukou, appointed government, social insurance (pension, medical),
-  housing provident fund, IIT bands, VAT, gaokao, a money scale (~2.5).
+
+### 4.7 China (step 6, approved as recommended Nov 2026: a central-China city, appointed government with a
+5-year review, medium hukou, wealth gap by hukou, the 2025 retirement reform, a ¥200M goal, invented names
+Qiaoyun / Fengtang / Shuangmu and the Jade River Exchange; censorship and social credit left out)
+- `js/data/countries/cn.js`: money scale 2.3 (ICP price levels), census groups (Han, Zhuang, Hui, Manchu, Uyghur,
+  other) written family name first (`content.surnameFirst`, read by `P.name`), CGSS/Pew religions ('other' =
+  Taoism & folk religion at the temple), NBS pay, IIT bands 3-45% above ¥60,000 with social insurance and the
+  provident fund pre-tax (`retirementRelief`) and ¥24,000 per child; social insurance through `tax.ni` with
+  `floor` (60% of the average wage), `employer.to` (300% cap) and `coverage: true`; VAT 13/9/6% inside prices;
+  property tax on business premises only; company tax 5%/25%; `federalShare` empty (central-China provinces get
+  back more than they send). National laws have one option (set by Beijing); the city sets the minimum wage
+  class, hardship aid, police, schools, hospitals, drug policy and so on. Lunisolar festivals (`lunisolar: true`
+  with `lo`, the earliest day: Spring Festival on 17 Feb 2026, 6 Feb 2027, 26 Jan 2028, ...), Golden Week.
+- `js/sim/china.js` (`LES.China`, system 'china', on for `cfg.country === 'cn'`; no dice, fixed id hashes):
+  hukou (`p.hukou` urban / rural / outside: founders by `hukou.mix`, newcomers outside, children a parent's;
+  transfer yearly after 5 years of social insurance, a degree or a high-rise home, for the half who want it),
+  starting wealth by hukou (`wealthGap`, in `World.makeAdult`), job cover `covered` (public jobs always, others
+  by hukou: migrants 40%) -> `job.si`, the earnings record `siMonths/siIdx/siAcct` (`contribute`, founders
+  `init`), `retireAge` (2025 reform: +1 month per 4 months, women workers per 2), `minYears` (15 -> 20 from 2030),
+  `claim` (basic pension 1% x years x (1 + index) / 2 of the average wage + personal account / divisor; too few
+  years: the residents' pension ¥230), `examBar` (vocational track +2.5, migrants +0.5) and the yearly zhongkao
+  (`p.zk`, top 55% academic).
+- Engine hooks (all gated): `FS.onPay` (coverage, floor, employer cap), `welfare.model 'china'` runs
+  `cnBenefits` (pensions, the childcare subsidy ¥300 under 3, migrant school costs, dibao for local hukou) and
+  `cnHealth` (employee / resident / residentAway / none, ¥33 a month residents' premium); `health.plans.*.public`
+  makes the treasury pay the insured part in `usBill`; unemployment insurance needs `job.si` and lasts 12/18/24
+  months (`jobLoss.needsSi`); no civil-service pension in China; labour.js retires covered jobs at `retireAge`;
+  `L.enroll` adds `examBar`; `crimeTuning.drugUse` (new, default 1).
+- Appointed government (`gov.appointed: { reviewYears, maxTerms }`, government.js): `startCampaign` becomes
+  `review` (no campaign, no votes): the province `appoint`s on ability, responsibility, education, rank and
+  public experience; at each review (growth of incomes, approval, debt, scandals) the leader is kept, moved on
+  (two terms, or promoted) or removed. Records go into `g.elections` with `appointed` (votes 0) and `g.reviews`.
+  The Gov't tab, the report and the setup card say "appointed". Hukou, social insurance years, pension and
+  zhongkao show on the person's Community card; the Society tab has a by-hukou table.
+- Art style 'cn': urban-village houses, older walk-up estates with caged balconies, gated tiled mid-rise estates,
+  villas, camphor trees instead of palms, rice paddies kept, lanterns, red flags, Spring Festival fireworks.
+- Calibration (80 years, 3 seeds, fertMult 0.34, mortMult 1): TFR 0.94, life expectancy 79.3, crime 226 per 100k,
+  47% solved, 78 drug users all in band; median pay ¥7,886 (warn against an approximate ¥6,000: NBS publishes no
+  median); prisoners 262 (off), then the final crime tuning (3 seeds x 40 years) gave index ~250, 56% solved, ~177
+  prisoners, ~72 users (prisoners and index just above their bands; small towns are noisy). Gini 0.66 and revenue
+  (~¥2,200-2,900 a person in the first 12 years, ¥19.7k averaged over 80) show the same wealth-concentration drift
+  as the UK and US (Phase 6); unemployment 1% as everywhere. Benchmark: Malaysia 150 founders x 10 years
+  2.91-3.01 s new vs 2.91-2.98 s old, identical hashes. 210 tests pass.
+- NEXT: the three countries are done; stop and report. Later: UAE, Mexico, South Africa (owner's order).
 
 Original notes:
 First move everything Malaysia-specific into a country pack (`js/data/countries/my.js`:

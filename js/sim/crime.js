@@ -45,7 +45,7 @@
   const DRUG_BASE = 0.00024;
   // Country tuning (pack crimeTuning): how often chances to offend come up, how often police solve
   // a case and how long sentences are, against the Malaysian calibration (1 = unchanged).
-  const TUNE0 = { opportunity: 1, clear: 1, murderClear: 1, sentence: 1, community: 0, drugRepeat: 1, lethal: 1 }; // lethal: guns make fights and robberies deadlier (US)
+  const TUNE0 = { opportunity: 1, clear: 1, murderClear: 1, sentence: 1, community: 0, drugRepeat: 1, lethal: 1, drugUse: 1 }; // lethal: guns make fights and robberies deadlier (US)
   let TUNE = TUNE0;
   const GANG_COLOURS = ['#e63946', '#8338ec', '#ff8c42', '#06d6a0', '#3a86ff', '#ffbe0b', '#d62828', '#8d99ae'];
 
@@ -276,7 +276,7 @@
       const peers = (cr.gang >= 0 ? 3 : 1) * (p.partnerId !== null && w.people[p.partnerId].cr && w.people[p.partnerId].cr.user ? 3 : 1);
       const ageF = age < 40 ? 1.5 : age < 50 ? 0.6 : 0.15;
       const f = (0.5 + p.stress / 100) * (1.5 - p.pers.resp / 100) * ageF * peers * (1 - 0.6 * (p.relig || 0) / 100) * (p.job ? 1 : 1.6);
-      if (R.next() < DRUG_BASE * K(w) * f) { cr.user = true; cr.addict = 10; st.startedUsing++; P.log(w, p, 'Started using drugs', 'crime', 0); }
+      if (R.next() < DRUG_BASE * K(w) * f * TUNE.drugUse) { cr.user = true; cr.addict = 10; st.startedUsing++; P.log(w, p, 'Started using drugs', 'crime', 0); }
       return;
     }
     // A user: cravings cost money (to a dealer), health and stress relief that does not last.

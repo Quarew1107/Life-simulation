@@ -269,7 +269,7 @@
   function govSection(w) {
     const GV = LES.Gov, g = w.gov;
     if (!g || !GV) return '';
-    const rows = g.elections.map(e => { const win = e.cands.find(c => c.id === e.winner); return `<tr><td>Y${U.dayToDate(e.day).year}</td><td>${esc(win ? win.name : '?')}${win && win.incumbent ? ' (re-elected)' : ''}</td><td>${win ? win.votes : 0} of ${e.voted}</td><td>${e.eligible ? Math.round(e.voted / e.eligible * 100) : 0}%</td></tr>`; }).join('');
+    const rows = g.elections.map(e => { const win = e.cands.find(c => c.id === e.winner); return e.appointed ? `<tr><td>Y${U.dayToDate(e.day).year}</td><td>${esc(win ? win.name : '?')}</td><td colspan="2">appointed: ${esc(e.appointed)}</td></tr>` : `<tr><td>Y${U.dayToDate(e.day).year}</td><td>${esc(win ? win.name : '?')}${win && win.incumbent ? ' (re-elected)' : ''}</td><td>${win ? win.votes : 0} of ${e.voted}</td><td>${e.eligible ? Math.round(e.voted / e.eligible * 100) : 0}%</td></tr>`; }).join('');
     return `<section><h2>Government and elections</h2><div class="grid">
 <div class="card"><b>Elections</b><table><tr><th>Year</th><th>Winner</th><th>Votes</th><th>Turnout</th></tr>${rows}</table></div>
 <div class="card"><b>Laws at the end</b><table>${GV.LAWS.map(l => `<tr><td>${esc(l.name)}</td><td>${esc(GV.optName(l.key, g.laws[l.key]))}</td></tr>`).join('')}</table>

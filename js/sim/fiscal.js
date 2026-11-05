@@ -95,10 +95,12 @@
     if (b && b.cash >= eis) FS.collect(w, b, 'cash', eis, 'EIS contributions');
     else FS.collect(w, L.sec.EMPLOYER, 'bal', eis, 'EIS contributions');
     let ni = 0, erNi = 0;
-    if (TX.ni) { // payroll tax on pay between thresholds (UK National Insurance, US FICA), and the employer's share
-      const a = gross / 100 / w.price * 12, E = TX.ni.employee, R = TX.ni.employer;
+    const si = TX.ni && TX.ni.coverage ? LES.China.covered(w, p, job) : true; // China: many private jobs pay no social insurance
+    if (TX.ni && TX.ni.coverage) { job.si = si; if (si) LES.China.contribute(w, p, gross); }
+    if (TX.ni && si) { // payroll tax on pay between thresholds (UK National Insurance, US FICA, China social insurance), and the employer's share
+      const a = Math.max(gross / 100 / w.price * 12, TX.ni.floor || 0), E = TX.ni.employee, R = TX.ni.employer; // (China: on at least 60% of the average wage)
       ni = FS.collect(w, p, 'cash', Math.round(U.RM((Math.max(0, Math.min(a, E.to) - E.from) * E.rate + Math.max(0, a - E.to) * E.above) / 12) * w.price), TX.ni.name || 'National Insurance');
-      erNi = Math.round(U.RM(Math.max(0, a - R.from) * R.rate / 12) * w.price);
+      erNi = Math.round(U.RM(Math.max(0, Math.min(a, R.to || Infinity) - R.from) * R.rate / 12) * w.price);
       if (b && b.cash >= erNi) FS.collect(w, b, 'cash', erNi, TX.ni.employerName || 'National Insurance (employers)');
       else FS.collect(w, L.sec.EMPLOYER, 'bal', erNi, TX.ni.employerName || 'National Insurance (employers)');
     }
@@ -253,6 +255,43 @@
     if (p.isHead) for (const id of p.careOf) { const c = w.people[id]; if (c.alive && !c.adult) c.cover = inc < fpl * H.childFpl ? 'medicaid' : cover === 'medicare' ? 'none' : cover; } // children: CHIP, or the parent's plan
   }
 
+  // China each month: the employees' basic pension or the residents' pension from the retirement age,
+  // medical insurance, the childcare subsidy, migrant children's school costs and dibao for local hukou.
+  function cnBenefits(w, p, cc, R) {
+    const pack = LES.Countries.pack, WF = pack.welfare, CN = LES.China, age = P.age(w, p), pay = (amt, line) => {
+      if (!(amt > 0)) return 0;
+      const a = LES.Gov.payOut(w, p, 'cash', amt, line); p.earned.welfare += a; p.monthIncome += a; return a;
+    };
+    if (age >= CN.retireAge(w, p) && (p.retired || !p.job || !p.job.si)) {
+      if (p.cnPension === undefined) { CN.claim(w, p); P.log(w, p, `Draws a ${p.cnEmp ? 'basic pension' : "residents' pension"} of ${U.fmtMoney(w.px(p.cnPension))}/mo`, 'money', 0); }
+      pay(w.px(p.cnPension), p.cnEmp ? 'basic pensions (employees)' : "residents' pensions");
+    }
+    cnHealth(w, p);
+    if (!p.isHead) return;
+    const q = p.partnerId !== null ? w.people[p.partnerId] : null, couple = !!(q && q.alive && !q.away);
+    let kids = 0, small = 0, school = 0;
+    for (const id of p.careOf) { const c = w.people[id]; if (!c.alive || c.adult) continue; kids++; const a = P.age(w, c); if (a < WF.childcare.under) small++; if (a >= 6 && a < 16) school++; }
+    if (small) pay(w.px(WF.childcare.monthly) * small, 'childcare subsidy');
+    if (school && p.hukou === 'outside') w.ledger.spend(p, 'cash', 'MERCHANT', Math.min(Math.max(0, p.cash), w.px(WF.migrantSchool) * school)); // fees and a place at a migrant school
+    if (p.hukou !== 'urban' && p.hukou !== 'rural') return; // dibao is for local hukou only
+    const D = WF.dibao, n = 1 + (couple ? 1 : 0) + kids, line = w.px(p.hukou === 'urban' ? D.urban : D.rural) * n;
+    const inc = (p.job ? p.job.salary : 0) + (couple && q.job ? q.job.salary : 0) + (p.cnPension ? w.px(p.cnPension) : 0) + (couple && q.cnPension ? w.px(q.cnPension) : 0);
+    if (inc >= line || p.cash + (couple ? q.cash : 0) > line * D.assetMonths || CN.hash(p.id, 23) >= D.takeUp + 0.1 * cc) return;
+    if (line - inc >= w.px(50)) pay(line - inc, 'dibao (minimum living allowance)');
+  }
+  // Medical insurance (China): employees' insurance with a covered job (kept in retirement with an
+  // employee pension), otherwise residents' insurance (paid at home for migrants: lower refunds).
+  function cnHealth(w, p) {
+    const H = LES.Countries.pack.health, CN = LES.China;
+    let cover;
+    if ((p.job && p.job.si) || p.cnEmp) cover = 'employee';
+    else if (CN.hash(p.id, 21) < H.residentTakeUp) cover = p.hukou === 'outside' ? 'residentAway' : 'resident';
+    else cover = 'none';
+    if (cover !== 'employee' && cover !== 'none' && !(FS.collect(w, p, 'cash', w.px(H.plans[cover].premium), "residents' medical insurance") > 0)) cover = 'none';
+    p.cover = cover;
+    if (p.isHead) for (const id of p.careOf) { const c = w.people[id]; if (c.alive && !c.adult) c.cover = c.hukou === 'outside' ? 'residentAway' : 'resident'; } // children: residents' insurance
+  }
+
   // Sales tax, assessment tax and employers' company tax for the month.
   function collectMonth(w) {
     const g = w.gov, L = w.ledger, F = LES.Finance, law = FS.RATES[w.policy.salesTax] ? w.policy.salesTax : Object.keys(FS.RATES)[0], R = FS.RATES[law];
@@ -349,11 +388,12 @@
     // Programmes (cash aid reaches B40 households through the community office: a weak
     // office misses some families and pays some who do not qualify).
     const cc = comp(w, 'community');
-    const meansTested = (LES.Countries.pack.welfare || {}).model === 'meansTested', usa = (LES.Countries.pack.welfare || {}).model === 'usa';
+    const model = (LES.Countries.pack.welfare || {}).model, meansTested = model === 'meansTested', usa = model === 'usa', china = model === 'china';
     for (const p of w.living) {
       if (!p.alive || !p.adult || p.away) continue;
       let amt = 0, line = 'cash aid';
       if (usa) usBenefits(w, p, cc, R); // (US towns also keep the city's cash-aid law below)
+      if (china) cnBenefits(w, p, cc, R); // (and Chinese cities)
       if (meansTested) ukBenefits(w, p, pol, cc, R);
       else if (pol.cashAid && p.isHead && (p.cls === 'B40' ? R.next() < 1 - 0.3 * (1 - cc) : p.cls === 'M40' && R.next() < 0.12 * (1 - cc))) amt += w.px(pol.cashAid);
       if (pol.ubi) { amt += w.px(pol.ubi); line = 'basic income & aid'; }

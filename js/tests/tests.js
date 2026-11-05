@@ -960,6 +960,69 @@
     check('Malaysia shows ringgit again afterwards', U.fmtMoney(100000) === 'RM1,000');
   }
 
+  // China (step 6): national rules in a central-China city; money in real yuan at 2.3x the engine's units.
+  async function cnTests() {
+    print('--- China rules ---', 'info');
+    const KC = LES.Countries, U = LES.U, CN = LES.China, CNd = Object.assign({}, LES.DEFAULTS, KC.get('cn').defaults, { country: 'cn', seed: 'cn-r', founders: 80 });
+    const myAlone = (() => { const m = new LES.World(Object.assign({}, LES.DEFAULTS, { seed: 'cn-sw', founders: 40 })); for (let d = 0; d < 400; d++) m.step(); return m.stableHash(); })();
+    const w = new LES.World(CNd), FS = LES.Fiscal, K = KC.scale(), near = (a, b, tol) => Math.abs(a - b) <= (tol || 2);
+    check('Money shows in real yuan (a cleaner earns ¥2,800 a month; the goal is ¥200 million)', U.fmtMoney(LES.C.JOB_BY_ID.cleaner.salary * 100) === '¥2,800' && U.fmtMoney(w.goal) === '¥200.00M' && K === 2.3, `${U.fmtMoney(LES.C.JOB_BY_ID.cleaner.salary * 100)} ${U.fmtMoney(w.goal)}`);
+    const t120 = FS.annualTaxOn(w, null, 120000 / K) * K;
+    check('Income tax on ¥120,000 a year: 3% then 10% above ¥60,000 and the 17.5% social insurance and provident fund', near(t120, 1380, 1), t120.toFixed(1));
+    const hk = {}; for (const x of w.living) hk[x.hukou] = (hk[x.hukou] || 0) + 1;
+    check('Founders hold local urban, local rural or outside hukou (about 50/25/25)', hk.urban > hk.rural && hk.rural > 0 && hk.outside > 0 && hk.urban + hk.rural + hk.outside === w.living.length, JSON.stringify(hk));
+    check('A Chinese name is written family name first', LES.P.name(w.living.find(x => x.eth === 'han')).split(' ')[0] === w.living.find(x => x.eth === 'han').last);
+    const tags = () => Object.assign({}, w.gov.month.tags);
+    const p = w.living.find(x => x.adult && CN.covered(w, x, { biz: -1, jobId: 'cleaner', startDay: 0 }));
+    p.cash = w.px(1e5);
+    let t0 = tags(), gross = w.px(8000 / K);
+    FS.onPay(w, p, { biz: -1, jobId: 'cleaner', salary: gross, startDay: 0 }, gross, 0);
+    let t1 = tags(); const d = k => ((t1[k] || 0) - (t0[k] || 0)) * K;
+    check('On ¥8,000 a month: social insurance ¥840 from the worker (10.5%) and ¥2,000 from the employer (25%)',
+      near(d('social insurance'), w.px(840), 4) && near(d('social insurance (employers)'), w.px(2000), 4), `${Math.round(d('social insurance') / w.price) / 100} / ${Math.round(d('social insurance (employers)') / w.price) / 100}`);
+    t0 = tags(); gross = w.px(2000 / K);
+    FS.onPay(w, p, { biz: -1, jobId: 'cleaner', salary: gross, startDay: 0 }, gross, 0); t1 = tags();
+    check('Low pay still pays social insurance on 60% of the average wage (¥4,500: ¥472.50)', near(d('social insurance'), w.px(472.5), 4), `${Math.round(d('social insurance') / w.price) / 100}`);
+    const q = w.living.find(x => x.adult && x !== p && !CN.covered(w, x, { biz: -1, jobId: 'cleaner', startDay: 0 })), job = { biz: -1, jobId: 'cleaner', salary: w.px(4000 / K), startDay: 0 };
+    t0 = tags(); FS.onPay(w, q, job, job.salary, 0); t1 = tags();
+    check('Many private jobs pay no social insurance (and then no unemployment insurance)', !job.si && !d('social insurance'));
+    const man = { sex: 'M', birthDay: -60 * 365, deathDay: null }, woman = { sex: 'F', birthDay: -40 * 365, deathDay: null, cnWorker: true };
+    check('Retirement age follows the 2025 reform (a man of 60 in 2026: 60 and 4 months; a woman worker born 1986: 55)', near(CN.retireAge(w, man) * 12, 724, 0.01) && near(CN.retireAge(w, woman), 55, 0.001), `${CN.retireAge(w, man)} ${CN.retireAge(w, woman)}`);
+    const r = w.living.find(x => x.adult && x !== p && x !== q);
+    Object.assign(r, { siMonths: 360, siIdx: 360, siAcct: 360 * 7500 / K * 0.08 });
+    r.birthDay = w.day - 61 * 365; r.sex = 'M'; delete r.cnPension; CN.claim(w, r);
+    const exp = 7500 * 30 * 0.01 + 360 * 7500 * 0.08 / 139;
+    check("Employees' pension after 30 years at the average wage: 30% of it plus the personal account / 139", near(r.cnPension * K, exp, 2) && r.cnEmp, `${(r.cnPension * K).toFixed(0)} vs ${exp.toFixed(0)}`);
+    Object.assign(r, { siMonths: 60 }); delete r.cnPension; CN.claim(w, r);
+    check("Too few years of social insurance: the residents' pension (~¥230)", !r.cnEmp && near(r.cnPension * K, 230, 1));
+    const pt = w.living.find(x => x.adult && x !== p && x !== q && x !== r);
+    pt.cover = 'employee'; pt.cash = w.px(1e5); pt.med = null;
+    const hs0 = w.gov.month.healthSub || 0, own = LES.Services.medicalBill(w, pt, 0, false, w.px(5000 / K)), bill = Math.round(w.px(5000 / K) * 1.3), expOwn = w.px(1300 / K) + Math.round((bill - w.px(1300 / K)) * 0.2);
+    check("Employees' medical insurance: the patient pays the ¥1,300 deductible and 20%, the public fund the rest", near(own, expOwn, 3) && near((w.gov.month.healthSub || 0) - hs0, bill - own, 3), `${own} vs ${expOwn}`);
+    const cal = [0, 365, 730, 1095].map(y => { for (let k = 0; k < 365; k++) { const f = LES.Calendar.festivalStarts(y + k); if (f && f.id === 'cny') return k; } return -1; });
+    check('Spring Festival moves like the Chinese calendar (17 Feb 2026, 6 Feb 2027, 26 Jan 2028, 13 Feb 2029)', cal.join() === '47,36,25,44', cal.join());
+    for (let k = 0; k < 365 * 6; k++) w.step();
+    const g = w.gov;
+    check('No elections: the province appoints the Party Secretary and reviews them every 5 years', LES.Gov.title(w) === 'Party Secretary' && g.elections.length >= 1 && g.elections.every(e => e.appointed && e.voted === 0) && (g.reviews || []).length >= 1 && !w.living.some(x => x.pol && x.pol.voted), `${g.elections.length} appointments, ${(g.reviews || []).length} reviews`);
+    const kidsOk = w.living.filter(x => !x.adult && x.gen > 0).every(c => c.hukou && (c.parents.map(id => w.people[id]).some(m => m && m.hukou === 'urban') ? c.hukou === 'urban' : true));
+    const newcomers = w.living.filter(x => x.migrant && x.arrivedDay > 0);
+    check('Children take a parent\'s hukou; newcomers hold one elsewhere until they transfer', kidsOk && newcomers.every(x => x.hukou === 'outside' || x.hukou === 'urban'), `${newcomers.length} newcomers`);
+    const base = {}; for (let k = 0; k < 400; k++) { const m = g.month; w.step(); if (g.month !== m) for (const [kk, v] of Object.entries(m.spend || {})) base[kk] = (base[kk] || 0) + v; }
+    check('Dibao and the childcare subsidy are paid; residents insure themselves', (base['childcare subsidy'] || 0) > 0 && (base['dibao (minimum living allowance)'] || 0) >= 0 && w.living.some(x => x.cover === 'resident'), Object.keys(base).join(', '));
+    const zk = w.living.filter(x => x.zk), voc = zk.filter(x => x.zk === 'vocational');
+    check('The zhongkao sends part of each year to vocational schools, and vocational pupils find university harder', !zk.length || (voc.length > 0 && voc.length < zk.length && CN.examBar(w, voc[0], LES.C.COURSE_BY_ID.BACH_GEN) >= 2.5), `${voc.length} of ${zk.length}`);
+    const myW = new LES.World(Object.assign({}, LES.DEFAULTS, { seed: 'cn-sw', founders: 40 }));
+    for (let k = 0; k < 400; k++) { myW.step(); w.step(); }
+    check('Running a Chinese city alongside changes nothing in a Malaysian one', myW.stableHash() === myAlone);
+    const sv = LES.Save.toJSON(w), w2 = LES.Save.fromJSON(sv);
+    for (let k = 0; k < 120; k++) { w.step(); w2.step(); }
+    check('A Chinese save loads in yuan and continues identically', JSON.parse(sv).country === 'cn' && w2.stableHash() === w.stableHash() && U.sym() === '¥');
+    const fresh = new LES.World(Object.assign({}, CNd, { seed: 'cn-inv' })); for (let k = 0; k < 730; k++) fresh.step(); // (the town above had cash set by hand)
+    check('Chinese cities keep their books balanced', fresh.checkInvariants().length === 0, fresh.checkInvariants().join('; '));
+    LES.Countries.ensure(LES.DEFAULTS);
+    check('Malaysia shows ringgit again afterwards', U.fmtMoney(100000) === 'RM1,000');
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -979,6 +1042,7 @@
       await countryTests();
       await ukTests();
       await usTests();
+      await cnTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -990,6 +1054,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, tileTests };
+  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

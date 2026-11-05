@@ -16,7 +16,7 @@
     const SC = LES.Scenarios, F = LES.Countries.fill;
     return [
       { key: 'national', scenario: 'none', preset: 'national', name: LES.PRESETS.national.name, icon: 'flag', short: F('A town of strangers in today\'s {country}, calibrated to official data.'),
-        desc: F('{adj} prices, wages, taxes, family life, religion, crime and an elected town government. Start here if this is your first world.'), watch: [F('Who reaches {goal}, and why'), 'How class, education and luck shape lives across generations', 'Elections, laws and what they change'] },
+        desc: F(`{adj} prices, wages, taxes, family life, religion, crime and ${LES.Gov && LES.Gov.appointed() ? 'an appointed city government' : 'an elected town government'}. Start here if this is your first world.`), watch: [F('Who reaches {goal}, and why'), 'How class, education and luck shape lives across generations', LES.Gov && LES.Gov.appointed() ? 'Appointed leaders, laws and what they change' : 'Elections, laws and what they change'] },
       ...SC.LIST.map(s => ({ key: s.id, scenario: s.id, preset: 'national', name: s.name, icon: s.icon, short: s.short, desc: s.desc, watch: s.watch, cfg: s.cfg })),
       { key: 'classic', scenario: 'none', preset: 'classic', name: 'Classic rules', icon: 'book-open', short: 'The original engine: harsh rules, no society, crime or government.',
         desc: 'No welfare, a higher birth rate and longer lives, a grid town, three ethnic groups, and none of the newer systems. For comparing with the original design.', watch: ['Survival without a safety net', F('The original {goal} race')] },
