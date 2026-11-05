@@ -439,6 +439,9 @@
     // schools; university places go by gaokao score in the province of the hukou.
     education: {
       vocIsced: 5, // a higher vocational diploma (dazhuan) is ISCED 5 (C02)
+      // C06 (approximate, from the 2020 census by age and MoE 2023 intake; not official targets): founders' bachelor's-
+      // or-higher and dazhuan shares by age group; yearly entry places per age cohort (today's high intake).
+      founders: [[25, 0.15, 0.15], [35, 0.22, 0.2], [45, 0.12, 0.12], [55, 0.06, 0.07], [65, 0.03, 0.04], [200, 0.02, 0.02]], places: { bach: 0.3, master: 0.05, voc: 0.3 }, admitBar: 1, // (plus the gaokao bars)
       gaokao: { academic: 0.55, bar: 1, vocationalBar: 2.5, awayBar: 0.5, zhongkaoAge: 15 },
     },
     settings: {

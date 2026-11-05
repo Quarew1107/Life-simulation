@@ -943,7 +943,10 @@
     },
     // Calibration targets (js/sim/calibration.js): target, warning band, source.
     // ISCED level of the 'VOC' credential (C02): the Vocational Certificate (SKM) is upper/post-secondary, not tertiary.
-    education: { vocIsced: 4 },
+    // C06 (approximate, from DOSM LFS education by age and OECD-style cohort patterns; not official targets):
+    // founders' bachelor's-or-higher and vocational-certificate shares by age group, and yearly entry places as a
+    // share of one age cohort (public and private universities; TVET certificates).
+    education: { vocIsced: 4, founders: [[25, 0.12, 0.2], [35, 0.25, 0.25], [45, 0.2, 0.2], [55, 0.14, 0.15], [65, 0.09, 0.1], [200, 0.05, 0.05]], places: { bach: 0.25, master: 0.04, voc: 0.25 }, admitBar: 1 }, // admitBar: entry grades above the course minimum (UPU)
     calibration: {
       tertiary: { target: 0.29, band: 0.08, src: 'DOSM Labour Force Survey 2023: ~29% of the labour force (15-64) with tertiary education (diploma or degree); the sim measures adults 25-64 and has no diploma credential, so it counts degrees only' },
       tfr: { target: 1.6, band: 0.35, src: 'DOSM Vital Statistics 2025 (TFR 2024 = 1.6; 2025 = 1.5)' },

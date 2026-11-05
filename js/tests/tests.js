@@ -107,6 +107,7 @@
     const w9 = small({ seed: 'tc009' });
     const s = w9.people[0];
     s.quals = []; s.att[C.INT] = 9;
+    if (LES.Labour.placesOn(w9)) LES.Labour.places(w9).credit.bach = 5; // (C06: a place is free for this test)
     LES.Labour.enroll(w9, s, C.COURSE_BY_ID.BACH_ENG);
     if (!s.enrol) LES.Labour.enroll(w9, s, C.COURSE_BY_ID.BACH_ENG);
     for (let i = 0; i < 40; i++) if (s.enrol) LES.Labour.study(w9, s, C.COURSE_BY_ID.BACH_ENG);
@@ -769,14 +770,18 @@
     // outside hires) changed every Malaysia history, so these were re-recorded once. Before: my-default
     // 9381afc4.../4e83df96, my-options ebdf7095.../60329a7c, my-pandemic-lawless ec6c1f0a.../753079c0, my-clans
     // dad42cbc.../ba6ebd6b, my-region b495fc0c...; reports 6c3f3adc, 2db065c, 2290240d. Classic is unchanged.
+    // C06 (rules revision 4: founders' credentials by age group, limited study places) changes every history;
+    // the previous revision-3 values (84f18b75.../3da2af2a, bd26ca13.../d49639b8, 3f0a2222.../ae339d10,
+    // cf3fc7fb.../a233679e, 7b691ae4...) are still reproduced with rulesRev 3 (eduPlacesTests). Reports before:
+    // 445f0e50, 389a9630, 18479e2.
     const MY = {
-      'my-default': '84f18b75b2c06289c6a601c0829afc1f/3da2af2a', 'my-options': 'bd26ca13824a4c4d1f7159a9c5ebda41/d49639b8',
-      'my-pandemic-lawless': '3f0a222219e38f1dae58e8d4611324af/ae339d10', 'my-clans': 'cf3fc7fbbbda7db225889a0d9f58f0d5/a233679e',
-      'my-region': '7b691ae4e34b125bffe4efe84075c4cc/474c56e2|9aa64dbf9cf8b64d1728935ea7de7845/2c7a8870|cbdee295f7a0d97ee8f76128c922925a/f160d7cb',
+      'my-default': '6f46c9e387bf10ddb3b3d94033aa64ce/cb7d9c49', 'my-options': '478956fafcd072210c38ac8aaacb39cd/d70395a8',
+      'my-pandemic-lawless': 'c33476168a16d5f0a362c77d2f215eda/e6ce124', 'my-clans': '93ccd394844426d0f15e2b43e3008f9f/8289b714',
+      'my-region': 'ab81f274d51b6e9d5aecda08fa5a643a/a914266d|f44d51d9c8881b2e652614ab4bfa904c/3c9ffbdf|5684b117ae77f6fc4ebd4a3c37311c5d/1d4dc438',
       'my-save': '93a0eff009e13bbf0631071fc098447a',
     };
     // 4a.6: the report names the drug policy instead of printing its key; 4b.1: a Country row in the settings table and "Today's rules".
-    const REPORT = { 'my-default': '445f0e50', 'my-pandemic-lawless': '389a9630', 'my-region': '18479e2' }; // C01 (report text only, engine fingerprints unchanged): tie-aware Spearman, n/a values, inheritance wording. Before C01: f66c05b8, 62c7b2a, cb8afa3d. Phase 6.2: official figures, work and business, the paper; // 4b.3: a 'Starting wealth by group' row; Phase 6: new histories and a 'Business and job markets' row
+    const REPORT = { 'my-default': '552b2b16', 'my-pandemic-lawless': 'bca4204f', 'my-region': '821ba9a8' }; // C06: new histories (rules revision 4). // C01 (report text only, engine fingerprints unchanged): tie-aware Spearman, n/a values, inheritance wording. Before C01: f66c05b8, 62c7b2a, cb8afa3d. Phase 6.2: official figures, work and business, the paper; // 4b.3: a 'Starting wealth by group' row; Phase 6: new histories and a 'Business and job markets' row
     const D = LES.DEFAULTS, base = { founders: 80, migration: 'normal' };
     const cases = {
       'my-default': () => new LES.World(Object.assign({}, D, base, { seed: 'my-1' })),
@@ -1174,7 +1179,7 @@
       b.managerId = other.id; other.manages = b.id; b.equity = equity;
       return b;
     };
-    check('New worlds settle estates under rules revision 3; Classic and older saves keep the old settlement', D.rulesRev === 3 && LES.PRESETS.classic.values.rulesRev === 1 && LES.upgradeConfig({}).rulesRev === 1);
+    check('New worlds settle estates under rules revision 3 or later; Classic and older saves keep the old settlement', D.rulesRev >= 3 && LES.PRESETS.classic.values.rulesRev === 1 && LES.upgradeConfig({}).rulesRev === 1);
 
     // E-01: RM240k cash, RM40k study debt, 40% of a RM900k firm, 3 children (one away), 20% tax above RM100k.
     const w = await town('est-1', 35);
@@ -1289,6 +1294,40 @@
     check('The calibration table explains measures defined differently from the official ones', /Not working/.test(t) && /Note on/.test(t) && (!Number.isFinite(m.completedFert) || /Completed children per woman/.test(t)));
   }
 
+  // C06: founders' credentials by age group and limited study places (rules revision 4).
+  async function eduPlacesTests() {
+    print('--- Founders\' credentials and study places (C06) ---', 'info');
+    const D = LES.DEFAULTS, L = LES.Labour, Cal = LES.Calibration, P = LES.P, C = LES.C;
+    check('Rules revision 4 for new worlds; Classic and older saves keep revision 1', D.rulesRev >= 4 && LES.PRESETS.classic.values.rulesRev === 1);
+    const uk = new LES.World(Object.assign({}, D, LES.Countries.get('uk').defaults, { country: 'uk', seed: 'c06-uk', founders: 300 }));
+    const ad = uk.living.filter(p => P.age(uk, p) >= 25 && P.age(uk, p) < 65), deg = ad.filter(p => Cal.eduLevel(p) >= 6), non = ad.filter(p => Cal.eduLevel(p) < 6);
+    const avg = xs => xs.reduce((a, p) => a + p.att[C.INT], 0) / Math.max(1, xs.length);
+    check('UK founders follow the age-group table (about half of 25-64s hold a degree)', deg.length / ad.length > 0.35 && deg.length / ad.length < 0.65, `${deg.length}/${ad.length}`);
+    check('Abler founders are more likely to hold a degree (not handed out blindly)', avg(deg) > avg(non) + 0.3, `${avg(deg).toFixed(2)} vs ${avg(non).toFixed(2)}`);
+    const my = new LES.World(Object.assign({}, D, { seed: 'c06-my', founders: 300 }));
+    const myAd = my.living.filter(p => P.age(my, p) >= 25 && P.age(my, p) < 65), myDeg = myAd.filter(p => Cal.eduLevel(p) >= 6).length / myAd.length;
+    check('Malaysian founders: far fewer degrees than in the UK', myDeg > 0.08 && myDeg < 0.32 && myDeg < deg.length / ad.length - 0.15, myDeg.toFixed(2));
+    for (let d = 0; d < 365 * 3; d++) my.step();
+    const st = L.places(my), PL = LES.Countries.pack.education.places, cohort = my.living.filter(q => q.alive && !q.away && P.age(my, q) >= 18 && P.age(my, q) < 25).length / 7;
+    check('Places each year follow the entry rate x the average 18-24 year group', Math.abs(st.cohort - cohort) < 1e-9 && Object.keys(PL).every(k => st.credit[k] <= Math.max(2, 2 * PL[k] * st.cohort) + 1e-9), JSON.stringify(st));
+    const young = my.living.find(q => q.alive && P.age(my, q) >= 18 && P.age(my, q) < 25) || my.living.find(q => q.adult), old = my.living.find(q => q.alive && P.age(my, q) >= 30);
+    const course = LES.C.COURSE_BY_ID.BACH_BUS;
+    st.credit.bach = 1.5;
+    check('Older applicants get a place only when places are spare; school leavers first', !L.takePlace(my, course, old) && L.takePlace(my, course, young) && Math.abs(st.credit.bach - 0.5) < 1e-9 && !L.takePlace(my, course, young));
+    const cand = my.living.find(q => q.alive && q.adult && !q.enrol && P.age(my, q) < 40);
+    st.credit.bach = 0; cand.lastEnrollTry = -99999; cand.att[C.INT] = 10;
+    L.enroll(my, cand, course);
+    check('No place this year: the applicant waits for next year\'s round (no daily retries)', !cand.enrol && cand.lastEnrollTry >= (Math.floor(my.day / 365) + 1) * 365 - 61);
+    const eq = new LES.World(Object.assign({}, D, { seed: 'c06-eq', founders: 40, scenario: 'equal' }));
+    const cl = new LES.World(Object.assign({}, D, LES.PRESETS.classic.values, { seed: 'c06-cl', founders: 40 }));
+    check('Born Equal (an atypical world) and Classic have no study places limit', !L.placesOn(eq) && !L.placesOn(cl) && L.placesOn(my));
+    // Versioning: the previous rules still reproduce the previous Malaysia fingerprint.
+    const textOf = w => LES.hashString(w.people.map(p => `${p.first} ${p.last}|${p.eth}|${p.rel || ''}|${p.job ? p.job.title || p.job.jobId : ''}|` + p.log.map(e => e.text).join('~')).join('#') + w.feed.map(e => e.text).join('~'))[0].toString(16);
+    const r3 = new LES.World(Object.assign({}, D, { founders: 80, migration: 'normal', seed: 'my-1', rulesRev: 3 }));
+    for (let d = 0; d < 4 * 365; d++) { r3.step(); if (d % 1500 === 0) await yieldUI(); }
+    check('Rules revision 3 still reproduces the previous Malaysia fingerprint (84f18b75...)', `${r3.stableHash()}/${textOf(r3)}` === '84f18b75b2c06289c6a601c0829afc1f/3da2af2a', `${r3.stableHash()}/${textOf(r3)}`);
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -1316,6 +1355,7 @@
       await catCapTests();
       await estateTests();
       await statsDefTests();
+      await eduPlacesTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -1327,6 +1367,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, tileTests };
+  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

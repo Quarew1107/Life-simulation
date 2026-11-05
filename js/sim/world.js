@@ -142,13 +142,17 @@
       p.health = U.clamp(R.normal(85, 8), 50, 100);
 
       const intel = p.att[C.INT];
-      const pDeg = U.clamp(0.1 + 0.08 * (intel - 5) + (age >= 22 ? 0.1 : 0), 0.02, 0.7);
+      // Rules revision 4 (C06): the country's credentials by age group (pack education.founders: [below age, degree
+      // share, vocational share]), more likely for abler people; otherwise the original generic chance.
+      const FD = cfg.rulesRev >= 4 && (LES.Countries.pack.education || {}).founders, band = FD ? (FD.find(b => age < b[0]) || FD[FD.length - 1]) : null;
+      const pDeg = band ? U.clamp(band[1] * Math.exp(0.45 * (intel - 5)) / 1.35, 0, 0.95) : U.clamp(0.1 + 0.08 * (intel - 5) + (age >= 22 ? 0.1 : 0), 0.02, 0.7);
+      const pVoc = band ? band[2] : 0.3;
       const r = R.next();
       if (age >= 22 && r < pDeg) {
         const q = intel >= 7 && R.next() < 0.15 ? 'MED' : ['BACH_GEN', 'BACH_BUS', 'BACH_ENG'][R.weighted([0.35, 0.35, intel >= 5.5 ? 0.3 : 0.08])];
         p.quals.push(q);
         if (age >= 25 && R.next() < 0.15) p.quals.push('MASTER');
-      } else if (r < pDeg + 0.3) {
+      } else if (r < pDeg + pVoc) {
         p.quals.push('VOC');
       }
 

@@ -412,7 +412,9 @@
     },
     // Federal student loans: borrowed when a student cannot pay, a 10-year plan at ~6.4%, not cleared by
     // bankruptcy; Pell grants up to $7,395 a year for low-income students.
-    education: { vocIsced: 5, loans: { model: 'fixed', years: 10, interest: 0.064 }, pell: { max: 7395, incomeLimit: 60000 } }, // vocIsced: an associate degree is ISCED 5 (C02)
+    // C06 (approximate, from Census ACS 2023 attainment by age and NCES entry rates; not official targets):
+    // founders' bachelor's-or-higher and associate-degree shares by age group; yearly entry places per age cohort.
+    education: { founders: [[25, 0.2, 0.05], [35, 0.4, 0.1], [45, 0.4, 0.11], [55, 0.35, 0.11], [65, 0.33, 0.1], [200, 0.3, 0.08]], places: { bach: 0.45, master: 0.1, voc: 0.25 }, admitBar: 0, vocIsced: 5, loans: { model: 'fixed', years: 10, interest: 0.064 }, pell: { max: 7395, incomeLimit: 60000 } }, // vocIsced: an associate degree is ISCED 5 (C02)
     settings: {
       preset: { options: { national: "Today's rules (calibrated to US data)" }, help: "Fills the settings below. US: ~1.6 children per woman, ~79-year life expectancy, Ohio's state rules." },
       founders: { help: 'Strangers who found the town. The map size follows (100 = a small village).' },
