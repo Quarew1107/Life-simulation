@@ -140,6 +140,28 @@
     } catch (e) { console.error(e); showError(`Could not load ${file.name}: ${e.message}`); return false; }
   };
 
+  // Sandbox Fate (C09b): explain who is affected, offer to save a copy first, then queue the command.
+  app.askFate = function (id) {
+    const w = app.world, p = w.people[id], card = $('modal-card');
+    if (!p || !p.alive) return;
+    const r = LES.God.resolve(w, id), im = r.p ? LES.God.impact(r.w, r.p) : null, esc = U.esc;
+    card.onclick = null; card.classList.remove('wide');
+    card.innerHTML = `<h1>Fate: ${esc(P.name(p))}</h1>
+      ${r.error ? `<p class="lead">${esc(r.error)}</p>` : `<p class="note">${esc(P.name(r.p))}, aged ${Math.floor(P.age(r.w, r.p))}, lives in ${esc(LES.townName(r.w))}${im.partner ? `, partner of ${esc(P.name(im.partner))}` : ''}${im.stakes ? `, with shares in ${im.stakes} business${im.stakes > 1 ? 'es' : ''}` : ''}.</p>
+      <p class="lead">This ends ${esc(P.name(p))}'s life at the start of the next simulated day, through the normal course of a death: the family grieves, ${im.kids ? `${im.kids} child${im.kids > 1 ? 'ren' : ''} in their care ${im.soleCarer ? `(${im.soleCarer} with no other carer) will need a guardian` : im.kids > 1 ? 'stay with the other carer' : 'stays with the other carer'}` : 'no children depend on them'}, ${im.heirs ? `the estate goes to ${im.heirs === 1 ? 'their child' : `their ${im.heirs} children`}` : 'with no living children the estate leaves the town'}${im.runs ? `, ${esc(im.runs)} needs a new manager` : ''}${im.job ? `, and the job as ${esc(im.job)} falls vacant` : ''}.</p>
+      <p class="note">${LES.God.intervened(w) ? 'This world is already a sandbox world.' : 'From then on this world is marked <b>Sandbox / intervened</b>: its report and statistics say so, and Fate deaths are left out of life expectancy. Save a copy first if you want to keep the unchanged world.'}</p>`}
+      <div class="modal-actions">${r.error ? '' : '<button class="ghost" id="fate-save">Save a copy first</button>'}<span class="spacer"></span><button class="ghost" id="fate-cancel">Cancel</button>${r.error ? '' : '<button class="primary" id="fate-go">Confirm Fate</button>'}</div>`;
+    $('modal').classList.remove('hidden');
+    $('fate-cancel').onclick = () => $('modal').classList.add('hidden');
+    if (r.error) return;
+    $('fate-save').onclick = () => app.saveWorld();
+    $('fate-go').onclick = () => {
+      const out = LES.God.requestFate(w, id);
+      $('modal').classList.add('hidden');
+      if (out.error) showError(out.error); else UI.toast(`Fate will reach ${esc(P.name(p))} at the start of the next day${app.paused ? ' (time is paused: press +1 day or play)' : ''}.`);
+    };
+  };
+
   app.renameTown = function () {
     const w = app.world, card = $('modal-card');
     if (!w) return;
@@ -201,6 +223,7 @@
     if (name === 'bookmark' && sel >= 0) LES.Spectator.toggleBookmark(app.world, sel, false);
     if (name === 'bookmarkFamily' && sel >= 0) LES.Spectator.toggleBookmark(app.world, sel, true);
     if (name === 'celebrate' && sel >= 0) LES.Spectator.celebrate(sel);
+    if (name === 'fate' && sel >= 0) { app.askFate(sel); return; }
     UI.update(true);
   };
 

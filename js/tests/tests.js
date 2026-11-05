@@ -1380,6 +1380,54 @@
     check('Bookmark family marks the person with partner, parents and children; a second click removes it', SP.familyOf(b, p).every(id => fam.has(id)) && !SP.toggleBookmark(b, p.id, true) && !SP.mark(p.id));
   }
 
+  // C09b: Sandbox Fate through the normal death path, exactly once.
+  async function fateTests() {
+    print('--- Sandbox Fate (C09b) ---', 'info');
+    const G = LES.God, D = LES.DEFAULTS, P = LES.P;
+    const w = new LES.World(Object.assign({}, D, { seed: 'c09b', founders: 150 }));
+    for (let d = 0; d < 365 * 25; d++) { w.step(); if (d % 1500 === 0) await yieldUI(); }
+    check('A world nobody touched is not a sandbox world', !G.intervened(w) && !w.intervention);
+    const boss = w.living.find(p => p.alive && p.adult && p.manages >= 0 && p.children.some(id => w.people[id].alive)) || w.living.find(p => p.alive && p.adult && p.children.some(id => w.people[id].alive));
+    const b = boss.manages >= 0 ? w.biz[boss.manages] : null, deaths0 = w.stats.deaths;
+    const kids0 = boss.children.slice(), parents0 = (boss.parents || []).slice(), heirs0 = boss.children.filter(id => w.people[id].alive).sort((x, y) => x - y);
+    const q = G.requestFate(w, boss.id);
+    check('A request is queued, not carried out mid-step; a second request for the same person is refused', q.command && q.command.status === 'pending' && boss.alive && !!G.requestFate(w, boss.id).error);
+    w.step();
+    const est = w.estates.filter(e => e.decedent === boss.id);
+    check('Fate is carried out once at the start of the next day, through the normal death path', !boss.alive && boss.causeOfDeath === 'Fate (sandbox intervention)' && w.stats.deaths >= deaths0 + 1 && est.length === 1 && q.command.status === 'applied' && G.intervened(w));
+    check('The estate goes to every living child (one record, all heirs); the record and family links stay', est.length === 1 && est[0].heirs.join() === heirs0.join() && w.people[boss.id] === boss && boss.children.join() === kids0.join() && (boss.parents || []).join() === parents0.join() && kids0.every(id => w.people[id].parents.includes(boss.id)) && !boss.job && boss.manages < 0 && !Object.keys(boss.shares).length, `heirs ${est[0] && est[0].heirs.length} of ${heirs0.length}`);
+    check('Fate on someone already dead is refused', !!G.requestFate(w, boss.id).error && !!G.resolve(w, boss.id).error);
+    check('The business has a new owner or was sold; shares, ownership and books in order', (!b || !b.open || Object.keys(b.shares).every(k => w.people[Number(k)].alive)) && w.checkInvariants().length === 0, w.checkInvariants().slice(0, 3).join('; '));
+    // A sole carer: the children get a guardian.
+    const carer = w.living.find(p => p.alive && p.adult && p.careOf.some(id => { const c = w.people[id]; return c.alive && !c.adult && c.caregivers.length === 1; }));
+    if (carer) {
+      const kids = carer.careOf.map(id => w.people[id]).filter(c => c.alive && !c.adult);
+      G.requestFate(w, carer.id); w.step();
+      check("A sole carer's children are not deleted: they get a guardian or the welfare home", kids.every(c => c.alive && (c.caregivers.length > 0 || c.guardian === 'WELFARE')) && w.checkInvariants().length === 0);
+    } else check('Test needs a sole carer', false);
+    // Someone who dies before the command runs: skipped.
+    const v = w.living.find(p => p.alive && p.adult && !p.inst);
+    const c2 = G.requestFate(w, v.id).command; w.die(v, 'natural (test)'); w.step();
+    check('Someone who died before Fate arrived is skipped, not killed twice', c2.status === 'skipped' && v.causeOfDeath === 'natural (test)');
+    // Save while a command waits: it runs exactly once after loading too.
+    const t = w.living.find(p => p.alive && p.adult && !p.inst);
+    G.requestFate(w, t.id);
+    const w2 = LES.Save.fromJSON(LES.Save.toJSON(w));
+    for (let d = 0; d < 30; d++) { w.step(); w2.step(); }
+    check('A save taken with Fate waiting carries it out exactly once after loading', !w2.people[t.id].alive && w2.intervention.events.filter(e => e.target === t.id && e.status === 'applied').length === 1 && w2.stableHash() === w.stableHash());
+    const m = LES.Calibration.measure(w);
+    check('Statistics and the report say this is a sandbox world; Fate deaths stay out of life expectancy', m.intervened && (!LES.Report || /Sandbox world/.test(LES.Report.html(w))) && w.people.filter(p => p.fate).length === 3);
+    // A person living in a sister town is acted on there.
+    const R = new LES.Region(Object.assign({}, D, { seed: 'est-r', migration: 'normal', towns: '2' }), [{ founders: 90 }, { founders: 60, seed: 'est-r2' }]);
+    let away = null;
+    for (let d = 0; d < 365 * 40 && !away; d++) { R.step(); if (d % 365 === 0) { await yieldUI(); away = R.towns[0].people.find(p => p.alive && p.away && p.away.town === 1 && R.towns[1].people[p.away.id] && R.towns[1].people[p.away.id].alive) || null; } }
+    if (away) {
+      const there = R.towns[1].people[away.away.id], out = G.requestFate(R.towns[0], away.id);
+      for (let k = 0; k < 40; k++) R.step();
+      check('Someone living in the sister town is reached there (no ghost left at home); both towns stay in order', out.w === R.towns[1] && !there.alive && !away.alive && R.towns[0].checkInvariants().length === 0 && R.towns[1].checkInvariants().length === 0, R.towns[0].checkInvariants().concat(R.towns[1].checkInvariants()).slice(0, 3).join('; '));
+    } else check('Test needs someone who moved to the sister town', false);
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -1410,6 +1458,7 @@
       await eduPlacesTests();
       await townNameTests();
       await spectatorTests();
+      await fateTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -1421,6 +1470,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, tileTests };
+  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);
