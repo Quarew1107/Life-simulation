@@ -419,7 +419,7 @@
       inflMin: { help: 'US CPI: 2015 averaged 0.1%.' },
       inflMax: { help: 'US CPI: the 2010s ranged 0.1-3.2%; 2022 averaged 8.0%.' },
       fertility: { options: { national: 'US today (~1.6 children per woman)' } },
-      mortMult: { help: '1 = original engine (~80-year lives), 1.2 = US (79 years). 0 = nobody dies of old age.' },
+      mortMult: { help: '1 = original engine (~80-year lives), 1.05 = US (79 years). 0 = nobody dies of old age.' },
       society: { options: { on: 'On (income class, religion, festivals)' } },
       ethnicMix: { options: { national: 'US 2024 (White, Hispanic, Black, Asian, other)' } },
       interfaith: { options: { national: 'Free choice (US law)' } },
@@ -480,8 +480,10 @@
     },
     gangNames: { pattern: '{a} {b}', a: ['Northside', 'Eastside', 'West End', 'Southside', 'Riverside', 'Hilltop', 'Iron', 'Red'], b: ['Crew', 'Kings', 'Boys', 'Mob', 'Syndicate', 'Posse'] },
     // TFR ~1.6 (CDC 2024); life expectancy ~79 (CDC 2024).
-    demography: { fertMult: 0.6, mortMult: 1.2 }, // 80-year runs: TFR 1.10 at 0.42 (US child costs are high) and life expectancy 77.1 at 1.3
-    defaults: { goalRM: 200000000, marketOutsideRM: 350000000, mortMult: 1.2, leaderTitle: 'mayor', termYears: 4, inflMin: 0, inflMax: 6 },
+    // Share of job openings that go to someone from outside town (Phase 6: sets unemployment).
+    labour: { outsideHire: 0.45, paySd: 0.55, market: 1.6 }, // market: US firms reach bigger markets (more large firms, more top incomes) // US pay is more spread out (BLS: P90/P10 ~5 against ~3.5 in the UK)
+    demography: { fertMult: 0.75, mortMult: 1.05 }, // Phase 6 markets: TFR 1.28 at 0.6, life expectancy 77.4 at 1.2; // 80-year runs: TFR 1.10 at 0.42 (US child costs are high) and life expectancy 77.1 at 1.3
+    defaults: { goalRM: 200000000, marketOutsideRM: 350000000, mortMult: 1.05, leaderTitle: 'mayor', termYears: 4, inflMin: 0, inflMax: 6 },
     // Crime per 100k a year for the offences the engine models (FBI 2025): burglary ~160, vehicle theft ~147,
     // robbery ~50, aggravated assault ~210, murder 4.1, theft from the person ~15. Prisons and jails ~1.85m
     // (~540 per 100k). Problem drug users (opioids, stimulants) ~900 per 100k (approximate).
@@ -490,7 +492,7 @@
     // more chances to offend than Malaysia, police solve about half as often, few community sentences and
     // long ones (plea deals, mandatory minimums), prison from the second possession arrest, and guns make
     // fights and robberies four times as deadly.
-    crimeTuning: { opportunity: 1.75, clear: 0.5, community: 0.15, drugRepeat: 1, sentence: 2, lethal: 4 },
+    crimeTuning: { opportunity: 1.75, clear: 0.5, community: 0.15, drugRepeat: 1, sentence: 1.2, lethal: 4, drugUse: 1.6 }, // (Phase 6: 805 prisoners and 426 users at sentence 2, drugUse 1)
     events: {
       flood: { doy: 95, chance: 0.2, relief: 750, name: 'Spring floods' },
       haze: { doy: 200, chance: 0.3, days: 10, name: 'Heat wave', text: 'Heat wave: the hot weeks are hard on the old and the very young' },

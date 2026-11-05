@@ -98,7 +98,7 @@
     const si = TX.ni && TX.ni.coverage ? LES.China.covered(w, p, job) : true; // China: many private jobs pay no social insurance
     if (TX.ni && TX.ni.coverage) { job.si = si; if (si) LES.China.contribute(w, p, gross); }
     if (TX.ni && si) { // payroll tax on pay between thresholds (UK National Insurance, US FICA, China social insurance), and the employer's share
-      const a = Math.max(gross / 100 / w.price * 12, TX.ni.floor || 0), E = TX.ni.employee, R = TX.ni.employer; // (China: on at least 60% of the average wage)
+      const a = Math.max(gross / 100 / w.price * 12 * (TX.ni.compliance || 1), TX.ni.floor || 0), E = TX.ni.employee, R = TX.ni.employer; // (China: pay declared below the real wage) // (China: on at least 60% of the average wage)
       ni = FS.collect(w, p, 'cash', Math.round(U.RM((Math.max(0, Math.min(a, E.to) - E.from) * E.rate + Math.max(0, a - E.to) * E.above) / 12) * w.price), TX.ni.name || 'National Insurance');
       erNi = Math.round(U.RM(Math.max(0, Math.min(a, R.to || Infinity) - R.from) * R.rate / 12) * w.price);
       if (b && b.cash >= erNi) FS.collect(w, b, 'cash', erNi, TX.ni.employerName || 'National Insurance (employers)');

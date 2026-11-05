@@ -127,13 +127,13 @@
 
   // ---- Businesses (monthly numbers in RM). Fat-tailed: most stay small or fail, a few boom. ----
   C.BIZ = [
-    { id: 'stall', costRatio: 0.88, sigma: 0.12, boom: 0.0003, boomMin: 1.5, boomMax: 2.5, bust: 0.003, capEff: 0.12, skillSpread: 0.16, cyclical: 0.5, multiple: 1.5, w: w(.1, .1, .3, .3, .1, .1), place: 'hawker' },
-    { id: 'workshop', costRatio: 0.88, sigma: 0.12, boom: 0.0004, boomMin: 1.5, boomMax: 3, bust: 0.003, capEff: 0.1, skillSpread: 0.18, cyclical: 0.8, multiple: 2.5, w: w(.3, .2, .3, .1, .1, 0), place: 'shoplot', req: 'VOC' },
-    { id: 'retail', costRatio: 0.9, sigma: 0.15, boom: 0.0004, boomMin: 1.5, boomMax: 3, bust: 0.004, capEff: 0.1, skillSpread: 0.18, cyclical: 1, multiple: 3, w: w(.3, 0, .3, .4, 0, 0), place: 'shoplot' },
-    { id: 'restaurant', costRatio: 0.9, sigma: 0.18, boom: 0.0006, boomMin: 2, boomMax: 4, bust: 0.004, capEff: 0.09, skillSpread: 0.2, cyclical: 1, multiple: 4, w: w(.2, 0, .4, .4, 0, 0), place: 'shoplot' },
-    { id: 'trading', costRatio: 0.93, sigma: 0.22, boom: 0.0011, boomMin: 2, boomMax: 4, bust: 0.005, capEff: 0.08, skillSpread: 0.22, cyclical: 1.3, multiple: 5, w: w(.4, 0, .2, .4, 0, 0), place: 'office' },
-    { id: 'tech', costRatio: 0.92, sigma: 0.35, boom: 0.0026, boomMin: 3, boomMax: 8, bust: 0.012, capEff: 0.12, skillSpread: 0.35, cyclical: 1.2, multiple: 8, w: w(.7, 0, .2, .1, 0, 0), place: 'techhub' },
-    { id: 'property', costRatio: 0.88, sigma: 0.3, boom: 0.0011, boomMin: 2, boomMax: 3.5, bust: 0.005, capEff: 0.07, skillSpread: 0.22, cyclical: 2.5, multiple: 5, w: w(.3, 0, .2, .5, 0, 0), place: 'office' },
+    { id: 'stall', market: [20, 0], costRatio: 0.88, sigma: 0.12, boom: 0.0003, boomMin: 1.5, boomMax: 2.5, bust: 0.003, capEff: 0.12, skillSpread: 0.16, cyclical: 0.5, multiple: 1.5, w: w(.1, .1, .3, .3, .1, .1), place: 'hawker' },
+    { id: 'workshop', market: [5, 0], costRatio: 0.88, sigma: 0.12, boom: 0.0004, boomMin: 1.5, boomMax: 3, bust: 0.003, capEff: 0.1, skillSpread: 0.18, cyclical: 0.8, multiple: 2.5, w: w(.3, .2, .3, .1, .1, 0), place: 'shoplot', req: 'VOC' },
+    { id: 'retail', market: [10, 0], costRatio: 0.9, sigma: 0.15, boom: 0.0004, boomMin: 1.5, boomMax: 3, bust: 0.004, capEff: 0.1, skillSpread: 0.18, cyclical: 1, multiple: 3, w: w(.3, 0, .3, .4, 0, 0), place: 'shoplot' },
+    { id: 'restaurant', market: [5, 0], costRatio: 0.9, sigma: 0.18, boom: 0.0006, boomMin: 2, boomMax: 4, bust: 0.004, capEff: 0.09, skillSpread: 0.2, cyclical: 1, multiple: 4, w: w(.2, 0, .4, .4, 0, 0), place: 'shoplot' },
+    { id: 'trading', market: [3, 3], costRatio: 0.93, sigma: 0.22, boom: 0.0011, boomMin: 2, boomMax: 4, bust: 0.005, capEff: 0.08, skillSpread: 0.22, cyclical: 1.3, multiple: 5, w: w(.4, 0, .2, .4, 0, 0), place: 'office' },
+    { id: 'tech', market: [2, 15], costRatio: 0.92, sigma: 0.35, boom: 0.0026, boomMin: 3, boomMax: 8, bust: 0.012, capEff: 0.12, skillSpread: 0.35, cyclical: 1.2, multiple: 8, w: w(.7, 0, .2, .1, 0, 0), place: 'techhub' },
+    { id: 'property', market: [2, 1], costRatio: 0.88, sigma: 0.3, boom: 0.0011, boomMin: 2, boomMax: 3.5, bust: 0.005, capEff: 0.07, skillSpread: 0.22, cyclical: 2.5, multiple: 5, w: w(.3, 0, .2, .5, 0, 0), place: 'office' },
   ];
   // Private health and education (only with the government system, which pays for the
   // public ones). Owners pay their own staff (staff = posts at the starting size);

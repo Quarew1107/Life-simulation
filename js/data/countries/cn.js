@@ -317,7 +317,7 @@
       retirementRelief: { rate: 0.175, cap: 47250 }, // social insurance + provident fund, up to 300% of the average wage
       childRelief: 24000,
       rebate: { amount: 0, upTo: 0 },
-      ni: { name: 'social insurance', employerName: 'social insurance (employers)', floor: 54000, employee: { from: 0, to: 270000, rate: 0.105, above: 0 }, employer: { from: 0, to: 270000, rate: 0.25 }, coverage: true },
+      ni: { name: 'social insurance', employerName: 'social insurance (employers)', floor: 54000, employee: { from: 0, to: 270000, rate: 0.105, above: 0 }, employer: { from: 0, to: 270000, rate: 0.25 }, coverage: true, compliance: 0.7 }, // many employers declare less than the full wage
       companyBands: [[3000000, 0.05], [Infinity, 0.25]],
       companyRefRate: 0.25,
       largeCompanyRevenue: Infinity,
@@ -329,7 +329,7 @@
       salesTaxRaise: 'vat15',
       priceBase: { salesTax: 'vat13', fuel: 'none' },
       assessment: 0.03, assessmentName: 'property and land-use tax',
-      employerCorp: 0.06,
+      employerCorp: 0.04,
       eis: 0,
       // Beijing takes a share of VAT and company and income tax, but central-China provinces get more back
       // in transfers than they send, so the city keeps its taxes here.
@@ -344,7 +344,7 @@
     // Housing Provident Fund: 7% from the worker and 7% from the employer (5-12% allowed); about 45% of
     // workers have an account (formal jobs); paid out at retirement (or for a home).
     retirement: { employee: 0.07, employer: 0.07, participation: 0.45, accessAge: 60, dividend: { growth: 0.015, normal: 0.015, recession: 0.015 } },
-    fund: { payout: 0.04 },
+    fund: { payout: 0.02 }, // local state firms pay out little
     gov: {
       appointed: { reviewYears: 5, maxTerms: 2 },
       laws: [
@@ -430,7 +430,7 @@
       names: { urban: 'Local urban hukou', rural: 'Local rural hukou', outside: 'Hukou elsewhere (migrant)' },
       short: { urban: 'Urban', rural: 'Rural', outside: 'Migrant' },
       // Social insurance coverage of jobs (NBS migrant worker survey: ~30% of migrants have employee pension cover).
-      coverage: { urban: 0.85, rural: 0.6, outside: 0.4 },
+      coverage: { urban: 0.65, rural: 0.4, outside: 0.3 }, // (MOHRSS: ~380m pay into the employees' pension of ~740m employed)
       convert: { siYears: 5, homeTier: 3, willing: 0.5 }, // about half of rural migrants keep their village hukou (land rights)
       // Starting wealth: NBS 2024 urban/rural income ratio 2.34; migrants in between. The average is unchanged.
       startWealth: { urban: 1, rural: 0.43, outside: 0.6 },
@@ -518,7 +518,9 @@
     },
     gangNames: { pattern: 'The {a} {b}', a: ['Black', 'Red', 'Iron', 'Jade', 'Golden', 'River', 'East', 'Night'], b: ['Dragons', 'Tigers', 'Snakes', 'Brothers', 'Gang', 'Hall'] },
     // TFR ~1.0 (UN WPP 2024, 2023); life expectancy 79.0 (NBS 2024).
-    demography: { fertMult: 0.34, mortMult: 1 }, // 80-year runs: TFR 0.88 at 0.3 and life expectancy 76.9 at 1.15
+    // Share of job openings that go to someone from outside town (Phase 6: sets unemployment).
+    labour: { outsideHire: 0.5, paySd: 0.55, market: 1.3 },
+    demography: { fertMult: 0.47, mortMult: 1 }, // Phase 6 markets: TFR 0.73 at 0.34; // 80-year runs: TFR 0.88 at 0.3 and life expectancy 76.9 at 1.15
     defaults: { goalRM: 200000000, marketOutsideRM: 460000000, mortMult: 1, leaderTitle: 'president', termYears: 5, inflMin: -1, inflMax: 4 },
     // Crime per 100k a year for the offences the engine models (approximate: the MPS reports ~3.1m criminal
     // cases filed in 2024, ~220 per 100k, after a 25.7% fall; thefts, robbery and violence are about two
@@ -527,7 +529,7 @@
     // Tuned (3 seeds x 40 years at the Realistic scale: index ~250, 56% solved, ~177 prisoners, ~72 users per 100k):
     // police solve more than in Malaysia, short sentences and many suspended ones, compulsory rehab before
     // prison, few guns, and far less drug use.
-    crimeTuning: { opportunity: 1.15, clear: 0.7, community: 0.55, drugRepeat: 2, sentence: 0.3, lethal: 0.5, drugUse: 0.15 },
+    crimeTuning: { opportunity: 0.5, clear: 0.7, community: 0.55, drugRepeat: 2, sentence: 0.15, lethal: 0.5, drugUse: 0.1 }, // (Phase 6: index 243, 214 prisoners, 187 users at 1.15 / 0.3 / 0.15)
     events: {
       flood: { doy: 180, chance: 0.3, relief: 2000, name: 'Summer floods' },
       haze: { doy: 340, chance: 0.4, days: 14, name: 'Smog', text: 'Winter smog: the air is unhealthy for two weeks' },

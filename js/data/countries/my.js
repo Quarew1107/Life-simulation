@@ -928,6 +928,8 @@
     // Gang names: Geng + animal + colour/element.
     gangNames: { pattern: 'Geng {a} {b}', a: ['Naga', 'Harimau', 'Helang', 'Kala', 'Ular', 'Serigala', 'Buaya', 'Tebuan'], b: ['Hitam', 'Merah', 'Besi', 'Api', 'Malam', 'Emas'] },
     // Births and deaths: the 'national' birth-rate multiplier (TFR ~1.6) and the old-age mortality multiplier (life expectancy ~75).
+    // Share of job openings that go to someone from outside town (Phase 6: sets unemployment).
+    labour: { outsideHire: 0.3 },
     demography: { fertMult: 0.42, mortMult: 1.9 },
     // Settings a new world starts from in this country (applied when the country is picked in setup).
     defaults: { goalRM: 100000000, marketOutsideRM: 200000000, mortMult: 1.9, leaderTitle: 'president', termYears: 5, inflMin: -0.5, inflMax: 4.5 },
