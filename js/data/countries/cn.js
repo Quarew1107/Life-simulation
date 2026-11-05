@@ -438,6 +438,7 @@
     // Nine free school years; the zhongkao sends ~55% to academic high schools, the rest to vocational
     // schools; university places go by gaokao score in the province of the hukou.
     education: {
+      vocIsced: 5, // a higher vocational diploma (dazhuan) is ISCED 5 (C02)
       gaokao: { academic: 0.55, bar: 1, vocationalBar: 2.5, awayBar: 0.5, zhongkaoAge: 15 },
     },
     settings: {

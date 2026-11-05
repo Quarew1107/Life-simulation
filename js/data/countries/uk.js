@@ -522,7 +522,7 @@
     },
     // Plan 5 student loans: every fee is borrowed; 9% of pay above GBP25,000 a year; interest ~RPI;
     // written off after 40 years.
-    education: { loans: { rate: 0.09, threshold: 25000, years: 40, interest: 0.03 } },
+    education: { vocIsced: 4, loans: { rate: 0.09, threshold: 25000, years: 40, interest: 0.03 } }, // vocIsced: a Level 3 Diploma is ISCED 3-4 (C02)
     settings: {
       preset: { options: { national: "Today's rules (calibrated to ONS data)" }, help: 'Fills the settings below. UK: welfare on, ~1.4 children per woman, ~81-year life expectancy.' },
       founders: { help: 'Strangers who found the town. The map size follows (100 = a small village).' },

@@ -319,7 +319,7 @@ ${g.officials ? `<div class="card"><b>City council at the end</b><table>${LES.Co
     const Cal = LES.Calibration, m = Cal.measure(w), rows = Object.keys(Cal.TARGETS).filter(k => Number.isFinite(m[k]));
     if (!rows.length) return '';
     if (w.day < 3650) return `<section><h2>Against official figures (${esc(LES.Countries.pack.name)})</h2><p class="note">Shown from year 10: births, lifespans and crime need a few years to settle.</p></section>`;
-    return `<section><h2>Against official figures (${esc(LES.Countries.pack.name)})</h2><table><tr><th>Measure</th><th>This town</th><th>Official</th><th></th></tr>${rows.map(k => { const t = Cal.TARGETS[k], st = Cal.status(k, m[k]); return `<tr><td>${esc(t.label)}</td><td>${t.fmt(m[k])}</td><td>${t.fmt(t.target)}</td><td>${st === 'ok' ? 'close' : st === 'warn' ? 'a little off' : 'far off'}</td></tr>`; }).join('')}</table>
+    return `<section><h2>Against official figures (${esc(LES.Countries.pack.name)})</h2><table><tr><th>Measure</th><th>This town</th><th>Official</th><th></th><th>Source</th></tr>${rows.map(k => { const t = Cal.TARGETS[k], st = Cal.status(k, m[k]); return `<tr><td>${esc(t.label)}</td><td>${t.fmt(m[k])}${k === 'tertiary' ? ` <span class="note">(${m.tertiaryHits} of ${m.tertiaryN})</span>` : ''}</td><td>${t.fmt(t.target)}</td><td>${st === 'ok' ? 'close' : st === 'warn' ? 'a little off' : 'far off'}</td><td class="note">${esc(t.src || '')}</td></tr>`; }).join('')}</table>
 <p class="note">Measured the way the statistics offices do where the engine allows (crime and prisoners on the Realistic scale). A small town is noisy: compare several seeds before reading much into one.</p></section>`;
   }
   function workSection(w) {

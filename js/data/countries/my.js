@@ -942,8 +942,10 @@
       haze: { doy: 190, chance: 0.3, days: 25, name: 'Haze', text: 'Haze from regional fires: the air is unhealthy for weeks' },
     },
     // Calibration targets (js/sim/calibration.js): target, warning band, source.
+    // ISCED level of the 'VOC' credential (C02): the Vocational Certificate (SKM) is upper/post-secondary, not tertiary.
+    education: { vocIsced: 4 },
     calibration: {
-      tertiary: { target: 0.29, band: 0.08, src: 'DOSM Labour Force Survey 2023: ~29% of the labour force with a diploma or degree' },
+      tertiary: { target: 0.29, band: 0.08, src: 'DOSM Labour Force Survey 2023: ~29% of the labour force (15-64) with tertiary education (diploma or degree); the sim measures adults 25-64 and has no diploma credential, so it counts degrees only' },
       tfr: { target: 1.6, band: 0.35, src: 'DOSM Vital Statistics 2025 (TFR 2024 = 1.6; 2025 = 1.5)' },
       e0: { target: 75.3, band: 3, src: 'DOSM Abridged Life Tables 2023-2025' },
       unemp: { target: 0.03, band: 0.015, src: 'DOSM Labour Force Survey, Aug 2026 (2.9%)' },

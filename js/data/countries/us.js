@@ -412,7 +412,7 @@
     },
     // Federal student loans: borrowed when a student cannot pay, a 10-year plan at ~6.4%, not cleared by
     // bankruptcy; Pell grants up to $7,395 a year for low-income students.
-    education: { loans: { model: 'fixed', years: 10, interest: 0.064 }, pell: { max: 7395, incomeLimit: 60000 } },
+    education: { vocIsced: 5, loans: { model: 'fixed', years: 10, interest: 0.064 }, pell: { max: 7395, incomeLimit: 60000 } }, // vocIsced: an associate degree is ISCED 5 (C02)
     settings: {
       preset: { options: { national: "Today's rules (calibrated to US data)" }, help: "Fills the settings below. US: ~1.6 children per woman, ~79-year life expectancy, Ohio's state rules." },
       founders: { help: 'Strangers who found the town. The map size follows (100 = a small village).' },
