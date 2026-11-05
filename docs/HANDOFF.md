@@ -37,6 +37,13 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
   gifts as a share of tracked lifetime receipts (inherited business stakes are not counted)"; the award is
   "Richest with little recorded inheritance". Report-text fingerprints re-recorded (old values kept in the test
   comment); engine fingerprints unchanged. `reportStatsTests` (8 checks); 237/237 pass. Next: C02.
+- C02 DONE: `LES.Calibration.eduLevel(p)` = highest credential as ISCED (none 0, VOC = pack `education.vocIsced`:
+  Malaysia SKM certificate 4, UK Level 3 Diploma 4, US associate degree 5, China dazhuan 5; bachelor's 6, MED and
+  master's 7); the `tertiary` measure counts adults 25-64 once at level 5+, with `tertiaryHits/tertiaryN` and
+  NaN below `Cal.MIN_EDU_N` (20). Report's official-figures table shows the source of every target and n of N
+  for tertiary. Malaysia's target source now says it is the labour force with diplomas, which the sim lacks.
+  No behaviour change (fingerprints identical). `eduLevelTests` (5); 242/242 pass. Not re-measured over 80 years
+  (no tuning in this card): the old 74%/64%/72%/56% figures counted vocational-only people too. Next: C03.
 All work is committed and pushed. Latest (Nov 2026): countries stop at Malaysia, the UK (4.5), the United States
 (4.6) and China (4.7): the owner skipped UAE, Mexico and South Africa. Phase 6 (section 4.8) step 6.1, the shared
 calibration fixes, is done; next is 6.2 (report sections, the town newspaper, compare-with-normal runs), then 6.3. The full suite runs in

@@ -1109,6 +1109,30 @@
     check('The report no longer calls anyone self-made; it says what inheritance measures', !/self-made/i.test(html) && /recorded cash inheritance and gifts/i.test(html) && /not proof of cause|not causes/i.test(html));
   }
 
+  // C02: one highest-credential classification for the tertiary measure.
+  async function eduLevelTests() {
+    print('--- Education levels (C02) ---', 'info');
+    const Cal = LES.Calibration, KC = LES.Countries, q = quals => ({ quals });
+    KC.ensure(LES.DEFAULTS);
+    check('Malaysia: a vocational certificate alone is not tertiary (ISCED 4)', Cal.eduLevel(q(['VOC'])) === 4 && Cal.eduLevel(q([])) === 0);
+    check("A bachelor's is 6; medicine and master's are 7; several credentials count once at the highest", Cal.eduLevel(q(['BACH_GEN'])) === 6 && Cal.eduLevel(q(['MED'])) === 7 && Cal.eduLevel(q(['VOC', 'BACH_BUS', 'MASTER'])) === 7);
+    KC.ensure(Object.assign({}, LES.DEFAULTS, { country: 'us' }));
+    const us = Cal.eduLevel(q(['VOC']));
+    KC.ensure(Object.assign({}, LES.DEFAULTS, { country: 'uk' }));
+    const uk = Cal.eduLevel(q(['VOC']));
+    KC.ensure(Object.assign({}, LES.DEFAULTS, { country: 'cn' }));
+    const cn = Cal.eduLevel(q(['VOC']));
+    KC.ensure(LES.DEFAULTS);
+    check('The vocational credential follows each country: US associate degree 5, UK Level 3 Diploma 4, China dazhuan 5', us === 5 && uk === 4 && cn === 5, `${us} ${uk} ${cn}`);
+    const w = new LES.World(Object.assign({}, LES.DEFAULTS, { seed: 'c02', founders: 80 }));
+    for (let d = 0; d < 365; d++) w.step();
+    const m = Cal.measure(w), prime = w.living.filter(p => p.alive && !p.away && LES.P.age(w, p) >= 25 && LES.P.age(w, p) < 65);
+    const voc = prime.filter(p => p.quals.length && Cal.eduLevel(p) < 5).length;
+    check('The share counts each adult 25-64 once by the highest credential', m.tertiaryN === prime.length && m.tertiaryHits === prime.filter(p => p.quals.some(x => x !== 'VOC')).length && Math.abs(m.tertiary - m.tertiaryHits / m.tertiaryN) < 1e-12 && voc > 0, `${m.tertiaryHits}/${m.tertiaryN}, ${voc} vocational only`);
+    const tiny = new LES.World(Object.assign({}, LES.DEFAULTS, { seed: 'c02s', founders: 20, startAgeMin: 18, startAgeMax: 23 })); // nobody aged 25-64 yet
+    check('Too few adults: the share is not shown', Number.isNaN(Cal.measure(tiny).tertiary) && Cal.measure(tiny).tertiaryN < Cal.MIN_EDU_N);
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -1132,6 +1156,7 @@
       await marketTests();
       await phase6Tests();
       await reportStatsTests();
+      await eduLevelTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -1143,6 +1168,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, tileTests };
+  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

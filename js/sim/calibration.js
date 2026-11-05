@@ -9,6 +9,17 @@
   // Each target: label, format, and from the country pack's `calibration`: target, warning band
   // (absolute) and source. Filled by the applier at the end of this file.
   Cal.TARGETS = {};
+  // Highest completed credential as an ISCED 2011 level (C02): 0 = no recorded credential (school levels are not
+  // tracked), VOC = the country pack's `education.vocIsced` (a certificate or Level 3 diploma is 4, not tertiary;
+  // an associate degree or a Chinese dazhuan is 5), bachelor's 6, medicine and master's 7.
+  Cal.LEVELS = { BACH_GEN: 6, BACH_BUS: 6, BACH_ENG: 6, MED: 7, MASTER: 7 };
+  Cal.vocLevel = () => ((LES.Countries.pack.education || {}).vocIsced) || 4;
+  Cal.eduLevel = function (p) {
+    let lv = 0;
+    for (const q of p.quals) lv = Math.max(lv, q === 'VOC' ? Cal.vocLevel() : (Cal.LEVELS[q] || 0));
+    return lv;
+  };
+  Cal.MIN_EDU_N = 20; // fewer adults 25-64 than this: the share is not shown
   const money = x => `${LES.Countries.pack.money.symbol}${Math.round(x * LES.Countries.scale())}`; // engine units -> real money
   const DEFS = {
     tfr: { label: 'Children per woman', fmt: x => x.toFixed(2) },
@@ -23,7 +34,7 @@
     prison: { label: 'Prisoners per 100k (realistic scale)', fmt: x => x.toFixed(0) },
     clearance: { label: 'Share of crimes solved', fmt: U.fmtPct },
     revenue: { label: 'Public revenue per person / month (Year-1 $)', fmt: money },
-    tertiary: { label: 'Adults 25-64 with a diploma or degree', fmt: U.fmtPct }, // Phase 6
+    tertiary: { label: 'Adults 25-64 with tertiary education (ISCED 5+)', fmt: U.fmtPct }, // C02: highest credential, see Cal.eduLevel
   };
 
   // Period life expectancy from deaths and person-years lived in the last `years` years
@@ -74,7 +85,8 @@
     }
     r.hhGini = U.gini(hh);
     const prime = w.living.filter(p => p.alive && !p.away && P.age(w, p) >= 25 && P.age(w, p) < 65);
-    r.tertiary = prime.length ? prime.filter(p => p.quals.length).length / prime.length : NaN;
+    r.tertiaryN = prime.length; r.tertiaryHits = prime.filter(p => Cal.eduLevel(p) >= 5).length; // each person once, by the highest credential
+    r.tertiary = prime.length >= Cal.MIN_EDU_N ? r.tertiaryHits / prime.length : NaN;
     const dead = w.people.filter(p => !p.alive && p.causeOfDeath);
     r.starve = dead.length ? dead.filter(p => p.causeOfDeath === 'starvation').length / dead.length : 0;
     if (w.crime) { // averaged over the yearly history rows after year 5, scaled back to "Realistic"
