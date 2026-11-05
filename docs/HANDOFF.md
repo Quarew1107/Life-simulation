@@ -31,6 +31,12 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
   Audit findings still present on HEAD: Spearman without ties (C01), tertiary counts any qualification (C02),
   catastrophe multiplied after the cap (C03), business shares to local heirs only (C04), revenue per current
   person (C05), no admission capacity (C06), twins accepted separately.
+- C01 DONE: `LES.Report.rankWithTies` / `R.spearman(xs, ys, minN = 8)` (average ranks for ties, Pearson of ranks,
+  non-finite pairs dropped, null for too few pairs or a constant side); report shows n/a, the sample size and
+  "association in this simulated town, not cause"; 'self-made' claims replaced by "recorded cash inheritance and
+  gifts as a share of tracked lifetime receipts (inherited business stakes are not counted)"; the award is
+  "Richest with little recorded inheritance". Report-text fingerprints re-recorded (old values kept in the test
+  comment); engine fingerprints unchanged. `reportStatsTests` (8 checks); 237/237 pass. Next: C02.
 All work is committed and pushed. Latest (Nov 2026): countries stop at Malaysia, the UK (4.5), the United States
 (4.6) and China (4.7): the owner skipped UAE, Mexico and South Africa. Phase 6 (section 4.8) step 6.1, the shared
 calibration fixes, is done; next is 6.2 (report sections, the town newspaper, compare-with-normal runs), then 6.3. The full suite runs in
