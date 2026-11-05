@@ -146,12 +146,13 @@
     card.innerHTML = `<h1>The simulation has ended</h1>
       <p class="lead">${U.esc(w.endReason === 'extinct' ? 'The population died out.' : `${w.cfg.horizonYears} years have passed.`)} ${w.winner ? `🏆 ${U.esc(P.name(w.people[w.winner.pid]))} reached the goal.` : 'Nobody reached the goal.'}</p>
       <p>Open the full report to see what happened, why, the Hall of Fame and the most notable lives.</p>
-      <div class="modal-actions"><button class="ghost" id="end-csv">Export CSV</button><span class="spacer"></span><button class="ghost" id="end-close">Keep exploring</button><button class="ghost" id="end-new">Replay with a change</button><button class="primary" id="end-report">Open report</button></div>`;
+      <div class="modal-actions"><button class="ghost" id="end-csv">Export CSV</button><span class="spacer"></span><button class="ghost" id="end-close">Keep exploring</button>${app.region ? '' : `<button class="ghost" id="end-cmp">Compare with ${U.esc(LES.Compare.label(w.cfg))}</button>`}<button class="ghost" id="end-new">Replay with a change</button><button class="primary" id="end-report">Open report</button></div>`;
     $('modal').classList.remove('hidden');
     LES.Audio.setScene('report');
     $('end-close').onclick = () => $('modal').classList.add('hidden');
     $('end-report').onclick = () => LES.Report.open(w, app.prevSummary);
     $('end-csv').onclick = () => LES.Report.csv(w);
+    if ($('end-cmp')) $('end-cmp').onclick = () => LES.Compare.open(app);
     $('end-new').onclick = () => LES.Setup.open(app, false);
   };
 
@@ -179,6 +180,7 @@
     if (name === 'unpin') app.pinned = -1;
     if (name === 'csv') LES.Report.csv(app.world);
     if (name === 'report') LES.Report.open(app.world, app.prevSummary);
+    if (name === 'compare') LES.Compare.open(app);
     UI.update(true);
   };
 
@@ -313,7 +315,7 @@
   // Sound button state and the music / effects volume sliders next to it.
   function showSound(on) {
     const b = $('btn-sound');
-    b.textContent = on ? '🔊' : '🔇';
+    LES.iconOnly(b, on ? 'volume' : 'volume-x');
     b.classList.toggle('on', on);
     if (!on) $('vol-pop').classList.add('hidden'); // the sliders only appear while hovering (see initVolumeHover)
     $('vol-music').value = Math.round(LES.Audio.music * 100);

@@ -297,6 +297,53 @@ ${g.officials ? `<div class="card"><b>City council at the end</b><table>${LES.Co
 </div></section>`;
   }
 
+  // Phase 6 sections: the town against official figures, work and business, the country's own rules, the paper.
+  function officialSection(w) {
+    const Cal = LES.Calibration, m = Cal.measure(w), rows = Object.keys(Cal.TARGETS).filter(k => Number.isFinite(m[k]));
+    if (!rows.length) return '';
+    if (w.day < 3650) return `<section><h2>Against official figures (${esc(LES.Countries.pack.name)})</h2><p class="note">Shown from year 10: births, lifespans and crime need a few years to settle.</p></section>`;
+    return `<section><h2>Against official figures (${esc(LES.Countries.pack.name)})</h2><table><tr><th>Measure</th><th>This town</th><th>Official</th><th></th></tr>${rows.map(k => { const t = Cal.TARGETS[k], st = Cal.status(k, m[k]); return `<tr><td>${esc(t.label)}</td><td>${t.fmt(m[k])}</td><td>${t.fmt(t.target)}</td><td>${st === 'ok' ? 'close' : st === 'warn' ? 'a little off' : 'far off'}</td></tr>`; }).join('')}</table>
+<p class="note">Measured the way the statistics offices do where the engine allows (crime and prisoners on the Realistic scale). A small town is noisy: compare several seeds before reading much into one.</p></section>`;
+  }
+  function workSection(w) {
+    const h = w.history, last = h[h.length - 1] || {}, lab = (last.employed || 0) + (last.unemployed || 0) + (last.owners || 0), st = w.stats, cal = w.cfg.econModel === 'calibrated';
+    const open = w.biz.filter(b => b.open), byType = {}, types = LES.C.BIZ.concat(LES.C.BIZ_SERVICES || []);
+    for (const b of open) { const t = byType[b.type] = byType[b.type] || { n: 0, rev: 0, share: 0 }; t.n++; t.rev += b.lastRevenue || 0; t.share += b.marketShare === undefined ? 1 : b.marketShare; }
+    const big = open.slice().sort((a, b) => (b.lastRevenue || 0) - (a.lastRevenue || 0)).slice(0, 5);
+    const rows = Object.entries(byType).sort((a, b) => b[1].rev - a[1].rev);
+    return `<section><h2>Work and business</h2><div class="grid"><div class="card"><b>Jobs</b><table>
+<tr><td>Unemployment now</td><td>${lab ? pct((last.unemployed || 0) / lab) : '–'}</td></tr><tr><td>Hires in town</td><td>${st.hires}</td></tr>
+${cal ? `<tr><td>Openings filled from outside town</td><td>${st.vacOutside || 0}</td></tr>` : ''}<tr><td>Openings nobody took</td><td>${st.vacUnfilled || 0}</td></tr>
+<tr><td>Business owners</td><td>${last.owners || 0} of ${last.adults || 0} adults</td></tr></table>
+<p class="note">${cal ? 'Calibrated markets: firms of a kind share a market that grows with the town, so many rivals means smaller sales for each.' : 'Original markets: every firm sells to an unlimited outside market.'}</p></div>
+<div class="card"><b>Businesses by kind (last month)</b><table><tr><th>Kind</th><th>Open</th><th>Sales</th>${cal ? '<th>Market met</th>' : ''}</tr>${rows.map(([k, t]) => `<tr><td>${esc((types.find(x => x.id === k) || { name: k }).name)}</td><td>${t.n}</td><td>${U.fmtMoney(t.rev)}</td>${cal ? `<td>${pct(t.share / t.n)}</td>` : ''}</tr>`).join('')}</table></div>
+<div class="card"><b>Biggest firms</b><table>${big.map(b => `<tr><td>${esc(b.name)}</td><td>${U.fmtMoney(b.lastRevenue || 0)}/mo</td></tr>`).join('') || '<tr><td>None open</td></tr>'}</table></div></div></section>`;
+  }
+  function countrySection(w) {
+    const L = w.living.filter(p => p.alive && p.adult), K = LES.Countries.pack, rows = [];
+    if (L.some(p => p.hukou) && LES.China) {
+      for (const k of ['urban', 'rural', 'outside']) { const n = L.filter(p => p.hukou === k).length; if (n) rows.push([`Adults with a ${LES.China.name(k).toLowerCase()}`, n]); }
+      const jobs = L.filter(p => p.job);
+      rows.push(['Jobs paying social insurance', jobs.length ? pct(jobs.filter(p => p.job.si).length / jobs.length) : '–']);
+      rows.push(["Pensioners on the employees' / residents' pension", `${L.filter(p => p.cnPension && p.cnEmp).length} / ${L.filter(p => p.cnPension && !p.cnEmp).length}`]);
+    }
+    if (K.health && K.health.fpl) {
+      const cv = {}; for (const p of L) cv[p.cover || 'none'] = (cv[p.cover || 'none'] || 0) + 1;
+      for (const [k, v] of Object.entries(cv)) rows.push([`Health cover: ${k}`, v]);
+      rows.push(['Adults with medical debt', L.filter(p => p.debt && p.debt.medical > 0).length]);
+    }
+    if ((K.welfare || {}).model === 'meansTested') rows.push(['Households on Universal Credit now', L.filter(p => p.ucLast > 0).length]);
+    if (!rows.length) return '';
+    return `<section><h2>${esc(K.name)}: its own rules</h2><table>${rows.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(String(v))}</td></tr>`).join('')}</table></section>`;
+  }
+  function paperSection(w) {
+    const is = (w.news && w.news.issues) || [];
+    if (!is.length || !LES.NewsUI) return '';
+    const picks = [];
+    for (let y = 10; y <= Math.ceil(w.day / 365) + 9; y += 10) { const i = LES.News.issueAt(w, Math.min(w.day, y * 365 - 1)); if (i !== null && !picks.includes(i)) picks.push(i); }
+    return `<section><h2>${esc(LES.News.name(w))}: a front page a decade</h2><div class="grid">${picks.map(i => `<div>${LES.NewsUI.frontPage(w, i, true)}</div>`).join('')}</div></section>`;
+  }
+
   R.html = function (w, prev) {
     const a = R.analyse(w), h = w.history, cfg = w.cfg;
     const yr = r => r.day / 365;
@@ -311,6 +358,8 @@ ${g.officials ? `<div class="card"><b>City council at the end</b><table>${LES.Co
     const compare = prev ? `<section><h2>Compared with the previous run</h2><table><tr><th></th><th>Previous (${esc(prev.seed)})</th><th>This run (${esc(cfg.seed)})</th></tr>
       ${[['Winner', prev.winner, a.awards[0] && w.winner ? esc(P.name(w.people[w.winner.pid])) : 'none'], ['Richest peak', prev.richest, a.top[0] ? U.fmtMoney(a.top[0].peakReal) : '—'], ['Final median wealth', prev.median, U.fmtMoney(h[h.length - 1].median)], ['Population at end', prev.pop, h[h.length - 1].pop], ['Businesses failed', prev.failed, w.stats.bizFailed]].map(([k, x, y]) => `<tr><td>${k}</td><td>${esc(x)}</td><td>${y}</td></tr>`).join('')}</table>
       <p class="note">Changed settings: ${Object.keys(cfg).filter(k => JSON.stringify(cfg[k]) !== JSON.stringify(prev.cfg[k])).map(esc).join(', ') || 'none (only randomness)'}.</p></section>` : '';
+    const ap = LES.UI && LES.UI.app, cm = ap && ap.compare && ap.compare.seed === cfg.seed && ap.compare.day === w.day && LES.Compare ? ap.compare : null;
+    const compareNormal = cm ? `<section><h2>Compared with ${esc(cm.label)}</h2>${LES.Compare.table(LES.Compare.summary(w), cm.base, cm.label)}<p class="note">The same seed, founders and length under ${esc(cm.label)}: what these settings changed.</p></section>` : '';
     return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Simulation Report – ${esc(LES.townName(w))}</title>
 <style>
@@ -325,7 +374,7 @@ h1{font-size:28px;margin:0}h2{font-size:19px;margin:30px 0 10px;border-bottom:2p
 p{margin:8px 0}.why p{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--acc);border-radius:10px;padding:10px 14px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
 svg.chart{width:100%;height:auto;color:var(--fg)}table{border-collapse:collapse;width:100%;font-size:13px}td,th{padding:5px 8px;border-bottom:1px solid var(--line);text-align:left}
-.award b{color:var(--acc)}.bio li{margin:2px 0}.note{color:var(--muted);font-size:13px}.disc{margin-top:30px;padding:12px;border:1px dashed var(--line);border-radius:10px;color:var(--muted)}
+.paper{background:#f4efe2;color:#1f1d1a;border-radius:6px;padding:10px 14px;font-family:Georgia,serif}.paper-mast{display:flex;justify-content:space-between;gap:8px;border-bottom:3px double #1f1d1a;font-size:11px;margin-bottom:6px}.paper-mast b{font-size:17px;flex:1;text-align:center}.paper small{text-transform:uppercase;letter-spacing:1px;font:700 10px system-ui;color:#8a2c1f}.paper-h{font:700 16px Georgia,serif;margin:2px 0 6px}.paper-cols{display:grid;gap:4px 12px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));border-top:1px solid #b9b09b;padding-top:4px}.paper-story p{margin:2px 0;font-size:12px;line-height:1.3}.award b{color:var(--acc)}.bio li{margin:2px 0}.note{color:var(--muted);font-size:13px}.disc{margin-top:30px;padding:12px;border:1px dashed var(--line);border-radius:10px;color:var(--muted)}
 button{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer}
 @media print{button{display:none}}
 </style></head><body><main>
@@ -342,7 +391,12 @@ button{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid var(--li
 </div>
 <section class="why"><h2>Why it turned out this way</h2>${a.paras.map(x => `<p>${x}</p>`).join('')}</section>
 ${compare}
+${compareNormal}
+${officialSection(w)}
+${workSection(w)}
+${countrySection(w)}
 <section><h2>Charts</h2><div class="grid">${charts.map(([t, s]) => `<div class="card"><b>${t}</b>${s}</div>`).join('')}</div></section>
+${paperSection(w)}
 <section><h2>Hall of Fame</h2><div class="grid">${a.awards.map(x => `<div class="card award"><b>${esc(x.title)}</b><div>${esc(x.name)}</div><div class="note">${esc(x.why || '')}</div></div>`).join('')}</div></section>
 <section><h2>Notable lives</h2><div class="grid">${a.bios.map(b => `<div class="card bio"><b>${esc(P.name(b.p))}</b> <span class="note">${b.p.alive ? `${Math.floor(P.age(w, b.p))} years old` : `died aged ${Math.floor(P.age(w, b.p))}`} · ${C.STRATEGY_NAMES[b.p.strategy]}${b.p.migrant ? ' · migrant' : ''}</span><ul>${b.events.map(e => `<li><span class="note">Y${U.dayToDate(e.day).year}</span> ${esc(e.text)}</li>`).join('')}</ul></div>`).join('')}</div></section>
 <section><h2>Life goals achieved</h2><table><tr><th>Goal</th><th>Times achieved</th></tr>${(a.goals || []).map(g => `<tr><td>${LES.Goals.DEFS[g.id].icon} ${esc(LES.Goals.DEFS[g.id].name)}</td><td>${g.n}</td></tr>`).join('')}</table>

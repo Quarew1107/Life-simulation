@@ -303,7 +303,7 @@
     },
     names: {
       centralBank: "People's Bank of China", policyRate: 'loan prime rate', fund: 'Qiaoyun State Assets Fund', fundReturns: 'state asset returns',
-      exchange: 'Jade River Exchange', exchangeShort: 'Jade River', retirement: 'Housing Provident Fund', antiCorruption: 'discipline inspection commission', lockdown: 'Lockdown',
+      exchange: 'Jade River Exchange', exchangeShort: 'Jade River', retirement: 'Housing Provident Fund', antiCorruption: 'discipline inspection commission', lockdown: 'Lockdown', newspaper: 'Qiaoyun Daily',
     },
     // Taxes (Year-1 yuan a year). Individual income tax: 3-45% above ¥60,000 a year, social insurance and
     // the provident fund pre-tax, ¥24,000 a year per child. Social insurance from the worker (pension 8%,
@@ -535,6 +535,7 @@
       haze: { doy: 340, chance: 0.4, days: 14, name: 'Smog', text: 'Winter smog: the air is unhealthy for two weeks' },
     },
     calibration: {
+      tertiary: { target: 0.2, band: 0.07, src: 'Census 2020 and OECD: ~20% of 25-64 year-olds with a college diploma or degree' },
       tfr: { target: 1.0, band: 0.3, src: 'UN World Population Prospects 2024 (TFR ~1.0 in 2023)' },
       e0: { target: 79, band: 3, src: 'NBS Statistical Communique 2024 (79.0)' },
       unemp: { target: 0.051, band: 0.015, src: 'NBS surveyed urban unemployment, 2024 average (5.1%)' },

@@ -290,7 +290,7 @@
     },
     names: {
       centralBank: 'The Fed', policyRate: 'federal funds rate', fund: 'Brightwater Rainy Day Fund', fundReturns: 'rainy-day fund returns',
-      exchange: 'Liberty Exchange', exchangeShort: 'Liberty', retirement: '401(k)', antiCorruption: 'FBI', lockdown: 'Stay-at-home order',
+      exchange: 'Liberty Exchange', exchangeShort: 'Liberty', retirement: '401(k)', antiCorruption: 'FBI', lockdown: 'Stay-at-home order', newspaper: 'The Brightwater Gazette',
     },
     // Taxes (Year-1 USD a year). Federal 2026 brackets for a single filer on taxable income, $16,100 standard
     // deduction, 401(k) contributions pre-tax; FICA 7.65% (6.2% Social Security up to $184,500 + 1.45%
@@ -499,6 +499,7 @@
       tornado: { doy: 130, chance: 0.12, damage: [3000, 40000], name: 'Tornado' },
     },
     calibration: {
+      tertiary: { target: 0.51, band: 0.1, src: 'OECD Education at a Glance 2024: 51% of 25-64 year-olds (associate degree or higher)' },
       tfr: { target: 1.6, band: 0.35, src: 'CDC NCHS births 2024 (TFR 1.6)' },
       e0: { target: 79, band: 3, src: 'CDC NCHS mortality 2024 (79.0)' },
       unemp: { target: 0.043, band: 0.015, src: 'BLS Current Population Survey, 2026 (~4.3%)' },

@@ -45,6 +45,7 @@
     scenario: 'none',         // none | equal | reset | eternal | eduban | pandemic | robots | lawless | island | clans
     eqKids: 'yes',            // Born Equal: children are born equal too
     resetYear: '30', resetRepeat: 'no', // Great Reset
+    aristoMode: 'aristocracy', // Aristocracy vs Meritocracy
     banYear: '0',             // Education Ban: from this year
     pandemicYear: '10', pandemicSeverity: 'covid', // Pandemic
     robotYear: '5', robotSpeed: 'normal',          // Robot Age
@@ -104,7 +105,8 @@
   // with their scenario.
   LES.SETTINGS_GROUPS = ['Base rules', 'Town & map', 'Goal', 'Economy & prices', 'People & families', 'Society & religion', 'Crime & justice', 'Government'];
   LES.SETTINGS_META = [
-    { group: 'Scenario', key: 'scenario', label: 'Scenario', type: 'select', hidden: true, options: [['none', 'None'], ['equal', 'Born Equal'], ['reset', 'Great Reset'], ['eternal', 'Eternal Life'], ['eduban', 'Education Ban'], ['pandemic', 'Pandemic'], ['robots', 'Robot Age'], ['lawless', 'Lawless Town'], ['island', 'Isolated Island'], ['clans', 'Five Clans']] },
+    { group: 'Scenario', key: 'scenario', label: 'Scenario', type: 'select', hidden: true, options: [['none', 'None'], ['equal', 'Born Equal'], ['reset', 'Great Reset'], ['eternal', 'Eternal Life'], ['eduban', 'Education Ban'], ['pandemic', 'Pandemic'], ['robots', 'Robot Age'], ['lawless', 'Lawless Town'], ['island', 'Isolated Island'], ['clans', 'Five Clans'], ['aristo', 'Aristocracy vs Meritocracy']] },
+    { group: 'Scenario', scenario: 'aristo', key: 'aristoMode', label: 'World', type: 'select', options: [['aristocracy', 'Aristocracy: noble houses, old money, no inheritance tax'], ['meritocracy', 'Meritocracy: equal start, free university, 90% inheritance tax']] },
     { group: 'Scenario', scenario: 'equal', key: 'eqKids', label: 'Children', type: 'select', options: [['yes', 'Born equal too'], ['no', 'Inherit from their parents']] },
     { group: 'Scenario', scenario: 'reset', key: 'resetYear', label: 'Reset in year', type: 'select', options: [['10', 'Year 10'], ['20', 'Year 20'], ['30', 'Year 30'], ['50', 'Year 50']] },
     { group: 'Scenario', scenario: 'reset', key: 'resetRepeat', label: 'Repeat', type: 'select', options: [['no', 'Once'], ['yes', 'Every time that many years pass']] },

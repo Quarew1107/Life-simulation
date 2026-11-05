@@ -633,6 +633,7 @@
       exchangeShort: 'Bursa',
       retirement: 'EPF',
       antiCorruption: 'MACC',
+      newspaper: 'Berita Rezeki',
       lockdown: 'Lockdown (MCO)',
     },
     // Taxes (Year-1 RM a year unless noted). LHDN YA2025 resident bands, RM9,000 personal relief, EPF relief (11% up to RM4,000), RM2,000 per child, RM400 rebate up to RM35,000 chargeable income; SME company tax 15/17/24% (24% flat above RM50M revenue); SST or GST 6% by spending category; assessment tax 3% of rent; EIS 0.2% + 0.2%; 2% dividend tax above RM100k; fuel subsidy: px = price multiplier on vehicle costs, cost = treasury bill as a share of vehicle spending (RON95 RM1.99 against ~RM2.60).
@@ -942,6 +943,7 @@
     },
     // Calibration targets (js/sim/calibration.js): target, warning band, source.
     calibration: {
+      tertiary: { target: 0.29, band: 0.08, src: 'DOSM Labour Force Survey 2023: ~29% of the labour force with a diploma or degree' },
       tfr: { target: 1.6, band: 0.35, src: 'DOSM Vital Statistics 2025 (TFR 2024 = 1.6; 2025 = 1.5)' },
       e0: { target: 75.3, band: 3, src: 'DOSM Abridged Life Tables 2023-2025' },
       unemp: { target: 0.03, band: 0.015, src: 'DOSM Labour Force Survey, Aug 2026 (2.9%)' },

@@ -31,26 +31,26 @@
     <button id="btn-step" class="ghost" title="Advance one day (S)">+1 day</button>
     <div id="kpis" class="kpis"></div>
     <div id="goal" class="goal"></div>
-    <button id="btn-report" class="ghost" title="Open the simulation report in a new tab">📊 Report</button>
-    <button id="btn-save" class="ghost" title="Save this world to a file (load it from the New world screen)">💾 Save</button>
+    <button id="btn-report" class="ghost" data-icon="chart" title="Open the simulation report in a new tab">Report</button>
+    <button id="btn-save" class="ghost" data-icon="save" title="Save this world to a file (load it from the New world screen)">Save</button>
     <button id="btn-new" class="primary" title="Create a new world">New world</button>
   </header>
   <main>
     <section id="map-wrap">
       <canvas id="map" aria-label="Town map. Click a person to inspect them."></canvas>
       <div id="map-tools">
-        <button data-z="in" title="Zoom in">+</button>
-        <button data-z="out" title="Zoom out">−</button>
-        <button data-z="fit" title="Fit town">⤢</button>
+        <button data-z="in" title="Zoom in" aria-label="Zoom in" data-icon="plus"></button>
+        <button data-z="out" title="Zoom out" aria-label="Zoom out" data-icon="minus"></button>
+        <button data-z="fit" title="Fit town" aria-label="Fit town" data-icon="expand"></button>
         <div class="vol-wrap">
-          <button data-z="sound" id="btn-sound" title="Music &amp; sound effects (off by default)">🔇</button>
+          <button data-z="sound" id="btn-sound" title="Music &amp; sound effects (off by default)" aria-label="Sound" data-icon="volume-x"></button>
           <div id="vol-pop" class="hidden">
             <label title="Music volume">🎵<input type="range" id="vol-music" min="0" max="100" step="1" aria-label="Music volume"></label>
             <label title="Sound effects volume">🔔<input type="range" id="vol-sfx" min="0" max="100" step="1" aria-label="Sound effects volume"></label>
           </div>
         </div>
         <select id="overlay" title="Map overlay" aria-label="Map overlay"></select>
-        <button data-z="director" id="btn-director" title="Director mode: the camera jumps to the most interesting moments">🎬</button>
+        <button data-z="director" id="btn-director" title="Director mode: the camera jumps to the most interesting moments" aria-label="Director mode" data-icon="film"></button>
       </div>
       <div id="toasts" aria-live="polite"></div>
       <div id="tooltip" class="hidden"></div>
@@ -77,7 +77,7 @@
         <div id="lb-list"></div>
       </div>
       <div id="tab-feed" class="tab">
-        <div class="tab-tools"><div class="seg wrap" id="feed-filter"></div></div>
+        <div class="tab-tools"><div class="seg wrap" id="feed-filter"></div><button class="ghost" id="btn-news" data-icon="news" title="The town newspaper: a front page every month">Newspaper</button></div>
         <div id="feed-list"></div>
       </div>
       <div id="tab-place" class="tab"></div>
@@ -116,6 +116,7 @@
 <script src="js/sim/crime.js"></script>
 <script src="js/sim/government.js"></script>
 <script src="js/sim/china.js"></script>
+<script src="js/sim/news.js"></script>
 <script src="js/sim/services.js"></script>
 <script src="js/sim/fiscal.js"></script>
 <script src="js/sim/council.js"></script>
@@ -136,6 +137,9 @@
 <script src="js/ui/panels.js"></script>
 <script src="js/ui/places.js"></script>
 <script src="js/ui/report.js"></script>
+<script src="js/ui/news-ui.js"></script>
+<script src="js/ui/compare.js"></script>
+<script src="js/ui/minimap.js"></script>
 <script src="js/ui/extras.js"></script>
 <script src="js/ui/society-ui.js"></script>
 <script src="js/ui/crime-ui.js"></script>

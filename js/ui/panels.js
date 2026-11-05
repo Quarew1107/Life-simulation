@@ -22,6 +22,7 @@
       UI.renderLeaders(true);
     });
     $('feed-filter').innerHTML = FEED_FILTERS.map(([k, l]) => `<button data-f="${k}" class="${k === 'all' ? 'on' : ''}">${l}</button>`).join('');
+    $('btn-news').addEventListener('click', () => LES.NewsUI.open(app));
     $('feed-filter').addEventListener('click', e => {
       const b = e.target.closest('button'); if (!b) return;
       UI.feedFilter = b.dataset.f;
@@ -468,7 +469,7 @@
     const series = (k, label, color) => ({ label, color, data: h.map(r => [r.day / 365, r[k]]) });
     const race = w.living.filter(p => p.alive && p.adult).sort((a, b) => b.nw - a.nw).slice(0, 5);
     const scn = LES.Scenarios.current(w);
-    el.innerHTML = `${UI.regionCard(w)}
+    el.innerHTML = `${UI.app.region ? '' : `<div class="tab-tools"><button class="ghost" data-act="compare">${LES.icon('compare', 16)} Compare with ${U.esc(LES.Compare.label(w.cfg))}</button></div>`}${UI.regionCard(w)}
       ${scn ? `<div class="card"><h3><span>${LES.icon(scn.icon, 14)} Scenario: ${U.esc(scn.name)}</span></h3><div class="note">${U.esc(scn.short)}</div><div class="scn-status">${scn.status(w)}</div><canvas class="chart" id="st-scn"></canvas></div>` : ''}
       <div class="stat-grid">
         <div class="stat"><div class="v">${last.pop}</div><div class="l">alive (${last.children} kids)</div></div>
