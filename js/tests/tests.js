@@ -781,7 +781,7 @@
       'my-save': '93a0eff009e13bbf0631071fc098447a',
     };
     // 4a.6: the report names the drug policy instead of printing its key; 4b.1: a Country row in the settings table and "Today's rules".
-    const REPORT = { 'my-default': '552b2b16', 'my-pandemic-lawless': 'bca4204f', 'my-region': '821ba9a8' }; // C06: new histories (rules revision 4). // C01 (report text only, engine fingerprints unchanged): tie-aware Spearman, n/a values, inheritance wording. Before C01: f66c05b8, 62c7b2a, cb8afa3d. Phase 6.2: official figures, work and business, the paper; // 4b.3: a 'Starting wealth by group' row; Phase 6: new histories and a 'Business and job markets' row
+    const REPORT = { 'my-default': 'caaeab0d', 'my-pandemic-lawless': 'b9679882', 'my-region': '5a42d376' }; // C08: a 'Town name' row in the settings table (before: 552b2b16, bca4204f, 821ba9a8). C06: new histories (rules revision 4). // C01 (report text only, engine fingerprints unchanged): tie-aware Spearman, n/a values, inheritance wording. Before C01: f66c05b8, 62c7b2a, cb8afa3d. Phase 6.2: official figures, work and business, the paper; // 4b.3: a 'Starting wealth by group' row; Phase 6: new histories and a 'Business and job markets' row
     const D = LES.DEFAULTS, base = { founders: 80, migration: 'normal' };
     const cases = {
       'my-default': () => new LES.World(Object.assign({}, D, base, { seed: 'my-1' })),
@@ -1328,6 +1328,30 @@
     check('Rules revision 3 still reproduces the previous Malaysia fingerprint (84f18b75...)', `${r3.stableHash()}/${textOf(r3)}` === '84f18b75b2c06289c6a601c0829afc1f/3da2af2a', `${r3.stableHash()}/${textOf(r3)}`);
   }
 
+  // C08: custom town names are labels only.
+  async function townNameTests() {
+    print('--- Town names (C08) ---', 'info');
+    const D = LES.DEFAULTS, clean = LES.cleanTownName;
+    check('Names are trimmed, spaces collapsed, control characters dropped; 1-40 characters', clean('  Kota   Baru  ') === 'Kota Baru' && clean('A\u0007B​') === 'AB' && clean('') === null && clean('   ') === null && clean('x'.repeat(41)) === null && clean('x'.repeat(40)) === 'x'.repeat(40));
+    check('International names and emoji count as characters, not bytes', clean('Kampung Ōita 🌏') === 'Kampung Ōita 🌏' && clean('🌏'.repeat(40)) !== null && clean('🌏'.repeat(41)) === null && clean('北京') === '北京');
+    const def = LES.C.TOWN_NAME;
+    const a = new LES.World(Object.assign({}, D, { seed: 'c08', founders: 60 })), b = new LES.World(Object.assign({}, D, { seed: 'c08', founders: 60 }));
+    for (let d = 0; d < 1000; d++) { if (d === 100) LES.setTownName(b, 'Harapan Baru'); a.step(); b.step(); if (d % 500 === 0) await yieldUI(); }
+    check('Renaming a town on day 100 changes nothing in the simulation (same state on day 1,000)', a.hash() === b.hash() && LES.townName(b) === 'Harapan Baru' && LES.townName(a) === def && LES.C.TOWN_NAME === def);
+    const b2 = LES.Save.fromJSON(LES.Save.toJSON(b));
+    check('The name is saved and loaded; an older save without one shows the default', LES.townName(b2) === 'Harapan Baru' && LES.townName(LES.Save.fromJSON(LES.Save.toJSON(a))) === def);
+    check('An invalid name is refused and the old one kept; blank resets to the default', !LES.setTownName(b, '\u0001\u0002') && LES.townName(b) === 'Harapan Baru' && LES.setTownName(b, '') && LES.townName(b) === def);
+    LES.setTownName(b, '<img src=x onerror=alert(1)>');
+    const html = LES.Report ? LES.Report.html(b) : '';
+    check('A name that looks like code is shown as text in the report', !LES.Report || (!html.includes('<img src=x') && html.includes('&lt;img src=x onerror=alert(1)&gt;')));
+    const R = new LES.Region(Object.assign({}, D, { seed: 'c08r', migration: 'normal', towns: '2', townName: 'Kota Harmoni' }), [{ founders: 40 }, { founders: 30, seed: 'c08r2' }]);
+    const second = LES.townName(R.towns[1]);
+    LES.setTownName(R.towns[1], 'Kota Kecil');
+    check('In a region the setup name is the first town\'s; renaming one town leaves the others alone', LES.townName(R.towns[0]) === 'Kota Harmoni' && LES.townName(R.towns[1]) === 'Kota Kecil' && second !== 'Kota Harmoni' && R.towns[1].townIdx === 1);
+    const v = c => LES.validateConfig(Object.assign({}, D, c)).blockers.length;
+    check('Settings accept a blank name and refuse an over-long one', v({ townName: '' }) === 0 && v({ townName: 'Bandar Baru' }) === 0 && v({ townName: 'y'.repeat(41) }) > 0);
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -1356,6 +1380,7 @@
       await estateTests();
       await statsDefTests();
       await eduPlacesTests();
+      await townNameTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -1367,6 +1392,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, tileTests };
+  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

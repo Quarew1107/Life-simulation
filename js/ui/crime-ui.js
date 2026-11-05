@@ -82,7 +82,7 @@
       <div><span class="muted">Times a victim</span><span>${cr.victim}</span></div>
       <div><span class="muted">Temptation now</span><span>${(cr.t * 100).toFixed(1)}%</span></div>
       ${g ? `<div><span class="muted">Gang</span><span style="color:${g.colour}">${esc(g.name)}${g.leader === p.id ? ' (leader)' : ''}</span></div>` : ''}
-      ${cr.tie && w.region && w.region.towns[cr.tie.town] && w.region.towns[cr.tie.town].crime ? `<div><span class="muted">Old gang</span><span>ties to ${esc(w.region.towns[cr.tie.town].crime.gangs[cr.tie.gang].name)} in ${esc(w.region.towns[cr.tie.town].townName)}</span></div>` : ''}
+      ${cr.tie && w.region && w.region.towns[cr.tie.town] && w.region.towns[cr.tie.town].crime ? `<div><span class="muted">Old gang</span><span>ties to ${esc(w.region.towns[cr.tie.town].crime.gangs[cr.tie.gang].name)} in ${esc(LES.townName(w.region.towns[cr.tie.town]))}</span></div>` : ''}
       ${cr.user || cr.addict ? `<div><span class="muted">Drugs</span><span>${cr.user ? `using · addiction ${Math.round(cr.addict)}/100` : `clean for ${cr.clean} months`}</span></div>` : ''}
     </div>${cr.rec ? '<div class="note">A record makes employers less likely to hire them.</div>' : ''}</div>`;
   };

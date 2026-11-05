@@ -98,7 +98,7 @@
       if (ts.dataset.key !== key) {
         ts.dataset.key = key;
         ts.innerHTML = `<button data-town="-1" class="${regionOn ? 'on' : ''}" title="All the towns on one map (or scroll out past the whole town)">🗺 Region</button>`
-          + R.towns.map((t, i) => `<button data-town="${i}" class="${t === w && !regionOn ? 'on' : ''}" title="Show ${U.esc(t.townName)}">${U.esc(t.townName)} <small>${t.counts.living}</small></button>`).join('');
+          + R.towns.map((t, i) => `<button data-town="${i}" class="${t === w && !regionOn ? 'on' : ''}" title="Show ${U.esc(LES.townName(t))}">${U.esc(LES.townName(t))} <small>${t.counts.living}</small></button>`).join('');
         for (const b of ts.querySelectorAll('button')) b.onclick = () => (b.dataset.town === '-1' ? app.showRegion() : app.selectTown(Number(b.dataset.town)));
       }
     }
@@ -157,7 +157,7 @@
     const stratCol = C.STRATEGY_COLORS[p.strategy];
     let status;
     if (!p.alive) status = `🕯️ Died aged ${age} (${esc(p.causeOfDeath)}) on ${U.fmtDate(p.deathDay)}`;
-    else if (p.away) status = `✈️ Living outside ${LES.townName(w)} (left for ${esc(p.away.reason)})`;
+    else if (p.away) status = `✈️ Living outside ${esc(LES.townName(w))} (left for ${esc(p.away.reason)})`;
     else if (p.plan && p.plan.length) {
       const s = p.plan[app.dayFrac * 1440 < LES.SLOT_B ? 0 : 1] || p.plan[0];
       status = `${A.ICONS[s.act] || '•'} ${esc(s.label)}`;
@@ -270,8 +270,8 @@
     html += UI.politicsCard ? UI.politicsCard(w, p) : '';
     if (app.region && ((p.away && p.away.town !== undefined) || (p.xlinks && p.xlinks.length))) { // links to the same family in other towns
       const R = app.region, rows = [];
-      if (p.away && p.away.town !== undefined) rows.push(`<li>Now lives in <a href="#" data-xtown="${p.away.town}" data-xid="${p.away.id}">${U.esc(R.towns[p.away.town].townName)}</a></li>`);
-      for (const x of p.xlinks || []) { const q = R.towns[x.town].people[x.id]; if (q) rows.push(`<li>${x.rel === 'self' ? 'Moved here from' : x.rel === 'parent' ? 'Parent in' : 'Child in'} <a href="#" data-xtown="${x.town}" data-xid="${x.id}">${U.esc(R.towns[x.town].townName)}</a>${x.rel === 'self' ? '' : `: ${U.esc(P.name(q))}`}</li>`); }
+      if (p.away && p.away.town !== undefined) rows.push(`<li>Now lives in <a href="#" data-xtown="${p.away.town}" data-xid="${p.away.id}">${U.esc(LES.townName(R.towns[p.away.town]))}</a></li>`);
+      for (const x of p.xlinks || []) { const q = R.towns[x.town].people[x.id]; if (q) rows.push(`<li>${x.rel === 'self' ? 'Moved here from' : x.rel === 'parent' ? 'Parent in' : 'Child in'} <a href="#" data-xtown="${x.town}" data-xid="${x.id}">${U.esc(LES.townName(R.towns[x.town]))}</a>${x.rel === 'self' ? '' : `: ${U.esc(P.name(q))}`}</li>`); }
       html += `<div class="card"><h3>Other towns</h3><ul class="list-plain xlinks">${rows.join('')}</ul></div>`;
     }
     if (p.clan && LES.Scenarios.CLAN_BY_ID[p.clan]) { const cl = LES.Scenarios.CLAN_BY_ID[p.clan]; html += `<div class="card"><h3>Clan <small class="muted">Five Clans scenario</small></h3><p><span style="color:${cl.colour}">■</span> <b>${U.esc(cl.name)}</b> (${U.esc(cl.en)}): born with a gift for ${C.ATTR_NAMES[cl.attr].toLowerCase()}.</p></div>`; }
@@ -369,7 +369,7 @@
     const young = w.living.filter(p => p.alive && p.adult && P.age(w, p) < 21).slice(0, 3);
     const ent = w.living.filter(p => p.alive && p.strategy === 'ENT').slice(0, 2);
     const pick = arr => arr.map(p => `<li><span>${UI.plink(w, p.id)} <span class="muted">${Math.floor(P.age(w, p))} · ${C.STRATEGY_NAMES[p.strategy]}</span></span><span>${U.fmtMoney(p.nw)}</span></li>`).join('');
-    return `<div class="card"><h3>Welcome to ${LES.townName(w)}</h3>
+    return `<div class="card"><h3>Welcome to ${esc(LES.townName(w))}</h3>
       <p style="margin:0 0 6px">${w.cfg.founders} strangers each try to reach <b class="gold">${U.fmtMoney(w.goal)}</b>. Nobody is controlled — every choice is a weighted dice roll from their personality, strategy, needs and money.</p>
       <p class="muted" style="margin:0">Click anyone on the map, or pick someone below. Press <b>Space</b> to play/pause, <b>1–6</b> for speed.</p></div>
       <div class="card"><h3>Richest right now</h3><ul class="list-plain">${pick(rich)}</ul></div>
@@ -454,7 +454,7 @@
       const wages = a.filter(p => p.job).map(p => p.job.salary).sort((x, y) => x - y);
       const inn = moves.filter(m => m.to === i).reduce((s, m) => s + m.n, 0), out = moves.filter(m => m.from === i).reduce((s, m) => s + m.n, 0);
       const crime = t.crime ? Math.round(LES.Crime.rates(t).index) : null;
-      return `<tr class="${t === w ? 'on' : ''}"><td><a href="#" data-xtown="${i}" data-xid="-1">${U.esc(t.townName)}</a></td><td>${t.counts.living}</td><td>${h.unemployed !== undefined ? (h.unemployed / Math.max(1, h.unemployed + h.employed + h.owners) * 100).toFixed(1) + '%' : '–'}</td><td>${wages.length ? U.fmtMoney(U.quantile(wages, 0.5)) : '–'}</td><td>${U.fmtMoney(h.median || 0)}</td><td>${t.rentMult ? Math.round(t.rentMult[1] * 100) : 100}</td><td>${crime === null ? '–' : crime}</td><td>${gangCell(t)}</td><td>${com[i]}</td><td>+${inn} / −${out}</td></tr>`;
+      return `<tr class="${t === w ? 'on' : ''}"><td><a href="#" data-xtown="${i}" data-xid="-1">${U.esc(LES.townName(t))}</a></td><td>${t.counts.living}</td><td>${h.unemployed !== undefined ? (h.unemployed / Math.max(1, h.unemployed + h.employed + h.owners) * 100).toFixed(1) + '%' : '–'}</td><td>${wages.length ? U.fmtMoney(U.quantile(wages, 0.5)) : '–'}</td><td>${U.fmtMoney(h.median || 0)}</td><td>${t.rentMult ? Math.round(t.rentMult[1] * 100) : 100}</td><td>${crime === null ? '–' : crime}</td><td>${gangCell(t)}</td><td>${com[i]}</td><td>+${inn} / −${out}</td></tr>`;
     }).join('');
     return `<div class="card"><h3>Towns in the region</h3><div style="overflow-x:auto"><table class="cmp region-cmp"><tr><th>Town</th><th>Pop.</th><th>Jobless</th><th>Pay</th><th>Wealth</th><th>Rent</th><th>Crime</th><th title="Active gangs (chapters of a gang from another town)">Gangs</th><th title="Residents working in another town">Comm.</th><th title="People who moved in / out">In/out</th></tr>${rows}</table></div>
       <div class="note">One economy and one stock exchange. Households move to the town that suits them better (jobs, rent, prospects), and job openings that find nobody at home are advertised in the other towns, so people commute. Pay and wealth are medians; rent is an index (100 = normal); crime is index crimes per 100k a year; Comm. = residents who work in another town. Click a town to show it.</div></div>`;

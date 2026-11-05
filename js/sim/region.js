@@ -15,7 +15,25 @@
   LES.MAX_TOWNS = 3;
   LES.TOWN_NAMES = []; // from the country pack (town.townNames)
   LES.Countries.on('town names', K => { LES.TOWN_NAMES.length = 0; LES.TOWN_NAMES.push(...K.town.townNames); });
-  LES.townName = w => (w && (w.townName || (w.cfg && w.cfg.townName))) || LES.C.TOWN_NAME;
+  // Town names (C08) are display labels only: nothing in the simulation reads them. A town's own name
+  // (w.displayName, set before the start or renamed later) comes first, then the region's name for the town, then
+  // the settings, then the country's default. Past log lines and newspaper issues keep the name of their day.
+  // A valid name: 1-40 characters after trimming, no control or invisible formatting characters.
+  LES.cleanTownName = function (s) {
+    if (typeof s !== 'string') return null;
+    const t = s.normalize('NFC').replace(/[\u0000-\u001F\u007F-\u009F\u200B-\u200F\u2028-\u202E\u2060-\u2069\uFEFF]/g, '').replace(/\s+/g, ' ').trim();
+    const n = [...t].length;
+    return n >= 1 && n <= 40 ? t : null;
+  };
+  LES.townName = w => (w && (LES.cleanTownName(w.displayName) || w.townName || LES.cleanTownName(w.cfg && w.cfg.townName))) || LES.C.TOWN_NAME;
+  // Rename a town: '' resets to the default; returns false (and changes nothing) for an invalid name.
+  LES.setTownName = function (w, name) {
+    if (name === '' || name === null) { delete w.displayName; return true; }
+    const t = LES.cleanTownName(name);
+    if (!t) return false;
+    w.displayName = t;
+    return true;
+  };
 
   // Founders per town for the "towns" setting: the first town gets the founding population,
   // the others about 60% and 40% of it.
@@ -37,6 +55,7 @@
       list.forEach((t, i) => {
         const w = new LES.World(Object.assign({}, base, t));
         Region.attach(w, this, i, t.name || LES.TOWN_NAMES[i] || `Town ${i + 1}`);
+        if (i === 0 && LES.cleanTownName(base.townName)) w.displayName = LES.cleanTownName(base.townName); // the setup's name is the first town's
         this.towns.push(w);
       });
       const lead = this.towns[0];
@@ -107,7 +126,7 @@
             if (B.day - v.openDay !== 2 || v.applicants.length || R.next() > U.clamp(0.25 + 3 * slack, 0.05, 0.6)) continue; // nobody local applied yet
             v.shared = true;
             const st = A.town.kinds.station && A.town.kinds.station.length ? A.town.kinds.station[0] : A.town.byKind.depot;
-            A.vacancies.push({ id: A.nextVacId++, job: v.job, salary: v.salary, openDay: A.day, closeDay: v.closeDay, applicants: [], appSet: new Set(), place: st, commuteTo: B.townIdx, commuteName: B.townName });
+            A.vacancies.push({ id: A.nextVacId++, job: v.job, salary: v.salary, openDay: A.day, closeDay: v.closeDay, applicants: [], appSet: new Set(), place: st, commuteTo: B.townIdx, commuteName: LES.townName(B) });
             A.vacancies.sort((a, b) => (b.salary - a.salary) || (a.id - b.id));
             this.commutePosts = (this.commutePosts || 0) + 1;
           }
@@ -147,7 +166,7 @@
         const amt = Math.min(Math.floor(pg.cash * 0.25), A.px(20000));
         if (amt > 0 && A.ledger.move(pg, 'cash', A.ledger.sec.ABROAD, 'bal', amt)) B.ledger.pay('ABROAD', ch, 'cash', amt);
         (pg.chapters = pg.chapters || []).push({ town: B.townIdx, gang: ch.id });
-        A.pushFeed({ day: A.day, pid: -1, text: `${pg.name} opened a chapter in ${B.townName}`, cat: 'crime', imp: 2 });
+        A.pushFeed({ day: A.day, pid: -1, text: `${pg.name} opened a chapter in ${LES.townName(B)}`, cat: 'crime', imp: 2 });
       };
       for (const B of towns) {
         if (!B.crime || B.ended) continue;
@@ -176,7 +195,7 @@
             return (0.05 + idle / Math.max(1, young)) / Math.max(0.3, CR.policeFactor(B));
           };
           const B = room.map(t => ({ t, s: appeal(t) })).sort((a, b) => b.s - a.s || a.t.townIdx - b.t.townIdx)[0].t;
-          const ch = CR.foundChapter(B, { town: A.townIdx, gang: g.id, name: g.name, colour: g.colour, townName: A.townName }, R, null);
+          const ch = CR.foundChapter(B, { town: A.townIdx, gang: g.id, name: g.name, colour: g.colour, townName: LES.townName(A) }, R, null);
           if (ch) seed(A, g, B, ch);
         }
       }
@@ -191,7 +210,7 @@
           const ch = CR.chapterIn(B, A.townIdx, pg.id);
           if (ch) { CR.joinGang(B, ch, p); p.cr.tie = null; continue; }
           if (!CR.roomForGang(B)) continue;
-          const made = CR.foundChapter(B, { town: A.townIdx, gang: pg.id, name: pg.name, colour: pg.colour, townName: A.townName }, R, p);
+          const made = CR.foundChapter(B, { town: A.townIdx, gang: pg.id, name: pg.name, colour: pg.colour, townName: LES.townName(A) }, R, p);
           if (made) { p.cr.tie = null; seed(A, pg, B, made); }
         }
       }
@@ -269,8 +288,8 @@
       }
       for (const [, c] of made) { if (c.adult) c.mcost = F.monthlyCost(B, c); c.nw = P.netWorth(B, c); c.peakNw = c.nw; }
       const n = made.length;
-      P.log(B, head, `Moved here from ${A.townName}${n > 1 ? ` with ${n - 1} family member${n > 2 ? 's' : ''}` : ''} (${mv.reason})`, 'migration', 1);
-      P.log(A, made[0][0], `Settled in ${B.townName}`, 'migration', 0);
+      P.log(B, head, `Moved here from ${LES.townName(A)}${n > 1 ? ` with ${n - 1} family member${n > 2 ? 's' : ''}` : ''} (${mv.reason})`, 'migration', 1);
+      P.log(A, made[0][0], `Settled in ${LES.townName(B)}`, 'migration', 0);
       B.stats.immigrants += n;
       B.refreshLiving();
       this.moves.push({ day: B.day, from: A.townIdx, to: B.townIdx, n, reason: mv.reason, pairs: made.map(([s, c]) => [s.id, c.id]) });

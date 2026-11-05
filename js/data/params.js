@@ -8,6 +8,7 @@
     preset: 'national',       // national | classic | custom (setup-screen shortcut, recorded in reports)
     country: 'my',            // country pack (js/data/countries/): my
     seed: 'rezeki-1',
+    townName: '', // optional display name of the (first) town; '' = the country's default (C08)
     founders: 100,
     startAgeMin: 18,
     startAgeMax: 35,
@@ -128,6 +129,7 @@
     { group: 'Economy & prices', essential: true, key: 'economy', label: 'Economic cycles', type: 'select', options: [['stable', 'Stable'], ['normal', 'Normal cycles'], ['volatile', 'Volatile (frequent recessions)']] },
     { group: 'Crime & justice', essential: true, key: 'crime', label: 'Crime & vice', type: 'select', options: [['lively', 'Lively ({adj} rates x10)'], ['realistic', 'Realistic (rare in a small town)'], ['lawless', 'Lawless (x30)'], ['off', 'Off']], help: 'Lively makes crime visible in a small town.' },
     { group: 'Town & map', essential: true, key: 'seed', label: 'World seed', type: 'text', help: 'Same seed + same settings = the same history.' },
+    { group: 'Town & map', key: 'townName', label: 'Town name', type: 'text', optional: true, help: 'Optional: your own name for the (first) town. Blank = the country\'s default. Only a label: it changes nothing in the simulation, and you can rename the town later by clicking its name.' },
 
     // ---- Advanced ----
     { group: 'Base rules', key: 'preset', label: 'Rules', type: 'select', options: [['national', "Today's rules (calibrated to official data)"], ['classic', 'Classic (original harsh rules)'], ['custom', 'Custom']], help: 'Fills the settings below.' },
@@ -216,7 +218,8 @@
       } else if (m.type === 'select') {
         if (!m.options.some(o => o[0] === v)) blockers.push(`${m.label}: invalid choice.`);
       } else if (m.type === 'text') {
-        if (typeof v !== 'string' || !v.trim()) blockers.push(`${m.label}: cannot be empty.`);
+        if (m.optional && v === '') { /* optional and left blank */ } else if (typeof v !== 'string' || !v.trim()) blockers.push(`${m.label}: cannot be empty.`);
+        else if (m.key === 'townName' && !LES.cleanTownName(v)) blockers.push(`${m.label}: 1-40 characters, no control characters.`);
         else if (v.length > 40) blockers.push(`${m.label}: 40 characters max.`);
       }
     }
