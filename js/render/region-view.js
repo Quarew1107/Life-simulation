@@ -152,7 +152,7 @@
       for (const b of L.towns) {
         const w = region.towns[b.i], h = w.history[w.history.length - 1] || {}, sb = boxes[b.i];
         const jobless = h.unemployed !== undefined ? `${(h.unemployed / Math.max(1, h.unemployed + h.employed + h.owners) * 100).toFixed(1)}% jobless` : '';
-        const lines = [w.townName, `${w.counts.living} people${jobless ? ` · ${jobless}` : ''}`];
+        const lines = [LES.townName(w), `${w.counts.living} people${jobless ? ` · ${jobless}` : ''}`];
         if (w.crime) {
           const gc = LES.Crime.gangCount(w);
           lines.push(`crime ${Math.round(LES.Crime.rates(w).index)} per 100k${gc.live ? ` · ${gc.live} gang${gc.live > 1 ? 's' : ''}${gc.chapters ? ` (${gc.chapters} chapter${gc.chapters > 1 ? 's' : ''})` : ''}` : ''}`);

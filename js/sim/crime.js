@@ -437,7 +437,7 @@
     if (g.parent) return `chapter of ${g.parent.name} (${g.parent.townName})`;
     if (g.formerParent) return `split from ${g.formerParent}`;
     const R = w.region, live = (g.chapters || []).filter(c => R && R.towns[c.town] && R.towns[c.town].crime && R.towns[c.town].crime.gangs[c.gang] && R.towns[c.town].crime.gangs[c.gang].alive);
-    return live.length ? `chapters in ${[...new Set(live.map(c => R.towns[c.town].townName))].join(', ')}` : '';
+    return live.length ? `chapters in ${[...new Set(live.map(c => LES.townName(R.towns[c.town])))].join(', ')}` : '';
   };
   function adjacentBlocks(t, turf) {
     const out = [];

@@ -122,6 +122,15 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
   crime in crime.js): UK prisoners 273 (142), US 995 (540), MY 306 (256) -> crime tuning needs a re-run (C11);
   MY life expectancy 71.6 (75.3, warn). China period TFR n/a (under 30 births pooled). `eduPlacesTests` (9),
   TC-009 given a place; 282/282 pass. Next: C07 (optional) or C08 (town name).
+- C08 DONE (labels only; engine fingerprints unchanged): `LES.cleanTownName` (NFC, control/invisible characters
+  removed, spaces collapsed, 1-40 code points), `LES.setTownName(w, name)` ('' = default) and `LES.townName` now
+  prefers `w.displayName`, then the region's name, then `cfg.townName` (new optional setting 'Town name' in
+  Advanced -> Town & map; in a region it names the first town), then the country default. Click the town name in
+  the top bar to rename (`app.renameTown`). Region UI, cross-town logs, gang chapters, the region map and report use
+  the display name; unescaped uses fixed (welcome card, 'living outside'). Policy: past log lines and newspaper
+  issues keep the name of their day; the newspaper's title is the country pack's. Report-text fingerprints
+  re-recorded (a 'Town name' settings row). `townNameTests` (8): rename on day 100 -> identical `w.hash()` on day
+  1,000, save/load, escaping, Unicode, region. 290/290 pass. Next: C07 (optional), C09a.
 All work is committed and pushed. Latest (Nov 2026): countries stop at Malaysia, the UK (4.5), the United States
 (4.6) and China (4.7): the owner skipped UAE, Mexico and South Africa. Phase 6 (section 4.8) step 6.1, the shared
 calibration fixes, is done; next is 6.2 (report sections, the town newspaper, compare-with-normal runs), then 6.3. The full suite runs in

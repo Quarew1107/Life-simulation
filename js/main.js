@@ -140,6 +140,21 @@
     } catch (e) { console.error(e); showError(`Could not load ${file.name}: ${e.message}`); return false; }
   };
 
+  app.renameTown = function () {
+    const w = app.world, card = $('modal-card');
+    if (!w) return;
+    card.onclick = null; card.classList.remove('wide');
+    card.innerHTML = `<h1>Rename the town</h1><p class="lead">Only a label: nothing in the simulation changes. Past life events and newspaper issues keep the name of their day.</p>
+      <div class="field"><label for="tn-input">Town name</label><input id="tn-input" type="text" maxlength="60"><div class="help" id="tn-msg">1-40 characters. Leave blank for the default (${U.esc(LES.C.TOWN_NAME)}).</div></div>
+      <div class="modal-actions"><button class="ghost" id="tn-reset">Use the default</button><span class="spacer"></span><button class="ghost" id="tn-cancel">Cancel</button><button class="primary" id="tn-save">Save</button></div>`;
+    $('tn-input').value = w.displayName || '';
+    $('modal').classList.remove('hidden');
+    const done = () => { $('modal').classList.add('hidden'); UI.update(true); };
+    $('tn-cancel').onclick = () => $('modal').classList.add('hidden');
+    $('tn-reset').onclick = () => { LES.setTownName(w, ''); done(); };
+    $('tn-save').onclick = () => { const v = $('tn-input').value; if (v.trim() === '') { LES.setTownName(w, ''); done(); } else if (LES.setTownName(w, v)) done(); else $('tn-msg').textContent = 'Please use 1-40 characters (no control characters).'; };
+  };
+
   app.showEnd = function () {
     const w = app.world, card = $('modal-card');
     card.onclick = null; card.classList.remove('wide');
@@ -338,7 +353,7 @@
         app.regionView.hover = i;
         cv.style.cursor = i >= 0 ? 'pointer' : '';
         if (i >= 0) {
-          tip.innerHTML = `<b>${U.esc(app.region.towns[i].townName)}</b>Click to open this town`;
+          tip.innerHTML = `<b>${U.esc(LES.townName(app.region.towns[i]))}</b>Click to open this town`;
           tip.style.left = `${Math.min(sx + 14, rect.width - 240)}px`; tip.style.top = `${sy + 14}px`;
           tip.classList.remove('hidden');
         } else tip.classList.add('hidden');
@@ -462,6 +477,9 @@
     $('btn-save').addEventListener('click', () => app.saveWorld());
     $('btn-new').addEventListener('click', () => { app.paused = true; renderSpeed(); LES.Setup.open(app, false); });
     $('btn-report').addEventListener('click', () => { try { LES.Report.open(app.world, app.prevSummary); } catch (e) { console.error(e); showError(`Report failed: ${e.message}`); } });
+    // Rename the town shown (C08): a display label only; past log lines and paper issues keep their names.
+    const sub = $('town-sub');
+    if (sub) { sub.title = 'Click to rename this town'; sub.style.cursor = 'pointer'; sub.addEventListener('click', () => app.renameTown()); }
     window.addEventListener('keydown', e => {
       if (LES.Setup.isOpen() || /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;
       if (e.code === 'Space') { e.preventDefault(); app.togglePause(); }
