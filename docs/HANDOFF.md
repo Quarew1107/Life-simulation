@@ -21,9 +21,10 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
 
 ## 0. Where to pick up (status at the end of the last session)
 **Blueprint work (Nov 2026, `Idea/LES_*_2026-11-05.md`, branch `dev/blueprint-2026-11`, not pushed):**
-Status: C00-C11 done (C07 and C09c deferred, optional). Rules versions: 1 Classic and older saves, 2 C03, 3 C04b,
-4 C06 (today's rules). Open owner decisions: UK/US prison and UK crime retune; Malaysia life expectancy (see C11).
-Next step: decide those two, or merge `dev/blueprint-2026-11` into `main`.
+Status: C00-C11 and C07 done (C09c deferred, optional). Rules versions: 1 Classic and older saves, 2 C03, 3 C04b,
+4 C06 (today's rules). Owner decision (Nov 2026): no crime or life-expectancy retune; the remaining gaps (UK/US
+prisoners, UK crime, Malaysia life expectancy, see C11) are accepted as small. Next step: merge
+`dev/blueprint-2026-11` into `main` when ready (not pushed).
 - C00 baseline on c2a3032 (clean tree apart from the two untracked Idea docs). No Node here: run the harness
   checks in headless Edge (`python tools/edge.py tests.html "<js>"`). Full suite 229/229 (359 s; one earlier
   attempt hung idle in the harness and timed out, not reproduced). Hash, 1500 days, 100 founders: today's rules
@@ -201,9 +202,22 @@ Next step: decide those two, or merge `dev/blueprint-2026-11` into `main`.
   Same seed twice (today's rules and Classic): identical `hash()` and `stableHash()`; every save resumed
   identically 30 days later; Classic and Malaysia-pack fingerprints unchanged. Browser (in-app pane): every tab,
   newspaper, report, rename (an HTML-like name shows as text everywhere), Fate confirmation, save and load
-  (day, hash, name, sandbox flag, Fate count, rulesRev 4 kept), no console errors. C07 and C09c stay deferred: no
+  (day, hash, name, sandbox flag, Fate count, rulesRev 4 kept), no console errors. C07 (since done, below) and C09c were deferred: no
   correctness gap (the report's mobility uses lifetime peak wealth, not one month, and already says inherited
   stakes are not receipts; the gift is purely additive). Full suite 313/313.
+- C07 DONE (research measure; the live B40/M40/T20 classes and their table unchanged; engine fingerprints
+  unchanged). `Society.recordWindows` (from `World.snapshotMonth`, every world incl. Classic; reads only) keeps
+  sum/count windows of real household income and wealth: the carer's household at ages 10-15 (`p.mob.o`) and the
+  person's own at 30-40 (`p.mob.a`); `full` is false for a window that began before `w.mobSince` (founders, older
+  saves): never back-filled. `Society.sustainedMobility(w, minN = 30)`: people past 41 with both full windows
+  (>= 36 and 60 months), percentile ranks within birth decades of >= 30 people, Spearman of the ranks, quintile
+  matrix, bottom fifth -> top two-fifths, top fifth staying; statuses complete / incomplete / missingOrigin /
+  smallCohort. Report: a 'Sustained mobility (research measure)' paragraph, or 'Not measurable yet' with the
+  reasons; the inheritance paragraph says gifts, inherited cash, inherited stakes and value gains are four things.
+  Finding (not tuned; the card forbids a class penalty): 300 founders x 80 years gave n=44, rank correlation 0.05
+  (real countries roughly 0.3-0.5), 56% of the bottom fifth reached the top two-fifths: mobility looks high. If it
+  matters, first check education access, start-up capital and market pay-offs (blueprint 6.7). Small towns
+  rarely reach 30 records per decade. Report-text fingerprints re-recorded. `mobilityTests` (5). 318/318 pass.
 All work is committed and pushed. Latest (Nov 2026): countries stop at Malaysia, the UK (4.5), the United States
 (4.6) and China (4.7): the owner skipped UAE, Mexico and South Africa. Phase 6 (section 4.8) step 6.1, the shared
 calibration fixes, is done; next is 6.2 (report sections, the town newspaper, compare-with-normal runs), then 6.3. The full suite runs in

@@ -313,6 +313,64 @@
     for (const p of w.people) if (p.clsOrigin && p.cls35) { m[p.clsOrigin][p.cls35]++; n++; }
     return { m, n };
   };
+  // ---- Sustained mobility (C07, research only; the class table above stays as it is) ----
+  // Each month, add real (Year-1) household income and wealth to small sum/count windows: the household a child
+  // grows up in at ages 10-15, and the person's own household at ages 30-40. Averages over years, so a one-month
+  // spike cannot decide anyone's rank. A window that began before recording started (founders, older saves) is
+  // marked incomplete and never filled in after the fact.
+  S.WIN = { origin: [10, 16], adult: [30, 41] };
+  const hhOf = (w, p) => { const q = p.partnerId !== null ? w.people[p.partnerId] : null; return { inc: Math.max(0, p.incomeEMA) + (q ? Math.max(0, q.incomeEMA) : 0), nw: p.nw + (q ? q.nw : 0) }; };
+  S.recordWindows = function (w) {
+    if (w.mobSince === undefined) w.mobSince = w.day;
+    for (const p of w.living) {
+      if (!p.alive || p.away) continue;
+      const age = P.age(w, p);
+      let key = null, hh = null;
+      if (age >= S.WIN.origin[0] && age < S.WIN.origin[1]) {
+        const carer = p.caregivers.map(id => w.people[id]).find(c => c && c.alive && c.adult);
+        if (carer) { key = 'o'; hh = hhOf(w, carer); }
+      } else if (age >= S.WIN.adult[0] && age < S.WIN.adult[1]) { key = 'a'; hh = hhOf(w, p); }
+      if (!key) continue;
+      const m = p.mob = p.mob || {};
+      const r = m[key] = m[key] || { inc: 0, nw: 0, n: 0, full: p.birthDay + (key === 'o' ? S.WIN.origin[0] : S.WIN.adult[0]) * 365 >= w.mobSince };
+      r.inc += hh.inc / w.price; r.nw += hh.nw / w.price; r.n++;
+    }
+  };
+  // Ranks within birth-decade cohorts of at least minN people with both full windows; adult income rank against
+  // origin income rank. Returns null fields with a status when the sample is too small.
+  S.sustainedMobility = function (w, minN = 30) {
+    const done = [], status = { complete: 0, incomplete: 0, missingOrigin: 0, smallCohort: 0 };
+    for (const p of w.people) {
+      if (P.age(w, p) < S.WIN.adult[1] || !p.mob || !p.mob.a) continue; // the adult window is not over yet
+      const o = p.mob.o, a = p.mob.a;
+      if (!o) { status.missingOrigin++; continue; }
+      if (!o.full || !a.full || o.n < 36 || a.n < 60) { status.incomplete++; continue; }
+      done.push({ p, cohort: Math.floor(p.birthDay / 3650), oi: o.inc / o.n, ai: a.inc / a.n, ow: o.nw / o.n, aw: a.nw / a.n });
+    }
+    const byC = {};
+    for (const r of done) (byC[r.cohort] = byC[r.cohort] || []).push(r);
+    const rows = [];
+    const pctRank = (arr, k) => { const s = arr.map(r => r[k]).sort((x, y) => x - y); return v => (s.filter(x => x < v).length + 0.5 * (s.filter(x => x === v).length - 1)) / Math.max(1, s.length - 1); };
+    for (const c of Object.keys(byC)) {
+      const g = byC[c];
+      if (g.length < minN) { status.smallCohort += g.length; continue; }
+      const ro = pctRank(g, 'oi'), ra = pctRank(g, 'ai');
+      for (const r of g) { r.ro = ro(r.oi); r.ra = ra(r.ai); rows.push(r); }
+    }
+    status.complete = rows.length;
+    if (rows.length < minN) return { n: rows.length, status, enough: false };
+    const q5 = x => Math.min(4, Math.floor(x * 5)), m = [0, 1, 2, 3, 4].map(() => [0, 0, 0, 0, 0]);
+    for (const r of rows) m[q5(r.ro)][q5(r.ra)]++;
+    const bottom = rows.filter(r => q5(r.ro) === 0), top = rows.filter(r => q5(r.ro) === 4);
+    return {
+      n: rows.length, status, enough: true, matrix: m,
+      corr: LES.Report && LES.Report.spearman ? LES.Report.spearman(rows.map(r => r.ro), rows.map(r => r.ra)) : null,
+      upFromBottom: bottom.length ? bottom.filter(r => q5(r.ra) >= 3).length / bottom.length : null, bottomN: bottom.length,
+      stayTop: top.length ? top.filter(r => q5(r.ra) === 4).length / top.length : null, topN: top.length,
+      medianMove: U.median(rows.map(r => r.ra - r.ro)),
+    };
+  };
+
   // Medians by group (ethnicity or religion) for living adults.
   S.groupStats = function (w, key) {
     const g = {};

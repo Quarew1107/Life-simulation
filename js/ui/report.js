@@ -158,7 +158,7 @@
     if (top10.length) {
       const inh = median(top10.map(r => r.inheritShare));
       const luckyTop = top10.filter(r => r.p.log.some(x => /windfall|breakthrough/i.test(x.text))).length;
-      out.paras.push(`<b>Inheritance and luck.</b> For the 10 richest, recorded cash inheritance and gifts were a median ${pct(inh)} of their tracked lifetime receipts (inherited business stakes are not counted). ${luckyTop} of the top 10 had a windfall or a business breakthrough, against ${st.booms} breakthroughs and ${st.windfalls} windfalls in the whole town. ${luckyTop >= 6 ? 'Most of the biggest fortunes included a recorded lucky break.' : 'Most top fortunes had no recorded windfall or breakthrough (smaller good and bad luck is not counted here).'}`);
+      out.paras.push(`<b>Inheritance and luck.</b> For the 10 richest, recorded cash inheritance and gifts were a median ${pct(inh)} of their tracked lifetime receipts (inherited business stakes are not counted). ${luckyTop} of the top 10 had a windfall or a business breakthrough, against ${st.booms} breakthroughs and ${st.windfalls} windfalls in the whole town. ${luckyTop >= 6 ? 'Most of the biggest fortunes included a recorded lucky break.' : 'Most top fortunes had no recorded windfall or breakthrough (smaller good and bad luck is not counted here).'} Recorded gifts, inherited cash, inherited business stakes and gains from rising share or business values are four different things; this share covers only the first two.`);
     }
 
     // 6. Social mobility
@@ -173,6 +173,12 @@
       out.mobility = { n: kids.length, corr: mob, poor, poorToRich };
       out.paras.push(`<b>Social mobility.</b> ${kids.length} people born in town reached 30. Their wealth had ${corrWord(mob)} association with their parents' wealth (rank correlation ${rTxt(mob)}). ${poor ? `${poorToRich} of ${poor} children from the poorest fifth of families climbed into the top two-fifths.` : ''}`);
     }
+
+    // 6b. Sustained mobility (C07): income averaged over years, ranked within birth cohorts.
+    const sm = LES.Society.sustainedMobility(w);
+    out.sustained = sm;
+    if (sm.enough) out.paras.push(`<b>Sustained mobility (research measure).</b> Household income averaged over ages 10-15 against the person's own household income averaged over ages 30-40, each ranked within their birth decade (n=${sm.n}): ${corrWord(sm.corr)} association (rank correlation ${rTxt(sm.corr)}).${sm.bottomN ? ` Of ${sm.bottomN} who grew up in the bottom fifth, ${pct(sm.upFromBottom)} reached the top two-fifths` : ''}${sm.topN ? `; of ${sm.topN} from the top fifth, ${pct(sm.stayTop)} stayed there` : ''}. Years are averaged, so one good or bad month does not move anyone's rank.`);
+    else if (sm.n || sm.status.incomplete || sm.status.missingOrigin || sm.status.smallCohort) out.paras.push(`<b>Sustained mobility.</b> Not measurable yet: ${sm.n} complete life records (30 needed in a birth decade)${sm.status.incomplete ? `; ${sm.status.incomplete} with incomplete records (founders, people who arrived late, or a save from before these records)` : ''}${sm.status.missingOrigin ? `; ${sm.status.missingOrigin} not raised in town` : ''}.`);
 
     // 7. Economy & migration
     const rec = w.regimeHist.filter(x => x.regime === 'recession').length;
