@@ -34,6 +34,7 @@
 
   // =====================================================================
   define({
+    noEduPlaces: true, // (an atypical world: no national study places, C06)
     id: 'equal', name: 'Born Equal', icon: 'users',
     short: 'Everyone starts with the same money, the same abilities and no degrees.',
     desc: 'All founders get {cur}10,000, identical abilities (5 in every attribute), identical ageing genes and no qualifications; jobs at the start are handed out by lottery. Only personality and luck differ. Optionally, every child is born equal too.',
@@ -159,6 +160,7 @@
 
   // =====================================================================
   define({
+    noEduPlaces: true, // (an atypical world: no national study places, C06)
     id: 'eduban', name: 'Education Ban', icon: 'lock',
     short: 'Schools, colleges and universities are closed.',
     desc: 'From the chosen year children stay at home and learn less, and nobody can enrol in a course or degree; students drop out. People who already have qualifications keep them. Libraries stay open for self-study.',
@@ -368,6 +370,7 @@
   ];
   SC.CLAN_BY_ID = Object.fromEntries(SC.CLANS.map(c => [c.id, c]));
   define({
+    noEduPlaces: true, // (an atypical world: no national study places, C06)
     id: 'clans', name: 'Five Clans', icon: 'crown',
     short: 'A fictional world of five clans, each born with a gift.',
     desc: 'Every founder belongs to one of five fictional clans with an innate gift: Gajah (endurance), Harimau (strength), Kancil (agility), Merak (charisma) and Burung Hantu (intelligence). Children take a parent\'s clan and part of its gift. People prefer partners from their own clan. In this world only, group membership changes ability, so you can see which gifts the economy rewards.',
@@ -399,6 +402,7 @@
   // =====================================================================
   // Aristocracy vs Meritocracy (Phase 6.3): the same town under two opposite rules for getting ahead.
   define({
+    noEduPlaces: true, // (an atypical world: no national study places, C06)
     id: 'aristo', name: 'Aristocracy vs Meritocracy', icon: 'trophy',
     short: 'Noble houses with old money, or equal starts and taxed inheritance.',
     desc: 'Aristocracy: a tenth of the founders are noble houses holding most of the money; nobles marry nobles, their connections help them get hired, children inherit the title and there is no inheritance tax. Meritocracy: every founder starts with the same money, university is free, inheritance above the allowance is taxed at 90% and hiring looks only at ability. Run both on one seed and compare.',

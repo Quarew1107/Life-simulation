@@ -147,16 +147,42 @@
     w.stats.graduations++;
   };
 
+  // Rules revision 4 (C06): limited places. Each year a course group (bachelor's, master's, vocational) opens
+  // pack education.places[group] x (residents aged 18) places, kept as fractional credits (at most two years'
+  // worth); an accepted applicant takes one, or waits for next year. Scenarios built to be atypical are exempt.
+  const GROUP = id => (id === 'VOC' ? 'voc' : id === 'MASTER' ? 'master' : 'bach');
+  L.placesOn = w => w.cfg.rulesRev >= 4 && !!(LES.Countries.pack.education || {}).places && !((LES.Scenarios && LES.Scenarios.current(w)) || {}).noEduPlaces;
+  L.places = function (w) {
+    const PL = LES.Countries.pack.education.places, yr = Math.floor(w.day / 365), st = w.eduPlaces = w.eduPlaces || { year: -1, credit: {}, cohort: 0 };
+    if (st.year !== yr) {
+      st.year = yr;
+      st.cohort = w.living.filter(q => q.alive && !q.away && P.age(w, q) >= 18 && P.age(w, q) < 25).length / 7; // an average one-year cohort of 18-24s
+      for (const k of Object.keys(PL)) st.credit[k] = Math.min((st.credit[k] || 0) + PL[k] * st.cohort, Math.max(2, 2 * PL[k] * st.cohort));
+    }
+    return st;
+  };
+  L.takePlace = function (w, course, p) {
+    const g = GROUP(course.id), st = L.places(w);
+    if (!(g in st.credit)) return true;
+    const need = g === 'master' || P.age(w, p) < 25 ? 1 : 2; // school leavers first: older applicants only when places are spare
+    if (st.credit[g] >= need) { st.credit[g] -= 1; return true; }
+    return false;
+  };
+  const nextCycle = w => (Math.floor(w.day / 365) + 1) * 365 - 61; // (the 60-day wait in Actions then ends as the next year opens)
   L.enroll = function (w, p, course) {
     const R = w.rng.outcome;
     p.lastEnrollTry = w.day;
     p.energy -= 8;
-    const bar = (w.gov && course.id !== 'VOC' ? 1.0 : 0) + (LES.China && LES.China.on() ? LES.China.examBar(w, p, course) : 0); // public university places are competitive (UPU, gaokao)
+    const EB = w.cfg.rulesRev >= 4 ? (LES.Countries.pack.education || {}).admitBar : undefined; // C06: each country's entry bar (places do the rationing)
+    const bar = (w.gov && course.id !== 'VOC' ? (EB !== undefined ? EB : 1.0) : 0) + (LES.China && LES.China.on() ? LES.China.examBar(w, p, course) : 0); // public university places are competitive (UPU, gaokao)
     const acc = U.sigmoid((p.att[C.INT] - course.minInt - bar) * 1.5);
+    const cycle = L.placesOn(w); // rules revision 4: one admission round a year
     if (R.next() >= acc) {
       P.log(w, p, `Application to ${course.name} rejected`, 'edu', 0);
+      if (cycle) p.lastEnrollTry = Math.max(p.lastEnrollTry, nextCycle(w));
       return;
     }
+    if (cycle && !L.takePlace(w, course, p)) { P.log(w, p, `Offered no place on ${course.name} this year (all taken)`, 'edu', 0); w.stats.noPlace = (w.stats.noPlace || 0) + 1; p.lastEnrollTry = Math.max(p.lastEnrollTry, nextCycle(w)); return; }
     const scholar = w.derived.eduMult > 0 && R.next() < U.clamp(0.04 + 0.05 * (p.att[C.INT] - 6), 0, 0.4);
     let fee = scholar ? 0 : Math.round(w.px(course.fee) * w.derived.eduMult / course.months);
     const PG = LES.Countries.pack.education && LES.Countries.pack.education.pell; // US: Pell grants for low-income students

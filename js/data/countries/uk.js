@@ -524,7 +524,9 @@
     },
     // Plan 5 student loans: every fee is borrowed; 9% of pay above GBP25,000 a year; interest ~RPI;
     // written off after 40 years.
-    education: { vocIsced: 4, loans: { rate: 0.09, threshold: 25000, years: 40, interest: 0.03 } }, // vocIsced: a Level 3 Diploma is ISCED 3-4 (C02)
+    // C06 (approximate, from OECD Education at a Glance 2024 by age and UCAS/HESA entry rates; not official targets):
+    // founders' bachelor's-or-higher and Level 3 shares by age group; yearly entry places per age cohort.
+    education: { founders: [[25, 0.3, 0.35], [35, 0.55, 0.25], [45, 0.52, 0.25], [55, 0.45, 0.25], [65, 0.38, 0.25], [200, 0.28, 0.2]], places: { bach: 0.6, master: 0.12, voc: 0.3 }, admitBar: -0.5, vocIsced: 4, loans: { rate: 0.09, threshold: 25000, years: 40, interest: 0.03 } }, // vocIsced: a Level 3 Diploma is ISCED 3-4 (C02)
     settings: {
       preset: { options: { national: "Today's rules (calibrated to ONS data)" }, help: 'Fills the settings below. UK: welfare on, ~1.4 children per woman, ~81-year life expectancy.' },
       founders: { help: 'Strangers who found the town. The map size follows (100 = a small village).' },

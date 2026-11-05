@@ -107,6 +107,21 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
   `Cal.table` pools births and exposure over seeds (`Cal.pooledTfr`, `r.tfrParts`). 80 years x 3 seeds: Malaysia
   period TFR 1.54 (target 1.6; completed 1.37), revenue RM577, tertiary 47% (degrees only, target 29%); China
   revenue ¥3,170 (barely changed: real growth, not the old denominator), tertiary 53% (20%). Next: C06.
+- C06 DONE (rules revision 4; Classic and older saves keep the old code, rev 3 reproduces the previous fingerprint).
+  Measured first (Malaysia, 80 years): founders started at 16% degrees but reached 44% within 20 years because
+  adults kept enrolling (58% of applications accepted, nearly all graduate). Now: (1) founders' credentials by
+  age group from pack `education.founders` ([below age, degree share, vocational share]; approximate, not
+  official), ability-weighted (exp(0.45 x (INT - 5)) / 1.35); (2) `L.places`: yearly credits per course group =
+  pack `education.places` x an average one-year 18-24 cohort, capped at two years' worth; under-25s first
+  (older applicants need a spare place; master's not restricted by age); a rejected or placeless applicant waits
+  for next year's round; (3) pack `education.admitBar` (MY 1, UK -0.5, US 0, CN 1; was 1 everywhere). Exempt:
+  scenarios with `noEduPlaces` (Born Equal, Education Ban, Five Clans, Aristocracy vs Meritocracy).
+  80 years x 3 seeds: tertiary 25-64 MY 22% (29% incl. diplomas, which the sim lacks), UK 33% (52%, warn),
+  US 43% (51%), CN 34% (20%; the town is young and today's intake is high, the target is the whole 25-64 stock).
+  Other measures in band except: more crime and prisoners with fewer graduates (education lowers the pull of
+  crime in crime.js): UK prisoners 273 (142), US 995 (540), MY 306 (256) -> crime tuning needs a re-run (C11);
+  MY life expectancy 71.6 (75.3, warn). China period TFR n/a (under 30 births pooled). `eduPlacesTests` (9),
+  TC-009 given a place; 282/282 pass. Next: C07 (optional) or C08 (town name).
 All work is committed and pushed. Latest (Nov 2026): countries stop at Malaysia, the UK (4.5), the United States
 (4.6) and China (4.7): the owner skipped UAE, Mexico and South Africa. Phase 6 (section 4.8) step 6.1, the shared
 calibration fixes, is done; next is 6.2 (report sections, the town newspaper, compare-with-normal runs), then 6.3. The full suite runs in
