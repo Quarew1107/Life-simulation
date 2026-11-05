@@ -196,6 +196,11 @@
     if (name === 'csv') LES.Report.csv(app.world);
     if (name === 'report') LES.Report.open(app.world, app.prevSummary);
     if (name === 'compare') LES.Compare.open(app);
+    const sel = app.selected; // spectator tools: no simulation state is touched
+    if (name === 'spotlight' && sel >= 0) LES.Spectator.toggleSpotlight(sel);
+    if (name === 'bookmark' && sel >= 0) LES.Spectator.toggleBookmark(app.world, sel, false);
+    if (name === 'bookmarkFamily' && sel >= 0) LES.Spectator.toggleBookmark(app.world, sel, true);
+    if (name === 'celebrate' && sel >= 0) LES.Spectator.celebrate(sel);
     UI.update(true);
   };
 

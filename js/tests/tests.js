@@ -1352,6 +1352,34 @@
     check('Settings accept a blank name and refuse an over-long one', v({ townName: '' }) === 0 && v({ townName: 'Bandar Baru' }) === 0 && v({ townName: 'y'.repeat(41) }) > 0);
   }
 
+  // C09a: spectator tools only watch.
+  async function spectatorTests() {
+    print('--- Spectator tools (C09a) ---', 'info');
+    const SP = LES.Spectator, D = LES.DEFAULTS;
+    if (!SP) { check('The spectator module is loaded', false); return; }
+    const a = new LES.World(Object.assign({}, D, { seed: 'c09a', founders: 80 })), b = new LES.World(Object.assign({}, D, { seed: 'c09a', founders: 80 }));
+    const cv = typeof document !== 'undefined' ? document.createElement('canvas') : null, g = cv ? cv.getContext('2d') : null;
+    let acts = 0;
+    for (let d = 0; d < 3000; d++) {
+      a.step(); b.step();
+      if (d % 3 === 0 && acts < 1000) { // 1,000 spectator actions spread over the run (fast-forward: several days per action)
+        const ids = b.living.filter(p => p.alive).map(p => p.id), id = ids[(d * 7919) % ids.length];
+        const k = acts % 4;
+        if (k === 0) SP.toggleBookmark(b, id, false); else if (k === 1) SP.toggleBookmark(b, id, true); else if (k === 2) SP.toggleSpotlight(id); else SP.celebrate(id);
+        if (g) SP.draw({ screenPos: ids.slice(0, 40).map((pid, i) => ({ id: pid, x: 10 + i * 5, y: 50 })), z: 1, vw: 300, vh: 200 }, g, b);
+        acts++;
+      }
+      if (d % 500 === 0) await yieldUI();
+    }
+    check('1,000 spectator actions during a fast-forwarded run leave the simulation exactly as it was', acts === 1000 && a.hash() === b.hash() && a.stableHash() === b.stableHash(), `${acts} actions`);
+    check('Bookmarks live in the browser, not in the world or its save', SP.marks.length > 0 && !/bookmark|spotlight/i.test(LES.Save.toJSON(b)) && b.checkInvariants().length === 0);
+    const p = b.living.find(x => x.alive && x.partnerId !== null && x.children.length) || b.living.find(x => x.alive);
+    SP.marks = SP.marks.filter(m => m.id !== p.id);
+    SP.toggleBookmark(b, p.id, true);
+    const fam = SP.marked(b);
+    check('Bookmark family marks the person with partner, parents and children; a second click removes it', SP.familyOf(b, p).every(id => fam.has(id)) && !SP.toggleBookmark(b, p.id, true) && !SP.mark(p.id));
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -1381,6 +1409,7 @@
       await statsDefTests();
       await eduPlacesTests();
       await townNameTests();
+      await spectatorTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -1392,6 +1421,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, tileTests };
+  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);
