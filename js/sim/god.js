@@ -53,6 +53,7 @@
         w.die(p, 'Fate (sandbox intervention)');
         c.status = 'applied';
         st.modified = true;
+        st.applied = (st.applied || 0) + 1; // the log below keeps the last 200; this count keeps them all
       }
       c.day = w.day; c.rulesRev = w.cfg.rulesRev;
       st.events.push(c);

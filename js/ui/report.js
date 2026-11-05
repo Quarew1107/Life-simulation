@@ -59,7 +59,7 @@
         inheritShare: (e.inherit + e.gifts) / earnedTotal, // recorded cash inheritance and gifts / tracked lifetime receipts (inherited business stakes are not counted)
         strategy: p.stratHist.length ? p.stratHist[0].strategy : p.strategy,
         finalStrategy: p.strategy,
-        qual: p.quals.includes('MED') ? 'Medicine' : p.quals.includes('MASTER') ? "Master's" : p.quals.some(P.isBachelor) ? 'Bachelor' : p.quals.includes('VOC') ? 'Vocational' : 'None',
+        qual: R.qualOf(p),
         founded: w.biz.filter(b => b.founderId === p.id).length,
         failures: p.bizFailures,
         luckEvents: p.log.filter(x => x.cat === 'luck').length,
@@ -67,6 +67,36 @@
       });
     }
     return rows;
+  };
+
+  R.qualOf = p => (p.quals.includes('MED') ? 'Medicine' : p.quals.includes('MASTER') ? "Master's" : p.quals.some(P.isBachelor) ? 'Bachelor' : p.quals.includes('VOC') ? 'Vocational' : 'None');
+
+  // "What shaped their wealth" for one person (C10): recorded facts only (start, traits, money received, study,
+  // businesses, luck), read from the person's own records; no random numbers, no change to the world.
+  R.wealthStory = function (w, p) {
+    const e = p.earned, out = [];
+    if (p.parents.length) {
+      const pk = Math.max(0, ...p.parents.map(id => { const q = w.people[id]; return q ? Math.max(0, ...q.nwHist.map(([d, v]) => real(w, v, d))) : 0; }));
+      out.push(`Start: born in town; the richer parent's peak wealth was ${U.fmtMoney(pk)} (Year-1 money).`);
+    } else out.push(`Start: ${p.migrant ? 'moved here' : 'a founder'} with ${U.fmtMoney(p.nwHist.length ? real(w, p.nwHist[0][1], p.nwHist[0][0]) : 0)} (Year-1 money).`);
+    const adults = w.living.filter(q => q.alive && q.adult && q !== p);
+    if (adults.length >= 10) {
+      let best = 0;
+      p.pot.forEach((v, i) => { if (v > p.pot[best]) best = i; });
+      const share = adults.filter(q => q.pot[best] > p.pot[best]).length / adults.length;
+      out.push(`Strongest inherited potential: ${C.ATTR_NAMES[best]} (${share < 0.5 ? `top ${Math.max(1, Math.round(share * 100))}%` : `bottom ${Math.max(1, Math.round((1 - share) * 100))}%`} of today's adults).`);
+    }
+    const src = [['salary and gigs', e.wages + e.gigs], ['business payouts', e.business], ['investing', Math.max(0, e.invest + e.interest)], ['inheritance and gifts', e.inherit + e.gifts], ['luck', e.luck], ['welfare', e.welfare]];
+    const tot = U.sum(src.map(x => Math.max(0, x[1])));
+    if (tot > 0) out.push(`Money received: ${src.filter(x => x[1] / tot >= 0.05).sort((a, b) => b[1] - a[1]).slice(0, 3).map(x => `${x[0]} ${Math.round(x[1] / tot * 100)}%`).join(', ')} of recorded receipts${p.shares && Object.keys(p.shares).length ? ' (inherited business stakes are not counted as receipts)' : ''}.`);
+    const biz = w.biz.filter(b => b.founderId === p.id).length;
+    out.push(`Education: ${R.qualOf(p) === 'None' ? 'no degree or diploma' : R.qualOf(p)}${biz ? `; founded ${biz} business${biz > 1 ? 'es' : ''}, ${p.bizFailures} failed` : ''}.`);
+    const luck = p.log.filter(x => x.cat === 'luck'), bad = luck.filter(x => /ill|injured|scam|accident/i.test(x.text)).length;
+    if (luck.length) out.push(`Recorded luck: ${luck.length - bad} good and ${bad} bad event${bad === 1 ? '' : 's'}.`);
+    return {
+      lines: out.map(esc),
+      note: 'These are recorded facts, not a proven cause: the same choices with different luck, or in a different town, could have turned out differently.',
+    };
   };
 
   R.analyse = function (w) {
@@ -84,8 +114,11 @@
       const biz = w.biz.filter(b => b.founderId === winner.id);
       out.paras.push(`<b>${esc(P.name(winner))}</b> was the first to reach the ${U.fmtMoney(w.goal)} goal, in Year ${U.dayToDate(w.winner.day).year} at age ${w.winner.age}. Their path: ${C.STRATEGY_NAMES[wr ? wr.strategy : winner.strategy]} strategy at the start${winner.stratHist.length > 1 ? `, later ${C.STRATEGY_NAMES[winner.strategy]}` : ''}; ${biz.length ? `founded ${biz.length} business${biz.length > 1 ? 'es' : ''} (${biz.map(b => esc(b.name)).slice(0, 3).join(', ')}) with ${biz.reduce((s, b) => s + b.booms, 0)} breakthrough${biz.reduce((s, b) => s + b.booms, 0) === 1 ? '' : 's'}` : 'no businesses'}; ${wr ? `recorded cash inheritance and gifts were ${pct(wr.inheritShare)} of their tracked lifetime receipts (inherited business stakes are not counted)` : 'no record of their receipts'}.`);
     } else {
-      out.paras.push(`Nobody reached the ${U.fmtMoney(w.goal)} goal in ${years} years. The richest person ever was <b>${richest ? esc(P.name(richest.p)) : '—'}</b> with a peak of ${richest ? U.fmtMoney(richest.peakReal) : '—'} in Year-1 money — ${richest ? (richest.peakReal / w.goal * 100).toFixed(1) : 0}% of the goal. In this world the goal was out of reach: a salary alone cannot get there, and only rare business breakthroughs come close.`);
+      out.paras.push(`Nobody reached the ${U.fmtMoney(w.goal)} goal in ${years} years. The richest person ever was <b>${richest ? esc(P.name(richest.p)) : '—'}</b> with a peak of ${richest ? U.fmtMoney(richest.peakReal) : '—'} in Year-1 money — ${richest ? (richest.peakReal / w.goal * 100).toFixed(1) : 0}% of the goal. In this run nobody got there: under these rules a salary alone cannot reach it, and only rare business breakthroughs come close.`);
     }
+
+    // How to read this section (C10): one simulated town, associations not causes, and its sample size.
+    out.paras.push(`<b>How to read this.</b> These findings come from ${rows.length} adults who reached 30 in one simulated town over ${years} year${years === 1 ? '' : 's'}. When two things go together here (correlation), it does not prove that one caused the other, and the model's rules are assumptions, not measurements of the real world.${rows.length < 30 ? ' <b>Too few people for firm conclusions:</b> let the run go longer or use more founders.' : ''}${LES.God && LES.God.intervened(w) ? ' This is a sandbox world changed by you (Fate).' : ''}`);
 
     // 2. Strategies
     const byStrat = {};
@@ -99,7 +132,7 @@
       const bestTop = stratStats.slice().sort((a, b) => b.inTop - a.inTop)[0];
       const ent = stratStats.find(x => x.s === 'ENT');
       out.strat = stratStats;
-      out.paras.push(`<b>Strategy.</b> People who started with the <b>${C.STRATEGY_NAMES[bestMed.s]}</b> strategy had the best typical outcome (median peak ${U.fmtMoney(bestMed.med)}), while <b>${C.STRATEGY_NAMES[bestTop.s]}</b> produced the most top-10 fortunes (${bestTop.inTop} of 10).${ent ? ` Entrepreneurs had ${ent.fail} business failures between ${ent.n} of them${bestMed.s !== 'ENT' ? ' and a lower typical outcome — high risk, high variance' : ''}.` : ''}`);
+      out.paras.push(`<b>Strategy.</b> People who started with the <b>${C.STRATEGY_NAMES[bestMed.s]}</b> strategy had the best typical outcome (median peak ${U.fmtMoney(bestMed.med)}, n=${bestMed.n}), while <b>${C.STRATEGY_NAMES[bestTop.s]}</b> accounted for the most top-10 fortunes (${bestTop.inTop} of 10).${ent ? ` Entrepreneurs had ${ent.fail} business failures between ${ent.n} of them${bestMed.s !== 'ENT' ? ' and a lower typical outcome — high risk, high variance' : ''}.` : ''} People chose their strategy from their own traits and circumstances, so these are differences between groups, not the pay-off of the strategy alone.`);
     }
 
     // 3. Attributes & personality
@@ -119,13 +152,13 @@
     const byQ = {};
     for (const r of rows) (byQ[r.qual] = byQ[r.qual] || []).push(r.peakReal);
     out.edu = Object.keys(byQ).map(q => ({ q, n: byQ[q].length, med: median(byQ[q]) })).sort((a, b) => b.med - a.med);
-    if (out.edu.length > 1) out.paras.push(`<b>Education.</b> Median peak wealth by highest qualification: ${out.edu.map(e => `${e.q} ${U.fmtMoney(e.med)} (n=${e.n})`).join(', ')}.`);
+    if (out.edu.length > 1) out.paras.push(`<b>Education.</b> Median peak wealth by highest qualification: ${out.edu.map(e => `${e.q} ${U.fmtMoney(e.med)} (n=${e.n})`).join(', ')}. Graduates also tend to have more ability and family money, so the gap is not the value of the degree alone${out.edu.some(e => e.n < 5) ? '; groups under 5 people are too small to read' : ''}.`);
 
     // 5. Inheritance and luck
     if (top10.length) {
       const inh = median(top10.map(r => r.inheritShare));
       const luckyTop = top10.filter(r => r.p.log.some(x => /windfall|breakthrough/i.test(x.text))).length;
-      out.paras.push(`<b>Inheritance and luck.</b> For the 10 richest, recorded cash inheritance and gifts were a median ${pct(inh)} of their tracked lifetime receipts (inherited business stakes are not counted). ${luckyTop} of the top 10 had a windfall or a business breakthrough, against ${st.booms} breakthroughs and ${st.windfalls} windfalls in the whole town. ${luckyTop >= 6 ? 'Luck was a big part of the biggest fortunes.' : 'Most top fortunes were built without a single lucky break.'}`);
+      out.paras.push(`<b>Inheritance and luck.</b> For the 10 richest, recorded cash inheritance and gifts were a median ${pct(inh)} of their tracked lifetime receipts (inherited business stakes are not counted). ${luckyTop} of the top 10 had a windfall or a business breakthrough, against ${st.booms} breakthroughs and ${st.windfalls} windfalls in the whole town. ${luckyTop >= 6 ? 'Most of the biggest fortunes included a recorded lucky break.' : 'Most top fortunes had no recorded windfall or breakthrough (smaller good and bad luck is not counted here).'}`);
     }
 
     // 6. Social mobility
@@ -159,7 +192,7 @@
     if (totalGoals) {
       const top = achieved.filter(x => x.n).slice(0, 3).map(x => `${G.DEFS[x.id].icon} ${G.DEFS[x.id].name.toLowerCase()} (${x.n})`).join(', ');
       const neverRich = adults.filter(p => p.goalsDone.length && p.peakNw / w.price < U.RM(1e6)).length;
-      out.paras.push(`<b>Life goals.</b> Residents achieved ${totalGoals} personal goals; the most common were ${top}. ${neverRich} people achieved at least one goal without ever becoming millionaires. Today's adults have ${corrWord(moneyHappy)} association between wealth and happiness (rank correlation ${rTxt(moneyHappy)}) — ${moneyHappy === null || moneyHappy < 0.25 ? 'money bought little happiness here; family, health and leisure mattered more' : 'money did help, mostly through better homes, leisure and less stress'}.`);
+      out.paras.push(`<b>Life goals.</b> Residents achieved ${totalGoals} personal goals; the most common were ${top}. ${neverRich} people achieved at least one goal without ever becoming millionaires. Today's adults have ${corrWord(moneyHappy)} association between wealth and happiness (rank correlation ${rTxt(moneyHappy)}) — ${moneyHappy === null || moneyHappy < 0.25 ? 'richer adults were not much happier here' : 'richer adults tended to be happier here (the model gives happiness for better homes, leisure and less stress, which money can buy)'}.`);
     }
 
     // Hall of Fame
@@ -374,9 +407,9 @@ ${cal ? `<tr><td>Openings filled from outside town</td><td>${st.vacOutside || 0}
     const settings = LES.SETTINGS_META.filter(m => !m.scenario || m.scenario === cfg.scenario).map(m => `<tr><td>${esc(m.label)}</td><td>${esc(m.options ? (m.options.find(o => o[0] === cfg[m.key]) || [, cfg[m.key]])[1] : cfg[m.key])}</td></tr>`).join('');
     const compare = prev ? `<section><h2>Compared with the previous run</h2><table><tr><th></th><th>Previous (${esc(prev.seed)})</th><th>This run (${esc(cfg.seed)})</th></tr>
       ${[['Winner', prev.winner, a.awards[0] && w.winner ? esc(P.name(w.people[w.winner.pid])) : 'none'], ['Richest peak', prev.richest, a.top[0] ? U.fmtMoney(a.top[0].peakReal) : '—'], ['Final median wealth', prev.median, U.fmtMoney(h[h.length - 1].median)], ['Population at end', prev.pop, h[h.length - 1].pop], ['Businesses failed', prev.failed, w.stats.bizFailed]].map(([k, x, y]) => `<tr><td>${k}</td><td>${esc(x)}</td><td>${y}</td></tr>`).join('')}</table>
-      <p class="note">Changed settings: ${Object.keys(cfg).filter(k => JSON.stringify(cfg[k]) !== JSON.stringify(prev.cfg[k])).map(esc).join(', ') || 'none (only randomness)'}.</p></section>` : '';
+      <p class="note">Changed settings: ${Object.keys(cfg).filter(k => JSON.stringify(cfg[k]) !== JSON.stringify(prev.cfg[k])).map(esc).join(', ') || 'none (only randomness)'}. Differences come from the changed settings and from chance taking another path; one pair of runs cannot tell the two apart.</p></section>` : '';
     const ap = LES.UI && LES.UI.app, cm = ap && ap.compare && ap.compare.seed === cfg.seed && ap.compare.day === w.day && LES.Compare ? ap.compare : null;
-    const compareNormal = cm ? `<section><h2>Compared with ${esc(cm.label)}</h2>${LES.Compare.table(LES.Compare.summary(w), cm.base, cm.label)}<p class="note">The same seed, founders and length under ${esc(cm.label)}: what these settings changed.</p></section>` : '';
+    const compareNormal = cm ? `<section><h2>Compared with ${esc(cm.label)}</h2>${LES.Compare.table(LES.Compare.summary(w), cm.base, cm.label)}</section>` : '';
     return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Simulation Report – ${esc(LES.townName(w))}</title>
 <style>
@@ -397,7 +430,7 @@ button{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid var(--li
 </style></head><body><main>
 <h1>${esc(LES.townName(w))} — ${a.years}-year simulation report</h1>
 <div class="sub">Seed “${esc(cfg.seed)}” · ${cfg.founders} founders · ${esc(LES.MAP_SIZES[w.mapSize].name)} map · generated ${esc(U.fmtDate(Math.max(0, w.lastDay)))} ${w.ended ? '(finished)' : '(in progress)'}</div>
-<p><button onclick="(function(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([document.documentElement.outerHTML],{type:'text/html'}));a.download='les-report-${esc(cfg.seed).replace(/[^a-z0-9-]/gi, '_')}.html';a.click();})()">Download this report</button> <button onclick="print()">Print / PDF</button></p>${LES.God && LES.God.intervened(w) ? `<p class="disc" style="border-style:solid;color:inherit"><b>Sandbox world.</b> ${w.intervention.events.filter(e => e.status === 'applied').length} intervention(s) by you (Fate): this is not a controlled research run, so compare it with an unchanged run of the same seed. Fate deaths are left out of life expectancy.</p>` : ''}
+<p><button onclick="(function(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([document.documentElement.outerHTML],{type:'text/html'}));a.download='les-report-${esc(cfg.seed).replace(/[^a-z0-9-]/gi, '_')}.html';a.click();})()">Download this report</button> <button onclick="print()">Print / PDF</button></p>${LES.God && LES.God.intervened(w) ? `<p class="disc" style="border-style:solid;color:inherit"><b>Sandbox world.</b> ${w.intervention.applied || w.intervention.events.filter(e => e.status === 'applied').length} intervention(s) by you (Fate): this is not a controlled research run, so compare it with an unchanged run of the same seed. Fate deaths are left out of life expectancy.</p>` : ''}
 <div class="kpis">
 <div class="kpi"><b>${w.winner ? '🏆 ' + esc(P.name(w.people[w.winner.pid])) : 'No winner'}</b><span>${w.winner ? `reached ${U.fmtMoney(w.goal)} in Year ${U.dayToDate(w.winner.day).year}` : `goal ${U.fmtMoney(w.goal)}`}</span></div>
 <div class="kpi"><b>${a.top[0] ? U.fmtMoney(a.top[0].peakReal) : '—'}</b><span>richest ever (Year-1 money)</span></div>

@@ -228,6 +228,10 @@
         </div>
         ${holdings ? `<div class="note">Shares held: ${esc(holdings)}</div>` : ''}
       </div>`;
+    if (p.adult && LES.Report && LES.Report.wealthStory) {
+      const ws = LES.Report.wealthStory(w, p);
+      html += `<div class="card"><h3>What shaped their wealth</h3><ul class="list-plain">${ws.lines.map(x => `<li>${x}</li>`).join('')}</ul><div class="note">${ws.note}</div></div>`;
+    }
 
     if (p.adult && p.goal) {
       const gd = LES.Goals.DEFS[p.goal.id];
