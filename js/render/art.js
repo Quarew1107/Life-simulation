@@ -738,6 +738,53 @@
     door(g, X + W - 14, Y + H - 2, 9, 12, '#2b2d42');
     sign(g, SG('KARAOKE & BAR'), X + W / 2, Y + 1, '#2b2d42', '#ff99c8');
   }
+  // ---- Country versions of civic buildings, sport and scenery ----
+  function bambooClump(g, x, y) { // China: a clump of bamboo instead of a rain tree
+    if (!vis(x - 2, y - 4, 18, 26)) return;
+    g.fillStyle = PAL.shadow; g.beginPath(); g.ellipse(x + 7, y + 20, 7, 2, 0, 0, Math.PI * 2); g.fill();
+    for (let k = 0; k < 5; k++) { const sx = x + 1 + k * 3, top = y + (k % 2) * 4; rect(g, sx, top, 1, 21 - (k % 2) * 4, k % 2 ? '#6a9a3a' : '#7fb04a'); for (let j = top + 3; j < y + 20; j += 5) rect(g, sx, j, 1, 1, '#4d7a2a'); }
+    for (let k = 0; k < 7; k++) rect(g, x - 1 + k * 2 + (k % 2), y + (k % 3) * 3 - 1, 4, 2, k % 2 ? '#4f8a41' : '#5f9f45');
+  }
+  function basketball(g, b, X, Y, W, H) { // US rec court / Chinese basketball court: painted court, keys, two hoops
+    castShadow(g, X + 2, Y + 2, W - 4, H - 4, 3);
+    const cn = CNSTYLE(), out = cn ? '#3b6ea5' : '#4a6d8c', court = cn ? '#c75b39' : '#c9a56b';
+    rect(g, X + 2, Y + 2, W - 4, H - 4, out); rect(g, X + 6, Y + 6, W - 12, H - 12, court);
+    g.strokeStyle = '#f4f1e8'; g.lineWidth = 1; g.strokeRect(X + 6.5, Y + 6.5, W - 13, H - 13);
+    rect(g, X + W / 2, Y + 6, 1, H - 12, '#f4f1e8');
+    g.beginPath(); g.arc(X + W / 2 + 0.5, Y + H / 2, 7, 0, Math.PI * 2); g.stroke();
+    for (const [kx, dir] of [[X + 6, 1], [X + W - 6, -1]]) {
+      rect(g, dir > 0 ? kx : kx - 14, Y + H / 2 - 6, 14, 12, cn ? '#a8442a' : '#b98e55');
+      g.strokeRect((dir > 0 ? kx : kx - 14) + 0.5, Y + H / 2 - 5.5, 13, 11);
+      rect(g, kx + (dir > 0 ? 1 : -3), Y + H / 2 - 4, 2, 8, '#f4f1e8'); rect(g, kx + (dir > 0 ? 3 : -5), Y + H / 2 - 1, 2, 2, '#e85d04'); // board and hoop
+    }
+    g.strokeStyle = 'rgba(255,255,255,0.35)'; g.strokeRect(X + 2.5, Y + 2.5, W - 5, H - 5); // chain-link fence
+    sign(g, SG('FUTSAL'), X + W / 2, Y + H - 13, cn ? '#1d3557' : '#24476b');
+  }
+  // Memorial markers drawn live (ambience.js): Malaysia lanterns, UK poppies, US candles, China white chrysanthemums.
+  const memorialMarker = () => (UKSTYLE() ? 'poppy' : USSTYLE() ? 'candle' : CNSTYLE() ? 'flower' : 'lantern');
+  function memorialCentre(g, X, Y, W, H) { // the monument in the middle of the garden
+    const cx = X + W / 2, cy = Y + H / 2;
+    if (UKSTYLE()) { // a stone cenotaph with a wreath
+      castShadow(g, cx - 6, cy - 22, 12, 34, 3);
+      rect(g, cx - 10, cy + 6, 20, 6, '#b8ad95'); rect(g, cx - 6, cy - 22, 12, 28, '#d8d0bc'); rect(g, cx - 6, cy - 22, 3, 28, '#e8e1d0'); rect(g, cx - 8, cy - 24, 16, 3, '#c9bfa8');
+      g.fillStyle = '#c1121f'; g.beginPath(); g.arc(cx, cy + 2, 4, 0, Math.PI * 2); g.fill(); rect(g, cx - 1, cy + 1, 2, 2, '#1b1b22');
+      return true;
+    }
+    if (USSTYLE()) { // a granite wall of names and a flagpole
+      castShadow(g, cx - 16, cy - 8, 32, 12, 3);
+      rect(g, cx - 16, cy - 8, 32, 12, '#3d405b'); rect(g, cx - 16, cy - 8, 32, 2, '#5c6080');
+      for (let k = 0; k < 4; k++) rect(g, cx - 13, cy - 4 + k * 2, 26, 1, '#8d99ae');
+      rect(g, cx + 20, cy - 26, 1, 30, '#ddd'); for (let k = 0; k < 5; k++) rect(g, cx + 21, cy - 26 + k, 9, 1, k % 2 ? '#ffffff' : '#c1121f'); rect(g, cx + 21, cy - 26, 4, 3, '#1d3557');
+      return true;
+    }
+    if (CNSTYLE()) { // a stone stele under a small tiled roof
+      castShadow(g, cx - 8, cy - 18, 16, 28, 3);
+      rect(g, cx - 10, cy + 6, 20, 5, '#9a9b97'); rect(g, cx - 6, cy - 14, 12, 20, '#c9c5bb'); for (let k = 0; k < 4; k++) rect(g, cx - 2, cy - 11 + k * 4, 4, 2, '#7d7a72');
+      rect(g, cx - 10, cy - 19, 20, 5, '#3a3f44'); rect(g, cx - 12, cy - 21, 3, 2, '#3a3f44'); rect(g, cx + 9, cy - 21, 3, 2, '#3a3f44');
+      return true;
+    }
+    return false;
+  }
   // A small flag on a pole for the town hall (Malaysia keeps its own striped flag).
   function townFlag(g, fx, fy) {
     if (UKSTYLE()) { rect(g, fx, fy, 9, 5, '#1d3557'); rect(g, fx, fy + 1, 9, 3, '#f4f1e8'); rect(g, fx + 3, fy, 3, 5, '#f4f1e8'); rect(g, fx + 4, fy, 1, 5, '#c1121f'); rect(g, fx, fy + 2, 9, 1, '#c1121f'); return true; }
@@ -1110,16 +1157,31 @@
         break;
       }
       case 'lake': { // an irregular lake with a sandy shore, reeds, a jetty and a boat
+        if (CNSTYLE()) { // a lotus pond: stone edge, lotus pads, a zigzag bridge to a pavilion
+          rect(g, X, Y, W, H, '#7fbf5a');
+          const cx = X + W / 2, cy = Y + H / 2 + 4, rx = W / 2 - 18, ry = H / 2 - 20;
+          g.fillStyle = '#b9b4a8'; g.beginPath(); g.ellipse(cx, cy, rx + 5, ry + 5, 0.1, 0, Math.PI * 2); g.fill();
+          g.fillStyle = '#3f8fa5'; g.beginPath(); g.ellipse(cx, cy, rx, ry, 0.1, 0, Math.PI * 2); g.fill();
+          for (let i = 0; i < 70; i++) { const a = R.range(0, Math.PI * 2), d = R.range(0.3, 0.92), x = cx + Math.cos(a) * rx * d, y = cy + Math.sin(a) * ry * d; rect(g, x, y, 6, 4, i % 3 ? '#4f8a41' : '#5f9f45'); if (i % 5 === 0) rect(g, x + 1, y - 1, 2, 2, '#f7a1c4'); }
+          let bx = cx - rx - 4, by = cy + 6; // the zigzag bridge
+          for (let k = 0; k < 5; k++) { const nx = bx + rx * 0.36, ny = by + (k % 2 ? 8 : -8); rect(g, bx, by, nx - bx, 3, '#d8d0c0'); rect(g, nx - 3, Math.min(by, ny), 3, Math.abs(ny - by) + 3, '#d8d0c0'); bx = nx; by = ny; }
+          rect(g, cx - 6, cy - 10, 2, 7, '#b3261e'); rect(g, cx + 4, cy - 10, 2, 7, '#b3261e'); rect(g, cx - 9, cy - 15, 18, 5, '#3a3f44'); rect(g, cx - 11, cy - 17, 3, 2, '#3a3f44'); rect(g, cx + 8, cy - 17, 3, 2, '#3a3f44'); // pavilion
+          for (const [tx, ty] of [[X + 10, Y + 6], [X + W - 30, Y + 8], [X + 14, Y + H - 36], [X + W - 26, Y + H - 32]]) bambooClump(g, tx, ty);
+          sign(g, (b.label || 'LAKE').toUpperCase(), X + W / 2, Y + H - 14, '#1d6f8a');
+          break;
+        }
         rect(g, X, Y, W, H, '#7fbf5a');
         for (let i = 0; i < 40; i++) rect(g, X + R.int(0, W - 4), Y + R.int(0, H - 3), 4, 2, '#77b553');
         const cx = X + W / 2, cy = Y + H / 2 + 4, rx = W / 2 - 18, ry = H / 2 - 20;
-        g.fillStyle = PAL.sand; g.beginPath(); g.ellipse(cx, cy, rx + 6, ry + 6, 0.1, 0, Math.PI * 2); g.fill();
+        g.fillStyle = TEMPERATE() ? '#6fa04a' : PAL.sand; g.beginPath(); g.ellipse(cx, cy, rx + 6, ry + 6, 0.1, 0, Math.PI * 2); g.fill(); // UK, US: grassy banks
         g.fillStyle = '#3f8fb5'; g.beginPath(); g.ellipse(cx, cy, rx, ry, 0.1, 0, Math.PI * 2); g.fill();
         g.fillStyle = '#4fa3c7'; g.beginPath(); g.ellipse(cx - 6, cy - 4, rx - 14, ry - 12, 0.1, 0, Math.PI * 2); g.fill();
         for (let i = 0; i < 14; i++) rect(g, cx - rx / 2 + R.int(0, rx), cy - ry / 2 + R.int(0, ry), R.int(5, 10), 1, '#8fd0ea');
         for (let i = 0; i < 18; i++) { const a = R.range(0, Math.PI * 2), x = cx + Math.cos(a) * (rx + 3), y = cy + Math.sin(a) * (ry + 3); rect(g, x, y - 4, 1, 5, '#4f8a3a'); rect(g, x + 2, y - 3, 1, 4, '#5f9f45'); }
         rect(g, cx + rx - 30, cy - 2, 26, 4, PAL.woodLight); for (const px of [cx + rx - 28, cx + rx - 18, cx + rx - 8]) rect(g, px, cy + 2, 2, 3, PAL.woodDark); // jetty
-        rect(g, cx - 20, cy + 8, 14, 4, '#e76f51'); rect(g, cx - 18, cy + 6, 10, 2, '#f4f1e8'); // a boat
+        if (USSTYLE()) { rect(g, cx - 22, cy + 8, 16, 3, '#c1440e'); rect(g, cx - 20, cy + 9, 12, 1, '#7a2a08'); } // a canoe
+        else if (UKSTYLE()) { rect(g, cx - 20, cy + 8, 14, 4, '#2f5d3a'); rect(g, cx - 18, cy + 9, 10, 2, '#a8743f'); for (const [dx, dy] of [[-34, -6], [-28, -2], [10, -14]]) { rect(g, cx + dx, cy + dy, 3, 2, '#f4f1e8'); rect(g, cx + dx + 2, cy + dy - 1, 1, 1, '#2f5d3a'); } } // a rowing boat and ducks
+        else { rect(g, cx - 20, cy + 8, 14, 4, '#e76f51'); rect(g, cx - 18, cy + 6, 10, 2, '#f4f1e8'); } // a boat
         for (const [tx, ty] of [[X + 10, Y + 8], [X + W - 30, Y + 10], [X + 14, Y + H - 34], [X + W - 26, Y + H - 30]]) rainTree(g, tx, ty, 0.8, R);
         sign(g, (b.label || 'TASIK').toUpperCase(), X + W / 2, Y + H - 14, '#1d6f8a');
         break;
@@ -1187,6 +1249,23 @@
         break;
       }
       case 'forest': { // dense forest reserve with a waterfall into a rock pool
+        if (CNSTYLE()) { // a bamboo and camphor wood with a stone path and a small pavilion
+          rect(g, X, Y, W, H, '#5f8f3c');
+          g.strokeStyle = '#cfc9bc'; g.lineWidth = 4; g.beginPath(); g.moveTo(X + 10, Y + H - 4); g.bezierCurveTo(X + W * 0.3, Y + H * 0.4, X + W * 0.7, Y + H * 0.8, X + W - 10, Y + 10); g.stroke();
+          for (let i = 0; i < 56; i++) { const tx = X + R.int(-2, W - 16), ty = Y + R.int(-4, H - 28); if (R.next() < 0.35) rainTree(g, tx, ty, R.range(0.7, 1), R); else bambooClump(g, tx, ty); } // bamboo among camphor trees
+          rect(g, X + W / 2 - 6, Y + H / 2 - 4, 2, 7, '#b3261e'); rect(g, X + W / 2 + 4, Y + H / 2 - 4, 2, 7, '#b3261e'); rect(g, X + W / 2 - 9, Y + H / 2 - 9, 18, 5, '#3a3f44');
+          sign(g, (b.label || 'FOREST').toUpperCase(), X + W / 2, Y + H - 14, '#1f4d2b');
+          break;
+        }
+        if (TEMPERATE()) { // UK woods / US state forest: trees (US: many pines), a creek with a footbridge, a ranger cabin (US)
+          rect(g, X, Y, W, H, '#4f8a3e');
+          g.strokeStyle = '#4fa3c7'; g.lineWidth = 4; g.beginPath(); g.moveTo(X, Y + H * 0.35); g.bezierCurveTo(X + W * 0.35, Y + H * 0.6, X + W * 0.6, Y + H * 0.2, X + W, Y + H * 0.55); g.stroke();
+          for (let i = 0; i < 64; i++) { const tx = X + R.int(-4, W - 20), ty = Y + R.int(-6, H - 30); if (USSTYLE() && R.next() < 0.6) conifer(g, tx, ty); else rainTree(g, tx, ty, R.range(0.6, 1), R); }
+          rect(g, X + W * 0.45, Y + H * 0.4 - 6, 10, 14, PAL.woodLight); for (let k = 0; k < 4; k++) rect(g, X + W * 0.45, Y + H * 0.4 - 5 + k * 4, 10, 1, PAL.woodDark); // footbridge
+          if (USSTYLE()) { rect(g, X + 12, Y + H - 40, 18, 10, '#7a4f2b'); rect(g, X + 10, Y + H - 44, 22, 5, '#4a5a3a'); rect(g, X + 19, Y + H - 36, 4, 6, '#3a2f28'); } // ranger cabin
+          sign(g, (b.label || 'WOODS').toUpperCase(), X + W / 2, Y + H - 14, '#1f4d2b');
+          break;
+        }
         rect(g, X, Y, W, H, '#3f7a35');
         for (let i = 0; i < 26; i++) rainTree(g, X + R.int(-4, W - 24), Y + R.int(-6, H - 30), R.range(0.6, 1), R);
         const fx = X + W / 2 - 8;
@@ -1256,9 +1335,11 @@
       case 'memorial': { // Taman Kenangan: garden of remembrance (lanterns are drawn live)
         rect(g, X, Y, W, H, '#7fb069');
         g.strokeStyle = '#e2cf9f'; g.lineWidth = 3; g.strokeRect(X + 8.5, Y + 8.5, W - 17, H - 17);
+        if (!memorialCentre(g, X, Y, W, H)) {
         castShadow(g, X + W / 2 - 8, Y + H / 2 - 16, 16, 26, 3);
         rect(g, X + W / 2 - 8, Y + H / 2 - 10, 16, 20, '#cfc6b0'); rect(g, X + W / 2 - 5, Y + H / 2 - 16, 10, 6, '#b8ad95'); rect(g, X + W / 2 - 8, Y + H / 2 - 10, 16, 1, '#e8e1d0');
-        for (const [tx, ty] of [[2, 2], [W - 18, 4], [4, H - 26], [W - 20, H - 24]]) rainTree(g, X + tx, Y + ty, 0.9, R);
+        }
+        for (const [tx, ty] of [[2, 2], [W - 18, 4], [4, H - 26], [W - 20, H - 24]]) { if (CNSTYLE()) bambooClump(g, X + tx, Y + ty - 6); else rainTree(g, X + tx, Y + ty, 0.9, R); }
         sign(g, SG('TAMAN KENANGAN'), X + W / 2, Y + H - 14, '#4a5a3a');
         break;
       }
@@ -1344,6 +1425,8 @@
         windows(g, X + 8, s.wallY + 8, W - 16, 10, 4, 1, { col: PAL.glass, lit: 1, night: 'rgba(200,230,255,0.95)' });
         door(g, X + W / 2, Y + H - 4, 10, 10, '#1d3557');
         rect(g, X + W - 26, Y + H - 12, 16, 8, '#f4f6f8'); rect(g, X + W - 26, Y + H - 9, 16, 2, '#1d3557'); rect(g, X + W - 20, Y + H - 14, 4, 2, '#e63946'); rect(g, X + W - 16, Y + H - 14, 2, 2, '#3a86ff');
+        if (UKSTYLE()) { rect(g, X + W / 2 + 8, Y + H - 18, 1, 6, '#1b1b22'); rect(g, X + W / 2 + 6, Y + H - 22, 5, 5, '#1d3557'); rect(g, X + W / 2 + 7, Y + H - 21, 3, 3, '#8ecae6'); addLight(X + W / 2 + 7, Y + H - 21, 3, 3, 1, 'rgba(120,190,255,1)'); } // the blue lamp
+        if (USSTYLE()) { rect(g, X + 6, Y + H - 30, 1, 24, '#ddd'); for (let k = 0; k < 5; k++) rect(g, X + 7, Y + H - 30 + k, 9, 1, k % 2 ? '#ffffff' : '#c1121f'); rect(g, X + 7, Y + H - 30, 4, 3, '#1d3557'); } // the flag out front
         sign(g, SG('POLIS'), X + W / 2, Y + 4, '#1d3557', '#f2e8cf');
         break;
       }
@@ -1377,6 +1460,15 @@
         break;
       }
       case 'court': { // court with columns and a dome-capped clock tower
+        if (CNSTYLE()) { // a people's court: a grey stone block on a podium of steps, the red emblem over the door
+          rect(g, X + 4, Y + H - 12, W - 8, 8, '#cfc9bc'); for (let k = 0; k < 3; k++) rect(g, X + 6 + k * 2, Y + H - 11 + k * 3, W - 12 - k * 4, 1, '#b8b2a5');
+          const s = building(g, X + 4, Y + 2, W - 8, H - 14, { wall: '#bdb8ad', roof: '#9a9b97', wallH: 26, details: 'ac', seed: b.id });
+          for (let i = 0; i < 5; i++) rect(g, X + 10 + i * ((W - 26) / 4), s.wallY + 3, 4, s.wallH - 5, '#d8d3c8');
+          g.fillStyle = '#c1121f'; g.beginPath(); g.arc(X + W / 2, s.wallY + 5, 4, 0, Math.PI * 2); g.fill(); rect(g, X + W / 2 - 1, s.wallY + 4, 2, 2, '#ffd166');
+          door(g, X + W / 2, Y + H - 12, 10, 12, '#5c3b20');
+          sign(g, SG('MAHKAMAH'), X + W / 2, Y + H - 3, '#3d0c15', '#f2c14e');
+          break;
+        }
         const s = building(g, X + 2, Y + 4, W - 4, H - 8, { wall: '#eee6d6', roof: '#7a2632', roofType: 'hip', wallH: 26 });
         for (let i = 0; i < 6; i++) { const cx = X + 8 + i * ((W - 20) / 5); rect(g, cx, s.wallY + 3, 3, s.wallH - 6, '#ffffff'); rect(g, cx + 2, s.wallY + 3, 1, s.wallH - 6, '#cfc6b0'); }
         door(g, X + W / 2, Y + H - 4, 10, 13, '#5c3b20');
@@ -1431,6 +1523,7 @@
         break;
       }
       case 'futsal': {
+        if (USSTYLE() || CNSTYLE()) { basketball(g, b, X, Y, W, H); break; }
         castShadow(g, X + 2, Y + 2, W - 4, H - 4, 3);
         rect(g, X + 2, Y + 2, W - 4, H - 4, '#2d6a4f'); rect(g, X + 5, Y + 5, W - 10, H - 10, '#52b788');
         for (let x = X + 5; x < X + W - 5; x += 8) rect(g, x, Y + 5, 4, H - 10, '#4aab7e');
@@ -1544,5 +1637,5 @@
 
   // The season trees show; returns true when it changed (the renderer then repaints the map).
   const setSeason = s => { if (s === SEASON) return false; SEASON = s; return true; };
-  LES.Art = { shopSignBox, setSeason, beginLights, takeLights, PAL, rect, shade, sign, building, roof, facade, windows, door, awning, castShadow, rainTree, palm, banana, shrub, drawGround, drawBuilding, drawGreenery, setView, vis, prng };
+  LES.Art = { memorialMarker, shopSignBox, setSeason, beginLights, takeLights, PAL, rect, shade, sign, building, roof, facade, windows, door, awning, castShadow, rainTree, palm, banana, shrub, drawGround, drawBuilding, drawGreenery, setView, vis, prng };
 })(globalThis.LES = globalThis.LES || {});

@@ -265,7 +265,7 @@
         padi: 'Corn and soybean fields.',
         lot: 'Empty land. New buildings appear here when the town gets crowded.',
         depot: 'Bus station and the town gateway. Newcomers arrive here.',
-        memorial: 'Memorial garden. A lantern for every founder who has passed away.',
+        memorial: 'Memorial garden. A candle for every founder who has passed away.',
         cinema: 'Movie theater. Mid-tier entertainment.',
         karaoke: 'The bar: drinks, pool and karaoke with friends. Mid-tier entertainment.',
         bowling: 'Bowling alley. Mid-tier entertainment.',

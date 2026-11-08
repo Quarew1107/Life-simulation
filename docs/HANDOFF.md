@@ -22,11 +22,10 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
 ## 0. Where to pick up (status at the end of the last session)
 **To do (keep this list current; the same list is in `docs/ROADMAP.md`):**
 - [ ] C09c optional small gift (sandbox, blueprint 10.4): deferred by the owner; build only if asked.
-- [ ] Country looks still shared with Malaysia (presentation only): police station, court, cinema, bowling,
-      spa, futsal, memorial lanterns, lake and forest scenery. Malaysia's shophouse, mamak, hawker centre,
-      Minangkabau hall and the striped flag stay as they are.
 - [ ] Optional extras from 4.2: tax competition between towns, real map thumbnails for the region view.
 - [x] Country shop lots, eateries and scenery (Nov 2026, below).
+- [x] Country civic buildings, sport, memorial and lakes/forests (Nov 2026, below). Cinema, bowling and spa
+      were judged generic enough to share (the spa's palm already becomes a local tree).
 - [x] Blueprint C00-C11 and C07 (all on `main` and pushed; `dev/blueprint-2026-11` holds the same commits).
 
 **Country looks (Nov 2026, presentation only; engine fingerprints and Malaysia's map unchanged):**
@@ -44,6 +43,14 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
   place (y 22, 12 high, 2 lines) and the renderer draws it there (UK and China gold-lined).
 - Checked in the browser pane for the UK, US and China (shops empty and let, café/diner/noodle shop, market
   hall/food hall/food street, pub, karst and bluff).
+- Second pass: police (UK blue lamp, US flag), China's court (grey stone block with the red emblem), the
+  futsal pitch (US rec court and China basketball court via `basketball`; the UK keeps five-a-side), the
+  memorial (`memorialCentre`: UK cenotaph, US wall of names and flag, China stele; markers drawn live in
+  ambience.js through `LES.Art.memorialMarker()`: UK poppies, US candles, China white chrysanthemums; pack
+  descriptions say the same), lakes (UK and US grassy banks, UK rowing boat and ducks, US canoe; China lotus
+  pond with a zigzag bridge and pavilion) and forests (UK woods and US preserve with a creek and footbridge,
+  US pines and a ranger cabin; China bamboo among camphor trees). Festival lanterns on shops hang below the
+  fascia outside Malaysia.
 
 **Blueprint work (Nov 2026, `Idea/LES_*_2026-11-05.md`):** merged into `main` and pushed.
 Status: C00-C11 and C07 done (C09c deferred, optional). Rules versions: 1 Classic and older saves, 2 C03, 3 C04b,

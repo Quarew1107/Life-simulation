@@ -278,7 +278,7 @@
         padi: 'Rice paddies and vegetable plots.',
         lot: 'Empty land. New buildings appear here when the city gets crowded.',
         depot: 'Bus station and the city gateway. Newcomers arrive here.',
-        memorial: 'Memorial garden. A lantern for every founder who has passed away.',
+        memorial: 'Memorial garden. A white chrysanthemum for every founder who has passed away.',
         cinema: 'Cinema. Mid-tier entertainment.',
         karaoke: 'KTV: private karaoke rooms with friends. Mid-tier entertainment.',
         bowling: 'Bowling alley. Mid-tier entertainment.',

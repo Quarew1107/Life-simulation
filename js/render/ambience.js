@@ -128,12 +128,15 @@
     }
     // Memorial lanterns: one for every founder who has died
     const fallen = w.stats.deaths ? w.people.filter(p => !p.alive && p.gen === 0 && !p.migrant).length : 0;
+    const marker = LES.Art.memorialMarker(); // lantern (Malaysia), poppy (UK), candle (US), white chrysanthemum (China)
     for (const id of town.kinds.memorial || []) {
       const b = town.buildings[id], X = b.x * T + 12, Y = b.y * T + 14, cols = Math.floor((b.w * T - 24) / 6);
       for (let i = 0; i < Math.min(fallen, cols * 12); i++) {
         const x = X + (i % cols) * 6, y = Y + Math.floor(i / cols) * 9;
-        g.fillStyle = '#b23a48'; g.fillRect(x, y, 3, 4);
-        g.fillStyle = '#ffd166'; g.fillRect(x + 1, y + 1, 1, 2);
+        if (marker === 'poppy') { g.fillStyle = '#4f8a41'; g.fillRect(x + 1, y + 3, 1, 2); g.fillStyle = '#c1121f'; g.fillRect(x, y, 3, 3); g.fillStyle = '#1b1b22'; g.fillRect(x + 1, y + 1, 1, 1); }
+        else if (marker === 'candle') { g.fillStyle = '#f4f1e8'; g.fillRect(x + 1, y + 1, 2, 4); g.fillStyle = '#ffb703'; g.fillRect(x + 1, y - 1, 2, 2); }
+        else if (marker === 'flower') { g.fillStyle = '#f4f1e8'; g.fillRect(x, y, 3, 3); g.fillStyle = '#e9c46a'; g.fillRect(x + 1, y + 1, 1, 1); g.fillStyle = '#4f8a41'; g.fillRect(x + 1, y + 3, 1, 2); }
+        else { g.fillStyle = '#b23a48'; g.fillRect(x, y, 3, 4); g.fillStyle = '#ffd166'; g.fillRect(x + 1, y + 1, 1, 2); }
       }
     }
     if (fast) return;
@@ -143,7 +146,7 @@
       const blink = Math.floor(sec * 2) % 2;
       const deco = (ART().decor || DECOR)[fest.id];
       if (deco === 'homeLights') for (const id of town.kinds.kampung || []) { const b = town.buildings[id]; for (let i = 0; i < 6; i++) { g.fillStyle = (i + blink) % 2 ? '#ffb703' : '#fb8500'; g.fillRect(b.x * T + 2 + i * 8, (b.y + b.h) * T + 2, 2, 3); } }
-      if (deco === 'lanterns') for (const id of town.shoplots) { const b = town.buildings[id]; for (let i = 0; i < 3; i++) { g.fillStyle = '#d62828'; g.fillRect(b.x * T + 8 + i * 20, b.y * T + 29, 5, 6); g.fillStyle = '#ffd166'; g.fillRect(b.x * T + 10 + i * 20, b.y * T + 35, 1, 3); } }
+      if (deco === 'lanterns') { const ly = LES.Art.shopSignBox().style === 'my' ? 29 : 35; for (const id of town.shoplots) { const b = town.buildings[id]; for (let i = 0; i < 3; i++) { g.fillStyle = '#d62828'; g.fillRect(b.x * T + 8 + i * 20, b.y * T + ly, 5, 6); g.fillStyle = '#ffd166'; g.fillRect(b.x * T + 10 + i * 20, b.y * T + ly + 6, 1, 3); } } }
       if (deco === 'pumpkins') for (const tier of [0, 1, 2]) for (const id of town.homesByTier[tier] || []) { const b = town.buildings[id]; for (let i = 0; i < 2; i++) { const x = b.x * T + 6 + i * 9, y = (b.y + b.h) * T - 6; g.fillStyle = '#f77f00'; g.fillRect(x, y, 4, 3); g.fillStyle = '#386641'; g.fillRect(x + 1, y - 1, 1, 1); if (blink) { g.fillStyle = '#ffd166'; g.fillRect(x + 1, y + 1, 1, 1); } } }
       if (deco === 'diyas') for (const tier of [1, 2]) for (const id of town.homesByTier[tier]) { const b = town.buildings[id]; for (let i = 0; i < 5; i++) { g.fillStyle = ['#ff006e', '#ffbe0b', '#3a86ff', '#8338ec', '#fb5607'][(i + blink) % 5]; g.fillRect(b.x * T + 4 + i * 6, (b.y + b.h) * T + 3, 3, 3); } }
       if (deco === 'mallTree') for (const id of town.kinds.mall || []) { // a lit tree outside each mall

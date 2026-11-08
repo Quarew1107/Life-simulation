@@ -337,7 +337,7 @@
         padi: 'Farmland.',
         lot: 'Empty land. New buildings appear here when the town gets crowded.',
         depot: 'Bus station and the town gateway. Newcomers arrive here.',
-        memorial: 'Garden of remembrance. A lantern for every founder who has passed away.',
+        memorial: 'Garden of remembrance. A poppy for every founder who has passed away.',
         cinema: 'Cinema: films. Mid-tier entertainment.',
         karaoke: 'The pub: drinks, quiz nights and karaoke with friends. Mid-tier entertainment.',
         bowling: 'Bowling alley. Mid-tier entertainment.',
