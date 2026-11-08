@@ -38,7 +38,7 @@
       cards.push(`<div class="card"><h3>Businesses here</h3>${bizHere.length ? `<ul class="list-plain">${bizHere.map(x => {
         const owners = Object.keys(x.shares).map(k => `${UI.plink(w, Number(k))} ${Math.round(x.shares[k] * 100)}%`).join(', ');
         return `<li><span><b>${esc(x.name)}</b> <span class="muted">${esc(x.typeDef.name)} · since ${U.fmtMonthYear(x.foundedDay)}</span><br><span class="muted">Owners: ${owners}</span><br><span class="muted">Revenue ${U.fmtMoney(x.lastRevenue)}/mo · profit <span class="${x.lastProfit < 0 ? 'neg' : 'pos'}">${U.fmtMoney(x.lastProfit)}</span></span></span><span>${U.fmtMoney(x.equity)}</span></li>`;
-      }).join('')}</ul>` : '<p class="muted" style="margin:0">Empty — available for rent (SEWA).</p>'}</div>`);
+      }).join('')}</ul>` : `<p class="muted" style="margin:0">Empty — available for rent (${esc((LES.Countries.pack.town.signs || {}).SEWA || 'SEWA')}).</p>`}</div>`);
       const past = w.biz.filter(x => !x.open && x.place === b.id).slice(-5);
       if (past.length) cards.push(`<div class="card"><h3>Previous tenants</h3><ul class="list-plain">${past.map(x => `<li><span>${esc(x.name)} <span class="muted">${esc(x.closeReason || 'closed')}</span></span><span class="muted">${U.fmtMonthYear(x.foundedDay)}–${x.closedDay !== null ? U.fmtMonthYear(x.closedDay) : ''}</span></li>`).join('')}</ul></div>`);
     }

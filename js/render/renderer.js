@@ -593,16 +593,36 @@
     drawShops(g) {
       const w = this.w, T = this.town.T;
       g.textBaseline = 'top';
+      // Malaysia: the sign covers the shophouse's upper floor; elsewhere it is a fascia above the shop window.
+      const box = LES.Art.shopSignBox(), signs = LES.Countries.pack.town.signs, vacant = (signs && signs.SEWA) || 'SEWA';
+      const VACANT = { uk: ['#ffffff', '#c1121f'], us: ['#c1121f', '#ffffff'], cn: ['#d62828', '#ffd166'] }[box.style];
       for (const id of this.town.shoplots) {
         const b = this.town.buildings[id], X = b.x * T, Y = b.y * T;
         const bizId = w.shoplotOwner[id];
         if (bizId === undefined) {
-          rect(g, X + 14, Y + 12, 36, 10, '#e8e4da');
-          g.font = `8px ${FONT}`; g.fillStyle = '#7a2e1e'; g.fillText('SEWA', X + 20, Y + 13);
+          if (!VACANT) {
+            rect(g, X + 14, Y + 12, 36, 10, '#e8e4da');
+            g.font = `8px ${FONT}`; g.fillStyle = '#7a2e1e'; g.fillText('SEWA', X + 20, Y + 13);
+            continue;
+          }
+          g.font = `8px ${FONT}`;
+          const tw = Math.ceil(g.measureText(vacant).width), bx = Math.round(X + 32 - tw / 2 - 4);
+          rect(g, bx + 1, Y + box.y + 2, tw + 8, 10, 'rgba(0,0,0,0.3)');
+          rect(g, bx, Y + box.y + 1, tw + 8, 10, VACANT[1]); rect(g, bx + 1, Y + box.y + 2, tw + 6, 8, VACANT[0]);
+          g.fillStyle = VACANT[1]; g.fillText(vacant, bx + 4, Y + box.y + 2);
           continue;
         }
         const biz = w.biz[bizId];
         const col = biz.type === 'restaurant' ? '#b23a48' : biz.type === 'workshop' ? '#3d5a80' : biz.type === 'retail' ? '#2a9d8f' : '#6a4c93';
+        if (box.style !== 'my') { // fascia board: UK gold-lined with cream letters, China gold-lined with yellow, US plain
+          const edge = box.style === 'us' ? 'rgba(255,255,255,0.4)' : '#c9a227';
+          rect(g, X + 2, Y + box.y, 60, box.h, edge); rect(g, X + 3, Y + box.y + 1, 58, box.h - 2, col);
+          g.font = `6px ${FONT}`; g.fillStyle = box.style === 'uk' ? '#f2e8cf' : box.style === 'cn' ? '#ffe066' : '#ffffff';
+          const lines = wrapText(g, biz.name.toUpperCase(), 55, box.lines);
+          lines.forEach((ln, i) => g.fillText(ln, X + 5, Y + box.y + 1 + i * 5.5));
+          if (biz.scale > U.RM(biz.typeDef.scale0) * 3) rect(g, X + 58, Y + 2, 4, 4, '#f2c14e');
+          continue;
+        }
         rect(g, X + 2, Y + 7, 60, 20, col);
         rect(g, X + 2, Y + 7, 60, 1, 'rgba(255,255,255,0.4)');
         g.font = `6px ${FONT}`; g.fillStyle = '#ffffff';

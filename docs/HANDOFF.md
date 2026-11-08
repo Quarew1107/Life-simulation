@@ -20,11 +20,35 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
 - Docs: `README.md` (features), `docs/ROADMAP.md` (phases, decisions, Malaysian figures).
 
 ## 0. Where to pick up (status at the end of the last session)
-**Blueprint work (Nov 2026, `Idea/LES_*_2026-11-05.md`, branch `dev/blueprint-2026-11`, not pushed):**
+**To do (keep this list current; the same list is in `docs/ROADMAP.md`):**
+- [ ] C09c optional small gift (sandbox, blueprint 10.4): deferred by the owner; build only if asked.
+- [ ] Country looks still shared with Malaysia (presentation only): police station, court, cinema, bowling,
+      spa, futsal, memorial lanterns, lake and forest scenery. Malaysia's shophouse, mamak, hawker centre,
+      Minangkabau hall and the striped flag stay as they are.
+- [ ] Optional extras from 4.2: tax competition between towns, real map thumbnails for the region view.
+- [x] Country shop lots, eateries and scenery (Nov 2026, below).
+- [x] Blueprint C00-C11 and C07 (all on `main` and pushed; `dev/blueprint-2026-11` holds the same commits).
+
+**Country looks (Nov 2026, presentation only; engine fingerprints and Malaysia's map unchanged):**
+- Empty shop lots no longer say SEWA everywhere: the word comes from the pack's `town.signs.SEWA` (UK
+  'TO LET' on a white estate-agent board, US 'FOR LEASE', China 'FOR RENT' on a red-and-gold banner) and the
+  place card says the same.
+- `art.js` country painters: shop lots (`shopUK` Victorian high-street shop with brick upper floor, sash
+  windows and a painted shopfront; `shopUS` Main Street storefront with a false-front parapet and awning;
+  `shopCN` ground-floor shop under a tiled flat with caged windows, an AC unit, laundry and lanterns),
+  the mamak (`cafeUK`, `dinerUS`, `noodleCN`), the hawker centre (`marketUK` glazed market hall,
+  `foodhallUS` with food trucks, `foodstreetCN` with lantern strings), the karaoke bar (`pubUK`, `barUS`;
+  China keeps the KTV), the town hall's flags (`townFlag`) and the hill scenery (China: karst towers with a
+  pavilion; US: a pine bluff with a fire lookout; UK moors already existed).
+- Outside Malaysia the business sign is a fascia above the shop window: `LES.Art.shopSignBox()` gives its
+  place (y 22, 12 high, 2 lines) and the renderer draws it there (UK and China gold-lined).
+- Checked in the browser pane for the UK, US and China (shops empty and let, café/diner/noodle shop, market
+  hall/food hall/food street, pub, karst and bluff).
+
+**Blueprint work (Nov 2026, `Idea/LES_*_2026-11-05.md`):** merged into `main` and pushed.
 Status: C00-C11 and C07 done (C09c deferred, optional). Rules versions: 1 Classic and older saves, 2 C03, 3 C04b,
 4 C06 (today's rules). Owner decision (Nov 2026): no crime or life-expectancy retune; the remaining gaps (UK/US
-prisoners, UK crime, Malaysia life expectancy, see C11) are accepted as small. Next step: merge
-`dev/blueprint-2026-11` into `main` when ready (not pushed).
+prisoners, UK crime, Malaysia life expectancy, see C11) are accepted as small.
 - C00 baseline on c2a3032 (clean tree apart from the two untracked Idea docs). No Node here: run the harness
   checks in headless Edge (`python tools/edge.py tests.html "<js>"`). Full suite 229/229 (359 s; one earlier
   attempt hung idle in the harness and timed out, not reproduced). Hash, 1500 days, 100 founders: today's rules
@@ -246,7 +270,7 @@ economy, comparison card, save/load. Next, in this order:
    Metropolis) of scenery blocks: 'k' lake, 'm' hill, 'f' forest reserve (`LES.SCENERY_EXTRA`,
    `planDistricts`, painters in `art.js`). Setting `scenery` both/decor: with both they join
    `town.kinds.park` (venues) and homes next to them get `b.view` (less stress). Grid towns and
-   Classic are unchanged. Still open: country-specific scenery (karst, moors, dunes...).
+   Classic are unchanged. Country hills since done: UK moorland, China karst, US pine bluff (Nov 2026).
 3. 4.4 My Cast is DONE (lean version): `js/sim/cast.js` (`LES.Cast.add`), `js/ui/cast-ui.js` (creator with
    sprite preview, roster in localStorage with export/import, "★ My cast" mode in the Leaders tab,
    ★ on leaderboards). Still open: adding cast as founders at setup, partners/families inside the cast,

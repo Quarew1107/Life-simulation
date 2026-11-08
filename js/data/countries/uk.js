@@ -282,6 +282,7 @@
       busLine: 'Route',
       // Words on the map signs (keyed by the Malaysian sign text).
       signs: {
+        SEWA: 'TO LET', // an empty shop lot waiting for a tenant
         'HAWKER CENTRE': 'MARKET HALL', 'UNIVERSITI REZEKI': 'UNIVERSITY', 'KOLEJ VOKASIONAL': 'COLLEGE', DEWAN: 'COMMUNITY CENTRE',
         BURSA: 'ALBION EXCHANGE', 'REZEKI MALL': 'REXBURY CENTRE', HOSPITAL: 'NHS HOSPITAL', SEKOLAH: 'SCHOOL', KILANG: 'WORKS',
         BENGKEL: 'GARAGE', GUDANG: 'WAREHOUSE', 'TAPAK BINAAN': 'BUILDING SITE', STADIUM: 'LEISURE CENTRE', 'RUMAH KEBAJIKAN': "CHILDREN'S HOME",
