@@ -27,6 +27,10 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
 - [ ] Expansion 1 follow-ups if wanted: firefighters as public-sector posts paid by the treasury (now ordinary
       openings at the police station); a real start date for partnerships (the lasting-love goal counts from when
       it is chosen); US inequality sits slightly lower with the new jobs (0.42-0.44 vs target 0.48).
+- [ ] Performance follow-ups if wanted (`docs/PERFORMANCE.md`): run compare/calibration runs in a Web Worker;
+      one worker per town for big regions. Engine is linear (~8-10 us per person-day) with a flat profile.
+- [x] Performance pass (Nov 2026, `docs/PERFORMANCE.md`): CPU-painted map canvases, double-buffered overview,
+      Turbo view (⚡ / T), pump no longer waits on held-back frames. China 2,500: ~12 -> ~27 days/s (~33 Turbo).
 - [x] Expansion 1: 23 jobs, research centre, 6 degrees, 9 specialisations, 9 goals, 8 outfits, 9 looks (Nov 2026, below).
 - [x] Country shop lots, eateries and scenery (Nov 2026, below).
 - [x] Country civic buildings, sport, memorial and lakes/forests (Nov 2026, below). Cinema, bowling and spa
@@ -403,6 +407,10 @@ Measured with tiles (Edge, GPU): Metropolis town switch 941 ms -> 29 ms, frame z
   change (e.g. reuse the morning's options for the evening slot where nothing changed, needs
   kept in typed arrays, or one Web Worker per town for regions).
 - Time-slice stepping: done for 10 days/s and faster (MessageChannel pump in `js/main.js`).
+- Nov 2026 pass (`docs/PERFORMANCE.md`): at fast speeds the integrated GPU was the bottleneck (overview repainted
+  each season, ~45 ms per frame). Off-screen map canvases are now CPU canvases (`willReadFrequently`), a full
+  repaint goes into a second overview swapped in when complete, Turbo view draws ~4 frames/s while the pump runs,
+  and the pump continues after 50 ms if the browser holds a frame back. Results identical (hash checked).
 - Later, optional: one Web Worker per town for multi-core. Workers cannot load file:// scripts,
   so this needs a generated engine bundle (`tools/bundle.js` concatenating core/data/sim into
   one function whose `toString()` feeds a Blob worker).

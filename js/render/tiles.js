@@ -13,6 +13,12 @@
   const BYTES = TILE * TILE * 4 * 2; // a tile and its night-light layer
   const FONT = '"Silkscreen", "Press Start 2P", monospace';
 
+  // Off-screen map canvases are painted on the CPU (willReadFrequently keeps them out of
+  // the GPU): they are thousands of small rectangles, which an integrated GPU rasterises
+  // slowly at the moment the canvas is next drawn (measured: ~40 ms a frame while the
+  // overview was being repainted, against ~1 ms of CPU painting per piece).
+  const canvas = (w, h) => { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; cv.getContext('2d', { willReadFrequently: true }); return cv; };
+
   // A building's look, for spotting what changed.
   const sig = b => `${b.kind}|${b.x},${b.y},${b.w},${b.h}|${b.label || ''}|${b.built ? 1 : 0}|${b.block ? b.block.code : ''}`;
 
@@ -31,8 +37,9 @@
         const T = town.T;
         this.W = town.W * T; this.H = town.H * T;
         this.cols = Math.ceil(this.W / TILE); this.rows = Math.ceil(this.H / TILE);
-        this.ov = document.createElement('canvas'); this.ov.width = Math.ceil(this.W / OV); this.ov.height = Math.ceil(this.H / OV);
-        this.ovLights = document.createElement('canvas'); this.ovLights.width = this.ov.width; this.ovLights.height = this.ov.height;
+        this.back = null;
+        this.ov = canvas(Math.ceil(this.W / OV), Math.ceil(this.H / OV));
+        this.ovLights = canvas(this.ov.width, this.ov.height);
         LES.RegionMap.drawTown(this.ov.getContext('2d'), town, T / OV); // stand-in until tiles are painted
         this.ovDone = new Uint8Array(this.cols * this.rows);
         this.prepare();
@@ -49,10 +56,19 @@
       });
       this.sigs = now;
       this.prepare();
-      for (const k of dirty) { this.cache.delete(k); const [cx, cy] = k.split(',').map(Number); this.ovDone[cy * this.cols + cx] = 0; }
+      for (const k of dirty) {
+        this.cache.delete(k); const [cx, cy] = k.split(',').map(Number);
+        this.ovDone[cy * this.cols + cx] = 0; if (this.back) this.back.done[cy * this.cols + cx] = 0;
+      }
     }
-    // Paint everything again (e.g. once the pixel font has loaded).
-    reset() { const t = this.town; this.town = null; if (t) this.setTown(t, this.version); }
+    // Paint everything again (a new season's trees, or once the pixel font has loaded). The
+    // overview being shown stays on screen, unchanged, until its replacement is complete: a
+    // canvas that changes every frame must be sent to the GPU again every frame.
+    reset() {
+      if (!this.town) return;
+      this.drop();
+      this.back = { ov: canvas(this.ov.width, this.ov.height), lights: canvas(this.ov.width, this.ov.height), done: new Uint8Array(this.cols * this.rows) };
+    }
     drop() { this.cache.clear(); this.want.clear(); }
     get bytes() { return this.cache.size * BYTES; }
 
@@ -123,8 +139,7 @@
     }
 
     paintTile(cx, cy) {
-      const x0 = cx * TILE, y0 = cy * TILE, cv = document.createElement('canvas'), lights = document.createElement('canvas');
-      cv.width = cv.height = lights.width = lights.height = TILE;
+      const x0 = cx * TILE, y0 = cy * TILE, cv = canvas(TILE, TILE), lights = canvas(TILE, TILE);
       const rects = this.paintArea(cv.getContext('2d'), x0, y0, TILE, TILE);
       this.paintLights(lights.getContext('2d'), x0, y0, TILE, TILE, rects);
       const tile = { cv, lights };
@@ -139,16 +154,18 @@
       this.cache.delete(k); this.cache.set(k, t);
       return t;
     }
-    // One piece of the overview, painted straight at quarter scale (map and night lights).
+    // One piece of the overview, painted straight at quarter scale (map and night lights),
+    // into the replacement overview while one is under way.
     paintOverview(cx, cy) {
-      const x0 = cx * TILE, y0 = cy * TILE;
-      for (const cv of [this.ov, this.ovLights]) { const o = cv.getContext('2d'); o.setTransform(1, 0, 0, 1, 0, 0); o.clearRect(x0 / OV, y0 / OV, TILE / OV, TILE / OV); }
-      const o = this.ov.getContext('2d'), ol = this.ovLights.getContext('2d');
+      const x0 = cx * TILE, y0 = cy * TILE, B = this.back, ov = B ? B.ov : this.ov, ovl = B ? B.lights : this.ovLights;
+      for (const cv of [ov, ovl]) { const o = cv.getContext('2d'); o.setTransform(1, 0, 0, 1, 0, 0); o.clearRect(x0 / OV, y0 / OV, TILE / OV, TILE / OV); }
+      const o = ov.getContext('2d'), ol = ovl.getContext('2d');
       o.setTransform(1 / OV, 0, 0, 1 / OV, 0, 0); ol.setTransform(1 / OV, 0, 0, 1 / OV, 0, 0);
       const rects = this.paintArea(o, x0, y0, TILE, TILE, false);
       this.paintLights(ol, x0, y0, TILE, TILE, rects, false);
       o.setTransform(1, 0, 0, 1, 0, 0); ol.setTransform(1, 0, 0, 1, 0, 0);
-      this.ovDone[cy * this.cols + cx] = 1;
+      (B ? B.done : this.ovDone)[cy * this.cols + cx] = 1;
+      if (B && B.done.indexOf(0) < 0) { this.ov = B.ov; this.ovLights = B.lights; this.ovDone = B.done; this.back = null; } // swap in, complete
     }
 
     // Between frames: paint tiles wanted on screen first, then fill the overview, within budget ms.
@@ -159,7 +176,7 @@
         let k = null;
         for (const x of this.want) { this.want.delete(x); if (!this.cache.has(x)) { k = x; break; } }
         if (k) { const [cx, cy] = k.split(',').map(Number); this.paintTile(cx, cy); n++; continue; }
-        const i = this.ovDone.indexOf(0);
+        const i = (this.back ? this.back.done : this.ovDone).indexOf(0);
         if (i < 0) break;
         this.paintOverview(i % this.cols, Math.floor(i / this.cols)); n++;
       }
@@ -167,7 +184,7 @@
       for (const k of this.cache.keys()) { if (this.bytes <= this.cap) break; if (!keep || !keep.has(k)) this.cache.delete(k); }
       return n;
     }
-    get complete() { return this.ovDone.every(x => x); }
+    get complete() { return !this.back && this.ovDone.every(x => x); }
 
     // Tiles a view needs (asked for if not painted yet); none when zoomed out.
     need(vx, vy, vw, vh, z) {

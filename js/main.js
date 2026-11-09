@@ -17,6 +17,7 @@
   const app = {
     world: null, renderer: null, paused: true, speedIdx: 2, skipNights: true, pinned: -1, dayFrac: 0, selected: -1, fast: false, lastCfg: null,
     _rich: { t: 0, ids: [] },
+    turbo: (() => { try { return localStorage.getItem('les-turbo') === '1'; } catch (e) { return false; } })(),
   };
   window.LES_APP = app;
 
@@ -248,8 +249,13 @@
     const el = $('speed');
     el.innerHTML = `<button class="pause ${app.paused ? 'on' : ''}" data-s="pause" title="Play / pause (Space)">${app.paused ? '▶' : '❚❚'}</button>`
       + SPEEDS.map((s, i) => `<button data-s="${i}" class="${!app.paused && i === app.speedIdx ? 'on' : ''}" title="${s.tip} (key ${i + 1})">${s.label}</button>`).join('')
-      + `<button data-s="night" class="${app.skipNights ? 'on night' : 'night'}" title="Fast-forward nights 23:00-06:00 at slow speeds">🌙</button>`;
+      + `<button data-s="night" class="${app.skipNights ? 'on night' : 'night'}" title="Fast-forward nights 23:00-06:00 at slow speeds">🌙</button>`
+      + `<button data-s="turbo" class="${app.turbo ? 'on turbo' : 'turbo'}" title="Turbo view (T): at 10d/s and faster the map is redrawn about 4 times a second instead of every frame, so a big town simulates more days per second. Every event and result is exactly the same.">⚡</button>`;
   }
+  app.setTurbo = function (on) {
+    app.turbo = !!on; renderSpeed();
+    try { localStorage.setItem('les-turbo', app.turbo ? '1' : '0'); } catch (e) { /* private window: per session only */ }
+  };
   // byDirector = true when Director mode slows down for a shot; a speed the user picks
   // themselves always wins and cancels the Director's planned resume.
   app.setSpeed = function (i, byDirector) {
@@ -272,12 +278,23 @@
   // a big town that is slow to draw no longer leaves the processor waiting. After a
   // while without a frame (45 ms, or about two simulated days in a huge town where
   // one day takes longer than that) the pump waits for the map to be drawn.
-  const PUMP_MS = 14;
+  // Turbo view: while the pump runs, the map and panels are redrawn only every TURBO_MS,
+  // so the time a big town spends drawing goes to simulating instead (the days simulated
+  // are exactly the same; only how often they are shown changes).
+  const PUMP_MS = 14, TURBO_MS = 250;
+  let lastDrawAt = 0;
   const pump = new MessageChannel();
   let pumpOn = false, pumpLast = 0, lastFrameAt = 0, pumpAfterFrame = false, stepMs = 2;
+  // If the browser holds frames back (it throttles them to about one a second in a window
+  // it thinks is covered, even though the page still counts as visible), the pump
+  // carries on after FRAME_WAIT_MS instead of waiting for that frame.
+  const FRAME_WAIT_MS = 50;
   const pumpNext = () => {
-    if (performance.now() - lastFrameAt > U.clamp(1.6 * stepMs, 45, 150)) pumpAfterFrame = true;
-    else pump.port2.postMessage(0);
+    if (performance.now() - lastFrameAt > U.clamp(1.6 * stepMs, 45, 150)) {
+      pumpAfterFrame = true;
+      clearTimeout(pumpNext.t);
+      pumpNext.t = setTimeout(() => { if (pumpAfterFrame) { pumpAfterFrame = false; lastFrameAt = performance.now(); pump.port2.postMessage(0); } }, FRAME_WAIT_MS);
+    } else pump.port2.postMessage(0);
   };
   const timedStep = () => {
     const t = performance.now();
@@ -342,13 +359,15 @@
       }
       if (w.ended && !app.endShown) { app.endShown = true; app.paused = true; renderSpeed(); app.showEnd(); }
     }
-    if (w) {
+    const turboSkip = app.turbo && pumpOn && !!w && !app.paused && now - lastDrawAt < TURBO_MS;
+    if (w && !turboSkip) {
+      lastDrawAt = now;
       app.renderer.richIds = app.richIds();
       if (app.view === 'region' && app.region) app.regionView.draw(app, now);
       else app.renderer.frame(app.dayFrac, app.fast && !app.paused, now);
       UI.update(false);
-      UI.directorTick(now);
     }
+    if (w) UI.directorTick(now);
     LES.Audio.tick(app);
     if (pumpAfterFrame) { pumpAfterFrame = false; lastFrameAt = performance.now(); pump.port2.postMessage(0); }
     requestAnimationFrame(frame);
@@ -498,6 +517,7 @@
       const b = e.target.closest('button'); if (!b) return;
       if (b.dataset.s === 'pause') app.togglePause();
       else if (b.dataset.s === 'night') { app.skipNights = !app.skipNights; renderSpeed(); }
+      else if (b.dataset.s === 'turbo') app.setTurbo(!app.turbo);
       else app.setSpeed(Number(b.dataset.s));
       document.activeElement.blur(); // so Space toggles pause instead of re-clicking
     });
@@ -514,6 +534,7 @@
       else if (e.key >= '1' && e.key <= '7') app.setSpeed(Number(e.key) - 1);
       else if (e.key === 's' || e.key === 'S') stepDay();
       else if (e.key === 'f' || e.key === 'F') app.action('follow');
+      else if (e.key === 't' || e.key === 'T') app.setTurbo(!app.turbo);
       else if (e.key === 'Escape') { if (inRegion()) app.selectTown(app.world.townIdx); else app.action('deselect'); }
     });
     window.addEventListener('resize', () => r.resize());

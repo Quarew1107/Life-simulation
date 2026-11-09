@@ -282,13 +282,17 @@
   // ---- Ground ----
   // Texture patterns are made once and reused for every tile (a pattern works on any canvas).
   const patterns = new Map();
+  // Pattern tiles are painted on the CPU like the map tiles they fill (a GPU canvas drawn
+  // into a CPU one has to be read back from the GPU each time).
+  const smallCanvas = (w, h) => { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; return cv; };
+  const cpu2d = cv => cv.getContext('2d', { willReadFrequently: true });
   const memo = (key, make) => { let p = patterns.get(key); if (!p) patterns.set(key, p = make()); return p; };
   const grassPattern = g => memo('grass', () => makeGrass(g));
   const tiledPattern = (g, base, line, size, mortar) => memo(`t${base}${line}${size}${mortar}`, () => makeTiled(g, base, line, size, mortar));
   const noisePattern = (g, base, a, b, n) => memo(`n${base}${a}${b}${n}`, () => makeNoise(g, base, a, b, n));
   function makeGrass(g) {
-    const cv = document.createElement('canvas'); cv.width = 64; cv.height = 64;
-    const t = cv.getContext('2d'), R = new LES.RNG('grass-tile');
+    const cv = smallCanvas(64, 64);
+    const t = cpu2d(cv), R = new LES.RNG('grass-tile');
     rect(t, 0, 0, 64, 64, PAL.grass[0]);
     for (let y = 0; y < 64; y += 2) for (let x = 0; x < 64; x += 2) {
       const v = R.next();
@@ -298,16 +302,16 @@
     return g.createPattern(cv, 'repeat');
   }
   function makeTiled(g, base, line, size, mortar) {
-    const cv = document.createElement('canvas'); cv.width = size; cv.height = size;
-    const t = cv.getContext('2d');
+    const cv = smallCanvas(size, size);
+    const t = cpu2d(cv);
     rect(t, 0, 0, size, size, base);
     rect(t, 0, 0, size, 1, line); rect(t, 0, 0, 1, size, line);
     if (mortar) rect(t, size / 2, size / 2, 1, 1, line);
     return g.createPattern(cv, 'repeat');
   }
   function makeNoise(g, base, a, b, n) {
-    const cv = document.createElement('canvas'); cv.width = 48; cv.height = 48;
-    const t = cv.getContext('2d'), R = new LES.RNG(`noise${base}`);
+    const cv = smallCanvas(48, 48);
+    const t = cpu2d(cv), R = new LES.RNG(`noise${base}`);
     rect(t, 0, 0, 48, 48, base);
     for (let i = 0; i < n; i++) rect(t, R.int(0, 47), R.int(0, 47), 1 + R.int(0, 1), 1, R.next() < 0.5 ? a : b);
     return g.createPattern(cv, 'repeat');
