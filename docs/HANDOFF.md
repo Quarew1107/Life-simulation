@@ -37,6 +37,13 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
       names MY 101 -> 232, UK 87 -> 181, US 99 -> 221, CN 53 -> 134; most-repeated first name 15-33 -> 7-11 people.
       Sources: JPN/NRD 2025 statements, ONS baby names 2024, MPS name reports, Iban/Kadazan naming references.
       `nameTests` (4).
+- [x] Pop-ups and small screens (Nov 2026, UI only): toasts moved to `js/ui/toasts.js`. They are cleared when a
+      new world starts, a save is loaded or another town opens (`UI.clearToasts`), and a click only selects a person
+      in the world the toast came from. Smaller cards in the map's top-left corner, at most 3 (the oldest fades out
+      early); same-kind events on the same day share one card ("Had a bag snatched — 5 cases today"; key = day,
+      category and wording without names/numbers). Under 600 px the stack becomes a one-line ticker (newest only).
+      Speed bar can shrink and scroll so 🌙/⚡ are reachable at 375 px; at 600-1000 px the top bar keeps two rows
+      (no long title, icon-only Report/Save, speed / +1 day / + Person / goal on row 2).
 - [x] Pay ceiling for unskilled jobs (Nov 2026, rules revision 6, below).
 - [ ] Small: `checkInvariants` reports "P... has no class" if run mid-month (class is set at month end); the app
       only checks at quarter ends, so it is never shown, but the check could skip people not yet classed.

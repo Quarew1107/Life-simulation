@@ -1,4 +1,4 @@
-// Side panels (Person inspector, Leaderboard, Events, Stats), top bar, toasts.
+// Side panels (Person inspector, Leaderboard, Events, Stats) and top bar. Pop-ups: toasts.js.
 // Reads world state only; user actions go back to main.js through app methods.
 (function (LES) {
   'use strict';
@@ -37,10 +37,6 @@
       if (xl) { e.preventDefault(); app.selectTown(Number(xl.dataset.xtown)); if (Number(xl.dataset.xid) >= 0) app.select(Number(xl.dataset.xid), true); return; }
       const link = e.target.closest('[data-pid]');
       if (link) { app.select(Number(link.dataset.pid), true); }
-    });
-    $('toasts').addEventListener('click', e => {
-      const t = e.target.closest('[data-pid]');
-      if (t && Number(t.dataset.pid) >= 0) app.select(Number(t.dataset.pid), true);
     });
   };
 
@@ -544,7 +540,6 @@
     LES.Charts.line($('st-work'), { series: [series('employed', 'Employed', '#57d38c'), series('unemployed', 'Unemployed', '#ff6b6b'), series('owners', 'Business owners', '#ff8c42'), series('students', 'Students', '#b892ff')], xFmt: xs, yMin: 0 });
   };
 
-  // ---------------- Toasts ----------------
   // ---------------- Director mode ----------------
   // Picks the most interesting recent events (only things that really happened),
   // flies the camera to the person and shows a caption with context from their life.
@@ -583,26 +578,4 @@
     }
   };
 
-  UI.checkToasts = function () {
-    const w = UI.app.world;
-    for (const e of w.feed) if (e.seq > UI.feedSeqShown && e.imp >= 2 && e.pid >= 0) UI.director.queue.push(e);
-    const news = w.feed.filter(e => e.seq > UI.feedSeqShown), fresh = news.filter(e => e.imp >= 2);
-    if (w.feed.length) UI.feedSeqShown = Math.max(UI.feedSeqShown, w.feed[w.feed.length - 1].seq || 0);
-    for (const e of news) LES.Audio.onEvent(e, UI.app);
-    if (UI.castAlerts) UI.castAlerts(UI.app);
-    for (const e of fresh.slice(-3)) {
-      const name = e.pid >= 0 ? `<b>${esc(P.name(w.people[e.pid]))}</b> — ` : '';
-      UI.toast(`${CAT_ICON[e.cat] || ''} ${name}${esc(e.text)}`, U.fmtDate(e.day), e.pid, e.imp >= 3);
-    }
-  };
-  UI.toast = function (html, when, pid, big) {
-    const box = $('toasts');
-    const t = document.createElement('div');
-    t.className = `toast${big ? ' big' : ''}`;
-    t.dataset.pid = pid === undefined ? -1 : pid;
-    t.innerHTML = `<div class="t">${esc(when || '')}</div>${html}`;
-    box.appendChild(t);
-    while (box.children.length > 4) box.removeChild(box.firstChild);
-    setTimeout(() => t.remove(), big ? 12000 : 6000);
-  };
 })(globalThis.LES = globalThis.LES || {});
