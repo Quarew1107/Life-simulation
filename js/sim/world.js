@@ -131,8 +131,9 @@
       p.sex = o.sex || (R.next() < 0.5 ? 'M' : 'F');
       const mix = C.ETHNIC_MIXES[cfg.ethnicMix] || C.ETHNIC_MIXES.classic;
       p.eth = o.eth || mix.keys[R.weighted(mix.w)];
-      p.first = R.pick(C.NAMES[p.eth][p.sex]);
-      p.last = R.pick(C.NAMES[p.eth].last);
+      const NM = C.namesFor(this)[p.eth];
+      p.first = R.pick(NM[p.sex]);
+      p.last = R.pick(NM.last);
       p.birthDay = this.day - age * 365 - R.int(0, 364);
       p.adult = true;
       p.migrant = !!o.migrant;
@@ -206,7 +207,7 @@
       const c = this.addPerson();
       c.sex = R.next() < 0.5 ? 'M' : 'F';
       c.eth = R.next() < 0.5 ? father.eth : mother.eth;
-      c.first = R.pick(C.NAMES[c.eth][c.sex]);
+      c.first = R.pick(C.namesFor(this)[c.eth][c.sex]);
       c.last = father.last;
       c.birthDay = this.day - ageYears * 365 - (ageYears > 0 ? R.int(0, 364) : 0);
       c.gen = Math.max(father.gen, mother.gen) + 1;

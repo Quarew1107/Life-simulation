@@ -72,6 +72,35 @@
           last: ['Fernandez', 'De Souza', 'Pereira', "D'Cruz", 'Gomes', 'Rozario', 'Lazaroo', 'Theseira'],
         },
       },
+      // Rules revision 7 (Nov 2026): more first and family names (added to `names` in new worlds only, so older
+      // worlds and saves keep exactly the names they had). Drawn from each country's naming registers and trends.
+      namesMore: {
+        malay: {
+          M: ["Muhammad", "Rayyan", "Iskandar", "Harith", "Luqman", "Afiq", "Hazim", "Izzat", "Fakhrul", "Amirul", "Shahrul", "Nazrin", "Zulkifli", "Azman", "Kamal", "Fauzi", "Hisham", "Ridzuan", "Syahmi", "Ikmal", "Qayyum", "Aqil", "Arif", "Zikri", "Hairi", "Mukhriz", "Ammar", "Umar", "Yusuf", "Ismail", "Hamzah", "Aidil", "Shafiq", "Johan", "Ariff", "Khalid"],
+          F: ["Nur", "Maryam", "Aisyah", "Fatimah", "Zainab", "Azizah", "Qistina", "Sarah", "Ain", "Batrisya", "Iman", "Nabila", "Syazwani", "Hidayah", "Najwa", "Atiqah", "Izzati", "Shahirah", "Haziqah", "Wardah", "Raihana", "Khadijah", "Nadhirah", "Puteri", "Adlina", "Sumayyah", "Husna", "Dhia", "Afiqah", "Maisarah", "Zahra", "Insyirah", "Arissa", "Rania", "Safiya", "Mardhiah"],
+          last: ["Ahmad", "Mohamad", "Ali", "Osman", "Hussein", "Mahmud", "Jaafar", "Zakaria", "Hashim", "Musa", "Sulaiman", "Mansor", "Ramli", "Idris", "Bakar", "Yaacob", "Halim", "Mokhtar", "Shukor", "Ghani", "Daud", "Embong", "Nordin", "Saad"],
+        },
+        chinese: {
+          M: ["Wei Liang", "Jun Wei", "Zi Xuan", "Yi Xuan", "Kah Wai", "Chun Kit", "Wai Kit", "Ka Hoe", "Zheng Yang", "Yu Heng", "Jian Hong", "Choon Hong", "Kean Seng", "Soon Huat", "Teck Wah", "Eng Hock", "Kok Wai", "Chee Wei", "Hong Wei", "Jin Yang", "Shao Wei", "Ming Hui", "Kian Hoe", "Yong Sheng", "Boon Keat", "Wing Hong", "Jason", "Marcus", "Ryan", "Darren", "Brandon", "Ethan"],
+          F: ["Hui Ling", "Xin Hui", "Yi Ting", "Jia Hui", "Zi Qi", "Wen Qi", "Shu Ting", "Pei Ying", "Mun Yee", "Siew Mei", "Ai Ling", "Bee Lian", "Swee Lin", "Chooi Peng", "Kar Mun", "Wai Yee", "Yan Ling", "Xiao Wen", "Le Xuan", "Yu Xuan", "Qian Hui", "Jing Wen", "Rachel", "Michelle", "Joanne", "Vivian", "Cheryl", "Jasmine", "Charmaine", "Elaine"],
+          last: ["Teh", "Koh", "Cheah", "Khoo", "Ooi", "Leong", "Chin", "Foo", "Lau", "Ho", "Liew", "Yeoh", "Choo", "Gan", "Soh", "Chua", "Loh", "Kang", "Heng", "Tay", "Toh", "Yeo", "Wee", "Phang", "Siow", "Hew"],
+        },
+        indian: {
+          M: ["Arvind", "Karthik", "Prakash", "Ramesh", "Selvam", "Murugan", "Kumaran", "Saravanan", "Vinod", "Mahendran", "Thinesh", "Yogesh", "Kishor", "Darshan", "Rishi", "Sharvin", "Vishnu", "Tharun", "Jeevan", "Logesh", "Barath", "Ashwin", "Gopal", "Manoj", "Thiban", "Sathish", "Harvind", "Gurpreet", "Navin", "Kavin"],
+          F: ["Sangeetha", "Malini", "Vasanthi", "Thilaga", "Sharmila", "Jayanthi", "Kalaivani", "Pavithra", "Nithya", "Yamini", "Sarasvathy", "Tharshini", "Keerthana", "Shamini", "Harini", "Jasmin", "Sharvinna", "Darshini", "Ishwarya", "Vanitha", "Gayathri", "Rubini", "Lavanya", "Sathya", "Logeswari", "Pooja", "Manpreet", "Kiranjit"],
+          last: ["Ramasamy", "Govindasamy", "Arumugam", "Perumal", "Rajan", "Sivam", "Chandran", "Gopal", "Murthy", "Veerasamy", "Shanmugam", "Ganesan", "Selvaraju", "Kandasamy", "Thangaraj", "Menon", "Gill", "Dhillon", "Naidu", "Supramaniam"],
+        },
+        bumi: {
+          M: ["Robert", "Stanley", "Albert", "Francis", "Andrew", "Henry", "Patrick", "Dennis", "Bernard", "Vincent", "Edward", "Clarence", "Jeffrey", "Augustine", "Gimbang", "Kunul", "Sangan", "Unggang", "Nyalau", "Bujang", "Jelani", "Entri", "Gasing", "Awang", "Liman", "Jaul", "Sabang"],
+          F: ["Agnes", "Rosalind", "Veronica", "Catherine", "Elizabeth", "Monica", "Stella", "Josephine", "Beatrice", "Clara", "Felicia", "Rita", "Salud", "Nani", "Semitah", "Endu", "Inai", "Sulan", "Mina", "Selina", "Evelyn", "Theresa", "Winnie"],
+          last: ["Anak Jabu", "Anak Unggang", "Anak Nyalau", "Anak Bujang", "Anak Sabang", "Gimbang", "Kunul", "Sangan", "Bundu", "Liwan", "Gana", "Tangau", "Pairin", "Lingam", "Masing", "Jeling", "Kanang", "Entili", "Laing", "Dompok"],
+        },
+        other: {
+          M: ["Christopher", "Jonathan", "Brian", "Clement", "Leonard", "Anthony", "Desmond", "Terence", "Russell", "Benedict", "Aaron", "Julian", "Matthew", "Nicholas"],
+          F: ["Christine", "Jacqueline", "Gwendolyn", "Bernadette", "Priscilla", "Rebecca", "Sharon", "Jennifer", "Victoria", "Andrea", "Charlene", "Denise", "Isabel", "Marissa"],
+          last: ["Da Silva", "Lopez", "Rodrigues", "Monteiro", "Fernandes", "Sequerah", "Nonis", "Shepherdson", "Aeria", "Danker", "Pinto", "Xavier"],
+        },
+      },
       skin: {
         malay: ['#c68642', '#b5763a', '#d29a5e'],
         chinese: ['#f1c27d', '#e8b98a', '#f3cfa0'],

@@ -78,7 +78,7 @@
     const age = U.clamp(Math.round(spec.age), 0, ADULT - 1), c = w.addPerson();
     c.sex = spec.sex === 'M' ? 'M' : 'F';
     c.eth = C.NAMES[spec.eth] ? spec.eth : parents[0].eth;
-    c.first = R.pick(C.NAMES[c.eth][c.sex]); c.last = parents[0].last;
+    c.first = R.pick(C.namesFor(w)[c.eth][c.sex]); c.last = parents[0].last;
     c.birthDay = w.day - age * 365 - (age > 0 ? R.int(0, 364) : 0);
     c.gen = Math.max(...parents.map(q => q.gen)) + 1;
     c.parents = parents.map(q => q.id);

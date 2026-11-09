@@ -107,7 +107,7 @@
       for (let i = 0; i < 6; i++) $(`c-a${i}`).value = (2 + r() * 8).toFixed(1);
       for (const k of C.PERS) $(`c-p-${k}`).value = Math.round(r() * 100);
       $('c-fam').value = Math.round(r() * 100); $('c-age').value = 18 + Math.floor(r() * 40);
-      const eth = C.ETHNICITIES[Math.floor(r() * C.ETHNICITIES.length)], sex = r() < 0.5 ? 'M' : 'F', N = C.NAMES[eth];
+      const eth = C.ETHNICITIES[Math.floor(r() * C.ETHNICITIES.length)], sex = r() < 0.5 ? 'M' : 'F', N = C.NAMES_ALL[eth];
       $('c-eth').value = eth; $('c-sex').value = sex; $('c-first').value = N[sex][Math.floor(r() * N[sex].length)]; $('c-last').value = N.last[Math.floor(r() * N.last.length)];
       $('c-skin').value = C.SKIN[eth][Math.floor(r() * C.SKIN[eth].length)];
       preview();

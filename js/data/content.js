@@ -224,6 +224,10 @@
   // (Malay 58.2%, Chinese 22.2%, other Bumiputera 12.3%, Indian 6.5%, others 0.8%).
   C.ETHNIC_MIXES = {};
   C.NAMES = {};
+  // Rules revision 7: the country's extra names (namesMore) join the lists in new worlds. Older worlds and saves
+  // keep the original lists, so their names (and fingerprints) stay exactly as they were.
+  C.NAMES_REV = 7; C.NAMES_ALL = {};
+  C.namesFor = w => (w && w.cfg && w.cfg.rulesRev >= C.NAMES_REV ? C.NAMES_ALL : C.NAMES);
   C.SKIN = {};
   C.HAIR = ['#1b1b1b', '#2b1d14', '#3b2a1d', '#141414'];
   C.SHIRTS = ['#e63946', '#f4a261', '#2a9d8f', '#457b9d', '#e9c46a', '#8d99ae', '#6a4c93', '#43aa8b', '#f28482', '#3d5a80', '#ffffff', '#ff7f51'];
@@ -307,7 +311,12 @@
     list(C.ETHNICITIES, N.ethnicities); into(C.ETHNIC_NAMES, N.ethnicNames); into(C.ETHNIC_MIXES, N.ethnicMixes);
     C.START_WEALTH = N.startWealth || null; // the country's starting-wealth gap by group (none for Malaysia)
     C.ETHNIC_WEIGHTS = C.ETHNIC_MIXES.classic.w;
-    into(C.NAMES, N.names); into(C.SKIN, N.skin); C.TOWN_NAME = N.townName;
+    into(C.NAMES, N.names); into(C.SKIN, N.skin);
+    for (const k of Object.keys(C.NAMES_ALL)) delete C.NAMES_ALL[k];
+    for (const [eth, base] of Object.entries(N.names)) {
+      const more = (N.namesMore || {})[eth] || {}, merge = key => [...new Set(base[key].concat(more[key] || []))];
+      C.NAMES_ALL[eth] = { M: merge('M'), F: merge('F'), last: merge('last') };
+    } C.TOWN_NAME = N.townName;
     list(C.STOCKS, N.stocks); list(C.IPO_POOL, N.ipoPool); list(C.GLC_STOCKS, N.glcStocks);
   });
 })(globalThis.LES = globalThis.LES || {});

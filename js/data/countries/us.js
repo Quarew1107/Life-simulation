@@ -54,6 +54,35 @@
           last: ['Begay', 'Yazzie', 'Haddad', 'Kealoha', 'Morales-Smith', 'Ali', 'Silva', 'Reyes-Brown'],
         },
       },
+      // Rules revision 7 (Nov 2026): more first and family names (added to `names` in new worlds only, so older
+      // worlds and saves keep exactly the names they had). Drawn from each country's naming registers and trends.
+      namesMore: {
+        white: {
+          M: ["Liam", "Noah", "Oliver", "Henry", "Theodore", "Lucas", "Wyatt", "Owen", "Hudson", "Carter", "Grayson", "Benjamin", "William", "Jack", "Luke", "Caleb", "Hunter", "Dylan", "Nathan", "Andrew", "Joseph", "Robert", "Thomas", "Brian", "Kevin", "Scott", "Jeffrey", "Eric", "Steven", "Mark", "Zachary", "Garrett", "Bryce", "Colton", "Brody", "Connor"],
+          F: ["Charlotte", "Amelia", "Harper", "Evelyn", "Avery", "Ella", "Scarlett", "Grace", "Chloe", "Lily", "Nora", "Hazel", "Aubrey", "Claire", "Natalie", "Samantha", "Elizabeth", "Katherine", "Jennifer", "Stephanie", "Nicole", "Heather", "Melissa", "Amber", "Kimberly", "Danielle", "Courtney", "Brooke", "Kelsey", "Morgan", "Paige", "Sydney", "Addison", "Riley", "Quinn", "Molly"],
+          last: ["Brown", "Jones", "Williams", "Martin", "Allen", "King", "Scott", "Green", "Adams", "Nelson", "Hill", "Campbell", "Mitchell", "Roberts", "Carter", "Phillips", "Evans", "Turner", "Parker", "Collins", "Edwards", "Stewart", "Morris", "Murphy", "Cook", "Rogers", "Morgan", "Cooper", "Peterson", "Reed", "Bailey", "Kelly", "Howard", "Olson", "Larson", "Novak", "Russo"],
+        },
+        hispanic: {
+          M: ["Santiago", "Sebastián", "Emiliano", "Leonardo", "Gabriel", "Ángel", "Fernando", "Ricardo", "Eduardo", "Francisco", "Andrés", "Manuel", "Rafael", "Antonio", "Roberto", "Héctor", "Pedro", "Raúl", "Óscar", "Iván", "Julián", "Cristian", "Joaquín", "Nicolás", "Emanuel", "Isaac", "Josué", "Kevin"],
+          F: ["Valentina", "Mía", "Ximena", "Renata", "Victoria", "Regina", "Fernanda", "Andrea", "Mariana", "Alejandra", "Carolina", "Adriana", "Verónica", "Patricia", "Rosa", "Guadalupe", "Leticia", "Claudia", "Mónica", "Diana", "Jimena", "Emilia", "Luciana", "Paula", "Esmeralda", "Yesenia", "Karla", "Brenda"],
+          last: ["Gomez", "Diaz", "Cruz", "Morales", "Reyes", "Gutierrez", "Ortiz", "Chavez", "Ramos", "Ruiz", "Alvarez", "Mendoza", "Castillo", "Jimenez", "Moreno", "Romero", "Herrera", "Medina", "Aguilar", "Vargas", "Castro", "Vasquez", "Soto", "Delgado"],
+        },
+        black: {
+          M: ["Jordan", "Brandon", "Christopher", "Michael", "Anthony", "Darius", "Tyrone", "Reginald", "Jerome", "Kendrick", "Dante", "Khalil", "Tremaine", "Lamar", "Devonte", "Jalen", "Trevon", "Cameron", "Josiah", "Micah", "Amari", "Kingston", "Zion", "Desmond", "Rashad", "Terrell", "Kwame", "Ibrahim"],
+          F: ["Kennedy", "Nevaeh", "Aniyah", "Zaria", "Jada", "Brianna", "Taliyah", "Ayana", "Kendra", "Tamika", "Latoya", "Shanice", "Dominique", "Ciara", "Raven", "Asia", "Janelle", "Tanisha", "Danielle", "Gabrielle", "Maya", "Sanaa", "Amara", "Zuri", "Kayla", "Tierra", "Alexis", "Makayla"],
+          last: ["Johnson", "Williams", "Brown", "Jones", "Davis", "Thomas", "Moore", "Taylor", "Anderson", "White", "Jenkins", "Simmons", "Wallace", "Hayes", "Bryant", "Griffin", "Russell", "Henderson", "Foster", "Perry", "Graham", "Gaines", "Battle", "Okafor"],
+        },
+        asian: {
+          M: ["Brian", "Justin", "Ryan", "Andy", "Jonathan", "Ethan", "Aaron", "Kenji", "Takeshi", "Haruto", "Min-jun", "Seo-jun", "Duc", "Huy", "Tuan", "Quang", "Rohan", "Aditya", "Sanjay", "Rahul", "Paolo", "Marco", "Miguel", "Jun", "Hao", "Tenzin"],
+          F: ["Vivian", "Angela", "Karen", "Tiffany", "Cindy", "Annie", "Jessica", "Hana", "Aiko", "Yuki", "Seo-yeon", "Min-ji", "Mai", "Thao", "Lan", "Anh", "Kavya", "Isha", "Shreya", "Divya", "Maricel", "Joy", "Kristine", "Lin", "Xin", "Pema"],
+          last: ["Le", "Pham", "Huynh", "Vu", "Choi", "Lim", "Kang", "Yamamoto", "Nakamura", "Sato", "Gupta", "Reddy", "Kumar", "Santos", "Reyes", "Cruz", "Liu", "Zhang", "Huang", "Wu", "Lin", "Yang"],
+        },
+        other: {
+          M: ["Ahanu", "Takoda", "Kekoa", "Kainoa", "Bilal", "Karim", "Nasser", "Eli", "River", "Phoenix", "Ezra", "Gabriel", "Aiden", "Jaxon"],
+          F: ["Aiyana", "Kaya", "Nalani", "Kalani", "Mariam", "Yasmin", "Rana", "Luna", "Aurora", "Sage", "Zoe", "Naomi", "Lena", "Ariana"],
+          last: ["Tsosie", "Benally", "Nakai", "Kahale", "Akana", "Mansour", "Khalil", "Saleh", "Ortiz-Lee", "Nguyen-Smith", "Abboud", "Redcloud"],
+        },
+      },
       skin: {
         white: ['#f6d5b5', '#f1c8a0', '#ecbc96'],
         hispanic: ['#d29a5e', '#c68642', '#e0ac69'],

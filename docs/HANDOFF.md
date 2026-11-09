@@ -31,6 +31,12 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
       it is chosen); US inequality sits slightly lower with the new jobs (0.42-0.44 vs target 0.48).
 - [ ] Performance follow-ups if wanted (`docs/PERFORMANCE.md`): run compare/calibration runs in a Web Worker;
       one worker per town for big regions. Engine is linear (~8-10 us per person-day) with a flat profile.
+- [x] More names (Nov 2026, rules revision 7): each pack's `namesMore` (12-38 more first names per sex for every
+      group, more family names) joins `names` in new worlds through `C.namesFor(w)` / `C.NAMES_ALL`; revisions 1-6
+      and older saves keep the original lists, so their fingerprints are unchanged. 500 founders: distinct first
+      names MY 101 -> 232, UK 87 -> 181, US 99 -> 221, CN 53 -> 134; most-repeated first name 15-33 -> 7-11 people.
+      Sources: JPN/NRD 2025 statements, ONS baby names 2024, MPS name reports, Iban/Kadazan naming references.
+      `nameTests` (4).
 - [x] Pay ceiling for unskilled jobs (Nov 2026, rules revision 6, below).
 - [ ] Small: `checkInvariants` reports "P... has no class" if run mid-month (class is set at month end); the app
       only checks at quarter ends, so it is never shown, but the check could skip people not yet classed.

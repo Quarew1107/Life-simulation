@@ -41,6 +41,7 @@ The improvement plan agreed in November 2026. Each phase is one tested push.
 | Expansion 1 (Nov 2026) | `Idea/Expansion 1`: 23 jobs, a research centre, 6 degrees, 9 vocational/master's subjects, 9 life goals, 8 outfits, 9 looks (rules revision 5) | Done (Social butterfly goal deferred) |
 | Performance (Nov 2026) | `docs/PERFORMANCE.md`: map drawing off the GPU bottleneck, double-buffered overview, Turbo view, frame-wait fallback; China 2,500 founders ~12 -> ~27 days/s (~33 Turbo) | Done |
 | Pay ceiling (Nov 2026) | Jobs without qualifications: narrower offers and +6% promotions (rules revision 6); a China rider tops out near CNY 10.3k instead of 17k | Done |
+| More names (Nov 2026) | Two to three times as many first names per group in every country, more family names (rules revision 7) | Done |
 | Country looks | Shop lots, eateries, pub/bar, town hall flags, rent signs, police, court, sports court, memorial, hills, lakes and forests drawn in each country's style | Done for UK, US, China |
 
 ## To do

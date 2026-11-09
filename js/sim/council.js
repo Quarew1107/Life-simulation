@@ -93,7 +93,7 @@
     const pres = g.president >= 0 ? w.people[g.president] : null;
     if (!pick) {
       if (role === 'police') { // no senior officer in town: one is posted in from outside
-        const eth = R.pick(LES.Countries.pack.gov.officialGroups), N = C.NAMES[eth];
+        const eth = R.pick(LES.Countries.pack.gov.officialGroups), N = C.namesFor(w)[eth];
         g.officials.police = { id: -1, name: `Supt. ${R.pick(N.M)} ${R.pick(N.last)}`, comp: U.clamp(R.normal(0.5, 0.1), 0.25, 0.8), integrity: U.clamp(R.normal(0.65, 0.15), 0.2, 1), since: w.day, crony: false };
         CO.log(w, 'police', -1, `${g.officials.police.name} was posted in from outside as ${CO.ROLES.police.title}`);
       }

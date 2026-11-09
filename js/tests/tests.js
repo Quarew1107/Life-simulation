@@ -1368,7 +1368,7 @@
   async function payTests() {
     print('--- Pay ceiling for jobs without qualifications (rules revision 6) ---', 'info');
     const C = LES.C, L = LES.Labour, D = LES.DEFAULTS;
-    check('Revision 6 is the default', D.rulesRev === 6 && LES.PRESETS.national.values.rulesRev === 6);
+    check('Revision 6 or later is the default', D.rulesRev >= 6 && LES.PRESETS.national.values.rulesRev === D.rulesRev);
     const w6 = { cfg: { rulesRev: 6 } }, w5 = { cfg: { rulesRev: 5 } }, rider = C.JOB_BY_ID.rider, doctor = C.JOB_BY_ID.doctor;
     const R = new LES.RNG('pay-ceiling'), offers = [];
     for (let i = 0; i < 4000; i++) offers.push(L.offerSpread(w6, R, rider));
@@ -1384,6 +1384,28 @@
     }
     check('China, 12 years: no unskilled worker earns more than 2x base pay (was up to ~3.2x)', worst <= 2.05, `worst x${worst.toFixed(2)}`);
     check('The money check stays clean', w.checkInvariants().length === 0, JSON.stringify(w.checkInvariants().slice(0, 2)));
+  }
+
+  // Rules revision 7: more names in new worlds; older revisions keep the original lists.
+  async function nameTests() {
+    print('--- More names (rules revision 7) ---', 'info');
+    const C = LES.C, D = LES.DEFAULTS;
+    check('Revision 7 is the default', D.rulesRev === 7 && LES.PRESETS.national.values.rulesRev === 7);
+    let ok = true, info = [];
+    for (const c of ['my', 'uk', 'us', 'cn']) {
+      LES.Countries.use(c);
+      for (const eth of C.ETHNICITIES) {
+        const a = C.NAMES_ALL[eth], b = C.NAMES[eth];
+        const grows = ['M', 'F', 'last'].every(k => a[k].length >= b[k].length && b[k].every(n => a[k].includes(n)) && new Set(a[k]).size === a[k].length);
+        if (!grows || a.M.length < 20 || a.F.length < 20) { ok = false; info.push(`${c}/${eth} ${a.M.length}/${a.F.length}`); }
+      }
+    }
+    LES.Countries.ensure(D);
+    check('Every group in every country keeps its old names and has at least 20 first names per sex, no duplicates', ok, info.join(' '));
+    const w = new LES.World(Object.assign({}, D, { seed: 'names-1', founders: 300 }));
+    const firsts = new Set(w.people.map(p => p.first)), old = new LES.World(Object.assign({}, D, { seed: 'names-1', founders: 300, rulesRev: 6 }));
+    check('300 founders get more distinct first names than under revision 6', firsts.size > new Set(old.people.map(p => p.first)).size, `${firsts.size} vs ${new Set(old.people.map(p => p.first)).size}`);
+    check('Revision 6 still uses only the original lists', old.people.every(p => C.NAMES[p.eth][p.sex].includes(p.first) && (C.NAMES[p.eth].last.includes(p.last) || p.custom)));
   }
 
   async function expansionTests() {
@@ -1602,6 +1624,7 @@
       await mobilityTests();
       await expansionTests();
       await payTests();
+      await nameTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -1613,6 +1636,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, expansionTests, payTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

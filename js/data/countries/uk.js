@@ -56,6 +56,35 @@
           last: ['Haddad', 'Silva', 'Rahimi', 'Santos', 'Nowak', 'Mansour', 'Ferreira', 'Yilmaz'],
         },
       },
+      // Rules revision 7 (Nov 2026): more first and family names (added to `names` in new worlds only, so older
+      // worlds and saves keep exactly the names they had). Drawn from each country's naming registers and trends.
+      namesMore: {
+        white: {
+          M: ["Arthur", "Leo", "Oscar", "Archie", "Theodore", "Henry", "Freddie", "Alfie", "Charlie", "Jacob", "Teddy", "Finley", "Tommy", "Edward", "Reuben", "Albie", "Rory", "Hugo", "Max", "Toby", "Luca", "Jude", "Ollie", "Benjamin", "Matthew", "Alexander", "Dylan", "Jamie", "Ben", "Sam", "Owen", "Rhys", "Gareth", "Ewan", "Fraser", "Niall", "Ciaran", "Patrick"],
+          F: ["Ivy", "Florence", "Freya", "Poppy", "Elsie", "Isabella", "Willow", "Sophia", "Daisy", "Rosie", "Phoebe", "Evelyn", "Matilda", "Harper", "Sienna", "Emilia", "Millie", "Esme", "Mia", "Alice", "Bonnie", "Lottie", "Maisie", "Imogen", "Beatrice", "Rebecca", "Laura", "Rachel", "Katie", "Bethan", "Ffion", "Eilidh", "Niamh", "Siobhan", "Gemma", "Claire"],
+          last: ["Clarke", "Jackson", "Turner", "Hill", "Cooper", "Ward", "Morris", "Moore", "King", "Watson", "Harrison", "Morgan", "Baker", "Young", "Allen", "Mitchell", "Lee", "Martin", "Cook", "Bell", "Parker", "Phillips", "Shaw", "Lloyd", "Hughes", "Edwards", "Price", "Griffiths", "Campbell", "Stewart", "MacDonald", "Kelly", "O'Brien", "Nowak", "Wiśniewski"],
+        },
+        asian: {
+          M: ["Muhammad", "Ayaan", "Zayn", "Yahya", "Ismail", "Bilal", "Usman", "Rayyan", "Adam", "Harjit", "Gurdeep", "Rahul", "Vikram", "Dev", "Nikhil", "Faisal", "Tariq", "Sajid", "Kamran", "Shahid", "Junaid", "Harvey", "Raj", "Amit", "Hussain", "Kai", "Jun"],
+          F: ["Hafsa", "Inaya", "Zainab", "Khadija", "Ayesha", "Safa", "Mehreen", "Nadia", "Simran", "Harpreet", "Jasleen", "Divya", "Riya", "Pooja", "Neha", "Sana", "Rabia", "Shabana", "Farah", "Noor", "Anika", "Mina", "Yasmin", "Leena", "Hana", "Lin"],
+          last: ["Mahmood", "Rashid", "Akhtar", "Aziz", "Malik", "Butt", "Chaudhry", "Mirza", "Qureshi", "Rahman", "Uddin", "Miah", "Islam", "Gill", "Sandhu", "Kaur", "Bhatt", "Desai", "Joshi", "Mehta", "Kapoor", "Wong", "Li", "Nguyen"],
+        },
+        black: {
+          M: ["Tobi", "Femi", "Ade", "Kayode", "Olumide", "Kelechi", "Obinna", "Chinedu", "Kofi", "Yaw", "Kojo", "Nathaniel", "Isaiah", "Joel", "Malachi", "Jordan", "Reece", "Andre", "Leon", "Dwayne", "Mohamed", "Abdirahman", "Tendai", "Tunde", "Elijah"],
+          F: ["Adaeze", "Chiamaka", "Folake", "Funmi", "Temi", "Ifeoma", "Nkechi", "Akosua", "Ama", "Efua", "Blessing", "Joy", "Patience", "Comfort", "Naomi", "Hannah", "Kemi", "Simone", "Keisha", "Danielle", "Jade", "Hibo", "Fadumo", "Zainab", "Tiwa"],
+          last: ["Adebayo", "Ogunleye", "Eze", "Nwosu", "Obi", "Okonkwo", "Afolabi", "Oduya", "Owusu", "Appiah", "Darko", "Agyeman", "Thomas", "Lewis", "Grant", "Stewart", "Henry", "Francis", "Warsame", "Hassan", "Ali", "Farah"],
+        },
+        mixed: {
+          M: ["Jaden", "Tyler", "Marley", "Kyrie", "Ezra", "Micah", "Caleb", "Luca", "Rio", "Nathan", "Aaron", "Joel", "Mason", "Jamal", "Ryan"],
+          F: ["Ella", "Layla", "Amara", "Kiara", "Jada", "Tiana", "Nadia", "Zoe", "Mia", "Esme", "Aria", "Naomi", "Talia", "Gracie", "Sasha"],
+          last: ["Robinson", "Edwards", "Thomas", "Richards", "Grant", "Lewis", "Douglas", "Walker", "Allen", "Ahmed", "Khan", "Wright"],
+        },
+        other: {
+          M: ["Andrei", "Mihai", "Piotr", "Jakub", "Luis", "Marco", "Giorgos", "Mehmet", "Emre", "Reza", "Ali", "Dmitri", "Lukas", "Rafael"],
+          F: ["Maria", "Ioana", "Zuzanna", "Agnieszka", "Lucia", "Giulia", "Eleni", "Elif", "Zeynep", "Shirin", "Daria", "Anna", "Laura", "Beatriz"],
+          last: ["Popescu", "Ionescu", "Kowalczyk", "Wójcik", "Rossi", "Costa", "Papadopoulos", "Demir", "Kaya", "Hosseini", "Ivanov", "Novák", "Oliveira", "Gomez"],
+        },
+      },
       skin: {
         white: ['#f6d5b5', '#f1c8a0', '#ecbc96'],
         asian: ['#c68642', '#b5763a', '#e0ac69'],

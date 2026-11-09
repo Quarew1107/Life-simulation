@@ -61,6 +61,40 @@
           last: ['Yang', 'Long', 'Shi', 'Tian', 'Ma', 'Wu', 'Zhaxi', 'Ji'],
         },
       },
+      // Rules revision 7 (Nov 2026): more first and family names (added to `names` in new worlds only, so older
+      // worlds and saves keep exactly the names they had). Drawn from each country's naming registers and trends.
+      namesMore: {
+        han: {
+          M: ["Yichen", "Haoyu", "Zixuan", "Muchen", "Yuchen", "Hanyu", "Junjie", "Zihao", "Yuhang", "Haoxuan", "Zhiqiang", "Jianjun", "Guoqiang", "Jianhua", "Xiaoming", "Xiaojun", "Dawei", "Weidong", "Hongwei", "Jianping", "Yong", "Peng", "Kai", "Feng", "Lin", "Bin", "Chao", "Xiang", "Zhen", "Ruixuan", "Ze", "Yuze", "Chenxi", "Siyuan", "Jiahao", "Mingze"],
+          F: ["Yinuo", "Xiyue", "Shihan", "Muyan", "Ruoxi", "Xinyi", "Yuxi", "Yiyi", "Zixin", "Kexin", "Yutong", "Siqi", "Mengyao", "Jiayi", "Shiyu", "Yuhan", "Xiuying", "Guiying", "Yulan", "Lijuan", "Hong", "Yan", "Xiaohong", "Xiaoli", "Jing", "Wenjing", "Qian", "Lu", "Dan", "Hui", "Ying", "Ruolan", "Yiran", "Anqi", "Mengqi", "Xinyue"],
+          last: ["Ma", "Luo", "Liang", "Song", "Zheng", "Xie", "Han", "Tang", "Feng", "Yu", "Dong", "Xiao", "Cheng", "Cao", "Yuan", "Deng", "Xu", "Fu", "Shen", "Zeng", "Peng", "Lü", "Su", "Lu", "Jiang", "Cai", "Jia", "Ding", "Wei", "Pan", "Du", "Dai", "Xia", "Zhong", "Wang"],
+        },
+        zhuang: {
+          M: ["Shengli", "Hailong", "Wenbin", "Jiahua", "Guohua", "Liming", "Yongjun", "Hongbo", "Zhiyuan", "Jinlong", "Haitao", "Chengzhi"],
+          F: ["Meilan", "Xiaoyan", "Liuhua", "Yuhong", "Chunmei", "Lifang", "Xiulan", "Yanling", "Huifang", "Shuling", "Guilan", "Hongmei"],
+          last: ["Li", "Wang", "Zhou", "Tan", "Ban", "Lan", "Long", "Meng", "Luo", "Tang"],
+        },
+        hui: {
+          M: ["Yousuo", "Musa", "Ibrahim", "Haiping", "Dexin", "Jianguo", "Zhiping", "Xiaowei", "Junliang", "Ali", "Yongfu", "Shaohua"],
+          F: ["Aisha", "Maryam", "Haiyan", "Xiumei", "Lanying", "Fengying", "Yuehua", "Xiaojuan", "Lili", "Zainab", "Huimin", "Qinglan"],
+          last: ["Ma", "Yang", "Li", "Han", "Ding", "Mu", "Hu", "Ha", "Ke", "Lan"],
+        },
+        manchu: {
+          M: ["Jinming", "Delong", "Zhenyu", "Yuxiang", "Fuchun", "Ruiqi", "Shuyuan", "Guangyu", "Dehai", "Tianyi", "Yixuan", "Wenhao"],
+          F: ["Yuqing", "Shuhua", "Lingyun", "Ruixue", "Wanrong", "Xiaoxue", "Mingyue", "Jiaqi", "Yifei", "Qiuyue", "Huiru", "Yanhong"],
+          last: ["Aisin-Gioro", "Wang", "Liu", "Bai", "He", "Ha", "Tan"],
+        },
+        uyghur: {
+          M: ["Erkin", "Alim", "Kerem", "Nurmemet", "Obul", "Polat", "Rahman", "Sadir", "Tahir", "Ubul", "Yusup", "Zunun", "Mahmut", "Ehmet"],
+          F: ["Aynur", "Buhelchem", "Gulzar", "Hanzohra", "Meryem", "Muyesser", "Nigare", "Parida", "Rabiye", "Saadet", "Tajigul", "Zulfiye", "Ayse", "Gulbahar"],
+          last: ["Abdulla", "Ablimit", "Mamut", "Yasin", "Ismayil", "Turdi", "Abliz", "Kurban", "Sadiq", "Hoshur"],
+        },
+        other: {
+          M: ["Tashi", "Norbu", "Dorje", "Bater", "Bayar", "Chaolu", "Sonam", "Jinpa", "Ayi", "Wuyun", "Tenzin", "Aodeng", "Jiagu"],
+          F: ["Dolma", "Yangzom", "Pema", "Tsering", "Saran", "Narin", "Uyuna", "Gerile", "Ashima", "Aqi", "Lhamo", "Sarula", "Meizi", "Ruona"],
+          last: ["Bao", "Han", "Tong", "Ou", "Teng", "Qi", "Ba", "Dawa", "Wu", "Pu"],
+        },
+      },
       skin: {
         han: ['#f1c27d', '#eac086', '#e0ac69'],
         zhuang: ['#e0ac69', '#d29a5e', '#eac086'],
