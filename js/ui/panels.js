@@ -34,6 +34,7 @@
       const ui = e.target.closest('[data-ui]'); // panel-only toggles (no app action)
       if (ui) {
         if (ui.dataset.ui === 'help') UI.helpOpen = !UI.helpOpen;
+        if (ui.dataset.ui === 'places') app.renderer.selectedBuilding = -1;
         if (ui.dataset.ui === 'more') { UI.moreOpen = !UI.moreOpen; if (UI.moreOpen) UI.focusNext = '.p-more-menu button'; }
         UI.update(true);
         return;
@@ -46,6 +47,10 @@
       if (xl) { e.preventDefault(); app.selectTown(Number(xl.dataset.xtown)); if (Number(xl.dataset.xid) >= 0) app.select(Number(xl.dataset.xid), true); return; }
       const link = e.target.closest('[data-pid]');
       if (link) { app.select(Number(link.dataset.pid), true); }
+    });
+    $('side').addEventListener('keydown', e => { // list rows that act as buttons
+      const bl = (e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-bid]');
+      if (bl) { e.preventDefault(); e.stopPropagation(); UI.showBuilding(Number(bl.dataset.bid)); }
     });
     // The More menu closes on a click elsewhere, and Esc closes it before Esc deselects the person.
     document.addEventListener('pointerdown', e => { if (UI.moreOpen && !e.target.closest('.p-more')) UI.closeMore(false); });
@@ -499,14 +504,57 @@
     return bands;
   };
 
+  // ---------------- Side panel width ----------------
+  // Drag the panel's left edge (or focus it and use the arrow keys) to resize; double-click resets.
+  // The width is kept per browser. Phones (stacked layout) ignore it.
+  const SIDE_KEY = 'les-side-width', SIDE_MIN = 320;
+  UI.initResize = function (app) {
+    const side = $('side');
+    if (!side || $('side-grip')) return;
+    const grip = document.createElement('div');
+    grip.id = 'side-grip';
+    grip.setAttribute('role', 'separator');
+    grip.setAttribute('aria-orientation', 'vertical');
+    grip.setAttribute('aria-label', 'Resize the side panel');
+    grip.tabIndex = 0;
+    grip.title = 'Drag to resize the panel (double-click to reset)';
+    side.prepend(grip);
+    const maxW = () => Math.max(SIDE_MIN, Math.min(900, window.innerWidth * 0.6));
+    let raf = 0;
+    const apply = (px, save) => {
+      if (px === null) side.style.removeProperty('--side-w');
+      else side.style.setProperty('--side-w', `${Math.round(U.clamp(px, SIDE_MIN, maxW()))}px`);
+      if (!raf) raf = requestAnimationFrame(() => { raf = 0; window.dispatchEvent(new Event('resize')); UI.update(true); });
+      if (save) try { if (px === null) localStorage.removeItem(SIDE_KEY); else localStorage.setItem(SIDE_KEY, String(Math.round(px))); } catch (e) { /* private window: this session only */ }
+    };
+    try { const v = Number(localStorage.getItem(SIDE_KEY)); if (v >= SIDE_MIN) apply(v, false); } catch (e) { /* storage blocked */ }
+    let drag = null;
+    grip.addEventListener('pointerdown', e => {
+      drag = { x: e.clientX, w: side.getBoundingClientRect().width };
+      grip.setPointerCapture(e.pointerId); grip.classList.add('dragging'); e.preventDefault();
+    });
+    grip.addEventListener('pointermove', e => { if (drag) apply(drag.w + (drag.x - e.clientX), false); });
+    const end = () => { if (!drag) return; drag = null; grip.classList.remove('dragging'); apply(side.getBoundingClientRect().width, true); };
+    grip.addEventListener('pointerup', end); grip.addEventListener('pointercancel', end);
+    grip.addEventListener('dblclick', () => apply(null, true));
+    grip.addEventListener('keydown', e => {
+      const d = e.key === 'ArrowLeft' ? 24 : e.key === 'ArrowRight' ? -24 : 0;
+      if (!d) return;
+      e.preventDefault(); e.stopPropagation();
+      apply(side.getBoundingClientRect().width + d, true);
+    });
+  };
+
   // ---------------- Leaderboard ----------------
+  // Key to the coloured squares in the lists: each person's money strategy.
+  UI.strategyLegend = () => `<div class="lb-legend" title="The coloured square next to each name is that person's money strategy"><b>Strategy:</b> ${C.STRATEGIES.map(st => `<span><i style="background:${C.STRATEGY_COLORS[st]}"></i>${C.STRATEGY_NAMES[st]}</span>`).join('')}</div>`;
   UI.renderLeaders = function (force) {
     const app = UI.app, w = app.world;
     if (UI.lbMode === 'cast' && UI.renderCast) { UI.renderCast(force); return; } // My cast (js/ui/cast-ui.js)
     if (UI.lbMode === 'marks' && LES.Spectator) { // bookmarks (spectator tools)
       LES.Spectator.sync(w);
       const ms = LES.Spectator.marks.filter(m => w.people[m.id]);
-      $('lb-list').innerHTML = ms.length ? ms.map(m => { const p = w.people[m.id]; return `<div class="lb-row ${p.id === app.selected ? 'sel' : ''}" data-pid="${p.id}"><span class="rank">🔖</span><span class="dot" style="background:${C.STRATEGY_COLORS[p.strategy]}"></span><span><div class="nm">${esc(P.name(p))}${m.family ? ' <span class="muted">+ family</span>' : ''}</div><div class="sub">${Math.floor(P.age(w, p))} yrs · bookmarked Y${U.dayToDate(m.day).year}</div></span><span class="val">${p.alive ? (p.away ? 'away' : U.fmtMoney(p.nw)) : 'died'}</span></div>`; }).join('') : '<p class="note">No bookmarks yet. Select someone and press Bookmark (or Bookmark family). Bookmarks are kept in this browser for this seed.</p>';
+      $('lb-list').innerHTML = ms.length ? UI.strategyLegend() + ms.map(m => { const p = w.people[m.id]; return `<div class="lb-row ${p.id === app.selected ? 'sel' : ''}" data-pid="${p.id}"><span class="rank">🔖</span><span class="dot" style="background:${C.STRATEGY_COLORS[p.strategy]}"></span><span><div class="nm">${esc(P.name(p))}${m.family ? ' <span class="muted">+ family</span>' : ''}</div><div class="sub">${Math.floor(P.age(w, p))} yrs · bookmarked Y${U.dayToDate(m.day).year}</div></span><span class="val">${p.alive ? (p.away ? 'away' : U.fmtMoney(p.nw)) : 'died'}</span></div>`; }).join('') : '<p class="note">No bookmarks yet. Select someone and press Bookmark (or Bookmark family). Bookmarks are kept in this browser for this seed.</p>';
       return;
     }
     const q = $('search').value.trim().toLowerCase();
@@ -536,7 +584,8 @@
         default: return U.fmtMoney(p.nw);
       }
     };
-    $('lb-list').innerHTML = list.map((p, i) => `
+    const legend = UI.strategyLegend();
+    $('lb-list').innerHTML = (list.length ? legend : '') + list.map((p, i) => `
       <div class="lb-row ${p.id === app.selected ? 'sel' : ''}" data-pid="${p.id}">
         <span class="rank ${i < 3 && !q ? 'top' : ''}">${q ? '' : i + 1}</span>
         <span class="dot" style="background:${C.STRATEGY_COLORS[p.strategy]}" title="${C.STRATEGY_NAMES[p.strategy]}"></span>

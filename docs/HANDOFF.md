@@ -37,6 +37,16 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
       names MY 101 -> 232, UK 87 -> 181, US 99 -> 221, CN 53 -> 134; most-repeated first name 15-33 -> 7-11 people.
       Sources: JPN/NRD 2025 statements, ONS baby names 2024, MPS name reports, Iban/Kadazan naming references.
       `nameTests` (4).
+- [x] Side panel (Nov 2026, UI only): Person tab shows "Town at a glance" once a day has passed (closest to the
+      goal, this week's big events, population/jobs trend vs a year ago, "?" toggles the short help; keys now say
+      1-7). Person header: icon toolbar (Follow, Compare, Spotlight, Bookmark, Close) + "More" menu (Bookmark
+      family, Celebrate, Fate); Esc closes the menu first; focus survives re-renders (`UI.focusKey/restoreFocus`).
+      Side panel resizable by its left edge (`#side-grip`, arrows when focused, double-click resets; width in
+      localStorage `les-side-width`, CSS `--side-w`, default clamp(430px, 25vw, 560px); phones ignore it).
+      Place tab without a selection lists key buildings by group (`UI.keyPlacesHtml`, `UI.showBuilding` selects
+      and centres; "All places" goes back). Log charts tick at 1/2/5 x 10^n of the *displayed* currency
+      (`logTicks`, `U.moneyScale`); `fmtAxisMoney` prints 2M / 50k. Leaders lists have a strategy colour key.
+      Youngest adults sorted by age; Stats no longer promises "Research Mode (later)".
 - [x] Pop-ups and small screens (Nov 2026, UI only): toasts moved to `js/ui/toasts.js`. They are cleared when a
       new world starts, a save is loaded or another town opens (`UI.clearToasts`), and a click only selects a person
       in the world the toast came from. Smaller cards in the map's top-left corner, at most 3 (the oldest fades out

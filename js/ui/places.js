@@ -7,17 +7,62 @@
   const KIND_NAMES = {
     kampung: 'Kampung house', flat: 'PPR flats', terrace: 'Terrace houses', condo: 'Condominium', bungalow: 'Bungalow',
     shoplot: 'Shoplot', builtlot: 'New estate', lot: 'Empty lot', depot: 'Bus depot', memorial: 'Memorial garden',
+    townhall: 'Town hall', privhosp: 'Private hospital', privschool: 'Private school', techhub: 'Tech hub', researchcentre: 'Research centre', hq: 'Head office',
+  };
+
+  // With no building selected: the town's key buildings, grouped, each one click away.
+  const KEY_GROUPS = [
+    ['Government & justice', ['townhall', 'padang', 'police', 'court', 'jail', 'prison', 'rehab']],
+    ['Money & business', ['bursa', 'bank', 'hq', 'office', 'techhub', 'researchcentre', 'mall']],
+    ['Health & care', ['hospital', 'privhosp', 'welfare']],
+    ['Education', ['university', 'kolej', 'school', 'privschool', 'library', 'hall']],
+    ['Getting around', ['station', 'depot']],
+    ['Worship', ['masjid', 'tokong', 'kuil', 'gereja']],
+    ['Leisure', ['park', 'gym', 'cinema', 'golf', 'memorial']],
+  ];
+  UI.keyPlacesHtml = function (w) {
+    const t = w.town, groups = [], staffAt = new Map();
+    for (const p of w.living) if (p.alive && p.job) staffAt.set(p.job.place, (staffAt.get(p.job.place) || 0) + 1);
+    for (const [name, kinds] of KEY_GROUPS) {
+      const rows = [];
+      for (const k of kinds) {
+        const ids = t.kinds[k] || [];
+        ids.slice(0, 6).forEach((id, i) => {
+          const b = t.buildings[id], n = ids.length;
+          const nm = b.label || KIND_NAMES[b.kind] || (b.kind[0].toUpperCase() + b.kind.slice(1));
+          const staff = staffAt.get(id) || 0;
+          rows.push(`<li class="clickable" data-bid="${id}" tabindex="0" role="button" title="Select and show on the map"><span>${esc(nm)}${n > 1 && !b.label ? ` <span class="muted">${i + 1}</span>` : ''}</span><span class="muted">${staff ? `${staff} staff` : ''}</span></li>`);
+        });
+        if (ids.length > 6) rows.push(`<li><span class="muted">… and ${ids.length - 6} more on the map</span></li>`);
+      }
+      if (rows.length) groups.push(`<div class="glance-sec">${name}</div><ul class="list-plain places-list">${rows.join('')}</ul>`);
+    }
+    return `<div class="card"><h3>Places</h3><p class="muted" style="margin:0 0 4px">Click any building on the map, or one below, to see who owns it, who lives or works there, and who is there right now. The ${esc(LES.Countries.pack.names.exchangeShort)} opens the stock market.</p></div>
+      <div class="card"><h3>Key places in ${esc(LES.townName(w))}</h3>${groups.join('') || '<p class="muted" style="margin:0">No public buildings yet.</p>'}</div>`;
+  };
+  // Select a building (as a click on the map would) and centre the map on it.
+  UI.showBuilding = function (id) {
+    const app = UI.app, r = app.renderer, w = app.world, b = w && w.town.buildings[id];
+    if (!b) return;
+    if (app.view === 'region' && app.selectTown) app.selectTown(w.townIdx);
+    r.follow = false;
+    r.selectedBuilding = id;
+    if (r.z < r.fitZoom() * 1.5) r.z = r.fitZoom() * 2;
+    const T = w.town.T;
+    r.centerOn((b.x + b.w / 2) * T, (b.y + b.h / 2) * T, 1);
+    if (UI.tab !== 'place') UI.setTab('place'); else UI.update(true);
   };
 
   UI.renderPlace = function () {
     const app = UI.app, w = app.world, el = $('tab-place');
     const id = app.renderer.selectedBuilding;
     const b = id >= 0 ? w.town.buildings[id] : null;
-    if (!b) { el.innerHTML = '<div class="card"><h3>Places</h3><p class="muted" style="margin:0">Click any building on the map to see who owns it, who lives or works there, and who is there right now. Click the ' + LES.Countries.pack.names.exchangeShort + ' to open the stock market.</p></div>'; return; }
+    if (!b) { el.innerHTML = UI.keyPlacesHtml(w); return; }
     const title = b.label || KIND_NAMES[b.kind] || b.kind;
     const t = app.dayFrac * 1440, slot = t < LES.SLOT_B ? 0 : 1;
     const here = w.living.filter(p => p.alive && p.plan && p.plan[slot] && p.plan[slot].loc === b.id && !(p.plan[slot].act === 'REST' && t > LES.SLOT_END));
     const cards = [];
+    cards.push(`<div class="tab-tools"><button class="ghost" data-ui="places" title="Back to the list of key places">← All places</button></div>`);
     cards.push(`<div class="card"><h3>${esc(title)} <small class="muted">${esc(KIND_NAMES[b.kind] || b.kind[0].toUpperCase() + b.kind.slice(1))}</small></h3>
       <p style="margin:0 0 6px">${esc(LES.KIND_INFO[b.kind] || '')}</p>
       ${b.kind === 'bursa' ? '<button class="primary" data-act="bursa">Open the stock market</button>' : ''}</div>`);

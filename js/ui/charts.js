@@ -70,7 +70,7 @@
       if (ymax === ymin) ymax = ymin + 1;
       // Log axes snap to whole decades of the *displayed* value (money is shown in another
       // currency scale than it is stored in), so the ticks read 1, 2, 5 x 10^n.
-      const lk = opts.logY ? Math.log10(opts.yScale || (opts.yFmt === LES.Charts.fmtAxisMoney ? U.moneyScale() : 1)) : 0;
+      const ysc = opts.yScale || (opts.yFmt === LES.Charts.fmtAxisMoney ? U.moneyScale() : 1), lk = opts.logY ? Math.log10(ysc) : 0;
       if (opts.logY) { ymin = Math.floor(ymin + lk + 1e-9) - lk; ymax = Math.ceil(ymax + lk - 1e-9) - lk; if (ymax - ymin < 1) ymax = ymin + 1; }
       else { const padY = (ymax - ymin) * 0.08; ymax += padY; if (opts.yMin === undefined) ymin -= padY; }
       const X = x => pad.l + (x - xmin) / (xmax - xmin) * (w - pad.l - pad.r);
@@ -82,7 +82,7 @@
         if (x1 > x0) { g.fillStyle = b.color; g.fillRect(x0, pad.t, x1 - x0, h - pad.t - pad.b); }
       }
       g.strokeStyle = GRID; g.fillStyle = AXIS; g.textAlign = 'right'; g.textBaseline = 'middle';
-      const yt = opts.logY ? logTicks(ymin + lk, ymax + lk).map(t => t - lk) : niceTicks(ymin, ymax, 4);
+      const yt = opts.logY ? logTicks(ymin + lk, ymax + lk).map(t => t - lk) : niceTicks(ymin * ysc, ymax * ysc, 4).map(t => t / ysc);
       const step = opts.logY ? 1 : Math.max(1, Math.ceil(yt.length / 5));
       yt.forEach((t, i) => {
         if (i % step) return;
@@ -137,6 +137,13 @@
   };
   LES.Charts.niceTicks = niceTicks;
   LES.Charts.logTicks = logTicks;
-  // Axis money labels without the currency sign and without trailing zeros (2.00M -> 2M, 50.0k -> 50k).
-  LES.Charts.fmtAxisMoney = v => U.fmtMoney(v).replace(U.sym(), '').replace(/\.0+(?=[kMB]?$)|(\.\d*?)0+(?=[kMB]$)/, '$1');
+  // Axis money labels: no currency sign, 3 significant digits, no trailing zeros (2M, 50k, 1.5B).
+  LES.Charts.fmtAxisMoney = v => {
+    const d = Number((v * U.moneyScale()).toPrecision(3)), a = Math.abs(d), s = d < 0 ? '-' : '';
+    const t = x => String(Number(x.toFixed(2)));
+    if (a >= 1e9) return `${s}${t(a / 1e9)}B`;
+    if (a >= 1e6) return `${s}${t(a / 1e6)}M`;
+    if (a >= 1e3) return `${s}${t(a / 1e3)}k`;
+    return `${s}${t(a)}`;
+  };
 })(globalThis.LES = globalThis.LES || {});
