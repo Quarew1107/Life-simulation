@@ -72,10 +72,20 @@ main { flex: 1; display: flex; min-height: 0; }
 #map-hint { position: absolute; left: 12px; bottom: 10px; background: rgba(15,20,26,.75); padding: 5px 10px; border-radius: 6px; color: #cbd5df; font-size: 11px; pointer-events: none; }
 #tooltip { position: absolute; pointer-events: none; background: rgba(15,20,26,.95); border: 1px solid var(--line); padding: 7px 9px; border-radius: 8px; font-size: 12px; max-width: 260px; z-index: 5; }
 #tooltip b { display: block; }
-#toasts { position: absolute; left: 12px; top: 12px; display: flex; flex-direction: column; gap: 8px; max-width: 420px; z-index: 6; }
-.toast { background: rgba(18,24,31,.96); border: 1px solid var(--line); border-left: 4px solid var(--gold); border-radius: 8px; padding: 9px 12px; box-shadow: 0 6px 20px rgba(0,0,0,.35); animation: slidein .25s ease-out; cursor: pointer; }
-.toast.big { border-left-color: var(--teal); font-size: 14px; }
-.toast .t { font-size: 11px; color: var(--muted); }
+/* Pop-ups: small cards in the map's top-left corner, at most 3 (see js/ui/toasts.js) */
+#toasts { position: absolute; left: 10px; top: 10px; display: flex; flex-direction: column; gap: 5px; width: 320px; max-width: calc(100% - 64px); z-index: 6; pointer-events: none; }
+.toast { pointer-events: auto; background: rgba(18,24,31,.94); border: 1px solid var(--line); border-left: 3px solid var(--gold); border-radius: 6px; padding: 5px 9px; font-size: 12px; line-height: 1.35; box-shadow: 2px 2px 0 #0a0d11; animation: slidein .25s ease-out; cursor: pointer; transition: opacity .3s, transform .3s; }
+.toast:hover { border-color: var(--muted); border-left-color: var(--gold); }
+.toast.big { border-left-color: var(--teal); }
+.toast.big:hover { border-left-color: var(--teal); }
+.toast .t { font-size: 10px; color: var(--muted); margin-right: 2px; }
+.toast.out { opacity: 0; transform: translateX(-10px); }
+/* Narrow screens: one line with the newest pop-up only, so the map stays visible */
+@media (max-width: 599px) {
+  #toasts { left: 6px; top: 6px; max-width: calc(100% - 52px); width: auto; right: 52px; }
+  .toast { display: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 4px 8px; font-size: 11px; }
+  .toast:not(.out):last-child { display: block; }
+}
 @keyframes slidein { from { transform: translateX(-12px); opacity: 0; } to { transform: none; opacity: 1; } }
 
 /* ---------- Side panel ---------- */
@@ -309,7 +319,6 @@ button.primary { border-radius: 6px; box-shadow: 3px 3px 0 #7d5f17; }
 #tabs button.active .px-icon { color: var(--teal); opacity: 1; }
 @media (max-width: 1150px) { #tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); row-gap: 2px; } }
 .px-icon { display: inline-block; vertical-align: middle; flex: none; image-rendering: pixelated; }
-.toast { border-radius: 6px; box-shadow: 3px 3px 0 #0a0d11; }
 .lb-row .rank, .stat .v { font-family: var(--pixel); }
 .stat .v { font-size: 13px; }
 
@@ -324,6 +333,14 @@ button.primary { border-radius: 6px; box-shadow: 3px 3px 0 #7d5f17; }
 #regime { width: 150px; text-align: center; flex: none; }
 #mood { width: 200px; flex: none; overflow: hidden; text-overflow: ellipsis; }
 #speed { flex: none; }
+/* Small screens: the speed bar may shrink and scroll sideways, so 🌙 and ⚡ stay reachable */
+#speed { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+#speed::-webkit-scrollbar { display: none; }
+#speed button { flex: none; }
+@media (max-width: 599px) {
+  #speed { flex: 1 1 100%; min-width: 0; }
+  #speed button { flex: 1 0 auto; min-width: 0; padding: 6px 5px; font-size: 12px; }
+}
 
 /* Life goal card */
 .goal-now { display: flex; gap: 10px; align-items: center; margin-bottom: 6px; }
@@ -360,3 +377,22 @@ button.primary { border-radius: 6px; box-shadow: 3px 3px 0 #7d5f17; }
 .paper-box { margin-top: 12px; border-top: 1px solid #b9b09b; padding-top: 8px; font-size: 13px; }
 .paper-box table { width: 100%; border-collapse: collapse; } .paper-box td { padding: 2px 4px; border-bottom: 1px dotted #c9c0aa; } .paper-box td:last-child { text-align: right; }
 #minimap { position: absolute; right: 12px; bottom: 44px; border: 2px solid var(--line); border-radius: 6px; box-shadow: 0 4px 14px rgba(0,0,0,.4); cursor: crosshair; z-index: 5; image-rendering: pixelated; display: none; }
+
+/* Tablet widths: keep the top bar to two rows (shorter brand, narrower status items, icon-only Report/Save) */
+@media (min-width: 600px) and (max-width: 1000px) {
+  #topbar { gap: 8px; padding: 6px 10px; min-height: 0; }
+  .brand .title { display: none; }
+  .brand { gap: 8px; margin-right: 0; }
+  .clock { width: 86px; min-width: 86px; }
+  #date-text { font-size: 11px; }
+  #time-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #regime { width: auto; max-width: 130px; overflow: hidden; text-overflow: ellipsis; font-size: 11px; padding: 3px 8px; }
+  #mood { width: auto; flex: 0 1 150px; min-width: 0; } /* gives way to a scenario badge or town buttons */
+  #speed button { min-width: 0; padding: 6px 6px; }
+  .goal { min-width: 140px; max-width: 160px; }
+  /* Row 1: who, when and the file buttons; row 2: speed, +1 day, + Person and the goal */
+  #speed, #btn-step, #btn-cast, #goal { order: 2; }
+  #btn-new { margin-left: auto; }
+  #btn-report, #btn-save { font-size: 0; padding: 5px 7px; }
+  #btn-step, #btn-cast { padding: 6px 8px; }
+}

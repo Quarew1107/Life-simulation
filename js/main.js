@@ -60,7 +60,7 @@
     $('map-hint').textContent = MAP_HINT;
     if (R.towns[i] === app.world) { if (wasRegion) { app.renderer.fit(); UI.update(true); } return; }
     app.world = R.towns[i];
-    app.selected = -1; app._rich.t = 0; UI.feedSeqShown = 0;
+    app.selected = -1; app._rich.t = 0; UI.feedSeqShown = 0; UI.clearToasts();
     app.renderer.setWorld(app.world); app.renderer.selectedId = -1; app.renderer.follow = false;
     UI.update(true);
   };
@@ -86,6 +86,7 @@
     app.dayFrac = 0;
     app._rich.t = 0;
     UI.feedSeqShown = 0;
+    UI.clearToasts(); // pop-ups from the previous world point at its people
     app.renderer.setWorld(w);
     app.renderer.selectedId = -1;
     app.renderer.follow = false;
