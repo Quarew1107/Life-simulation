@@ -528,7 +528,9 @@
       logY: true, yFmt: LES.Charts.fmtAxisMoney, xFmt: xs, bands: UI.regimeBands(w),
     });
     const GD = LES.Goals.DEFS;
-    LES.Charts.bars($('st-goals'), LES.Goals.IDS.map(id => ({ label: `${GD[id].icon} ${GD[id].name}`, value: st.goalsAchieved[id] || 0, color: '#f2c14e' })), v => String(v));
+    const goalIds = LES.Goals.IDS.filter(id => LES.C.expOn(w, GD[id])), gc = $('st-goals');
+    if (gc) gc.style.height = (goalIds.length * 22 + 8) + 'px'; // one roomy row per goal
+    LES.Charts.bars(gc, goalIds.map(id => ({ label: `${GD[id].icon} ${GD[id].name}`, value: st.goalsAchieved[id] || 0, color: '#f2c14e' })), v => String(v));
     LES.Charts.line($('st-happy'), { series: [{ label: 'Median happiness', color: '#f2c14e', data: h.filter(r => r.happy !== undefined).map(r => [r.day / 365, r.happy]) }], xFmt: xs, yMin: 0 });
     LES.Charts.bars($('st-strat'), C.STRATEGIES.map(s => ({ label: C.STRATEGY_NAMES[s], value: last.stratMedian[s], color: C.STRATEGY_COLORS[s] })), v => U.fmtMoney(v));
     LES.Charts.line($('st-pop'), { series: [series('pop', 'Total', '#e8edf2'), series('adults', 'Adults', '#5aa9e6'), series('children', 'Children', '#f28482')], xFmt: xs, yMin: 0 });
