@@ -58,6 +58,7 @@
   let SYM = 'RM', MK = 1; // MK: the country's money scale (engine units -> real money for display)
   U.setCurrency = (sym, k) => { SYM = sym; MK = k || 1; };
   U.sym = () => SYM;
+  U.moneyScale = () => MK / 100; // engine units (sen) -> displayed money, e.g. for round chart ticks
   U.fmtMoney = function (sen) {
     if (!Number.isFinite(sen)) return `${SYM}?`;
     const v = sen * MK / 100, a = Math.abs(v), s = v < 0 ? '-' : '';

@@ -26,6 +26,21 @@
     return ticks;
   }
 
+  // Round ticks for a log axis (in log10 units): 1, 2, 5 x 10^n when there is room,
+  // otherwise whole decades (every 2nd or 3rd decade on very tall ranges). At most ~6 ticks.
+  function logTicks(lo, hi) {
+    const out = [], eps = 1e-9;
+    const d0 = Math.floor(lo + eps), d1 = Math.ceil(hi - eps);
+    if (d1 - d0 <= 2) {
+      for (let d = d0; d <= d1; d++) for (const m of [1, 2, 5]) { const t = d + Math.log10(m); if (t >= lo - eps && t <= hi + eps) out.push(t); }
+      if (out.length >= 3) return out;
+      out.length = 0;
+    }
+    const every = Math.max(1, Math.ceil((d1 - d0 + 1) / 6));
+    for (let d = d0; d <= d1; d++) if ((d - d0) % every === 0 && d >= lo - eps && d <= hi + eps) out.push(d);
+    return out;
+  }
+
   LES.Charts = {
     // opts: { series:[{label,color,data:[[x,y]],dash}], logY, yFmt, xFmt, bands:[{x0,x1,color}], yMin }
     line(canvas, opts) {
@@ -53,7 +68,10 @@
       }
       if (xmax === xmin) xmax = xmin + 1;
       if (ymax === ymin) ymax = ymin + 1;
-      if (opts.logY) { ymin = Math.floor(ymin); ymax = Math.ceil(ymax); }
+      // Log axes snap to whole decades of the *displayed* value (money is shown in another
+      // currency scale than it is stored in), so the ticks read 1, 2, 5 x 10^n.
+      const lk = opts.logY ? Math.log10(opts.yScale || (opts.yFmt === LES.Charts.fmtAxisMoney ? U.moneyScale() : 1)) : 0;
+      if (opts.logY) { ymin = Math.floor(ymin + lk + 1e-9) - lk; ymax = Math.ceil(ymax + lk - 1e-9) - lk; if (ymax - ymin < 1) ymax = ymin + 1; }
       else { const padY = (ymax - ymin) * 0.08; ymax += padY; if (opts.yMin === undefined) ymin -= padY; }
       const X = x => pad.l + (x - xmin) / (xmax - xmin) * (w - pad.l - pad.r);
       const Y = y => pad.t + (1 - (tf(y) - ymin) / (ymax - ymin)) * (h - pad.t - pad.b);
@@ -64,8 +82,8 @@
         if (x1 > x0) { g.fillStyle = b.color; g.fillRect(x0, pad.t, x1 - x0, h - pad.t - pad.b); }
       }
       g.strokeStyle = GRID; g.fillStyle = AXIS; g.textAlign = 'right'; g.textBaseline = 'middle';
-      const yt = opts.logY ? Array.from({ length: ymax - ymin + 1 }, (_, i) => ymin + i) : niceTicks(ymin, ymax, 4);
-      const step = Math.max(1, Math.ceil(yt.length / 5));
+      const yt = opts.logY ? logTicks(ymin + lk, ymax + lk).map(t => t - lk) : niceTicks(ymin, ymax, 4);
+      const step = opts.logY ? 1 : Math.max(1, Math.ceil(yt.length / 5));
       yt.forEach((t, i) => {
         if (i % step) return;
         const yy = Math.round(Yt(t)) + 0.5;
@@ -118,5 +136,7 @@
     },
   };
   LES.Charts.niceTicks = niceTicks;
-  LES.Charts.fmtAxisMoney = v => U.fmtMoney(v).replace(U.sym(), '');
+  LES.Charts.logTicks = logTicks;
+  // Axis money labels without the currency sign and without trailing zeros (2.00M -> 2M, 50.0k -> 50k).
+  LES.Charts.fmtAxisMoney = v => U.fmtMoney(v).replace(U.sym(), '').replace(/\.0+(?=[kMB]?$)|(\.\d*?)0+(?=[kMB]$)/, '$1');
 })(globalThis.LES = globalThis.LES || {});

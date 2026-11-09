@@ -31,13 +31,36 @@
     });
     // Delegated clicks for person links and panel buttons
     $('side').addEventListener('click', e => {
+      const ui = e.target.closest('[data-ui]'); // panel-only toggles (no app action)
+      if (ui) {
+        if (ui.dataset.ui === 'help') UI.helpOpen = !UI.helpOpen;
+        if (ui.dataset.ui === 'more') { UI.moreOpen = !UI.moreOpen; if (UI.moreOpen) UI.focusNext = '.p-more-menu button'; }
+        UI.update(true);
+        return;
+      }
       const act = e.target.closest('[data-act]');
-      if (act) { app.action(act.dataset.act, act.dataset); return; }
+      if (act) { if (act.closest('.p-more-menu')) UI.moreOpen = false; app.action(act.dataset.act, act.dataset); return; }
+      const bl = e.target.closest('[data-bid]'); // a building in the Place tab's list
+      if (bl) { UI.showBuilding(Number(bl.dataset.bid)); return; }
       const xl = e.target.closest('[data-xtown]'); // the same person or family in another town
       if (xl) { e.preventDefault(); app.selectTown(Number(xl.dataset.xtown)); if (Number(xl.dataset.xid) >= 0) app.select(Number(xl.dataset.xid), true); return; }
       const link = e.target.closest('[data-pid]');
       if (link) { app.select(Number(link.dataset.pid), true); }
     });
+    // The More menu closes on a click elsewhere, and Esc closes it before Esc deselects the person.
+    document.addEventListener('pointerdown', e => { if (UI.moreOpen && !e.target.closest('.p-more')) UI.closeMore(false); });
+    window.addEventListener('keydown', e => {
+      if (!UI.moreOpen) return;
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); UI.closeMore(true); return; }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { // move through the menu items
+        const items = [...document.querySelectorAll('.p-more-menu button')];
+        if (!items.length) return;
+        e.preventDefault(); e.stopPropagation();
+        const i = items.indexOf(document.activeElement), n = items.length;
+        items[(i < 0 ? 0 : i + (e.key === 'ArrowDown' ? 1 : -1) + n) % n].focus();
+      }
+    }, true);
+    UI.initResize(app);
     $('toasts').addEventListener('click', e => {
       const t = e.target.closest('[data-pid]');
       if (t && Number(t.dataset.pid) >= 0) app.select(Number(t.dataset.pid), true);
@@ -190,18 +213,8 @@
           <div class="status">${status}</div>
           <div class="chips">${chips.join('')}</div>
         </div>
-        <div class="p-actions">
-          ${p.alive ? `<button class="ghost ${app.renderer.follow ? 'on' : ''}" data-act="follow">${app.renderer.follow ? 'Following' : 'Follow'}</button>` : ''}
-          <button class="ghost ${app.pinned === p.id ? 'on' : ''}" data-act="${app.pinned === p.id ? 'unpin' : 'pin'}" title="Pin this person, then select someone else to compare">${app.pinned === p.id ? 'Pinned' : 'Compare'}</button>
-          ${LES.Spectator ? `<button class="ghost ${LES.Spectator.spotlight === p.id ? 'on' : ''}" data-act="spotlight" title="Dim the map around this person (spectator tools only watch: nothing in the simulation changes)">Spotlight</button>
-          <button class="ghost ${LES.Spectator.mark(p.id) && !LES.Spectator.mark(p.id).family ? 'on' : ''}" data-act="bookmark" title="Bookmark this person (kept in this browser for this seed)">Bookmark</button>
-          <button class="ghost ${LES.Spectator.mark(p.id) && LES.Spectator.mark(p.id).family ? 'on' : ''}" data-act="bookmarkFamily" title="Bookmark this person with partner, parents and children">Bookmark family</button>
-          ${p.alive ? '<button class="ghost" data-act="celebrate" title="Confetti on the map (just for show)">Celebrate</button>' : ''}` : ''}
-          ${p.alive && LES.God ? '<button class="ghost" data-act="fate" title="Sandbox: end this person&#39;s life (asks first; marks the world as intervened)">Fate…</button>' : ''}
-          <button class="ghost" data-act="deselect">Close</button>
-        </div>
-
       </div>
+      ${UI.toolbarHtml(app, p)}
       <div class="card">
         <h3>Net worth <small class="muted">peak ${U.fmtMoney(p.peakNw)}</small></h3>
         <div class="networth"><span class="big ${nw < 0 ? 'neg' : ''}">${U.fmtMoney(nw)}</span><span class="muted">${(prog * 100).toFixed(0)}% to goal (log)</span></div>
@@ -347,8 +360,10 @@
       html = html.slice(0, cut) + LES.Extras.compareHtml(w, w.people[app.pinned], p) + html.slice(cut);
     }
     const scroll = el.scrollTop;
+    const keep = UI.focusKey(el);
     el.innerHTML = html;
     el.scrollTop = scroll;
+    UI.restoreFocus(el, keep);
 
     // Canvases
     const portrait = $('portrait');
@@ -373,18 +388,107 @@
     }
   };
 
+  // Short help: the full welcome before the first day; afterwards a "?" toggle on the glance card.
+  UI.helpHtml = function (w) {
+    return `<p style="margin:0 0 6px">${w.cfg.founders} strangers each try to reach <b class="gold">${U.fmtMoney(w.goal)}</b>. Nobody is controlled: every choice is a weighted dice roll from their personality, strategy, needs and money.</p>
+      <p class="muted" style="margin:0">Click anyone on the map, or pick someone from a list. Keys: <b>Space</b> play/pause, <b>1–7</b> speed, <b>S</b> step one day, <b>F</b> follow the selected person, <b>T</b> turbo, <b>P</b> add a person, <b>Esc</b> close.</p>`;
+  };
+
   UI.welcomeHtml = function () {
     const app = UI.app, w = app.world;
-    const rich = w.living.filter(p => p.alive && p.adult).sort((a, b) => b.nw - a.nw).slice(0, 3);
-    const young = w.living.filter(p => p.alive && p.adult && P.age(w, p) < 21).slice(0, 3);
-    const ent = w.living.filter(p => p.alive && p.strategy === 'ENT').slice(0, 2);
+    const adults = w.living.filter(p => p.alive && p.adult && !p.away);
+    const young = adults.filter(p => P.age(w, p) < 21).sort((a, b) => (P.age(w, a) - P.age(w, b)) || (a.id - b.id)).slice(0, 3);
+    const ent = adults.filter(p => p.strategy === 'ENT').slice(0, 2);
     const pick = arr => arr.map(p => `<li><span>${UI.plink(w, p.id)} <span class="muted">${Math.floor(P.age(w, p))} · ${C.STRATEGY_NAMES[p.strategy]}</span></span><span>${U.fmtMoney(p.nw)}</span></li>`).join('');
-    return `<div class="card"><h3>Welcome to ${esc(LES.townName(w))}</h3>
-      <p style="margin:0 0 6px">${w.cfg.founders} strangers each try to reach <b class="gold">${U.fmtMoney(w.goal)}</b>. Nobody is controlled — every choice is a weighted dice roll from their personality, strategy, needs and money.</p>
-      <p class="muted" style="margin:0">Click anyone on the map, or pick someone below. Press <b>Space</b> to play/pause, <b>1–6</b> for speed.</p></div>
-      <div class="card"><h3>Richest right now</h3><ul class="list-plain">${pick(rich)}</ul></div>
-      ${young.length ? `<div class="card"><h3>Youngest adults</h3><ul class="list-plain">${pick(young)}</ul></div>` : ''}
+    const extra = `${young.length ? `<div class="card"><h3>Youngest adults</h3><ul class="list-plain">${pick(young)}</ul></div>` : ''}
       ${ent.length ? `<div class="card"><h3>Would-be entrepreneurs</h3><ul class="list-plain">${pick(ent)}</ul></div>` : ''}`;
+    if (w.lastDay < 1) { // before the first day: the welcome
+      const rich = adults.slice().sort((a, b) => b.nw - a.nw).slice(0, 3);
+      return `<div class="card"><h3>Welcome to ${esc(LES.townName(w))}</h3>${UI.helpHtml(w)}</div>
+        <div class="card"><h3>Richest right now</h3><ul class="list-plain">${pick(rich)}</ul></div>${extra}`;
+    }
+    return UI.glanceHtml(w) + extra;
+  };
+
+  // "Town at a glance": shown on the Person tab once time has moved on and nobody is selected.
+  UI.glanceHtml = function (w) {
+    const app = UI.app, goal = w.goal;
+    const prog = p => U.clamp((Math.log10(Math.max(1, P.goalWorth(w, p) / 100)) - 3) / (Math.log10(goal / 100) - 3), 0, 1);
+    const race = w.living.filter(p => p.alive && p.adult && !p.away).sort((a, b) => (P.goalWorth(w, b) - P.goalWorth(w, a)) || (a.id - b.id)).slice(0, 3);
+    let raceHtml;
+    if (w.winner) raceHtml = `<p style="margin:0">🏆 ${UI.plink(w, w.winner.pid)} reached the goal in Year ${U.dayToDate(w.winner.day).year}, aged ${w.winner.age}.</p>`;
+    else raceHtml = `<ul class="list-plain glance-race">${race.map(p => `<li><span>${UI.plink(w, p.id)} <span class="muted">${Math.floor(P.age(w, p))} · ${C.STRATEGY_NAMES[p.strategy]}</span></span><span>${U.fmtMoney(P.goalWorth(w, p))} <span class="muted">${Math.round(prog(p) * 100)}%</span></span></li>`).join('')}</ul>`;
+    // Big events: the last 7 days, or else the most recent ones.
+    const big = w.feed.filter(e => e.imp >= 2);
+    let recent = big.filter(e => e.day >= w.lastDay - 6), evTitle = 'This week';
+    if (!recent.length) { recent = big; evTitle = 'Latest big events'; }
+    recent = recent.slice(-4).reverse();
+    const evHtml = recent.length ? `<ul class="list-plain glance-ev">${recent.map(e => `<li${e.pid >= 0 ? ` data-pid="${e.pid}" class="clickable"` : ''}><span>${CAT_ICON[e.cat] || '•'} ${e.pid >= 0 ? `<b>${esc(P.name(w.people[e.pid]))}</b>: ` : ''}${esc(e.text)}</span><span class="muted">${U.fmtDate(e.day)}</span></li>`).join('')}</ul>` : '<p class="muted" style="margin:0">Nothing big has happened yet.</p>';
+    // Trends: now vs. about a year ago (monthly snapshots).
+    const h = w.history, last = h[h.length - 1], then = h[Math.max(0, h.length - 13)];
+    const empRate = r => { const lf = r.employed + r.unemployed + r.owners; return lf ? (r.employed + r.owners) / lf : 0; };
+    const delta = (a, b, fmt, downIsGood) => { const d = a - b; return d === 0 || !Number.isFinite(d) ? '<span class="muted">±0</span>' : `<span class="${(d > 0) !== !!downIsGood ? 'pos' : 'neg'}">${d > 0 ? '▲' : '▼'} ${fmt(Math.abs(d))}</span>`; };
+    const since = last && then && last !== then ? (h.length > 13 ? 'vs. a year ago' : 'since the start') : '';
+    const trends = last ? `<div class="grid2 glance-trend">
+        <div><span class="muted">People</span><span>${w.counts.living} ${since ? delta(last.pop, then.pop, v => v) : ''}</span></div>
+        <div><span class="muted">In work</span><span>${U.fmtPct(empRate(last))} ${since ? delta(Math.round(empRate(last) * 100), Math.round(empRate(then) * 100), v => v + ' pts') : ''}</span></div>
+        <div><span class="muted">Jobless</span><span>${last.unemployed} ${since ? delta(last.unemployed, then.unemployed, v => v, true) : ''}</span></div>
+        <div><span class="muted">Firms open</span><span>${last.businesses} ${since ? delta(last.businesses, then.businesses, v => v) : ''}</span></div>
+      </div>${since ? `<div class="note">Changes ${since}.</div>` : ''}` : '';
+    return `<div class="card glance"><h3><span>${esc(LES.townName(w))} at a glance</span><button class="ghost help-btn ${UI.helpOpen ? 'on' : ''}" data-ui="help" title="How to watch: a short help" aria-expanded="${UI.helpOpen ? 'true' : 'false'}">?</button></h3>
+        ${UI.helpOpen ? `<div class="glance-help">${UI.helpHtml(w)}</div>` : ''}
+        <div class="glance-sec">${w.winner ? 'Goal reached' : `Closest to ${U.fmtMoney(goal)}`}</div>${raceHtml}
+        <div class="glance-sec">${evTitle}</div>${evHtml}
+        <div class="glance-sec">Trends</div>${trends}
+        <p class="muted" style="margin:8px 0 0">Click a name, or anyone on the map, to follow their life.</p></div>`;
+  };
+
+  // Person toolbar: the main actions as icon buttons (tooltips + labels for screen readers),
+  // the rest in a "More" menu. Every button keeps its data-act, so app.action and the F/Esc keys work as before.
+  UI.moreOpen = false;
+  UI.toolbarHtml = function (app, p) {
+    if (UI.moreFor !== p.id) { UI.moreOpen = false; UI.moreFor = p.id; }
+    const S = LES.Spectator, mk = S ? S.mark(p.id) : null;
+    const btn = (act, icon, label, tip, on) => `<button class="tb ${on ? 'on' : ''}" data-act="${act}" title="${esc(tip)}" aria-label="${esc(label)}"${on !== undefined ? ` aria-pressed="${on ? 'true' : 'false'}"` : ''}><span aria-hidden="true">${icon}</span></button>`;
+    const main = [];
+    if (p.alive) main.push(btn('follow', '🎥', app.renderer.follow ? 'Stop following' : 'Follow', app.renderer.follow ? 'Following: the camera stays on them (F to stop)' : 'Follow: keep the camera on this person (F)', !!app.renderer.follow));
+    const pinned = app.pinned === p.id;
+    main.push(btn(pinned ? 'unpin' : 'pin', '⚖️', pinned ? 'Unpin from compare' : 'Compare', pinned ? 'Pinned for comparing: select someone else to see them side by side (click to unpin)' : 'Compare: pin this person, then select someone else to see them side by side', pinned));
+    if (S) {
+      main.push(btn('spotlight', '🔦', 'Spotlight', 'Spotlight: dim the map around this person (spectator tools only watch: nothing in the simulation changes)', S.spotlight === p.id));
+      main.push(btn('bookmark', '🔖', 'Bookmark', 'Bookmark this person (kept in this browser for this seed; see Leaders → Bookmarks)', !!(mk && !mk.family)));
+    }
+    const more = [];
+    if (S) {
+      more.push(`<button role="menuitemcheckbox" aria-checked="${mk && mk.family ? 'true' : 'false'}" class="${mk && mk.family ? 'on' : ''}" data-act="bookmarkFamily" title="Bookmark this person with partner, parents and children">👪 Bookmark family${mk && mk.family ? ' ✓' : ''}</button>`);
+      if (p.alive) more.push('<button role="menuitem" data-act="celebrate" title="Confetti on the map (just for show)">🎉 Celebrate</button>');
+    }
+    if (p.alive && LES.God) more.push('<button role="menuitem" data-act="fate" title="Sandbox: end this person&#39;s life (asks first; marks the world as intervened)">⚠️ Fate…</button>');
+    const moreHtml = more.length ? `<div class="p-more">
+        <button class="tb more ${UI.moreOpen ? 'on' : ''}" data-ui="more" aria-haspopup="menu" aria-expanded="${UI.moreOpen ? 'true' : 'false'}" title="More actions">More ▾</button>
+        ${UI.moreOpen ? `<div class="p-more-menu" role="menu">${more.join('')}</div>` : ''}</div>` : '';
+    return `<div class="p-toolbar" role="toolbar" aria-label="Actions for ${esc(P.name(p))}">${main.join('')}${moreHtml}<span class="sp"></span>${btn('deselect', '✕', 'Close', 'Close (Esc)')}</div>`;
+  };
+  // Re-renders replace the panel's HTML: keep keyboard focus on the same control.
+  UI.focusKey = function (el) {
+    const a = document.activeElement;
+    if (!a || !el.contains(a)) return null;
+    if (a.dataset.act) return `[data-act="${a.dataset.act}"]`;
+    if (a.dataset.ui) return `[data-ui="${a.dataset.ui}"]`;
+    return null;
+  };
+  UI.restoreFocus = function (el, key) {
+    const want = UI.focusNext || key;
+    UI.focusNext = null;
+    if (!want) return;
+    const t = el.querySelector(want) || (key && el.querySelector(key));
+    if (t) t.focus({ preventScroll: true });
+  };
+  UI.closeMore = function (refocus) {
+    if (!UI.moreOpen) return;
+    UI.moreOpen = false;
+    if (refocus) UI.focusNext = '[data-ui="more"]';
+    UI.update(true);
   };
 
   UI.regimeBands = function (w) {
@@ -504,7 +608,7 @@
       <div class="card"><h3>Happiness <small class="muted">median adult, 0-100</small></h3><canvas class="chart" id="st-happy"></canvas></div>
       <div class="card"><h3>Wealth <small class="muted">adults, Year-1 money, log · shading = boom / recession</small></h3><canvas class="chart tall" id="st-wealth"></canvas></div>
       <div class="card"><h3>Median net worth by strategy <small class="muted">adults 30+, today</small></h3><canvas class="chart" id="st-strat"></canvas>
-        <div class="note">Exploratory only: one world, people also differ in age, ability and luck. Research Mode (later) will compare thousands of seeds.</div></div>
+        <div class="note">Exploratory only: one world, and people also differ in age, ability and luck. To test a pattern, compare several seeds (Stats → Compare, or a new town with another seed).</div></div>
       <div class="card"><h3>Population</h3><canvas class="chart" id="st-pop"></canvas></div>
       <div class="card"><h3>Work</h3><canvas class="chart" id="st-work"></canvas></div>
       <div class="card"><h3>${LES.Countries.pack.names.exchange} <small class="muted">index (log) · town influence now ${(w.mkt.alpha * 100).toFixed(1)}%</small></h3><canvas class="chart" id="st-mkt"></canvas>
