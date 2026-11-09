@@ -522,6 +522,9 @@
       document.activeElement.blur(); // so Space toggles pause instead of re-clicking
     });
     $('btn-step').addEventListener('click', () => { stepDay(); $('btn-step').blur(); });
+    // Create a person mid-game (the same creator as Leaders → ★ My cast; "Save and add to town").
+    app.createPerson = () => { if (!app.world || app.world.ended || !$('modal').classList.contains('hidden')) return; app.paused = true; renderSpeed(); UI.openCastCreator(-1); };
+    $('btn-cast').addEventListener('click', () => { app.createPerson(); $('btn-cast').blur(); });
     $('btn-save').addEventListener('click', () => app.saveWorld());
     $('btn-new').addEventListener('click', () => { app.paused = true; renderSpeed(); LES.Setup.open(app, false); });
     $('btn-report').addEventListener('click', () => { try { LES.Report.open(app.world, app.prevSummary); } catch (e) { console.error(e); showError(`Report failed: ${e.message}`); } });
@@ -535,6 +538,7 @@
       else if (e.key === 's' || e.key === 'S') stepDay();
       else if (e.key === 'f' || e.key === 'F') app.action('follow');
       else if (e.key === 't' || e.key === 'T') app.setTurbo(!app.turbo);
+      else if (e.key === 'p' || e.key === 'P') app.createPerson();
       else if (e.key === 'Escape') { if (inRegion()) app.selectTown(app.world.townIdx); else app.action('deselect'); }
     });
     window.addEventListener('resize', () => r.resize());

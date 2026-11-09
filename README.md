@@ -51,6 +51,7 @@ While a scenario runs, a badge in the top bar names it, the Stats tab shows its 
 | 1–7 | Speed: 1× (1 sim minute per second), 10×, 60×, 1 day/s, 10 days/s, 100 days/s, MAX |
 | T | Turbo view (⚡): at 10 days/s and faster the map is redrawn ~4 times a second, so big towns simulate faster (results unchanged) |
 | S | Advance one day |
+| P | Create a person and add them to the town (also the ＋ Person button; saved people: Leaders → ★ My cast) |
 | F | Follow the selected person |
 | Esc | Close the person panel |
 | 📊 Report | The full simulation report in a new tab (downloadable as one HTML file) |
