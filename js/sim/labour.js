@@ -21,9 +21,9 @@
       const spread = w.cfg.econModel === 'calibrated' ? L.PAY_MID * U.clamp(Math.exp(R.normal(0, L.paySd())), 0.5, 2.4) : U.clamp(R.normal(1, 0.12), 0.7, 1.5); // pay within a job varies (log-normal)
       const salary = Math.round(w.px(j.salary * spread * w.macro().wageMult) / 1000) * 1000;
       const days = R.int(w.cfg.vacancyDaysMin, w.cfg.vacancyDaysMax);
-      if (w.gov && LES.Services.PUBLIC_JOBS.has(j.id)) { R.pick(w.town.kinds[j.place]); continue; } // the town and private employers post these
-      if (w.sys.jobOk.length && !w.sys.jobOk.every(s => s.jobOk(w, j))) { R.pick(w.town.kinds[j.place]); continue; } // e.g. automated away (scenarios)
-      w.vacancies.push({ id: w.nextVacId++, job: j, salary, openDay: day, closeDay: day + days, applicants: [], appSet: new Set(), place: R.pick(w.town.kinds[j.place]) });
+      if (w.gov && LES.Services.PUBLIC_JOBS.has(j.id)) { R.pick(LES.World.sitesFor(w, j)); continue; } // the town and private employers post these
+      if (w.sys.jobOk.length && !w.sys.jobOk.every(s => s.jobOk(w, j))) { R.pick(LES.World.sitesFor(w, j)); continue; } // e.g. automated away (scenarios)
+      w.vacancies.push({ id: w.nextVacId++, job: j, salary, openDay: day, closeDay: day + days, applicants: [], appSet: new Set(), place: R.pick(LES.World.sitesFor(w, j)) });
       w.stats.vacOpened++;
     }
     // Best-paid first (stable by id): job seekers read the top of the listings.
@@ -45,8 +45,9 @@
       const e = U.clamp(p.xp[v.job.cat] / 5, 0, 1);
       const q = U.clamp(P.extraQuals(p, v.job.req) / 2, 0, 1);
       const referral = p.netMonth > 0 ? 0.04 : 0; // contacts made at the golf club / lounge
+      const fit = v.job.pref && p.specs && v.job.pref.some(s => p.specs.VOC === s || p.specs.MASTER === s) ? 0.05 : 0; // Expansion 1: the right specialisation helps a little
       const hm = w.sys.hireWeight.length ? w.sysMul('hireWeight', p, v) : 1; // e.g. a criminal record
-      cands.push({ p, score: (hw[0] * a + hw[1] * e + hw[2] * q + referral) * hm, tie: w.rng.jobs.next() });
+      cands.push({ p, score: (hw[0] * a + hw[1] * e + hw[2] * q + referral + fit) * hm, tie: w.rng.jobs.next() });
     }
     if (!cands.length) { w.stats.vacUnfilled++; return; }
     cands.sort((x, y) => (y.score - x.score) || (y.tie - x.tie) || (x.p.id - y.p.id));
@@ -139,11 +140,31 @@
     if (e.progress >= course.months * 12) L.graduate(w, p, course);
   };
 
+  // Expansion 1: the subject of a vocational certificate or master's degree, picked without dice (a fixed
+  // hash of who and when) by the design weights times ability fit, so no random stream moves.
+  L.giveSpec = function (w, p, q) {
+    const list = C.SPECS[q];
+    if (!list || (p.specs && p.specs[q])) return null;
+    if (q === 'MASTER') { // the subject has to follow from the first degree
+      const has = d => p.quals.includes(d), ok = { MAST_RESEARCH: has('BACH_SCI') || has('BACH_ENG') || has('MED') || has('BACH_PHARM') || has('BACH_GEN'), MAST_DATA: has('BACH_CS') || has('BACH_ENG') || has('BACH_BUS') || has('BACH_SCI'), MAST_MBA: true };
+      list.forEach(x => { x._ok = ok[x.id]; });
+    } else list.forEach(x => { x._ok = true; });
+    const wts = list.map(x => (x._ok ? x.weight * Math.max(0.2, LES.Actions.attrScore(p, x.w) - 3) : 0));
+    let h = Math.imul((p.id + 1) ^ 0x5bd1e995, 0x9e3779b1) ^ Math.imul(w.day + 7, 0x85ebca6b) ^ (q === 'VOC' ? 0x1234 : 0x4321);
+    h ^= h >>> 15; h = Math.imul(h, 0x2c1b3c6d); h ^= h >>> 12;
+    let r = ((h >>> 0) / 4294967296) * U.sum(wts), k = 0;
+    while (k < wts.length - 1 && (r -= wts[k]) >= 0) k++;
+    p.specs = p.specs || {};
+    p.specs[q] = list[k].id;
+    return list[k];
+  };
+
   L.graduate = function (w, p, course) {
     p.quals.push(course.id);
     const years = ((w.day - p.enrol.startDay) / 365).toFixed(1);
+    if (p.enrol.spec) (p.specs = p.specs || {})[course.id] = p.enrol.spec;
     p.enrol = null;
-    P.log(w, p, `Graduated: ${course.name} after ${years} years`, 'edu', 1);
+    P.log(w, p, `Graduated: ${p.specs && p.specs[course.id] ? P.qualName(p, course.id) : course.name} after ${years} years`, 'edu', 1);
     w.stats.graduations++;
   };
 
@@ -189,7 +210,12 @@
     if (PG && fee > 0 && course.id !== 'MASTER') { let inc = Math.max(0, p.incomeEMA); for (const id of p.parents) { const q = w.people[id]; if (q && q.alive) inc += Math.max(0, q.incomeEMA); }
       if (inc / w.price / 100 * 12 < PG.incomeLimit) fee = Math.max(0, fee - w.px(PG.max / 12)); }
     p.enrol = { course: course.id, startDay: w.day, progress: 0, scholarship: scholar, feeMonthly: fee, monthsPaid: 0 };
-    P.log(w, p, `Enrolled in ${course.name}${scholar ? ' with a full scholarship!' : ''}`, 'edu', scholar ? 1 : 0);
+    let title = course.name;
+    if (w.cfg.rulesRev >= C.EXPANSION_REV && C.SPECS[course.id]) { // Expansion 1: choose the subject; its fee differs a little
+      const held = p.specs && p.specs[course.id], sp = L.giveSpec(w, p, course.id);
+      if (sp) { p.enrol.spec = sp.id; delete p.specs[course.id]; if (held) p.specs[course.id] = held; p.enrol.feeMonthly = Math.round(fee * sp.fee); title = course.id === 'VOC' ? `${course.name} (${sp.name})` : sp.name; }
+    }
+    P.log(w, p, `Enrolled in ${title}${scholar ? ' with a full scholarship!' : ''}`, 'edu', scholar ? 1 : 0);
     if (scholar) w.stats.scholarships++;
   };
 

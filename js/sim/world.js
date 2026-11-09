@@ -8,6 +8,12 @@
   const mortalityYear = (age, mult = 1) => age < 1 ? 0.004 : age < 18 ? 0.0003 : 0.0004 + 0.000015 * mult * Math.exp(0.1 * age);
   LES.mortalityYear = mortalityYear;
 
+  // Expansion 1: founders' degrees (same overall share; the newer subjects split it). Engineering,
+  // computing, architecture, law and pharmacy are less likely for founders with modest intelligence.
+  const FOUNDER_DEGREES = ['BACH_GEN', 'BACH_BUS', 'BACH_ENG', 'BACH_SCI', 'BACH_CS', 'BACH_ARCH', 'BACH_LAW', 'BACH_PHARM', 'BACH_SOC'];
+  const FOUNDER_WEIGHTS = [0.22, 0.26, 0.2, 0.06, 0.08, 0.03, 0.04, 0.03, 0.08];
+  const FOUNDER_HARD = new Set(['BACH_ENG', 'BACH_CS', 'BACH_ARCH', 'BACH_LAW', 'BACH_PHARM']);
+
   class World {
     constructor(cfgIn) {
       this.cfg = LES.upgradeConfig(Object.assign({}, LES.DEFAULTS, cfgIn || {}));
@@ -31,7 +37,8 @@
         for (const id of sc) { const s = t.buildings[id]; for (const b of t.buildings) if (b.home && Math.abs(b.x + b.w / 2 - (s.x + s.w / 2)) < s.w / 2 + 12 && Math.abs(b.y + b.h / 2 - (s.y + s.h / 2)) < s.h / 2 + 10) b.view = true; }
       }
       const tt = LES.TOWN_TYPES[type];
-      if (tt && tt.jobs) this.jobFreq = C.JOBS.map(j => j.freq * (tt.jobs[j.id] || 1)); // the job mix of this kind of town
+      if (this.cfg.rulesRev >= C.EXPANSION_REV) this.jobFreq = World.jobMix(this, tt && tt.jobs); // Expansion 1: the new jobs join the mix
+      else if (tt && tt.jobs) this.jobFreq = C.JOBS.map(j => (j.exp ? 0 : j.freq * (tt.jobs[j.id] || 1))); // the job mix of this kind of town
       this.townVersion = 0;
       this.day = 0;
       this.lastDay = -1;
@@ -60,9 +67,10 @@
       this.qualValue = {};
       for (const q of Object.keys(C.QUALS)) {
         // Expected pay a qualification unlocks = average of the jobs that require it.
-        const sal = C.JOBS.filter(j => j.req && P.hasCred({ quals: [q] }, j.req)).map(j => j.salary);
+        const sal = C.JOBS.filter(j => j.req && C.expOn(this, j) && P.hasCred({ quals: [q] }, j.req)).map(j => j.salary);
         this.qualValue[q] = sal.length ? U.sum(sal) / sal.length : 3000;
       }
+      if (this.cfg.rulesRev >= C.EXPANSION_REV) World.placeResearchCentre(this);
       this.goal = this.derived.goal;
       this.milestoneList = [...new Set([U.RM(1e5), U.RM(1e6), U.RM(1e7), this.goal])].filter(x => x <= this.goal).sort((a, b) => a - b);
       this.initFounders();
@@ -149,11 +157,15 @@
       const pVoc = band ? band[2] : 0.3;
       const r = R.next();
       if (age >= 22 && r < pDeg) {
-        const q = intel >= 7 && R.next() < 0.15 ? 'MED' : ['BACH_GEN', 'BACH_BUS', 'BACH_ENG'][R.weighted([0.35, 0.35, intel >= 5.5 ? 0.3 : 0.08])];
+        const EXP = cfg.rulesRev >= C.EXPANSION_REV; // Expansion 1: the newer degrees take part of the same share
+        const q = intel >= 7 && R.next() < 0.15 ? 'MED' : EXP
+          ? FOUNDER_DEGREES[R.weighted(FOUNDER_DEGREES.map((d, i) => FOUNDER_WEIGHTS[i] * (intel >= 5.5 || !FOUNDER_HARD.has(d) ? 1 : 0.27)))]
+          : ['BACH_GEN', 'BACH_BUS', 'BACH_ENG'][R.weighted([0.35, 0.35, intel >= 5.5 ? 0.3 : 0.08])];
         p.quals.push(q);
-        if (age >= 25 && R.next() < 0.15) p.quals.push('MASTER');
+        if (age >= 25 && R.next() < 0.15) { p.quals.push('MASTER'); if (EXP) Lb.giveSpec(this, p, 'MASTER'); }
       } else if (r < pDeg + pVoc) {
         p.quals.push('VOC');
+        if (cfg.rulesRev >= C.EXPANSION_REV) Lb.giveSpec(this, p, 'VOC');
       }
 
       let rm;
@@ -167,13 +179,13 @@
       this.ledger.pay(source, p, 'cash', this.px(U.clamp(Math.round(rm), 0, 20000000)));
 
       if (R.next() < (o.jobChance || 0)) {
-        const eligible = C.JOBS.filter(j => P.hasCred(p, j.req));
+        const eligible = C.JOBS.filter(j => C.expOn(this, j) && P.hasCred(p, j.req));
         const j = eligible[R.weighted(eligible.map(x => x.freq * (x.req ? 3 : 1)))];
         const salary = Math.round(this.px(j.salary * (cfg.econModel === 'calibrated' ? LES.Labour.PAY_MID * U.clamp(Math.exp(R.normal(0, LES.Labour.paySd())), 0.5, 2.4) : U.clamp(R.normal(1, 0.1), 0.75, 1.3))) / 1000) * 1000;
         const level = 1 + Math.min(2, Math.floor(Math.max(0, age - 20) / 6 * R.next() * 1.5));
         p.job = {
           jobId: j.id, title: j.title, salary: Math.round(salary * Math.pow(1.12, level - 1)), level, startDay: this.day - R.int(30, 1500),
-          shiftsMonth: 0, lastShiftDay: -1, warnings: 0, place: R.pick(this.town.kinds[j.place]), perfOk: 0, perfN: 0, cat: j.cat,
+          shiftsMonth: 0, lastShiftDay: -1, warnings: 0, place: R.pick(World.sitesFor(this, j)), perfOk: 0, perfN: 0, cat: j.cat,
         };
         p.xp[j.cat] = Math.min(5, Math.max(0, age - 18) * 0.25 * R.range(0.3, 1));
         this.ledger.pay(source, p, 'epf', Math.round(salary * 0.24 * 12 * Math.max(0, age - 20) * 0.5));
@@ -643,6 +655,34 @@
       return LES.hashString(parts.join('|')).map(x => x.toString(16).padStart(8, '0')).join('');
     }
   }
+
+  // Expansion 1 job mix. Openings are drawn by level (no qualification, vocational, degree); the new jobs
+  // join each level without changing how many of all openings that level gets, and take at most a third of it.
+  World.EXP_SHARE = 1 / 3; // the most of a level's openings the new jobs may take (balance check, Nov 2026: half lowered US inequality too far)
+  World.jobMix = function (w, typeMult) {
+    const base = C.JOBS.map(j => j.freq * ((typeMult && typeMult[j.id]) || 1));
+    const level = j => (!j.req ? 0 : j.req === 'VOC' ? 1 : 2), old = [0, 0, 0], add = [0, 0, 0];
+    C.JOBS.forEach((j, i) => { (j.exp ? add : old)[level(j)] += base[i]; });
+    const cap = World.EXP_SHARE, newScale = old.map((o, k) => (add[k] > o * cap / (1 - cap) ? o * cap / (1 - cap) / add[k] : 1));
+    const total = old.map((o, k) => o + add[k] * newScale[k]);
+    return C.JOBS.map((j, i) => { const k = level(j); return total[k] > 0 ? base[i] * (j.exp ? newScale[k] : 1) * old[k] / total[k] : 0; });
+  };
+  // Expansion 1: the Research & Innovation Centre is built on one of the town's empty lots when the town has
+  // at least two (it keeps one for growth); otherwise its jobs are done at the university or an office (job alt).
+  World.placeResearchCentre = function (w) {
+    const t = w.town;
+    if (t.kinds.researchcentre && t.kinds.researchcentre.length) return;
+    if (t.lots.filter(id => !t.buildings[id].built).length < 2) return;
+    if (LES.growTown(t, 'r')) w.townVersion++;
+  };
+  // Where a job is done in this town: its workplace, else the first alternative that exists.
+  World.sitesFor = function (w, j) {
+    const k = w.town.kinds;
+    if (!j.exp || (k[j.place] && k[j.place].length)) return k[j.place]; // older jobs exactly as before
+    for (const a of j.alt || []) if (k[a] && k[a].length) return k[a];
+    for (const a of ['office', 'mall', 'hawker', 'factory']) if (k[a] && k[a].length) return k[a];
+    return k[j.place] || [];
+  };
 
   LES.World = World;
 })(globalThis.LES = globalThis.LES || {});

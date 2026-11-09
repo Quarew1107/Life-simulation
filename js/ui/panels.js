@@ -295,7 +295,7 @@
     }
 
     // Career & education
-    const quals = p.quals.length ? p.quals.map(q => C.QUALS[q]).join(', ') : 'None';
+    const quals = p.quals.length ? p.quals.map(q => P.qualName(p, q)).join(', ') : 'None';
     let career = `<div class="grid2"><div><span class="muted">Qualifications</span><span>${esc(quals)}</span></div></div>`;
     if (p.enrol) {
       const c = C.COURSE_BY_ID[p.enrol.course];

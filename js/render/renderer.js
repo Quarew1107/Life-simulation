@@ -419,7 +419,7 @@
         // Face the way they walk (routes are straight road segments, so one of dx/dy is 0).
         const view = !it.moving ? 'front' : it.dx !== 0 ? 'side' : it.dy < 0 ? 'back' : 'front';
         const inYard = p.inst && p.inst.kind === 'prison' && !it.leaving;
-        const outfit = inYard ? 'prisoner' : (atPlace && LES.Ambience.outfitFor(p, slotAct)) || LES.Ambience.festivalOutfit(p, festDay);
+        const outfit = inYard ? 'prisoner' : (atPlace && LES.Ambience.outfitFor(p, slotAct)) || LES.Ambience.eventOutfit(p, festDay) || LES.Ambience.festivalOutfit(p, festDay);
         const spr = LES.Sprites.person(LES.Sprites.lookOf(p, age), group, it.moving ? walkFrame : 0, outfit, view);
         const x = Math.round(it.x - spr.width / 2), y = Math.round(it.y - spr.height);
         if (view === 'side' && it.dx < 0) { // walking left: mirror the right-facing sprite

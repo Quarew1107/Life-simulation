@@ -189,7 +189,7 @@
 
     // 8. Life goals and happiness: success is not only money.
     const G = LES.Goals, adults = w.people.filter(p => p.adult);
-    const achieved = G.IDS.map(id => ({ id, n: st.goalsAchieved[id] || 0 })).sort((a, b) => b.n - a.n);
+    const achieved = G.IDS.filter(id => LES.C.expOn(w, G.DEFS[id])).map(id => ({ id, n: st.goalsAchieved[id] || 0 })).sort((a, b) => b.n - a.n); // (Expansion 1 goals only where they exist)
     const totalGoals = U.sum(achieved.map(x => x.n));
     const living = rows.filter(r => r.p.alive && !r.p.away);
     const moneyHappy = spearman(living.map(r => r.p.nw), living.map(r => r.p.happy));

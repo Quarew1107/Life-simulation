@@ -43,18 +43,18 @@
     hooks: {
       init(w) {
         const r = R(w), L = w.ledger, F = LES.Finance, A = C.AGEING;
-        const plain = C.JOBS.filter(j => !j.req && !j.commute);
+        const plain = C.JOBS.filter(j => !j.req && !j.commute && C.expOn(w, j));
         for (const p of w.people) {
           p.pot = [5, 5, 5, 5, 5, 5]; p.att = [5, 5, 5, 5, 5, 5]; p.peak = p.att.slice();
           p.ageing = { bOnset: A.bOnset[0], bRate: A.bRate[0], bFloor: (A.bFloor[0] + A.bFloor[1]) / 2, mOnset: A.mOnset[0], mRate: A.mRate[0], mFloor: (A.mFloor[0] + A.mFloor[1]) / 2 };
-          p.quals = []; p.health = 85;
+          p.quals = []; delete p.specs; p.health = 85;
           if (p.epf > 0) L.spend(p, 'epf', 'GENESIS', p.epf);
           const want = w.px(10000);
           if (p.cash > want) L.spend(p, 'cash', 'GENESIS', p.cash - want); else if (p.cash < want) L.pay('GENESIS', p, 'cash', want - p.cash);
           p.xp = Object.fromEntries(C.XP_CATS.map(k => [k, 0]));
           if (p.job) { // the job lottery: everyone with a job gets an entry-level one
             const j = plain[r.weighted(plain.map(x => x.freq))];
-            p.job = Object.assign(p.job, { jobId: j.id, title: j.title, salary: w.px(j.salary), level: 1, cat: j.cat, place: r.pick(w.town.kinds[j.place]) });
+            p.job = Object.assign(p.job, { jobId: j.id, title: j.title, salary: w.px(j.salary), level: 1, cat: j.cat, place: r.pick(LES.World.sitesFor(w, j)) });
             p.incomeEMA = Math.round(p.job.salary * 0.89);
           } else p.incomeEMA = w.px(800);
           p.nw = P.netWorth(w, p); p.peakNw = p.nw;

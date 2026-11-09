@@ -20,18 +20,37 @@
       1: ['..hhhh..', '.hhhhhh.', 'hhsssshh', 'hsessesh', 'hhsssshh'],
       2: ['...hh...', '.hhhhhh.', '.hssssh.', '.sesses.', '..ssss..'],
       3: ['..cccc..', '.cccccc.', 'ccsssscc', 'csessesc', 'ccsssscc'],
+      // Expansion 1 hairstyles (Idea/Expansion 1): 4 curly, 5 buzz cut, 6 ponytail, 7 braids, 8 wavy, 9 side parting
+      4: ['.hhhhhh.', 'hhhhhhhh', 'hhsssshh', '.sesses.', '..ssss..'],
+      5: ['..hhhh..', '.hhhhhh.', '.ssssss.', '.sesses.', '..ssss..'],
+      6: ['..hhhh..', '.hhhhhh.', '.hsssshh', '.sessesh', '..ssss.h'],
+      7: ['..hhhh..', '.hhhhhh.', 'hhsssshh', 'hsessesh', 'h.ssss.h'],
+      8: ['.hhhhhh.', 'hhhhhh.h', '.hsssshh', '.sesses.', '..ssss..'],
+      9: ['hhhhhhh.', '.hhhhhhh', '.hsssshh', '.sesses.', '..ssss..'],
     },
     back: {
       0: ['..hhhh..', '.hhhhhh.', '.hhhhhh.', '.hhhhhh.', '..ssss..'],
       1: ['..hhhh..', '.hhhhhh.', 'hhhhhhhh', 'hhhhhhhh', 'hhhhhhhh'],
       2: ['...hh...', '.hhhhhh.', '.hhhhhh.', '.hhhhhh.', '..ssss..'],
       3: ['..cccc..', '.cccccc.', 'cccccccc', 'cccccccc', 'cccccccc'],
+      4: ['.hhhhhh.', 'hhhhhhhh', 'hhhhhhhh', '.hhhhhh.', '..ssss..'],
+      5: ['..hhhh..', '.hhhhhh.', '.hhhhhh.', '.ssssss.', '..ssss..'],
+      6: ['..hhhh..', '.hhhhhh.', '.hhhhhh.', '.hhhhhh.', '...hh...'],
+      7: ['..hhhh..', '.hhhhhh.', 'hhhhhhhh', 'hhhhhhhh', 'h.ssss.h'],
+      8: ['.hhhhhh.', 'hhhhhhhh', 'hhhhhhhh', '.hhhhhh.', '..ssss..'],
+      9: ['hhhhhhh.', '.hhhhhhh', '.hhhhhh.', '.hhhhhh.', '..ssss..'],
     },
     side: { // facing right
       0: ['..hhhh..', '.hhhhhh.', '.hhssss.', '.hssses.', '..ssss..'],
       1: ['..hhhh..', '.hhhhhh.', 'hhhssss.', 'hhssses.', 'hh.sss..'],
       2: ['hh.hhh..', 'hhhhhhh.', '.hhssss.', '.hssses.', '..ssss..'],
       3: ['..cccc..', '.cccccc.', 'cccssss.', 'ccssses.', 'cccsss..'],
+      4: ['.hhhhhh.', 'hhhhhhhh', 'hhhssss.', 'hhssses.', '..ssss..'],
+      5: ['..hhhh..', '.hhhhhh.', '.hsssss.', '.sssses.', '..ssss..'],
+      6: ['..hhhh..', 'hhhhhhh.', 'hhhssss.', 'h.ssses.', 'h.ssss..'],
+      7: ['..hhhh..', '.hhhhhh.', 'hhhssss.', 'hhssses.', 'hh.sss..'],
+      8: ['.hhhhhh.', 'hhhhhhh.', '.hhssss.', 'hhssses.', '..ssss..'],
+      9: ['hhhhhh..', '.hhhhhhh', '.hhssss.', '.hssses.', '..ssss..'],
     },
   };
   const SIDE_BODY = ['..tttt..', '..tttt..', '..ttat..', '..ttkt..'];
@@ -62,6 +81,15 @@
     kurta: () => ({ shirt: '#f3ead7', pants: '#f3ead7' }),
     cny: () => ({ shirt: '#c1121f' }),
     gawai: () => ({ shirt: '#1b1b1b', pants: '#9b2226', sash: '#e9c46a' }), // Iban / Kadazan dress: black with red and gold
+    // Expansion 1 (Idea/Expansion 1): tie = a centre stripe, badge = one chest pixel, band = a reflective stripe, apron = a front panel
+    overalls: { shirt: '#294e70', pants: '#294e70', badge: '#f5c15e' },
+    security: { shirt: '#233c56', pants: '#223447', hat: '#233c56', badge: '#d7b56d' },
+    firefighter: { shirt: '#be7932', pants: '#322e31', hat: '#d5a037', band: '#f9d75e' },
+    labcoat: { shirt: '#ebf1e9', pants: '#547a8c', badge: '#2bbda9' },
+    apron: { shirt: '#fae5cc', pants: '#4a4555', apron: '#a35b47' },
+    business: { shirt: '#37445e', pants: '#283243', tie: '#80b7c9' },
+    gown: { shirt: '#262b40', pants: '#262b40', hat: '#262b40', tie: '#e4b85a' },
+    wedding: { shirt: '#f4ebdb', pants: '#766478', tie: '#d2a8b0' },
   };
   LES.OUTFITS = OUTFITS;
 
@@ -79,7 +107,7 @@
       case 'p': return look.pants;
       case 'f': return '#2b2b2b';
       case 'c': return look.scarf;
-      case 'g': return look.glasses === 2 ? '#c9a227' : '#26232b';
+      case 'g': return look.glasses === 2 ? '#c9a227' : look.glasses === 3 ? '#8b5a2b' : '#26232b'; // 3: round tortoiseshell
       case 'b': return grey ? '#bdbdbd' : look.hair;
       case 'd': return darker(look.skin, 0.8);
       case 'H': return HATS[look.hat] || look.hatColour || '#1d3557';
@@ -97,10 +125,12 @@
   // Glasses, beard and headwear on an adult's head rows (0-4); not over a headscarf.
   function addExtras(rows, look, view) {
     const side = view === 'side', back = view === 'back';
+    if (look.glasses === 3 && !back && !side) rows[2] = [...rows[2]].map((c, i) => (c === 's' && (i === 2 || i === 5) ? 'g' : c)).join(''); // round frames reach above the eye
     if (look.glasses && !back) rows[3] = side ? put(put(rows[3], 4, 'g'), 6, rows[3][6] === '.' ? '.' : 'g') : [...rows[3]].map((c, i) => (c === 's' && (i === 1 || i === 3 || i === 4 || i === 6) ? 'g' : c)).join('');
     if (look.beard && !back) {
       if (look.beard === 1) rows[4] = rows[4].replace(/s/g, 'd');
       else if (look.beard === 2) rows[4] = side ? put(rows[4], 5, 'b') : put(put(rows[4], 3, 'b'), 4, 'b');
+      else if (look.beard === 4) rows[4] = side ? put(put(rows[4], 4, 'b'), 5, 'b') : [...rows[4]].map((c, i) => (c === 's' ? (i === 3 || i === 4 ? 'b' : 'd') : c)).join(''); // goatee
       else { rows[4] = rows[4].replace(/s/g, 'b'); if (!side) rows[3] = [...rows[3]].map((c, i) => (c === 's' && (i === 1 || i === 6) ? 'b' : c)).join(''); }
     }
     if (look.hat && look.style !== 3) {
@@ -109,6 +139,7 @@
       if (look.hat === 4) rows[1] = rows[1].replace(/^\.(H+)\.$/, 'H$1H');
       if (look.hat === 1) rows[0] = rows[0].replace(/^\.\.(H+)\.\.$/, '.H$1H.'); // a songkok is a flat-topped box
       if (look.hat === 3 && !back) rows[2] = side ? put(rows[2], 7, 'H') : rows[2]; // cap brim (side view)
+      if (look.hat === 5) rows[0] = '..HHHH..'; // beanie: a rounded top
     }
     return rows;
   }
@@ -140,7 +171,8 @@
     if (hit && hit.band === band && hit.base === L) return hit.look;
     const id = p.id, man = p.sex === 'M', x = {};
     if (age >= 16 && h01(id, 1) < 0.06 + 0.008 * Math.max(0, age - 35)) x.glasses = h01(id, 2) < 0.25 ? 2 : 1;
-    if (man && age >= 20 && h01(id, 3) < ({ malay: 0.3, indian: 0.35, chinese: 0.12 }[p.eth] || 0.25)) { const r = h01(id, 4); x.beard = r < 0.4 ? 1 : r < 0.7 ? 2 : 3; }
+    if (x.glasses && h01(id, 11) < 0.25) x.glasses = 3; // round spectacles
+    if (man && age >= 20 && h01(id, 3) < ({ malay: 0.3, indian: 0.35, chinese: 0.12 }[p.eth] || 0.25)) { const r = h01(id, 4); x.beard = r < 0.4 ? 1 : r < 0.6 ? 2 : r < 0.85 ? 3 : 4; }
     if (man && age >= 18) {
       const r = h01(id, 5);
       if (p.eth === 'malay' && r < 0.1) x.hat = 1; // songkok
@@ -148,6 +180,11 @@
       else if (p.eth === 'indian' && r < 0.05) { x.hat = 4; x.hatColour = TURBANS[Math.floor(h01(id, 6) * TURBANS.length)]; } // turban
       else if (age < 50 && r > 0.92) { x.hat = 3; x.hatColour = CAP_COLOURS[Math.floor(h01(id, 7) * CAP_COLOURS.length)]; } // cap
     }
+    if (!x.hat && age >= 14 && age < 40 && L.style !== 3 && h01(id, 12) < 0.04) { x.hat = 5; x.hatColour = CAP_COLOURS[Math.floor(h01(id, 13) * CAP_COLOURS.length)]; } // beanie
+    // Expansion 1 hairstyles for residents, by the same fixed rule (short hair or long hair only).
+    const hs = h01(id, 14);
+    if (L.style === 0) { const st = hs < 0.15 ? 5 : hs < 0.27 ? 9 : hs < 0.37 ? 4 : hs < 0.45 ? 8 : 0; if (st) x.style = st; }
+    else if (L.style === 1) { const st = hs < 0.2 ? 6 : hs < 0.32 ? 7 : hs < 0.45 ? 8 : hs < 0.52 ? 4 : 0; if (st) x.style = st; }
     const look = Object.keys(x).length ? Object.assign({}, L, x) : L;
     derived.set(p, { band, base: L, look });
     return look;
@@ -195,6 +232,13 @@
       if (of && of.sash && group !== 'child' && group !== 'baby') { // saree drape over one shoulder
         g.fillStyle = of.sash;
         for (let i = 0; i < 4; i++) g.fillRect(2 + i, 6 + i, 1, 1);
+      }
+      if (of && (group === 'adult' || group === 'elder')) { // Expansion 1 uniform details (torso rows 5-8; +1 for the outline)
+        const front = view === 'front', side = view === 'side' || view === 'sideL';
+        if (of.apron && front) { g.fillStyle = of.apron; g.fillRect(3, 7, 4, 3); g.fillRect(4, 6, 2, 1); }
+        if (of.tie && front) { g.fillStyle = of.tie; g.fillRect(5, 6, 1, 3); }
+        if (of.badge && !(view === 'back')) { g.fillStyle = of.badge; g.fillRect(side ? (view === 'sideL' ? 4 : 5) : 6, 7, 1, 1); }
+        if (of.band) { g.fillStyle = of.band; for (let x = 1; x <= wpx; x++) if (filled(x - 1, 7)) g.fillRect(x, 8, 1, 1); }
       }
       cache.set(key, cv);
       return cv;

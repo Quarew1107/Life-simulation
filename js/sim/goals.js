@@ -12,6 +12,11 @@
   const bodyAvg = p => (p.att[C.STR] + p.att[C.END] + p.att[C.AGI]) / 3;
   const liveKids = (w, p) => { let k = 0; for (const id of p.children) if (w.people[id].alive) k++; return k; };
   const PRESTIGE_JOBS = ['doctor', 'engineer', 'softdev', 'manager', 'banker', 'citytech'];
+  // Expansion 1 helpers.
+  const debtOf = p => p.debt.study + (p.debt.medical || 0);
+  const grownChild = (w, p) => p.children.some(id => { const c = w.people[id]; return c && c.alive && P.age(w, c) >= 18; });
+  const staffOf = (w, p) => { let k = 0; for (const q of w.living) if (q.alive && q.job && q.job.biz >= 0) { const b = w.biz[q.job.biz]; if (b && b.open && b.founderId === p.id) k++; } return k; };
+  const ownsStaffedType = (w, p) => w.biz.some(b => b.open && b.founderId === p.id && b.typeDef && (b.typeDef.staff || b.typeDef.build));
 
   // weight: how likely this person picks it; bias: utility added to actions (TRAIN_BODY /
   // TRAIN_MIND split training); spend: change to the share of income spent on lifestyle.
@@ -124,6 +129,112 @@
       bias: { INVEST: 0.5, START_BIZ: 0.2, SOCIAL: 0.2, CHILDCARE: 0.3 }, spend: -0.05,
       family: 0.4,
     },
+
+    // ---- Expansion 1 (rules revision 5; Idea/Expansion 1). Each is measured from state the simulation
+    // really keeps, with month counters on the goal itself; eligible() keeps a goal away from people it
+    // cannot apply to. 'Social butterfly' is deferred: 'friends' counts socialising, not real friendships.
+    DEBT_FREE: {
+      name: 'Debt-free living', icon: '🪙', exp: 5,
+      weight: (w, p) => (debtOf(p) > 0 ? 0.6 : 0.08) + 0.4 * n(p.pers.dis) + 0.3 * n(p.pers.pat) + (p.strategy === 'INV' || p.strategy === 'BAL' ? 0.3 : 0),
+      init: () => ({ months: 0 }),
+      text: () => 'No debts and six months of living costs saved, for a whole year',
+      monthly: (w, p, g) => { g.months = debtOf(p) <= 0 && p.arrears <= 0 && p.cash >= 6 * p.mcost ? g.months + 1 : 0; },
+      progress: (w, p, g) => U.clamp((debtOf(p) <= 0 ? 0.2 : 0) + 0.2 * Math.min(1, p.cash / Math.max(1, 6 * p.mcost)) + 0.6 * g.months / 12, 0, 1),
+      done: (w, p, g) => g.months >= 12,
+      bias: { WORK: 0.3, INVEST: 0.3, SOCIAL: -0.3 }, spend: -0.15,
+    },
+    LASTING_LOVE: {
+      name: 'A lasting love', icon: '💞', exp: 5,
+      weight: (w, p) => 0.2 + 0.4 * n(p.pers.resp) + 0.3 * n(p.pers.pat) + 0.5 * Math.max(0, n(p.famDesire)),
+      init: (w, p) => ({ partner: p.partnerId, months: 0 }),
+      text: () => 'Stay with the same partner for 10 years',
+      monthly: (w, p, g) => {
+        const q = p.partnerId !== null ? w.people[p.partnerId] : null;
+        if (!q || !q.alive) { g.partner = null; g.months = 0; return; }
+        if (g.partner !== p.partnerId) { g.partner = p.partnerId; g.months = 0; }
+        g.months++;
+      },
+      progress: (w, p, g) => U.clamp(g.months / 120, 0, 1),
+      done: (w, p, g) => g.months >= 120,
+      bias: { SOCIAL: 0.3, REST: 0.2, GIG: -0.2 }, spend: 0, family: 0.3,
+    },
+    GOOD_PARENT: {
+      name: 'Raise good children', icon: '🧸', exp: 5,
+      eligible: (w, p) => p.children.length > 0 || p.famDesire >= 55,
+      weight: (w, p) => 0.15 + 0.5 * Math.max(0, n(p.pers.resp)) + 0.6 * Math.max(0, n(p.famDesire)),
+      init: () => ({ months: 0 }),
+      text: () => 'Care for a child for 10 years and see them grow up',
+      monthly: (w, p, g) => { if (p.careOf.some(id => { const c = w.people[id]; return c && c.alive && P.age(w, c) < 18; })) g.months++; },
+      progress: (w, p, g) => U.clamp(0.8 * Math.min(1, g.months / 120) + (grownChild(w, p) ? 0.2 : 0), 0, 1),
+      done: (w, p, g) => g.months >= 120 && grownChild(w, p),
+      bias: { CHILDCARE: 0.8, WORK: 0.1, SOCIAL: -0.2 }, spend: 0.05, family: 0.4, care: 0.3,
+    },
+    MASTER_SKILL: {
+      name: 'Master a skill', icon: '🎯', exp: 5,
+      weight: (w, p) => 0.15 + 0.4 * n(p.pers.dis) + 0.3 * n(p.pers.pat) + (p.strategy === 'SPEC' ? 0.6 : 0),
+      init: (w, p) => { // intelligence or perception (what mind training builds), up to 9 or the person's own ceiling
+        const a = p.pot[C.INT] >= p.pot[C.PER] ? C.INT : C.PER;
+        return { attr: a, target: Math.round(Math.max(Math.min(9, p.pot[a] - 0.3), Math.min(p.att[a] + 0.5, p.pot[a])) * 10) / 10, months: 0 };
+      },
+      text: g => `Master ${C.ATTR_NAMES[g.attr].toLowerCase()}: reach ${g.target.toFixed(1)} and keep it for 6 months`,
+      monthly: (w, p, g) => { g.months = p.att[g.attr] >= g.target ? g.months + 1 : 0; },
+      progress: (w, p, g) => U.clamp(0.7 * Math.min(1, p.att[g.attr] / g.target) + 0.3 * g.months / 6, 0, 1),
+      done: (w, p, g) => g.months >= 6,
+      bias: { TRAIN_MIND: 1, STUDY: 0.3, SOCIAL: -0.2 }, spend: 0,
+    },
+    CAREER_STABLE: {
+      name: 'Career stability', icon: '🧱', exp: 5,
+      weight: (w, p) => 0.3 + 0.4 * n(p.pers.dis) + 0.4 * n(p.pers.resp) + (p.strategy === 'WORK' ? 0.5 : 0),
+      init: () => ({ months: 0 }),
+      text: () => 'Stay in work for 5 years without a break',
+      monthly: (w, p, g) => { g.months = p.job ? g.months + 1 : 0; }, // switching jobs keeps the streak (the new job starts the same day)
+      progress: (w, p, g) => U.clamp(g.months / 60, 0, 1),
+      done: (w, p, g) => g.months >= 60,
+      bias: { WORK: 0.4, STUDY: 0.1, START_BIZ: -0.5 }, spend: -0.05,
+    },
+    RISE_UP: {
+      name: 'Rise from poverty', icon: '📈', exp: 5,
+      eligible: (w, p) => p.clsOrigin === 'B40', // grew up in a B40 household (recorded at age 12; needs the Society system)
+      weight: (w, p) => 0.5 + 0.4 * n(p.pers.res) + 0.3 * n(p.pers.pat) - 0.2 * n(p.pers.risk),
+      init: () => ({ months: 0 }),
+      text: () => 'Grew up in the B40: live in the M40 or above for 3 years',
+      monthly: (w, p, g) => { g.months = p.cls === 'M40' || p.cls === 'T20' ? g.months + 1 : 0; },
+      progress: (w, p, g) => U.clamp(g.months / 36, 0, 1),
+      done: (w, p, g) => g.months >= 36,
+      bias: { WORK: 0.3, STUDY: 0.3, INVEST: 0.2, SOCIAL: -0.2 }, spend: -0.1,
+    },
+    CREATE_JOBS: {
+      name: 'Create opportunities', icon: '🏢', exp: 5,
+      eligible: (w, p) => ownsStaffedType(w, p), // only firms that really hire staff count (private clinics, schools, hospitals)
+      weight: (w, p) => 0.3 + 0.6 * n(p.pers.risk) + 0.4 * n(p.pers.resp) + (p.strategy === 'ENT' ? 0.8 : 0),
+      init: () => ({ months: 0, staff: 0 }),
+      text: () => 'Employ at least 3 people in my own business for 2 years',
+      monthly: (w, p, g) => { g.staff = staffOf(w, p); g.months = g.staff >= 3 ? g.months + 1 : 0; },
+      progress: (w, p, g) => U.clamp(0.5 * Math.min(1, g.staff / 3) + 0.5 * g.months / 24, 0, 1),
+      done: (w, p, g) => g.months >= 24,
+      bias: { MANAGE_BIZ: 0.8, START_BIZ: 0.4, SOCIAL: -0.2 }, spend: -0.1,
+    },
+    LONG_LIFE: {
+      name: 'Live a long life', icon: '🌿', exp: 5,
+      eligible: (w, p) => P.age(w, p) >= 50,
+      weight: (w, p) => 0.3 + 0.4 * n(p.pers.pat) + 0.3 * n(p.pers.resp) + (p.strategy === 'BAL' ? 0.3 : 0),
+      init: () => ({}),
+      text: () => 'Reach 85 in good health (60+)',
+      progress: (w, p) => U.clamp(0.7 * Math.min(1, P.age(w, p) / 85) + 0.3 * Math.min(1, p.health / 60), 0, 1),
+      done: (w, p) => P.age(w, p) >= 85 && p.health >= 60,
+      bias: { REST: 0.4, TRAIN_BODY: 0.5, HEALTH: 0.3, GIG: -0.3, WORK: -0.1 }, spend: 0.05,
+    },
+    COMEBACK: {
+      name: 'The comeback', icon: '🌅', exp: 5,
+      eligible: (w, p) => p.bankruptUntil >= 0 && P.age(w, p) < 65, // only after a recorded personal bankruptcy
+      weight: (w, p) => 0.8 + 0.4 * n(p.pers.res) + 0.2 * n(p.pers.risk),
+      init: () => ({ months: 0 }),
+      text: () => 'Bounce back from bankruptcy: a positive net worth and 3 months of savings for a year',
+      monthly: (w, p, g) => { g.months = p.nw > 0 && p.cash >= 3 * p.mcost ? g.months + 1 : 0; },
+      progress: (w, p, g) => U.clamp(0.4 * (p.nw > 0 ? 1 : 0) + 0.6 * g.months / 12, 0, 1),
+      done: (w, p, g) => g.months >= 12,
+      bias: { WORK: 0.4, GIG: 0.3, TRAIN_MIND: 0.2, SOCIAL: -0.3 }, spend: -0.15,
+    },
   };
   G.IDS = Object.keys(G.DEFS);
 
@@ -145,7 +256,7 @@
   // Pick a (new) goal. exclude = goal ids not to repeat right away.
   G.pick = function (w, p, reason, exclude) {
     const R = w.rng.goals;
-    const ids = G.IDS.filter(id => !(exclude || []).includes(id));
+    const ids = G.IDS.filter(id => !(exclude || []).includes(id) && C.expOn(w, G.DEFS[id]) && (!G.DEFS[id].eligible || G.DEFS[id].eligible(w, p)));
     const idx = R.weighted(ids.map(id => Math.max(0.01, G.DEFS[id].weight(w, p))));
     const id = ids[Math.max(0, idx)];
     p.goal = Object.assign({ id, since: w.day, progress: 0 }, G.DEFS[id].init(w, p, R));

@@ -1045,6 +1045,20 @@
         sign(g, SG('BANK'), X + W / 2, Y + 2, '#8a6d1d', '#ffe9a8');
         break;
       }
+      case 'researchcentre': { // Expansion 1: a two-storey lab with a slate-blue roof, aqua windows, a teal badge and a glass entrance
+        const s = building(g, X + 4, Y + 10, W - 8, H - 30, { wall: '#d8e6e8', roof: '#3a5566', wallH: 46, details: 'ac', seed: b.id });
+        rect(g, X + 16, Y + 12, 20, 8, '#6fbccb'); rect(g, X + 16, Y + 12, 20, 2, '#a6e3ee'); // rooftop skylight
+        rect(g, X + W - 34, Y + 4, 10, 12, '#2b4a5c'); rect(g, X + W - 32, Y + 2, 6, 4, '#6fbccb'); // fume-hood vent stack
+        for (const row of [s.wallY + 5, s.wallY + 25]) windows(g, X + 10, row, W - 20, 14, 7, 1, { col: '#6fbccb', frame: '#2b4a5c', wide: 0.7, tall: 0.85, lit: 0.7, night: 'rgba(170,235,245,0.95)' });
+        rect(g, X + W / 2 - 14, s.wallY + 2, 28, 6, '#ffffff'); rect(g, X + W / 2 - 4, s.wallY + 2, 8, 6, '#2bbda9'); // badge
+        rect(g, X + W / 2 - 12, Y + H - 34, 24, 14, '#2b4a5c'); rect(g, X + W / 2 - 10, Y + H - 32, 20, 12, '#9fd3e0'); rect(g, X + W / 2, Y + H - 32, 1, 12, '#2b4a5c'); // glass entrance
+        addLight(X + W / 2 - 10, Y + H - 32, 20, 12, 1, 'rgba(190,240,250,0.95)');
+        rect(g, X + 4, Y + H - 18, W - 8, 16, PAL.concrete); for (let k = 0; k < 6; k++) rect(g, X + 12 + k * 26, Y + H - 18, 1, 16, PAL.concreteLine); // forecourt
+        car(g, X + 20, Y + H - 14, '#e9ecef'); car(g, X + W - 40, Y + H - 14, '#2a6f97');
+        shrub(g, X + W / 2 - 24, Y + H - 22); shrub(g, X + W / 2 + 16, Y + H - 22);
+        sign(g, (b.label || 'RESEARCH CENTRE').toUpperCase(), X + W / 2, Y - 2, '#2b4a5c', '#d8f3f6');
+        break;
+      }
       case 'bursa': {
         const s = building(g, X + 2, Y + 2, W - 4, H - 4, { wall: '#24384c', roof: '#16222e', wallH: H - 18, details: 'ac', seed: b.id });
         rect(g, X + 8, s.wallY + 4, W - 16, 26, '#0e1620');

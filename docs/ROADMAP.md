@@ -38,12 +38,14 @@ The improvement plan agreed in November 2026. Each phase is one tested push.
 | Next (see `docs/HANDOFF.md`) | Performance groundwork, multiple towns (max 3, one by default), scenic terrain and bigger maps, My Cast, countries (Malaysia, UK, USA, China) | Done |
 | 6. Polish | 6.1 calibration: firms share a town-sized market, wider pay, outside hires (Gini, revenue, unemployment in band for Malaysia, UK, US; China mostly). 6.2 report sections, town newspaper, compare-with-normal-world runs. 6.3 Aristocracy vs Meritocracy, pixel icons, mini-map | Done |
 | Blueprint (Nov 2026) | `Idea/LES_*_2026-11-05.md` cards C00-C11: honest statistics, estates with business stakes, admissions, mobility measure, town name, spectator tools, sandbox Fate, comparison limits, release checks | Done (C09c gift deferred) |
+| Expansion 1 (Nov 2026) | `Idea/Expansion 1`: 23 jobs, a research centre, 6 degrees, 9 vocational/master's subjects, 9 life goals, 8 outfits, 9 looks (rules revision 5) | Done (Social butterfly goal deferred) |
 | Country looks | Shop lots, eateries, pub/bar, town hall flags, rent signs, police, court, sports court, memorial, hills, lakes and forests drawn in each country's style | Done for UK, US, China |
 
 ## To do
 Kept in step with `docs/HANDOFF.md` section 0.
 - C09c optional small gift (sandbox): deferred; only if the owner asks.
 - Optional 4.2 extras: tax competition between towns, real map thumbnails in the region view.
+- Expansion 1 leftovers: Social butterfly goal (needs real friendships), firefighters as public-sector posts, a partnership start date.
 
 ## Malaysian reference figures
 | Measure | Value | Source |

@@ -9,7 +9,27 @@
   const rnd = (n) => hash(n) / 4294967296;
 
   // ---- Uniforms ----
-  const JOB_OUTFIT = { chef: 'chef', doctor: 'medic', nurse: 'medic', construction: 'hardhat', electrician: 'hardhat', rider: 'rider', accountant: 'office', banker: 'office', manager: 'office', sales: 'office', softdev: 'office', engineer: 'office', teacher: 'office' };
+  const JOB_OUTFIT = { chef: 'chef', doctor: 'medic', nurse: 'medic', construction: 'hardhat', electrician: 'hardhat', rider: 'rider', accountant: 'office', banker: 'business', manager: 'business', sales: 'office', softdev: 'office', engineer: 'office', teacher: 'office',
+    // Expansion 1 jobs and uniforms
+    mechanic: 'overalls', plumber: 'overalls', equiptech: 'overalls', carpenter: 'hardhat', security: 'security', firefighter: 'firefighter',
+    labtech: 'labcoat', scientist: 'labcoat', envofficer: 'labcoat', waiter: 'apron', barista: 'apron', careasst: 'medic', pharmacist: 'medic', paramedic: 'medic',
+    architect: 'business', lawyer: 'business', researchcoord: 'business', itsupport: 'office', analyst: 'office', journalist: 'office', socialworker: 'office' };
+  // Event clothes (Expansion 1), only for a real event in the person's life: a graduation gown for two days after
+  // a degree, wedding clothes the day partners get together (community dress where the country has it).
+  A.eventOutfit = function (p, day) {
+    const log = p.log;
+    for (let i = log.length - 1; i >= 0 && log[i].day >= day - 2; i--) {
+      const e = log[i];
+      if (e.cat === 'edu' && e.text.startsWith('Graduated') && p.quals.length && p.quals[p.quals.length - 1] !== 'VOC') return 'gown';
+      if (e.cat === 'family' && e.text.startsWith('Became partners') && e.day >= day - 1) {
+        if (p.eth === 'malay') return p.sex === 'M' ? 'bajuMelayu' : 'kurung';
+        if (p.eth === 'indian') return p.sex === 'M' ? 'kurta' : 'saree';
+        if (p.eth === 'chinese' || (LES.Countries.pack.art || {}).style === 'cn') return 'cny';
+        return 'wedding';
+      }
+    }
+    return null;
+  };
   A.outfitFor = function (p, slotAct) {
     if (!slotAct) return null;
     if (slotAct.act === 'WORK' && p.job) return JOB_OUTFIT[p.job.jobId] || null;

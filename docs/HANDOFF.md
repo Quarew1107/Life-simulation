@@ -23,10 +23,50 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
 **To do (keep this list current; the same list is in `docs/ROADMAP.md`):**
 - [ ] C09c optional small gift (sandbox, blueprint 10.4): deferred by the owner; build only if asked.
 - [ ] Optional extras from 4.2: tax competition between towns, real map thumbnails for the region view.
+- [ ] Expansion 1 deferred item: 'Social butterfly' goal (needs real friendships; `p.friends` only counts socialising).
+- [ ] Expansion 1 follow-ups if wanted: firefighters as public-sector posts paid by the treasury (now ordinary
+      openings at the police station); a real start date for partnerships (the lasting-love goal counts from when
+      it is chosen); US inequality sits slightly lower with the new jobs (0.42-0.44 vs target 0.48).
+- [x] Expansion 1: 23 jobs, research centre, 6 degrees, 9 specialisations, 9 goals, 8 outfits, 9 looks (Nov 2026, below).
 - [x] Country shop lots, eateries and scenery (Nov 2026, below).
 - [x] Country civic buildings, sport, memorial and lakes/forests (Nov 2026, below). Cinema, bowling and spa
       were judged generic enough to share (the spa's palm already becomes a local tree).
 - [x] Blueprint C00-C11 and C07 (all on `main` and pushed; `dev/blueprint-2026-11` holds the same commits).
+
+**Expansion 1 (Nov 2026, `Idea/Expansion 1/`; rules revision 5, the new default):**
+- Gate: everything new is marked `exp: 5` and exists only when `cfg.rulesRev >= 5` (`C.expOn`). Classic (1),
+  older saves and revision 4 run exactly as before; `countryTests` pins its stored fingerprints to revision 4.
+- Jobs (content.js, every pack): 23 new (`waiter` ... `researchcoord`), titles and pay per country. Pay was
+  checked against each pack's existing jobs and trimmed where the design was above them (e.g. Malaysia's
+  bus driver RM3,700 -> 2,800, UK hospitality to near the minimum wage, China's lawyer 15,000 -> 11,000);
+  no new job pays more than a doctor. How common: `common` (1-10, one scale for every country); `World.jobMix`
+  keeps each entry level's (none / vocational / degree) share of openings and lets the new jobs take at most a
+  third of it (`World.EXP_SHARE`; half lowered US inequality from ~0.50 to ~0.39). `alt` = fallback workplace
+  (`World.sitesFor`); older jobs keep their exact lookup. Firefighters are ordinary openings at the police station.
+- Research & Innovation Centre (`researchcentre`, town code 'r'): built on an empty lot at the start when the
+  town has two or more (one is kept for growth); otherwise its six jobs use the university or an office.
+- Education: six bachelor's courses (`BACH_SCI`, `BACH_CS`, `BACH_ARCH`, `BACH_LAW`, `BACH_PHARM`, `BACH_SOC`)
+  as real courses in `C.BACHELORS` (one bachelor's is enough; places and exam bars as for any degree); pharmacy
+  is not a medical degree; Computer Science also opens software jobs (`req` may be a list). Fees/months per
+  country (UK capped fees; US law is a JD route of 7 years and pharmacy a PharmD of 6). The six vocational and
+  three master's subjects are specialisations (`C.SPECS`, `p.specs`, `Labour.giveSpec`): the credential stays
+  VOC / MASTER, the subject is picked by a fixed hash (no random stream moves) from the design weights times
+  ability fit, master's subjects must follow the first degree, the fee changes by the subject's multiple and a
+  matching subject adds 0.05 to the hiring score (`job.pref`). Founders get the new degrees and subjects too.
+- Goals (goals.js, `eligible()` added): debt-free living, a lasting love, raise good children, master a skill
+  (intelligence or perception, to 9 or the person's ceiling), career stability, rise from poverty (needs a B40
+  childhood, `p.clsOrigin`), create opportunities (only owners of firms that really hire staff), live a long
+  life (50+), the comeback (only after a recorded bankruptcy; half of bankrupt people rethink their goal).
+  Social butterfly deferred (see To do).
+- Looks (sprites.js, cast-ui.js): hairstyles 4-9 (curly, buzz cut, ponytail, braids, wavy, side parting) in
+  all three views, round spectacles (glasses 3), goatee (beard 4), beanie (hat 5); residents get them by the
+  existing fixed rule. Outfits: overalls, security, firefighter, lab coat, apron, business, graduation gown (two
+  days after a degree) and wedding clothes (the day partners get together; Malay, Indian and Chinese couples
+  wear their community dress); `Ambience.eventOutfit`, presentation only.
+- Balance check (300 founders x 30 years x 2 seeds, rev 4 vs rev 5, all four countries): invariants clean;
+  new jobs ~30-35% of employment; unemployment a little lower; Malaysia, UK and China Gini about the same;
+  US Gini 0.44/0.42 (was 0.51/0.48); unfilled openings back to revision-4 levels with the one-third cap; life
+  expectancy unchanged (six seeds: 74.8 vs 74.1; single runs are noisy). `expansionTests` (16 checks).
 
 **Country looks (Nov 2026, presentation only; engine fingerprints and Malaysia's map unchanged):**
 - Empty shop lots no longer say SEWA everywhere: the word comes from the pack's `town.signs.SEWA` (UK

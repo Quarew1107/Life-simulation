@@ -19,7 +19,10 @@
 
   // ---- Qualifications & courses ----
   C.QUALS = {}; // names from the country pack
-  C.BACHELORS = ['BACH_GEN', 'BACH_BUS', 'BACH_ENG', 'MED'];
+  // Expansion 1 (rules revision 5): six more bachelor's degrees. Older revisions never offer them.
+  C.BACHELORS = ['BACH_GEN', 'BACH_BUS', 'BACH_ENG', 'MED', 'BACH_SCI', 'BACH_CS', 'BACH_ARCH', 'BACH_LAW', 'BACH_PHARM', 'BACH_SOC'];
+  C.EXPANSION_REV = 5; // content marked exp: 5 exists only in worlds with cfg.rulesRev >= 5
+  C.expOn = (w, x) => !x || !x.exp || (w && w.cfg.rulesRev >= x.exp);
   C.COURSES = [
     { id: 'VOC', minInt: 2, place: 'kolej', diff: 3.5, w: w(.4, .1, .3, 0, .1, .1) },
     { id: 'BACH_GEN', minInt: 5, place: 'university', diff: 4.5, w: w(.7, 0, .2, .1, 0, 0) },
@@ -27,7 +30,35 @@
     { id: 'BACH_ENG', minInt: 6.3, place: 'university', diff: 6, w: w(.8, 0, .2, 0, 0, 0) },
     { id: 'MED', minInt: 7.5, place: 'university', diff: 7, w: w(.7, 0, .2, 0, 0, .1) },
     { id: 'MASTER', minInt: 5, place: 'university', diff: 6.5, w: w(.8, 0, .2, 0, 0, 0), prereq: 'BACH' },
+    // Expansion 1: degrees that lead to the new professions (fees and months from the country pack).
+    { id: 'BACH_SCI', minInt: 5.8, place: 'university', diff: 5.5, w: w(.7, 0, .2, 0, 0, .1), exp: 5 },
+    { id: 'BACH_CS', minInt: 6, place: 'university', diff: 5.8, w: w(.7, 0, .2, .1, 0, 0), exp: 5 },
+    { id: 'BACH_ARCH', minInt: 6.3, place: 'university', diff: 6.3, w: w(.6, 0, .3, .1, 0, 0), exp: 5 },
+    { id: 'BACH_LAW', minInt: 6.3, place: 'university', diff: 6.2, w: w(.6, 0, .2, .2, 0, 0), exp: 5 },
+    { id: 'BACH_PHARM', minInt: 6.8, place: 'university', diff: 6.5, w: w(.7, 0, .2, 0, 0, .1), exp: 5 },
+    { id: 'BACH_SOC', minInt: 5, place: 'university', diff: 4.8, w: w(.4, 0, .2, .3, 0, .1), exp: 5 },
   ];
+  // Expansion 1: specialisations of the vocational certificate and the master's degree. The credential is
+  // still VOC or MASTER (same entry rules, places and job gates); the specialisation is the name on it and a
+  // small edge when applying for a job that prefers it. weight = how often it is chosen (by ability fit);
+  // fee = multiple of the country's course fee.
+  C.SPECS = {
+    VOC: [
+      { id: 'VOC_TRADES', name: 'Skilled Trades', weight: 30, fee: 1.1, w: w(0, .3, .4, 0, .3, 0) },
+      { id: 'VOC_CARE', name: 'Care & Emergency Support', weight: 18, fee: 1.15, w: w(0, 0, .4, .3, 0, .3) },
+      { id: 'VOC_IT', name: 'IT Support', weight: 15, fee: 1.05, w: w(.5, 0, .3, .2, 0, 0) },
+      { id: 'VOC_LAB', name: 'Laboratory & Environmental Technology', weight: 10, fee: 1.25, w: w(.4, 0, .4, 0, .2, 0) },
+      { id: 'VOC_HOSP', name: 'Hospitality & Culinary Services', weight: 17, fee: 0.7, w: w(0, 0, .3, .4, .3, 0) },
+      { id: 'VOC_TRANSPORT', name: 'Transport & Logistics', weight: 10, fee: 1, w: w(0, 0, .4, 0, .3, .3) },
+    ],
+    MASTER: [
+      { id: 'MAST_RESEARCH', name: 'MSc Research & Applied Science', weight: 35, fee: 1.2, w: w(.7, 0, .2, 0, 0, .1) },
+      { id: 'MAST_DATA', name: 'MSc Data Science & Analytics', weight: 30, fee: 1.1, w: w(.7, 0, .3, 0, 0, 0) },
+      { id: 'MAST_MBA', name: 'Master of Business Administration', weight: 35, fee: 1.3, w: w(.4, 0, .2, .4, 0, 0) },
+    ],
+  };
+  C.SPEC_BY_ID = {};
+  for (const k of Object.keys(C.SPECS)) for (const x of C.SPECS[k]) C.SPEC_BY_ID[x.id] = Object.assign(x, { of: k });
   C.COURSE_BY_ID = {};
   for (const c of C.COURSES) C.COURSE_BY_ID[c.id] = c;
 
@@ -47,13 +78,40 @@
     { id: 'accountant', req: 'BACH_BUS', w: w(.6, 0, .4, 0, 0, 0), diff: 6, cat: 'office', place: 'office' },
     { id: 'banker', req: 'BACH_BUS', w: w(.5, 0, .2, .3, 0, 0), diff: 6.5, cat: 'office', place: 'bank' },
     { id: 'engineer', req: 'BACH_ENG', w: w(.6, 0, .4, 0, 0, 0), diff: 6.5, cat: 'technical', place: 'factory' },
-    { id: 'softdev', req: 'BACH_ENG', w: w(.7, 0, .3, 0, 0, 0), diff: 7, cat: 'technical', place: 'techhub' },
+    { id: 'softdev', req: ['BACH_ENG', 'BACH_CS'], w: w(.7, 0, .3, 0, 0, 0), diff: 7, cat: 'technical', place: 'techhub' },
     { id: 'manager', req: 'BACH_BUS', w: w(.4, 0, .1, .5, 0, 0), diff: 7, cat: 'office', place: 'office' },
     { id: 'doctor', req: 'MED', w: w(.5, 0, .3, 0, .1, .1), diff: 7.5, cat: 'medical', place: 'hospital' },
     // Commuter jobs in the big city: better pay, but a long train ride each way.
     { id: 'cityretail', req: null, w: w(.1, 0, .3, .5, 0, .1), diff: 4.5, cat: 'sales', place: 'station', commute: true },
     { id: 'citycorp', req: 'BACH', w: w(.5, 0, .2, .3, 0, 0), diff: 6, cat: 'office', place: 'station', commute: true },
-    { id: 'citytech', req: 'BACH_ENG', w: w(.7, 0, .3, 0, 0, 0), diff: 7, cat: 'technical', place: 'station', commute: true },
+    { id: 'citytech', req: ['BACH_ENG', 'BACH_CS'], w: w(.7, 0, .3, 0, 0, 0), diff: 7, cat: 'technical', place: 'station', commute: true },
+    // ---- Expansion 1 (rules revision 5; Idea/Expansion 1). common = how common on the template's 1-10 scale;
+    // within each entry level (none, vocational, degree) the mix is rescaled so that level keeps its share of
+    // all openings (World.jobMix). alt = where the job is done when the town lacks the first workplace.
+    // pref = a specialisation that gives a small edge when applying.
+    { id: 'waiter', req: null, w: w(0, 0, 0, .45, .35, .2), diff: 3, cat: 'sales', place: 'hawker', alt: ['mamak', 'mall'], common: 8, exp: 5, pref: ['VOC_HOSP'] },
+    { id: 'barista', req: null, w: w(0, 0, .45, .2, .35, 0), diff: 3.5, cat: 'sales', place: 'mamak', alt: ['hawker', 'mall'], common: 6, exp: 5, pref: ['VOC_HOSP'] },
+    { id: 'security', req: null, w: w(0, .2, .45, 0, 0, .35), diff: 4, cat: 'manual', place: 'mall', alt: ['office'], risk: 'physical', common: 5, exp: 5 },
+    { id: 'warehouseop', req: null, w: w(0, .35, .2, 0, 0, .45), diff: 3.5, cat: 'manual', place: 'warehouse', alt: ['factory'], risk: 'physical', common: 7, exp: 5, pref: ['VOC_TRANSPORT'] },
+    { id: 'careasst', req: 'VOC', w: w(0, 0, .35, .2, 0, .45), diff: 4.5, cat: 'medical', place: 'hospital', alt: ['welfare'], risk: 'physical', common: 6, exp: 5, pref: ['VOC_CARE'] },
+    { id: 'plumber', req: 'VOC', w: w(0, .2, .45, 0, .35, 0), diff: 5, cat: 'technical', place: 'construction', alt: ['workshop'], risk: 'physical', common: 5, exp: 5, pref: ['VOC_TRADES'] },
+    { id: 'carpenter', req: 'VOC', w: w(0, .35, .45, 0, .2, 0), diff: 5, cat: 'technical', place: 'construction', alt: ['workshop'], risk: 'physical', common: 5, exp: 5, pref: ['VOC_TRADES'] },
+    { id: 'hairdresser', req: 'VOC', w: w(0, 0, .2, .45, .35, 0), diff: 4.5, cat: 'sales', place: 'mall', alt: ['hawker'], common: 4, exp: 5 },
+    { id: 'busdriver', req: 'VOC', w: w(0, 0, .45, 0, .2, .35), diff: 5, cat: 'manual', place: 'depot', alt: ['station', 'warehouse'], risk: 'physical', common: 4, exp: 5, pref: ['VOC_TRANSPORT'] },
+    { id: 'itsupport', req: 'VOC', w: w(.45, 0, .35, .2, 0, 0), diff: 5.5, cat: 'technical', place: 'techhub', alt: ['office'], common: 5, exp: 5, pref: ['VOC_IT'] },
+    { id: 'labtech', req: 'VOC', w: w(.35, 0, .45, 0, .2, 0), diff: 5, cat: 'technical', place: 'researchcentre', alt: ['university', 'hospital'], common: 3, exp: 5, pref: ['VOC_LAB'] },
+    { id: 'pharmacist', req: 'BACH_PHARM', w: w(.45, 0, .35, .2, 0, 0), diff: 6.5, cat: 'medical', place: 'hospital', alt: ['mall'], common: 2, exp: 5 },
+    { id: 'paramedic', req: 'VOC', w: w(0, 0, .45, 0, .2, .35), diff: 6, cat: 'medical', place: 'hospital', alt: ['depot'], risk: 'physical', common: 2, exp: 5, pref: ['VOC_CARE'] },
+    { id: 'firefighter', req: 'VOC', w: w(0, .45, .2, 0, 0, .35), diff: 6, cat: 'manual', place: 'police', alt: ['townhall', 'depot'], risk: 'heavy', common: 2, exp: 5 },
+    { id: 'architect', req: 'BACH_ARCH', w: w(.45, 0, .35, .2, 0, 0), diff: 7, cat: 'technical', place: 'office', common: 2, exp: 5 },
+    { id: 'lawyer', req: 'BACH_LAW', w: w(.45, 0, .2, .35, 0, 0), diff: 7.5, cat: 'office', place: 'office', alt: ['court'], common: 2, exp: 5 },
+    { id: 'socialworker', req: ['BACH_SOC', 'BACH_GEN'], w: w(0, 0, .35, .45, 0, .2), diff: 6, cat: 'office', place: 'townhall', alt: ['welfare', 'office'], common: 3, exp: 5 },
+    { id: 'scientist', req: ['BACH_SCI', 'BACH_ENG', 'MED'], w: w(.45, 0, .35, 0, 0, .2), diff: 7.5, cat: 'technical', place: 'researchcentre', alt: ['university'], common: 1, exp: 5, pref: ['MAST_RESEARCH'] },
+    { id: 'analyst', req: ['BACH_CS', 'BACH_SCI', 'BACH_ENG', 'BACH_BUS'], w: w(.45, 0, .35, .2, 0, 0), diff: 6.5, cat: 'office', place: 'researchcentre', alt: ['techhub', 'office'], common: 3, exp: 5, pref: ['MAST_DATA'] },
+    { id: 'journalist', req: 'BACH', w: w(.2, 0, .35, .45, 0, 0), diff: 6, cat: 'office', place: 'office', common: 3, exp: 5 },
+    { id: 'equiptech', req: 'VOC', w: w(.35, 0, .45, 0, .2, 0), diff: 5.5, cat: 'technical', place: 'researchcentre', alt: ['university', 'factory'], risk: 'physical', common: 2, exp: 5, pref: ['VOC_LAB', 'VOC_TRADES'] },
+    { id: 'envofficer', req: 'VOC', w: w(.2, 0, .45, 0, 0, .35), diff: 5.5, cat: 'technical', place: 'researchcentre', alt: ['university', 'townhall'], risk: 'physical', common: 2, exp: 5, pref: ['VOC_LAB'] },
+    { id: 'researchcoord', req: ['BACH_BUS', 'BACH_SCI'], w: w(.35, 0, .2, .45, 0, 0), diff: 6, cat: 'office', place: 'researchcentre', alt: ['office'], common: 2, exp: 5, pref: ['MAST_MBA'] },
   ];
   C.JOB_BY_ID = {};
   for (const j of C.JOBS) C.JOB_BY_ID[j.id] = j;
@@ -236,7 +294,8 @@
   LES.Countries.on('content', K => {
     const N = K.content;
     fill(C.JOBS, N.jobs, 'job'); fill(Object.values(C.GOV_JOBS), N.govJobs, 'public job');
-    list(C.JOB_FREQ, C.JOBS.map(j => j.freq));
+    for (const j of C.JOBS) if (j.exp) j.freq = j.common; // Expansion 1: one mix for every country (rescaled per level)
+    list(C.JOB_FREQ, C.JOBS.map(j => (j.exp ? 0 : j.freq))); // older rules revisions never post the new jobs
     into(C.QUALS, N.quals);
     fill(C.COURSES, N.courses, 'course'); fill(C.GIGS, N.gigs, 'gig'); fill(C.TRAININGS, N.trainings, 'training');
     for (const cat of C.TIER_CATS) C.TIERS[cat].forEach((t, i) => Object.assign(t, N.tiers[cat][i]));

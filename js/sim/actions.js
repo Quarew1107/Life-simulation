@@ -145,7 +145,7 @@
     const patience = p.pers.pat / 100;
     let best = null, bestV = 0.05;
     for (const c of C.COURSES) {
-      if (p.quals.includes(c.id)) continue;
+      if (p.quals.includes(c.id) || !C.expOn(w, c)) continue; // (Expansion 1 degrees only in rules revision 5+)
       if (c.prereq && !P.hasCred(p, c.prereq)) continue;
       if (c.id !== 'MASTER' && C.BACHELORS.includes(c.id) && p.quals.some(P.isBachelor)) continue; // one bachelor is enough
       const acc = U.sigmoid((p.att[C.INT] - c.minInt) * 1.5);

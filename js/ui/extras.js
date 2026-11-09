@@ -76,7 +76,7 @@
       <table class="cmp"><tr><th></th><th>${UI.plink(w, a.id)}</th><th>${UI.plink(w, b.id)}</th></tr>
       ${row('Age', q => Math.floor(P.age(w, q)))}
       ${row('Strategy', q => C.STRATEGY_NAMES[q.strategy])}
-      ${row('Qualifications', q => esc(q.quals.map(x => C.QUALS[x]).join(', ') || 'None'))}
+      ${row('Qualifications', q => esc(q.quals.map(x => LES.P.qualName(q, x)).join(', ') || 'None'))}
       ${num('Net worth', q => q.nw, U.fmtMoney)}
       ${num('Peak net worth', q => q.peakNw, U.fmtMoney)}
       ${num('Wages earned', q => q.earned.wages, U.fmtMoney)}

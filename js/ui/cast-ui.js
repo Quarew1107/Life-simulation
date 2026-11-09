@@ -18,10 +18,10 @@
   UI.castRoster = load;
 
   const RELS = [['', 'As usual for their community'], ['islam', 'Islam'], ['buddhism', 'Buddhism'], ['christianity', 'Christianity'], ['hinduism', 'Hinduism'], ['none', 'No religion']];
-  const STYLES = [[0, 'Short hair'], [1, 'Long hair'], [2, 'Bun'], [3, 'Tudung (headscarf)']];
-  const GLASSES = [[0, 'None'], [1, 'Dark frames'], [2, 'Gold frames']];
-  const BEARDS = [[0, 'None'], [1, 'Stubble'], [2, 'Moustache'], [3, 'Full beard']];
-  const HATS = [[0, 'None'], [1, 'Songkok'], [2, 'Kopiah (white cap)'], [3, 'Cap'], [4, 'Turban']];
+  const STYLES = [[0, 'Short hair'], [1, 'Long hair'], [2, 'Bun'], [3, 'Tudung (headscarf)'], [4, 'Curly hair'], [5, 'Buzz cut'], [6, 'Ponytail'], [7, 'Braids'], [8, 'Wavy hair'], [9, 'Side parting']];
+  const GLASSES = [[0, 'None'], [1, 'Dark frames'], [2, 'Gold frames'], [3, 'Round spectacles']];
+  const BEARDS = [[0, 'None'], [1, 'Stubble'], [2, 'Moustache'], [3, 'Full beard'], [4, 'Goatee']];
+  const HATS = [[0, 'None'], [1, 'Songkok'], [2, 'Kopiah (white cap)'], [3, 'Cap'], [4, 'Turban'], [5, 'Beanie']];
   const slider = (id, label, v, max) => `<label class="cast-sl"><span>${esc(label)}</span><input type="range" id="${id}" min="0" max="${max}" step="${max > 10 ? 1 : 0.1}" value="${v}"><b id="${id}-v">${v}</b></label>`;
   const sel = (id, opts, v) => `<select id="${id}">${opts.map(([k, l]) => `<option value="${k}" ${String(k) === String(v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
   const colour = (id, v) => `<input type="color" id="${id}" value="${v}">`;
@@ -51,7 +51,7 @@
           <label>Shirt ${colour('c-shirt', spec.look.shirt)}</label><label>Trousers ${colour('c-pants', spec.look.pants)}</label>
           <label>Headscarf ${colour('c-scarf', spec.look.scarf)}</label><label>Hair style ${sel('c-style', STYLES, spec.look.style)}</label>
           <label>Glasses ${sel('c-glasses', GLASSES, spec.look.glasses || 0)}</label><label>Beard ${sel('c-beard', BEARDS, spec.look.beard || 0)}</label>
-          <label>Headwear ${sel('c-hat', HATS, spec.look.hat || 0)}</label><label>Cap / turban ${colour('c-hatc', spec.look.hatColour || '#1d3557')}</label></div>
+          <label>Headwear ${sel('c-hat', HATS, spec.look.hat || 0)}</label><label>Cap / turban / beanie ${colour('c-hatc', spec.look.hatColour || '#1d3557')}</label></div>
           <canvas id="c-preview" width="120" height="150"></canvas></div>
         <div class="card"><h3>Family <small class="muted">within your cast</small></h3><div class="form-grid">
           <div class="field"><label>Partner</label>${sel('c-partner', [['', 'None'], ...others.map(o => [o.id, `${o.first} ${o.last} (${o.sex === 'M' ? 'man' : 'woman'}, ${o.age})`])], spec.partner)}<div class="help">They arrive and live together as a couple (a man and a woman, as for every couple in town).</div></div>

@@ -620,6 +620,7 @@
     p.pendingReview = 'personal bankruptcy';
     P.log(w, p, 'Declared bankrupt; debts written off, no loans for 5 years', 'money', 2);
     w.stats.bankruptcies++;
+    if (w.cfg.rulesRev >= LES.C.EXPANSION_REV && LES.Goals && p.goal && p.goal.id !== 'COMEBACK' && w.rng.goals.next() < 0.5) LES.Goals.pick(w, p, 'after going bankrupt'); // Expansion 1: some rethink their goal (the comeback becomes possible)
   };
 
   // ---- Monthly personal finance ----

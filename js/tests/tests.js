@@ -782,13 +782,15 @@
     };
     // 4a.6: the report names the drug policy instead of printing its key; 4b.1: a Country row in the settings table and "Today's rules".
     const REPORT = { 'my-default': 'a1efec66', 'my-pandemic-lawless': '4c41e7c2', 'my-region': '1ec4fc54' }; // C07 (report text only): sustained-mobility status and the four wealth origins (before: 6d4336bf, 53df8f5a, 1373d1e7). // C10 (report text only, engine fingerprints unchanged): 'How to read this', softer cause wording (before: caaeab0d, b9679882, 5a42d376). C08: a 'Town name' row in the settings table (before: 552b2b16, bca4204f, 821ba9a8). C06: new histories (rules revision 4). // C01 (report text only, engine fingerprints unchanged): tie-aware Spearman, n/a values, inheritance wording. Before C01: f66c05b8, 62c7b2a, cb8afa3d. Phase 6.2: official figures, work and business, the paper; // 4b.3: a 'Starting wealth by group' row; Phase 6: new histories and a 'Business and job markets' row
-    const D = LES.DEFAULTS, base = { founders: 80, migration: 'normal' };
+    // Expansion 1 (rules revision 5) adds jobs, degrees and goals, so these stored fingerprints are pinned to
+    // revision 4, which must keep reproducing them exactly (revision 5 is checked in expansionTests).
+    const D = LES.DEFAULTS, base = { founders: 80, migration: 'normal', rulesRev: 4 };
     const cases = {
       'my-default': () => new LES.World(Object.assign({}, D, base, { seed: 'my-1' })),
       'my-options': () => new LES.World(Object.assign({}, D, base, { seed: 'my-2', drugPolicy: 'treatment', leaderTitle: 'datuk', interfaith: 'free', ethnicMix: 'classic', fertility: 'normal', education: 'expensive', wealthDist: 'unequal' })),
       'my-pandemic-lawless': () => new LES.World(Object.assign({}, D, base, { seed: 'my-3', scenario: 'pandemic', pandemicYear: '5', crime: 'lawless' })),
       'my-clans': () => new LES.World(Object.assign({}, D, base, { seed: 'my-4', scenario: 'clans' })),
-      'my-region': () => new LES.Region(Object.assign({}, D, { seed: 'my-5', migration: 'normal', towns: '3' }), [{ founders: 60 }, { founders: 40, seed: 'my-5b' }, { founders: 30, seed: 'my-5c' }]),
+      'my-region': () => new LES.Region(Object.assign({}, D, { seed: 'my-5', migration: 'normal', towns: '3', rulesRev: 4 }), [{ founders: 60 }, { founders: 40, seed: 'my-5b' }, { founders: 30, seed: 'my-5c' }]),
     };
     // State plus every text people and the feed see (names, job titles, log lines), so a moved label shows up too.
     const textOf = w => LES.hashString(w.people.map(p => `${p.first} ${p.last}|${p.eth}|${p.rel || ''}|${p.job ? p.job.title || p.job.jobId : ''}|` + p.log.map(e => e.text).join('~')).join('#') + w.feed.map(e => e.text).join('~'))[0].toString(16);
@@ -1233,6 +1235,7 @@
     w2.die(rich, 'test');
     const due = Math.round((w2.px(10000) + w2.px(800000) - w2.px(100000)) * 0.2);
     check('E-07: tax above the cash is paid by selling part of the stake; the tax recorded is the tax moved', near(w2.gov.estateTaxTotal - t4, due) && w2.ledger.sec.TAX.bal - taxBal >= due - 2 && rich.cash === 0 && b4.outsideShare > 0 && near(Object.values(b4.shares).reduce((a, x) => a + x, 0) + b4.outsideShare, 1, 1e-9), `${(w2.gov.estateTaxTotal - t4) / 100} vs ${due / 100}`);
+    w2.policy = LES.Gov.policyOf(w2.gov.laws); // E-07 set the tax directly, not by law: put the law's policy back so the saved world (which rebuilds policy from the laws) matches (E-10)
     check('Every estate record adds up: no negative amounts', w2.estates.filter(r => r.rev === 3).every(r => r.amounts.every(x => x >= 0) && r.equity.every(x => x >= 0) && r.total >= 0));
     check('The books balance after these estates', w2.checkInvariants().length === 0, w2.checkInvariants().slice(0, 3).join('; '));
 
@@ -1354,6 +1357,57 @@
     check('Settings accept a blank name and refuse an over-long one', v({ townName: '' }) === 0 && v({ townName: 'Bandar Baru' }) === 0 && v({ townName: 'y'.repeat(41) }) > 0);
   }
 
+
+  // Expansion 1 (Idea/Expansion 1): 23 jobs, a research centre, 6 degrees, 9 specialisations, 9 goals (rules revision 5).
+  async function expansionTests() {
+    print('--- Expansion 1 (jobs, education, goals) ---', 'info');
+    const C = LES.C, P = LES.P, D = LES.DEFAULTS, G = LES.Goals;
+    const newJobs = C.JOBS.filter(j => j.exp), ids = C.JOBS.map(j => j.id);
+    check('23 new jobs with unique ids; the old ones keep theirs', newJobs.length === 23 && new Set(ids).size === ids.length && ['cleaner', 'doctor', 'citytech'].every(id => C.JOB_BY_ID[id] && !C.JOB_BY_ID[id].exp));
+    let packsOk = true;
+    for (const c of ['uk', 'us', 'cn', 'my']) {
+      LES.Countries.ensure(Object.assign({}, D, { country: c }));
+      if (!newJobs.every(j => j.title && j.salary > 0 && j.freq > 0)) packsOk = false;
+      if (!C.COURSES.every(x => x.name && x.fee > 0 && x.months > 0) || !['BACH_SCI', 'BACH_LAW', 'BACH_PHARM'].every(q => C.QUALS[q])) packsOk = false;
+      if (newJobs.some(j => C.JOB_BY_ID[j.id].salary > C.JOB_BY_ID.doctor.salary)) packsOk = false;
+    }
+    check('Every country names and pays every new job and degree; no new job pays more than a doctor', packsOk);
+    check('Older rules revisions never post the new jobs (zero in the national mix)', newJobs.every(j => C.JOB_FREQ[C.JOBS.indexOf(j)] === 0));
+    const w5 = new LES.World(Object.assign({}, D, { seed: 'exp-1', founders: 150, migration: 'normal' }));
+    const mix = w5.jobFreq, lvl = j => (!j.req ? 0 : j.req === 'VOC' ? 1 : 2), sum = (f, k, ex) => C.JOBS.reduce((a, j, i) => a + (lvl(j) === k && (ex === undefined || !!j.exp === ex) ? f[i] : 0), 0);
+    const base = C.JOBS.map(j => (j.exp ? 0 : j.freq));
+    check('Each entry level keeps its share of openings; new jobs take at most a third of a level', [0, 1, 2].every(k => Math.abs(sum(mix, k) - sum(base, k)) < 1e-9 && sum(mix, k, true) <= sum(mix, k) * LES.World.EXP_SHARE + 1e-9), mix.map(x => x.toFixed(2)).join(' '));
+    check('Revision 5 is the default; Classic stays at revision 1', D.rulesRev === 5 && LES.PRESETS.classic.values.rulesRev === 1);
+    const rc = w5.town.kinds.researchcentre || [];
+    check('The research centre is built on a spare lot (one lot is kept for growth) or its jobs use the fallback', rc.length === 1 ? w5.town.lots.some(id => !w5.town.buildings[id].built) : true, `${rc.length} centre(s)`);
+    check('BACH_PHARM does not count as a medical degree; Computer Science opens software jobs', !P.hasCred({ quals: ['BACH_PHARM'] }, 'MED') && P.hasCred({ quals: ['BACH_CS'] }, C.JOB_BY_ID.softdev.req) && !P.hasCred({ quals: ['VOC'] }, C.JOB_BY_ID.analyst.req) && P.hasCred({ quals: ['BACH_LAW'] }, 'BACH'));
+    const vocF = w5.people.filter(p => p.quals.includes('VOC')), masF = w5.people.filter(p => p.quals.includes('MASTER'));
+    check('Founders with a certificate or master\'s get a subject; master\'s subjects follow the first degree', vocF.length > 0 && vocF.every(p => p.specs && C.SPEC_BY_ID[p.specs.VOC]) && masF.every(p => p.specs && p.specs.MASTER && (p.specs.MASTER !== 'MAST_DATA' || ['BACH_CS', 'BACH_ENG', 'BACH_BUS', 'BACH_SCI'].some(q => p.quals.includes(q)))), `${vocF.length} certificates, ${masF.length} master's`);
+    check('Founders hold some of the newer degrees', w5.people.some(p => p.quals.some(q => ['BACH_SCI', 'BACH_CS', 'BACH_ARCH', 'BACH_LAW', 'BACH_PHARM', 'BACH_SOC'].includes(q))));
+    let bad = 0;
+    for (let d = 0; d < 6 * 365; d++) { w5.step(); if (d % 365 === 0) { bad += w5.checkInvariants().length; await yieldUI(); } }
+    const hired = new Set(w5.people.filter(p => p.job && C.JOB_BY_ID[p.job.jobId].exp).map(p => p.job.jobId));
+    const places = w5.people.filter(p => p.job && !p.job.commuteTo).every(p => w5.town.buildings[p.job.place]);
+    check('Six years with the new content: invariants clean, new jobs filled, every job has a real workplace', bad === 0 && hired.size >= 5 && places, `${hired.size} new job kinds held; ${bad} invariant problems`);
+    const goals = new Set(w5.people.filter(p => p.goal).map(p => p.goal.id).concat(w5.people.flatMap(p => p.goalsDone.map(x => x.id))));
+    check('New life goals are chosen in revision 5', ['DEBT_FREE', 'CAREER_STABLE', 'LASTING_LOVE', 'MASTER_SKILL'].filter(id => goals.has(id)).length >= 2, [...goals].join(' '));
+    check('Goals that need a history are only given to people who have it (B40 childhood, bankruptcy, a staffed firm, age 50+)', w5.living.every(p => !p.goal || !G.DEFS[p.goal.id].eligible || p.goal.since < w5.day - 31 || G.DEFS[p.goal.id].eligible(w5, p)));
+    const w4 = new LES.World(Object.assign({}, D, { seed: 'exp-1', founders: 150, migration: 'normal', rulesRev: 4 }));
+    for (let d = 0; d < 3 * 365; d++) { w4.step(); if (d % 500 === 0) await yieldUI(); }
+    check('Revision 4 worlds get none of it (jobs, degrees, subjects, goals, research centre)', !w4.people.some(p => (p.job && C.JOB_BY_ID[p.job.jobId].exp) || p.specs || p.quals.some(q => C.COURSE_BY_ID[q] && C.COURSE_BY_ID[q].exp) || (p.goal && G.DEFS[p.goal.id].exp)) && !(w4.town.kinds.researchcentre || []).length);
+    const w5b = LES.Save.fromJSON(LES.Save.toJSON(w5)), w5c = LES.Save.fromJSON(LES.Save.toJSON(w5));
+    for (let d = 0; d < 60; d++) { w5b.step(); w5c.step(); }
+    check('A revision 5 save loads and continues identically', w5b.hash() === w5c.hash() && w5b.people.some(p => p.specs));
+    if (typeof document !== 'undefined' && LES.Sprites) {
+      const px = look => { const c = LES.Sprites.person(look, 'adult', 0, null, 'front'); return c.getContext('2d').getImageData(0, 0, c.width, c.height).data.join(); };
+      const L0 = { skin: '#e0ac69', hair: '#1b1b1b', shirt: '#2a9d8f', pants: '#1d3557', style: 0, scarf: '#c9184a' };
+      const variants = [{ style: 4 }, { style: 5 }, { style: 6 }, { style: 7 }, { style: 8 }, { style: 9 }, { glasses: 3 }, { beard: 4 }, { hat: 5, hatColour: '#5c7cc0' }].map(x => px(Object.assign({}, L0, x)));
+      check('Each new look (6 hairstyles, round spectacles, goatee, beanie) draws differently', new Set([px(L0), ...variants]).size === 10 && px(Object.assign({}, L0, { beard: 4 })) !== px(Object.assign({}, L0, { beard: 2 })));
+      const of = ['overalls', 'security', 'firefighter', 'labcoat', 'apron', 'business', 'gown', 'wedding'].map(o => { const c = LES.Sprites.person(L0, 'adult', 0, o, 'front'); return c.getContext('2d').getImageData(0, 0, c.width, c.height).data.join(); });
+      check('The eight new outfits draw differently', new Set(of).size === 8);
+    }
+  }
+
   // C09a: spectator tools only watch.
   async function spectatorTests() {
     print('--- Spectator tools (C09a) ---', 'info');
@@ -1437,7 +1491,7 @@
     const w = new LES.World(Object.assign({}, D, { seed: 'c10', founders: 60 }));
     for (let d = 0; d < 365 * 2; d++) w.step();
     const cur = CMP.summary(w), t = CMP.table(cur, Object.assign({}, cur, { country: 'Testland', rules: 'Classic (original rules)', rev: 1 }), 'Classic rules');
-    check('The comparison names country, rules and rules version, years and the sample size', t.includes(LES.Countries.pack.name) && t.includes('rules version 4') && t.includes('rules version 1') && t.includes('Years simulated') && t.includes('sample size'));
+    check('The comparison names country, rules and rules version, years and the sample size', t.includes(LES.Countries.pack.name) && t.includes('rules version 5') && t.includes('rules version 1') && t.includes('Years simulated') && t.includes('sample size'));
     check('It says it is a same-seed world comparison, not a matched experiment, and that one pair cannot prove a cause', /same-seed world comparison/.test(t) && /not a matched experiment/.test(t) && /cannot prove/.test(t));
     check('A short run shows "insufficient data", not a blank or zero, and is warned about', /insufficient data \(under 10 years\)/.test(t) && /Fewer than 20 years/.test(t) && /nobody yet/.test(t) && CMP.table(Object.assign({}, cur, { revenue: undefined }), cur, 'x').includes('no government'));
     check('Different countries are warned about (amounts are in different currencies)', /different countries/.test(t) && !/different countries/.test(CMP.table(cur, cur, 'x')));
@@ -1519,6 +1573,7 @@
       await fateTests();
       await explainTests();
       await mobilityTests();
+      await expansionTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -1530,6 +1585,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, expansionTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

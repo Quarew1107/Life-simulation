@@ -12,7 +12,7 @@
   // Highest completed credential as an ISCED 2011 level (C02): 0 = no recorded credential (school levels are not
   // tracked), VOC = the country pack's `education.vocIsced` (a certificate or Level 3 diploma is 4, not tertiary;
   // an associate degree or a Chinese dazhuan is 5), bachelor's 6, medicine and master's 7.
-  Cal.LEVELS = { BACH_GEN: 6, BACH_BUS: 6, BACH_ENG: 6, MED: 7, MASTER: 7 };
+  Cal.LEVELS = { BACH_GEN: 6, BACH_BUS: 6, BACH_ENG: 6, MED: 7, MASTER: 7, BACH_SCI: 6, BACH_CS: 6, BACH_ARCH: 6, BACH_LAW: 6, BACH_PHARM: 6, BACH_SOC: 6 };
   Cal.vocLevel = () => ((LES.Countries.pack.education || {}).vocIsced) || 4;
   Cal.eduLevel = function (p) {
     let lv = 0;

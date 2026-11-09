@@ -42,8 +42,15 @@
   P.hasCred = function (p, req) {
     if (!req) return true;
     if (req === 'BACH') return p.quals.some(P.isBachelor);
+    if (Array.isArray(req)) return req.some(r => P.hasCred(p, r)); // Expansion 1: any of several degrees
     return p.quals.includes(req);
   };
+  // The name of a qualification as held (Expansion 1: a vocational or master's specialisation shows its subject).
+  P.qualName = (p, q) => {
+    const sp = p.specs && p.specs[q] && C.SPEC_BY_ID[p.specs[q]];
+    return sp ? (q === 'VOC' ? `${C.QUALS.VOC} (${sp.name})` : sp.name) : C.QUALS[q];
+  };
+  P.reqName = req => (Array.isArray(req) ? req.map(r => C.QUALS[r] || r).join(' / ') : req === 'BACH' ? 'any degree' : C.QUALS[req] || req);
   // Qualifications beyond the job's minimum (capped bonus in hiring).
   P.extraQuals = (p, req) => Math.max(0, p.quals.length - (req ? 1 : 0));
 

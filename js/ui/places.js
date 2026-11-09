@@ -48,7 +48,7 @@
       cards.push(`<div class="card"><h3>Employees <small class="muted">${staff.length}</small></h3><ul class="list-plain">${staff.slice(0, 40).map(p => `<li><span>${UI.plink(w, p.id)} <span class="muted">${esc(LES.Labour.title(p.job))}</span></span><span>${U.fmtMoney(p.job.salary)}/mo</span></li>`).join('')}</ul></div>`);
     }
     const vacs = w.vacancies.filter(v => v.place === b.id);
-    if (vacs.length) cards.push(`<div class="card"><h3>Open vacancies</h3><ul class="list-plain">${vacs.map(v => `<li><span>${esc(v.job.title)} <span class="muted">${v.job.req ? C.QUALS[v.job.req] || 'Degree' : 'no qualification needed'} · ${v.applicants.length} applicants · closes ${U.fmtDate(v.closeDay)}</span></span><span>${U.fmtMoney(v.salary)}</span></li>`).join('')}</ul></div>`);
+    if (vacs.length) cards.push(`<div class="card"><h3>Open vacancies</h3><ul class="list-plain">${vacs.map(v => `<li><span>${esc(v.job.title)} <span class="muted">${v.job.req ? esc(LES.P.reqName(v.job.req)) : 'no qualification needed'} · ${v.applicants.length} applicants · closes ${U.fmtDate(v.closeDay)}</span></span><span>${U.fmtMoney(v.salary)}</span></li>`).join('')}</ul></div>`);
 
     if (b.kind === 'memorial') {
       const gone = w.people.filter(p => !p.alive && p.gen === 0 && !p.migrant).sort((x, y) => y.deathDay - x.deathDay);

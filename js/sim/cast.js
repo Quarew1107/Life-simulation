@@ -13,7 +13,7 @@
   'use strict';
   const U = LES.U, C = LES.C, P = LES.P, F = LES.Finance, Fa = LES.Family;
   const Cast = LES.Cast = {};
-  Cast.QUALS = [['', 'No qualification'], ['VOC', 'Vocational certificate'], ['BACH_GEN', 'Bachelor of Arts'], ['BACH_BUS', 'Bachelor of Business'], ['BACH_ENG', 'Bachelor of Engineering'], ['MED', 'Medical degree']];
+  Cast.QUALS = [['', 'No qualification'], ['VOC', 'Vocational certificate'], ['BACH_GEN', 'Bachelor of Arts'], ['BACH_BUS', 'Bachelor of Business'], ['BACH_ENG', 'Bachelor of Engineering'], ['MED', 'Medical degree'], ['BACH_SCI', 'BSc Applied Science'], ['BACH_CS', 'BSc Computer Science'], ['BACH_ARCH', 'Architecture'], ['BACH_LAW', 'Law'], ['BACH_PHARM', 'Pharmacy'], ['BACH_SOC', 'Social Work']];
   // A spec: { id, first, last, sex, age, eth, rel, relig, att[6], pers{}, famDesire, strategy, qual, cash, look{},
   //           partner: id | '', parents: [ids], town: 0-2 }
   const CD = () => LES.Countries.pack.content.castDefault; // the country's default new person

@@ -247,6 +247,7 @@
       case 'G': at('depot', BN.depot, 1, 1, 6, 4); at('memorial', BN.memorial, 8, 1, 6, 8); break;
       case 'X': at('hq', block.hqName || BN.hq, 4, 0, 6, 10); at('park', BN.plaza, 0, 0, 3, 11, { decor: true }); break;
       case 'e': at('privschool', block.hqName || BN.privschool, 1, 0, 9, 7); at('padang', BN.field, 1, 7, 12, 4, { decor: true }); break; // private school with a sports field
+      case 'r': at('researchcentre', BN.researchcentre, 1, 1, 12, 8); break; // Expansion 1: built on an empty lot at the start (World.placeResearchCentre)
       case 'h': at('privhosp', block.hqName || BN.privhosp, 4, 0, 10, 9); at('park', BN.garden, 0, 0, 3, 11, { decor: true }); break;
       case 'V':
         at('cinema', BN.cinema, 1, 1, 6, 5, { venue: true });
