@@ -18,7 +18,7 @@
     const n = R.poisson(lambda);
     for (let i = 0; i < n; i++) {
       const j = C.JOBS[R.weighted(w.jobFreq || C.JOB_FREQ)];
-      const spread = w.cfg.econModel === 'calibrated' ? L.PAY_MID * U.clamp(Math.exp(R.normal(0, L.paySd())), 0.5, 2.4) : U.clamp(R.normal(1, 0.12), 0.7, 1.5); // pay within a job varies (log-normal)
+      const spread = w.cfg.econModel === 'calibrated' ? L.offerSpread(w, R, j) : U.clamp(R.normal(1, 0.12), 0.7, 1.5); // pay within a job varies (log-normal)
       const salary = Math.round(w.px(j.salary * spread * w.macro().wageMult) / 1000) * 1000;
       const days = R.int(w.cfg.vacancyDaysMin, w.cfg.vacancyDaysMax);
       if (w.gov && LES.Services.PUBLIC_JOBS.has(j.id)) { R.pick(LES.World.sitesFor(w, j)); continue; } // the town and private employers post these
@@ -32,6 +32,19 @@
 
   // FSD 6.2: qualification is the only gate; best weighted score wins.
   L.PAY_SD = 0.35; L.PAY_MID = 0.85; // spread and middle of pay offers within a job (calibrated markets; people move to the better offers)
+  // Rules revision 6 (Nov 2026): jobs that need no qualification have a lower ceiling. Before, the ablest
+  // workers collected the top offers (up to 2.04x base pay) and four promotions of +12% (x1.57), so a rider
+  // could earn ~3.2x base (China: ~17k a month). Now their offers spread less (sd at most 0.35, at most 1.6x
+  // the middle offer, which is 0.95x base so typical pay stays near the official medians) and each promotion
+  // adds 6%: at most ~1.9x base. Skilled jobs are unchanged.
+  L.PAY_REV = 6; L.PAY_MID_LOW = 0.95;
+  L.unskilled = (w, j) => w.cfg.rulesRev >= L.PAY_REV && !!j && !j.req;
+  // A pay offer as a multiple of the job's base pay (calibrated markets). One normal draw either way.
+  L.offerSpread = function (w, R, j) {
+    const low = L.unskilled(w, j);
+    return (low ? L.PAY_MID_LOW : L.PAY_MID) * U.clamp(Math.exp(R.normal(0, low ? Math.min(L.paySd(), 0.35) : L.paySd())), 0.5, low ? 1.6 : 2.4);
+  };
+  L.promoRaise = (w, j) => (L.unskilled(w, j) ? 1.06 : 1.12); // pay rise of one promotion
   L.award = function (w, v) {
     const hw = w.cfg.hiringWeights, seen = new Set(), cands = [];
     if (w.cfg.econModel === 'calibrated' && v.applicants.length && w.rng.jobs.next() < L.outsideHire()) { w.stats.vacOutside = (w.stats.vacOutside || 0) + 1; return; } // a commuter or newcomer from outside gets it
@@ -287,7 +300,7 @@
         const pr = U.clamp(0.04 + 0.3 * (perf - 0.6) + 0.025 * p.xp[job.cat], 0.01, 0.35) * m.promoMult;
         if (job.level < 5 && w.day - job.startDay > 300 && R.next() < pr) {
           job.level++;
-          job.salary = Math.round(job.salary * 1.12 / 1000) * 1000;
+          job.salary = Math.round(job.salary * L.promoRaise(w, C.JOB_BY_ID[job.jobId]) / 1000) * 1000;
           P.log(w, p, `Promoted to ${L.title(job)} (${U.fmtMoney(job.salary)}/mo)`, 'career', job.salary >= w.px(10000) ? 1 : 0);
           w.stats.promotions++;
         }

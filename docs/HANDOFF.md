@@ -31,6 +31,9 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
       it is chosen); US inequality sits slightly lower with the new jobs (0.42-0.44 vs target 0.48).
 - [ ] Performance follow-ups if wanted (`docs/PERFORMANCE.md`): run compare/calibration runs in a Web Worker;
       one worker per town for big regions. Engine is linear (~8-10 us per person-day) with a flat profile.
+- [x] Pay ceiling for unskilled jobs (Nov 2026, rules revision 6, below).
+- [ ] Small: `checkInvariants` reports "P... has no class" if run mid-month (class is set at month end); the app
+      only checks at quarter ends, so it is never shown, but the check could skip people not yet classed.
 - [x] Performance pass (Nov 2026, `docs/PERFORMANCE.md`): CPU-painted map canvases, double-buffered overview,
       Turbo view (⚡ / T), pump no longer waits on held-back frames. China 2,500: ~12 -> ~27 days/s (~33 Turbo).
 - [x] Expansion 1: 23 jobs, research centre, 6 degrees, 9 specialisations, 9 goals, 8 outfits, 9 looks (Nov 2026, below).
@@ -38,6 +41,22 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
 - [x] Country civic buildings, sport, memorial and lakes/forests (Nov 2026, below). Cinema, bowling and spa
       were judged generic enough to share (the spa's palm already becomes a local tree).
 - [x] Blueprint C00-C11 and C07 (all on `main` and pushed; `dev/blueprint-2026-11` holds the same commits).
+
+**Pay ceiling for jobs without qualifications (Nov 2026; rules revision 6, the new default):**
+- Problem: offers reached 0.85 x 2.4 = 2.04x base pay, the ablest workers collected them by job-hopping, and four
+  promotions of +12% added x1.57: a China rider could earn ~3.2x base (~CNY 17k a month; 1 in 10 riders above
+  CNY 12.8k). Real riders rarely pass ~CNY 10-12k.
+- Rule (`Labour.offerSpread`, `Labour.promoRaise`, `Labour.unskilled`; jobs with `req: null`, rulesRev >= 6):
+  offers 0.95x base x lognormal(sd min(paySd, 0.35)) clamped to 0.5-1.6; promotions +6% (levels and titles kept,
+  so 'Top of my profession' stays reachable). Ceiling ~1.9x base. Skilled jobs, Classic and revisions 1-5 unchanged
+  (one normal draw per offer either way). Founders' starting jobs use the same rules.
+- Measured (400 founders x 30 y x 2 seeds): China rider median x1.17 (CNY 6.4k), p90 x1.60 (CNY 8.8k), max x1.87
+  (CNY 10.3k), was x1.14 / x2.33 / x3.15; Malaysia rider p90 RM3.5k, max RM4.3k (was RM5.1k). Four countries
+  (300 x 30 y x 2): invariants clean at month end; Gini unchanged within noise; median wage in band everywhere
+  (MY RM2,900, UK GBP 2,820-3,070, US $4,350-4,880, CN CNY 5,590-5,780). With the middle offer left at 0.85 the
+  median fell 10-18% and the UK and US dropped below their bands. `payTests` (5); `marketTests` now measures
+  sales with the firm sizes from before the month-end growth (the share is set from those); the estate cases
+  pin rules revision 5 (their seeds need particular households).
 
 **Expansion 1 (Nov 2026, `Idea/Expansion 1/`; rules revision 5, the new default):**
 - Gate: everything new is marked `exp: 5` and exists only when `cfg.rulesRev >= 5` (`C.expOn`). Classic (1),

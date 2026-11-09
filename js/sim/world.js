@@ -181,10 +181,10 @@
       if (R.next() < (o.jobChance || 0)) {
         const eligible = C.JOBS.filter(j => C.expOn(this, j) && P.hasCred(p, j.req));
         const j = eligible[R.weighted(eligible.map(x => x.freq * (x.req ? 3 : 1)))];
-        const salary = Math.round(this.px(j.salary * (cfg.econModel === 'calibrated' ? LES.Labour.PAY_MID * U.clamp(Math.exp(R.normal(0, LES.Labour.paySd())), 0.5, 2.4) : U.clamp(R.normal(1, 0.1), 0.75, 1.3))) / 1000) * 1000;
+        const salary = Math.round(this.px(j.salary * (cfg.econModel === 'calibrated' ? LES.Labour.offerSpread(this, R, j) : U.clamp(R.normal(1, 0.1), 0.75, 1.3))) / 1000) * 1000;
         const level = 1 + Math.min(2, Math.floor(Math.max(0, age - 20) / 6 * R.next() * 1.5));
         p.job = {
-          jobId: j.id, title: j.title, salary: Math.round(salary * Math.pow(1.12, level - 1)), level, startDay: this.day - R.int(30, 1500),
+          jobId: j.id, title: j.title, salary: Math.round(salary * Math.pow(LES.Labour.promoRaise(this, j), level - 1)), level, startDay: this.day - R.int(30, 1500),
           shiftsMonth: 0, lastShiftDay: -1, warnings: 0, place: R.pick(World.sitesFor(this, j)), perfOk: 0, perfN: 0, cat: j.cat,
         };
         p.xp[j.cat] = Math.min(5, Math.max(0, age - 18) * 0.25 * R.range(0.3, 1));

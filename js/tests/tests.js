@@ -1039,9 +1039,13 @@
     print('--- Calibrated markets (Phase 6) ---', 'info');
     const F = LES.Finance, w = new LES.World(Object.assign({}, LES.DEFAULTS, { seed: 'mk-1', founders: 120 }));
     let over = 0, months = 0;
+    // A firm's share is set from its size before the month-end growth, and its revenue uses that size, so
+    // what it sold is measured with the size from the day before (a boom the same night can add up to 50%).
+    const before = new Map();
     for (let d = 0; d < 365 * 12; d++) {
+      if (U.dayToDate(w.day).lastOfMonth) { before.clear(); for (const b of w.biz) if (b.open) before.set(b.id, b.scale); }
       w.step();
-      if (w.date.lastOfMonth && w.bizLoad) { months++; for (const t of LES.C.BIZ) if (t.market) { const sold = w.biz.filter(b => b.open && b.type === t.id).reduce((a, b) => a + b.scale * (b.marketShare === undefined ? 1 : b.marketShare), 0); if (sold > F.marketSize(w, t) * 1.05 + 1) over++; } }
+      if (w.date.lastOfMonth && w.bizLoad) { months++; for (const t of LES.C.BIZ) if (t.market) { const sold = w.biz.filter(b => b.open && b.type === t.id).reduce((a, b) => a + (before.has(b.id) ? before.get(b.id) : b.scale) * (b.marketShare === undefined ? 1 : b.marketShare), 0); if (sold > F.marketSize(w, t) * 1.05 + 1) over++; } }
       if (d % 1500 === 0) await yieldUI();
     }
     check("Firms of a kind never sell more than their market (it grows with the town)", months > 100 && over === 0, `${over} months over, ${months} months`);
@@ -1160,7 +1164,8 @@
   async function estateTests() {
     print('--- Estates (C04b, rules revision 3) ---', 'info');
     const D = LES.DEFAULTS, F = LES.Finance, Fa = LES.Family, P = LES.P;
-    const town = async (seed, years, extra) => { const w = new LES.World(Object.assign({}, D, { seed, founders: 150 }, extra || {})); for (let d = 0; d < 365 * years; d++) { w.step(); if (d % 1500 === 0) await yieldUI(); } return w; };
+    // (pinned to rules revision 5: the cases need households these seeds grow under those rules; estates are the same in 5 and 6)
+    const town = async (seed, years, extra) => { const w = new LES.World(Object.assign({}, D, { seed, founders: 150, rulesRev: 5 }, extra || {})); for (let d = 0; d < 365 * years; d++) { w.step(); if (d % 1500 === 0) await yieldUI(); } return w; };
     const near = (a, b, tol) => Math.abs(a - b) <= (tol || 2);
     // Strip a person to a known estate: no investments, pension, trust or shares; exactly `cash`.
     const strip = (w, p, cash) => {
@@ -1359,6 +1364,28 @@
 
 
   // Expansion 1 (Idea/Expansion 1): 23 jobs, a research centre, 6 degrees, 9 specialisations, 9 goals (rules revision 5).
+  // Rules revision 6: jobs that need no qualification have a lower pay ceiling (Labour.offerSpread / promoRaise).
+  async function payTests() {
+    print('--- Pay ceiling for jobs without qualifications (rules revision 6) ---', 'info');
+    const C = LES.C, L = LES.Labour, D = LES.DEFAULTS;
+    check('Revision 6 is the default', D.rulesRev === 6 && LES.PRESETS.national.values.rulesRev === 6);
+    const w6 = { cfg: { rulesRev: 6 } }, w5 = { cfg: { rulesRev: 5 } }, rider = C.JOB_BY_ID.rider, doctor = C.JOB_BY_ID.doctor;
+    const R = new LES.RNG('pay-ceiling'), offers = [];
+    for (let i = 0; i < 4000; i++) offers.push(L.offerSpread(w6, R, rider));
+    const maxOffer = Math.max(...offers), maxPay = maxOffer * Math.pow(L.promoRaise(w6, rider), 4);
+    check('An unskilled offer is at most 1.6x the middle (0.95x base); four promotions of 6% keep pay under 2x base', maxOffer <= L.PAY_MID_LOW * 1.6 + 1e-9 && maxPay < 2, `max offer x${maxOffer.toFixed(2)}, with promotions x${maxPay.toFixed(2)}`);
+    check('Skilled jobs and older revisions keep the old spread and 12% promotions', L.promoRaise(w6, doctor) === 1.12 && L.promoRaise(w5, rider) === 1.12 && !L.unskilled(w5, rider) && L.unskilled(w6, rider) && !L.unskilled(w6, doctor));
+    // A run: nobody in an unskilled job earns more than 2x the job's base pay at today's prices.
+    const w = new LES.World(Object.assign({}, D, { country: 'cn', seed: 'pay-1', founders: 150, migration: 'normal' }));
+    let worst = 0;
+    for (let y = 0; y < 12; y++) {
+      await runDays(w, 365);
+      for (const p of w.living) if (p.alive && p.job) { const j = C.JOB_BY_ID[p.job.jobId]; if (j && !j.req) worst = Math.max(worst, p.job.salary / w.px(j.salary)); }
+    }
+    check('China, 12 years: no unskilled worker earns more than 2x base pay (was up to ~3.2x)', worst <= 2.05, `worst x${worst.toFixed(2)}`);
+    check('The money check stays clean', w.checkInvariants().length === 0, JSON.stringify(w.checkInvariants().slice(0, 2)));
+  }
+
   async function expansionTests() {
     print('--- Expansion 1 (jobs, education, goals) ---', 'info');
     const C = LES.C, P = LES.P, D = LES.DEFAULTS, G = LES.Goals;
@@ -1377,7 +1404,7 @@
     const mix = w5.jobFreq, lvl = j => (!j.req ? 0 : j.req === 'VOC' ? 1 : 2), sum = (f, k, ex) => C.JOBS.reduce((a, j, i) => a + (lvl(j) === k && (ex === undefined || !!j.exp === ex) ? f[i] : 0), 0);
     const base = C.JOBS.map(j => (j.exp ? 0 : j.freq));
     check('Each entry level keeps its share of openings; new jobs take at most a third of a level', [0, 1, 2].every(k => Math.abs(sum(mix, k) - sum(base, k)) < 1e-9 && sum(mix, k, true) <= sum(mix, k) * LES.World.EXP_SHARE + 1e-9), mix.map(x => x.toFixed(2)).join(' '));
-    check('Revision 5 is the default; Classic stays at revision 1', D.rulesRev === 5 && LES.PRESETS.classic.values.rulesRev === 1);
+    check('Revision 5 or later is the default; Classic stays at revision 1', D.rulesRev >= 5 && LES.PRESETS.national.values.rulesRev === D.rulesRev && LES.PRESETS.classic.values.rulesRev === 1);
     const rc = w5.town.kinds.researchcentre || [];
     check('The research centre is built on a spare lot (one lot is kept for growth) or its jobs use the fallback', rc.length === 1 ? w5.town.lots.some(id => !w5.town.buildings[id].built) : true, `${rc.length} centre(s)`);
     check('BACH_PHARM does not count as a medical degree; Computer Science opens software jobs', !P.hasCred({ quals: ['BACH_PHARM'] }, 'MED') && P.hasCred({ quals: ['BACH_CS'] }, C.JOB_BY_ID.softdev.req) && !P.hasCred({ quals: ['VOC'] }, C.JOB_BY_ID.analyst.req) && P.hasCred({ quals: ['BACH_LAW'] }, 'BACH'));
@@ -1491,7 +1518,7 @@
     const w = new LES.World(Object.assign({}, D, { seed: 'c10', founders: 60 }));
     for (let d = 0; d < 365 * 2; d++) w.step();
     const cur = CMP.summary(w), t = CMP.table(cur, Object.assign({}, cur, { country: 'Testland', rules: 'Classic (original rules)', rev: 1 }), 'Classic rules');
-    check('The comparison names country, rules and rules version, years and the sample size', t.includes(LES.Countries.pack.name) && t.includes('rules version 5') && t.includes('rules version 1') && t.includes('Years simulated') && t.includes('sample size'));
+    check('The comparison names country, rules and rules version, years and the sample size', t.includes(LES.Countries.pack.name) && t.includes(`rules version ${LES.DEFAULTS.rulesRev}`) && t.includes('rules version 1') && t.includes('Years simulated') && t.includes('sample size'));
     check('It says it is a same-seed world comparison, not a matched experiment, and that one pair cannot prove a cause', /same-seed world comparison/.test(t) && /not a matched experiment/.test(t) && /cannot prove/.test(t));
     check('A short run shows "insufficient data", not a blank or zero, and is warned about', /insufficient data \(under 10 years\)/.test(t) && /Fewer than 20 years/.test(t) && /nobody yet/.test(t) && CMP.table(Object.assign({}, cur, { revenue: undefined }), cur, 'x').includes('no government'));
     check('Different countries are warned about (amounts are in different currencies)', /different countries/.test(t) && !/different countries/.test(CMP.table(cur, cur, 'x')));
@@ -1574,6 +1601,7 @@
       await explainTests();
       await mobilityTests();
       await expansionTests();
+      await payTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -1585,6 +1613,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, expansionTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, expansionTests, payTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);
