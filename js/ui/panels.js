@@ -422,7 +422,8 @@
         happy: [adults, p => p.happy], family: [w.living.filter(p => p.alive && p.adult), kids],
         fit: [adults, body], goals: [w.people.filter(p => p.adult), p => p.goalsDone.length],
       }[UI.lbMode] || [adults, p => p.nw];
-      list = by[0].slice().sort((a, b) => (by[1](b) - by[1](a)) || (b.nw - a.nw)).slice(0, 50);
+      if (UI.lbMode === 'poor') list = adults.filter(p => !p.away).sort((a, b) => (a.nw - b.nw) || (a.id - b.id)).slice(0, 10); // lowest net worth first
+      else list = by[0].slice().sort((a, b) => (by[1](b) - by[1](a)) || (b.nw - a.nw)).slice(0, 50);
     }
     const val = p => {
       if (q) return U.fmtMoney(p.nw);
