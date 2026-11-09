@@ -47,17 +47,17 @@
   // town with them; ticking someone ticks their whole household.
   function castPicker(base) {
     const roster = LES.UI.castRoster ? LES.UI.castRoster() : [], again = (base.castArrivals || []).reduce((n, a) => n + a.specs.length, 0);
-    if (!roster.length && !again) return '';
     const on = new Set((base.cast || []).map(s => s.id)), town = id => ((base.cast || []).find(s => s.id === id) || {}).town || 0;
     const rows = roster.map(s => {
       const fam = LES.Cast.householdOf(roster, s).filter(o => o !== s).map(o => o.first);
       return `<label class="cast-pick"><input type="checkbox" data-id="${esc(s.id)}" ${on.has(s.id) ? 'checked' : ''}> <b>${esc(s.first)} ${esc(s.last)}</b> <span class="muted">${s.age} · ${esc(C.ETHNIC_NAMES[s.eth] || s.eth)}${fam.length ? ` · with ${esc(fam.join(', '))}` : ''}</span>
         <select id="set-cast-town-${esc(s.id)}" class="cast-town" title="Which town (when there are several)">${[0, 1, 2].map(i => `<option value="${i}" ${town(s.id) === i ? 'selected' : ''}>Town ${i + 1}</option>`).join('')}</select></label>`;
     }).join('');
-    return `<details class="set-cast" ${on.size ? 'open' : ''}><summary>★ My cast as founders: <b id="set-cast-sum">${on.size ? `${on.size} chosen` : 'none chosen'}</b></summary>
-      <div id="set-cast">${rows || '<p class="note">No saved people.</p>'}</div>
+    return `<details class="set-cast" ${on.size || !roster.length ? 'open' : ''}><summary>★ My cast as founders: <b id="set-cast-sum">${on.size ? `${on.size} chosen` : 'none chosen'}</b></summary>
+      <div id="set-cast">${rows || '<p class="note">You have no saved people yet. Design your own characters (looks, abilities, personality, family) and they found the town with the strangers.</p>'}</div>
+      <div class="modal-actions" style="justify-content:flex-start"><button type="button" class="ghost" id="set-cast-new">＋ Create a person</button></div>
       ${again ? `<label class="cast-pick"><input type="checkbox" id="set-cast-again" checked> Also bring back the ${again} ${again > 1 ? 'people' : 'person'} you added during the last run (on the same days)</label>` : ''}
-      <p class="note">Your cast lives by the same rules as everyone else. Create people in the Leaders tab → ★ My cast.</p></details>`;
+      <p class="note">Your cast lives by the same rules as everyone else. During a run you can also add or edit people in the Leaders tab → ★ My cast.</p></details>`;
   }
 
   function field(m, v) {
@@ -66,7 +66,7 @@
     if (m.type === 'select') input = `<select id="set-${m.key}">${m.options.map(([k, l]) => `<option value="${k}" ${k === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
     else if (m.type === 'int' || m.type === 'num') input = `<input id="set-${m.key}" type="number" step="${m.step || 1}" min="${m.min}" max="${m.max}" value="${v}">`;
     else if (m.key === 'seed') input = `<div class="seed-row"><input id="set-${m.key}" type="text" maxlength="40" value="${esc(v)}"><button class="ghost" id="set-random" type="button" title="Pick a random seed">🎲</button></div>`;
-    else input = `<input id="set-${m.key}" type="text" maxlength="40" value="${esc(v)}">`;
+    else input = `<input id="set-${m.key}" type="text" maxlength="40" value="${esc(v)}"${m.key === 'townName' ? ` placeholder="${esc(C.TOWN_NAME)}"` : ''}>`;
     return `<div class="field" data-key="${m.key}"><label for="set-${m.key}">${esc(m.label)}</label>${input}${m.help ? `<div class="help">${esc(m.help)}</div>` : ''}</div>`;
   }
 
@@ -185,6 +185,17 @@
         castSync(e); syncPreset(e); refresh();
       };
       for (const el of card.querySelectorAll('.scn-card')) el.onclick = () => choose(el.dataset.card);
+      // Create a person from here: the creator borrows this dialog, then the setup comes back
+      // with every choice kept and the new person ticked.
+      $('set-cast-new').onclick = () => {
+        const cfg = readForm(base);
+        cfg.preset = LES.presetOf(cfg);
+        card.oninput = card.onchange = null; // the setup's handlers must not see the creator's fields
+        LES.UI.openCastCreator(-1, s => {
+          if (s) cfg.cast = (cfg.cast || []).concat([Object.assign(JSON.parse(JSON.stringify(s)), { town: 0 })]);
+          LES.Setup.open(app, first, cfg);
+        });
+      };
       $('set-load').onclick = () => $('set-load-file').click();
       $('set-load-file').onchange = e => { const f = e.target.files[0]; if (f) app.loadWorld(f); e.target.value = ''; };
       renderDetail();

@@ -121,6 +121,7 @@
 
     // ---- Your town (main page) ----
     { group: 'Town & map', essential: true, key: 'country', label: 'Country', type: 'select', options: [['my', 'Malaysia']], help: 'Prices, wages, taxes, laws, people and festivals of this country. Classic rules are Malaysia only.' },
+    { group: 'Town & map', essential: true, key: 'townName', label: 'Town name', type: 'text', optional: true, help: 'Optional: your own name for the (first) town. Blank = the country\'s default. Only a label: it changes nothing in the simulation, and you can rename the town later by clicking its name.' },
     { group: 'Town & map', essential: true, key: 'founders', label: 'Founding population', type: 'int', min: 20, max: 6000, help: 'Strangers who found the town. The map size follows (100 = a small town).' },
     { group: 'Goal', essential: true, key: 'horizonYears', label: 'Years to simulate', type: 'int', min: 5, max: 300, help: '120 years is about four generations.' },
     { group: 'Economy & prices', essential: true, key: 'wealthDist', label: 'Starting wealth', type: 'select', options: [['equal', 'Equal ({k:10} each)'], ['moderate', 'Moderate inequality'], ['unequal', 'High inequality (some born rich)']] },
@@ -129,7 +130,6 @@
     { group: 'Economy & prices', essential: true, key: 'economy', label: 'Economic cycles', type: 'select', options: [['stable', 'Stable'], ['normal', 'Normal cycles'], ['volatile', 'Volatile (frequent recessions)']] },
     { group: 'Crime & justice', essential: true, key: 'crime', label: 'Crime & vice', type: 'select', options: [['lively', 'Lively ({adj} rates x10)'], ['realistic', 'Realistic (rare in a small town)'], ['lawless', 'Lawless (x30)'], ['off', 'Off']], help: 'Lively makes crime visible in a small town.' },
     { group: 'Town & map', essential: true, key: 'seed', label: 'World seed', type: 'text', help: 'Same seed + same settings = the same history.' },
-    { group: 'Town & map', key: 'townName', label: 'Town name', type: 'text', optional: true, help: 'Optional: your own name for the (first) town. Blank = the country\'s default. Only a label: it changes nothing in the simulation, and you can rename the town later by clicking its name.' },
 
     // ---- Advanced ----
     { group: 'Base rules', key: 'preset', label: 'Rules', type: 'select', options: [['national', "Today's rules (calibrated to official data)"], ['classic', 'Classic (original harsh rules)'], ['custom', 'Custom']], help: 'Fills the settings below.' },

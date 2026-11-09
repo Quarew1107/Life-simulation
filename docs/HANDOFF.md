@@ -18,6 +18,8 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
   open `tests.html` (from disk is fine) and click Run all tests: ~2 min in Edge.
   Calibration: `node tools/headless.js calib`. Benchmarks: `node tools/headless.js bench founders=400 years=10`.
 - Docs: `README.md` (features), `docs/ROADMAP.md` (phases, decisions, Malaysian figures).
+- `Idea/` (the owner's design notes, task cards and content designs) lives only on the owner's computer:
+  it is in `.gitignore` and must never be committed or pushed. References to `Idea/...` below point there.
 
 ## 0. Where to pick up (status at the end of the last session)
 **To do (keep this list current; the same list is in `docs/ROADMAP.md`):**

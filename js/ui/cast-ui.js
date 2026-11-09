@@ -26,7 +26,8 @@
   const sel = (id, opts, v) => `<select id="${id}">${opts.map(([k, l]) => `<option value="${k}" ${String(k) === String(v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
   const colour = (id, v) => `<input type="color" id="${id}" value="${v}">`;
 
-  UI.openCastCreator = function (idx) {
+  // back(spec | null): called instead of closing (the setup screen reopens itself).
+  UI.openCastCreator = function (idx, back) {
     const roster = load(), spec = idx >= 0 && roster[idx] ? JSON.parse(JSON.stringify(roster[idx])) : Object.assign(LES.Cast.blank(), { id: uid() });
     const others = roster.filter(o => o.id !== spec.id);
     const card = $('modal-card');
@@ -59,7 +60,7 @@
           <div class="field"><label>Second parent</label>${sel('c-par2', [['', 'None'], ...others.map(o => [o.id, `${o.first} ${o.last} (${o.age})`])], spec.parents[1] || '')}<div class="help">Under 18? They need a parent from your cast, at least 12 years older, and arrive in their care.</div></div>
         </div><div class="msgs" id="c-msgs"></div></div>
       </div>
-      <div class="modal-actions"><button class="ghost" id="c-random">🎲 Random</button><span class="spacer"></span><button class="ghost" id="c-cancel">Cancel</button><button class="ghost" id="c-save">Save to my cast</button><button class="primary" id="c-add">Save and add to town</button></div>`;
+      <div class="modal-actions"><button class="ghost" id="c-random">🎲 Random</button><span class="spacer"></span><button class="ghost" id="c-cancel">Cancel</button><button class="ghost" id="c-save">Save to my cast</button>${back ? '' : '<button class="primary" id="c-add">Save and add to town</button>'}</div>`;
     $('modal').classList.remove('hidden');
     const read = () => ({
       first: $('c-first').value.trim() || 'Nameless', last: $('c-last').value.trim(), sex: $('c-sex').value, age: Number($('c-age').value) || 25, eth: $('c-eth').value, rel: $('c-rel').value,
@@ -93,9 +94,14 @@
       if (i >= 0) list[i] = s; else list.push(s);
       save(list); return s;
     };
-    $('c-cancel').onclick = () => $('modal').classList.add('hidden');
-    $('c-save').onclick = () => { store(); $('modal').classList.add('hidden'); UI.renderLeaders(true); };
-    $('c-add').onclick = () => { const s = store(); $('modal').classList.add('hidden'); UI.addCast(s); };
+    if (back) {
+      $('c-cancel').onclick = () => back(null);
+      $('c-save').onclick = () => back(store());
+    } else {
+      $('c-cancel').onclick = () => $('modal').classList.add('hidden');
+      $('c-save').onclick = () => { store(); $('modal').classList.add('hidden'); UI.renderLeaders(true); };
+      $('c-add').onclick = () => { const s = store(); $('modal').classList.add('hidden'); UI.addCast(s); };
+    }
     $('c-random').onclick = () => {
       const r = () => Math.random();
       for (let i = 0; i < 6; i++) $(`c-a${i}`).value = (2 + r() * 8).toFixed(1);
