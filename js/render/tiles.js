@@ -20,7 +20,7 @@
   const canvas = (w, h) => { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; cv.getContext('2d', { willReadFrequently: true }); return cv; };
 
   // A building's look, for spotting what changed.
-  const sig = b => `${b.kind}|${b.x},${b.y},${b.w},${b.h}|${b.label || ''}|${b.built ? 1 : 0}|${b.block ? b.block.code : ''}`;
+  const sig = b => `${b.kind}|${b.x},${b.y},${b.w},${b.h}|${b.label || ''}|${b.built ? 1 : 0}|${b.block ? b.block.code : ''}${b.kind === 'construction' ? `|${LES.Art.siteStage(b)}` : ''}`;
 
   class MapTiles {
     constructor(capMB) {
@@ -48,6 +48,12 @@
       }
       if (this.version === version) return;
       this.version = version;
+      this.refresh(true);
+    }
+    // Paint again only the tiles of buildings whose look changed (a new estate, a builder's yard stage).
+    refresh(always) {
+      const town = this.town;
+      if (!town) return;
       const now = town.buildings.map(sig), dirty = new Set();
       now.forEach((s, i) => {
         if (s === this.sigs[i]) return;
@@ -55,7 +61,7 @@
         for (const k of this.tilesIn(b.x * T - MARGIN, b.y * T - MARGIN, b.w * T + 2 * MARGIN, b.h * T + 2 * MARGIN)) dirty.add(k);
       });
       this.sigs = now;
-      this.prepare();
+      if (always || dirty.size) this.prepare();
       for (const k of dirty) {
         this.cache.delete(k); const [cx, cy] = k.split(',').map(Number);
         this.ovDone[cy * this.cols + cx] = 0; if (this.back) this.back.done[cy * this.cols + cx] = 0;
@@ -114,6 +120,7 @@
       Art.beginLights();
       Art.drawGround(g, town);
       for (const b of this.order) if (Art.vis(b.x * T - MARGIN, b.y * T - MARGIN, b.w * T + 2 * MARGIN, b.h * T + 2 * MARGIN)) Art.drawBuilding(g, b);
+      Art.winterGround(g, x0, y0, w, h); // frost and lying snow on grass and lawns (only in those weeks), before the trees
       Art.drawGreenery(g, town, this.busy);
       // Bus stops (shelter on the sidewalk) and the town gateway arch.
       for (const line of town.busLines) for (const st of line.stops) {

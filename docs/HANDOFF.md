@@ -25,7 +25,7 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
 **To do (keep this list current; the same list is in `docs/ROADMAP.md`):**
 
 **Review follow-up (Nov 2026): 6 tasks from a UI/art/bug review, done one at a time.** Tasks 1 (pop-ups and
-small screens), 2 (side panel), 3 (Report and Compare) and 4 (people art) are done (ticked below). Tasks 5-6 are open. Rules for each: UI and art tasks
+small screens), 2 (side panel), 3 (Report and Compare), 4 (people art) and 5 (buildings and winter) are done (ticked below). Task 6 is open. Rules for each: UI and art tasks
 must not change simulation results (no `js/sim/` edits, never use the world RNG in render code; use hashes of
 ids/positions for variety); keep the full suite passing (`python tools/edge.py tests.html "await
 LES_TESTS.runAll(), document.getElementById('out').textContent" 1800`, 343/343 at 1a84ec6); keep a 2,500-founder
@@ -77,15 +77,30 @@ town no slower to draw (`docs/PERFORMANCE.md`); tick the item here when done.
     z 4 1.17 -> 1.23 ms, within run-to-run noise. Needed: one fixed object shape for people on the list (the
     spread `{ p, ...pos }` with many shapes cost ~20%) and a cached look key in `Sprites.person`.
   - Tests: `peopleArtTests` (12; tests.html now loads renderer.js). Full suite 364/364.
-- [ ] **Task 5: Buildings, site stages and winter** (`js/render/art.js`, `js/render/tiles.js`).
-  - Empty shops: rows of identical red "FOR RENT" banners; vary them (shutters, faded posters, clean empty
-    fronts), banner on only some.
-  - Shophouse rows and office towers repeat exactly: 2-3 variants each (awning colour, roofline, windows), and an
-    occupied shop's sign/awning matching its business type.
-  - Building sites: stages (foundation -> frame -> nearly finished) from construction progress (read-only);
-    repaint the tile only when the stage changes.
-  - Light snow/frost in UK, China (and US where it fits) winters through the existing season repaint (back
-    buffer in `tiles.js`), so no per-frame cost. No snow in Malaysia. Keep the map-tile seam test passing.
+- [x] **Task 5: Buildings, site stages and winter** (Nov 2026, drawing only; `js/render/art.js`, `tiles.js`,
+      `renderer.js`, `ambience.js`; `art.weather.snow` in the UK, US and China packs).
+  - Empty shops (`LES.vacantLook(id)`, drawn per frame in `drawShops`): rent banner on ~1 in 3; others shutters down
+    (padlock), shutters with posters and graffiti, or a clean empty front. Occupied shops: an awning in the
+    business type's colour (Malaysian five-foot way, US storefront, UK cafés/restaurants). `drawShops` now skips
+    shops off screen and the details below zoom 0.8.
+  - Variants by `Art.variant(b, 3)` (id hash): Malaysian shophouse (terracotta gable / Straits parapet with louvred
+    shutters / zinc roof with balcony rail), UK shop (sash / oriel window / stucco), US (stepped front / dentil
+    cornice / name panel with arched windows), China (tank and solar / tiled roof / potted plants), office tower
+    (blue-grey / glass curtain wall / stone-clad with a spire). The tech hub is unchanged.
+  - Builder's yard (`construction`): `Art.siteStage(b)` foundations -> frame -> nearly finished, every 60 days by
+    date (offset per yard). The renderer calls `Art.setDay(day)`; when the day moves, `MapTiles.refresh()` repaints
+    only buildings whose signature changed (the yard's stage is in `sig`); `prepare()` only runs when something did.
+  - Winter: `Ambience.snowSpells(winter)` seeds 1-2 (UK), 3-5 (US), 0-1 (China) spells per Dec-Feb from
+    `art.weather.snow.spells/days/lying`; flakes fall on spell days (weather 'snow' now follows the spells), snow
+    lies until `lying` days after. `Art.setSnow` + season changes trigger the one full repaint. Lying snow: white
+    roofs (`snowRoof` in `roof()`), snow on bare branches and conifers, and `Art.winterGround` (after buildings,
+    before trees) turns grass-like greens white; through the rest of the winter it gives a light frost. Malaysia
+    never changes. Cost: a 512 px tile paints in ~5.5 ms in winter vs ~3.5 ms (once per tile, no per-frame cost).
+  - Bug fixed on the way: ground textures (grass, paving, asphalt) were made lazily with the tile's drawing area
+    still set, so `rect()` skipped most of the pattern and roads/paving/grass showed as the plain background green
+    in many places. `memo()` now makes patterns with the drawing area switched off (a test checks for holes).
+  - Frame time (2,500 founders, alternating old/new): z 0.9 1.22 -> 1.12 ms, z 2.5 1.35 -> 1.23 ms.
+  - Tests: `buildingArtTests` (8). Full suite 372/372.
 - [ ] **Task 6: Crime outside Malaysia (rules revision 8).** Baseline (rev 7, Lively, 300 founders, 12 years,
       index crimes per 100k): UK 7,867 vs target 2,000; US 2,828 vs 590; China 532 vs 150; Malaysia 254 vs 170.
   - Cause found: `CR.CASES_PER_OFFICER` (cases one officer handles a month) was calibrated on Malaysia (170 per

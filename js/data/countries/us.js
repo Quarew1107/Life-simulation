@@ -533,7 +533,7 @@
       style: 'us',
       latitude: 40, summerTime: [67, 305], // daylight saving time
       seasons: true,
-      weather: { rain: [0.4, 0.36, 0.42, 0.42, 0.42, 0.38, 0.35, 0.32, 0.3, 0.32, 0.38, 0.4], heavy: 0.12, snow: { months: [0, 1, 11], chance: 0.14 } },
+      weather: { rain: [0.4, 0.36, 0.42, 0.42, 0.42, 0.38, 0.35, 0.32, 0.3, 0.32, 0.38, 0.4], heavy: 0.12, snow: { months: [0, 1, 11], chance: 0.14, spells: [3, 5], days: [1, 3], lying: 4 } },
       hazeSky: { id: 'heat', name: 'Heat wave' },
       outfits: [['raya', { rel: 'islam' }, 'kurta', 'kurung'], ['deepavali', { rel: 'hinduism' }, 'kurta', 'saree'], ['christmas', { rel: 'christianity' }, 'office', 'office'], ['easter', { rel: 'christianity' }, 'office', 'office'], ['thanksgiving', {}, 'office', 'office'], ['cny', { eth: 'asian' }, 'cny', 'cny']],
       decor: { christmas: 'mallTree', july4: 'flags', halloween: 'pumpkins', raya: 'homeLights', deepavali: 'diyas', cny: 'lanterns' },

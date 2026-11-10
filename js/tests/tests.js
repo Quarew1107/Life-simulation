@@ -1648,6 +1648,61 @@
     cv.remove();
   }
 
+  // Review task 5: building variety, builder's yard stages, winter frost and snow (drawing only).
+  async function buildingArtTests() {
+    print('--- Buildings, yard stages and winter ---', 'info');
+    if (typeof document === 'undefined' || !LES.Renderer) { print('(browser only: skipped)'); return; }
+    const Art = LES.Art, Amb = LES.Ambience, K = LES.Countries;
+    // Empty shops: a banner on about one in three, the other three looks all used, fixed per shop.
+    const looks = {}; for (let id = 0; id < 600; id++) looks[LES.vacantLook(id)] = (looks[LES.vacantLook(id)] || 0) + 1;
+    check('Empty shops: a rent banner on about one in three; shutters, posters and clean fronts for the rest', looks.banner > 150 && looks.banner < 260 && looks.shutters > 80 && looks.posters > 80 && looks.clean > 80 && LES.vacantLook(42) === LES.vacantLook(42), JSON.stringify(looks));
+    const vs = new Set(); for (let id = 0; id < 60; id++) vs.add(Art.variant({ id }, 3));
+    check('Shophouses, shops and office towers come in three versions, fixed by the building', vs.size === 3 && Art.variant({ id: 7 }, 3) === Art.variant({ id: 7 }, 3));
+    // The builder's yard: foundations -> frame -> nearly finished, each stage two months.
+    const yard = { id: 11 }, seq = [];
+    for (let d = 0; d < 400; d++) { Art.setDay(d); seq.push(Art.siteStage(yard)); }
+    let changes = 0, ok = true;
+    for (let d = 1; d < seq.length; d++) if (seq[d] !== seq[d - 1]) { changes++; if (seq[d] !== (seq[d - 1] + 1) % 3) ok = false; }
+    Art.setDay(-1);
+    check('The yard goes foundations -> frame -> nearly finished, moving on every 60 days; before the first day it shows the frame', ok && changes >= 6 && changes <= 7 && Art.siteStage(yard) === 1, `${changes} changes`);
+    // Only the yard's tiles are painted again when its stage moves on.
+    const w = new LES.World(Object.assign({}, LES.DEFAULTS, { seed: 'yard-tiles', founders: 120 }));
+    const t = new LES.MapTiles(64); Art.setDay(0); t.setTown(w.town, 0);
+    const site = w.town.buildings[w.town.byKind.construction], T = w.town.T;
+    for (let cy = 0; cy < t.rows; cy++) for (let cx = 0; cx < t.cols; cx++) t.cache.set(`${cx},${cy}`, {});
+    const s0 = Art.siteStage(site); for (let d1 = 1; d1 < 200; d1++) { Art.setDay(d1); if (Art.siteStage(site) !== s0) break; }
+    const before = t.cache.size; t.refresh();
+    const gone = before - t.cache.size, yardTiles = t.tilesIn(site.x * T - 40, site.y * T - 40, site.w * T + 80, site.h * T + 80).length;
+    const others = w.town.kinds.construction ? w.town.kinds.construction.length : 1;
+    check('A new yard stage repaints only the yard\'s own tiles', gone >= 1 && gone <= yardTiles * others, `${gone} of ${before} tiles`);
+    Art.setDay(-1);
+    // Snow spells: a few seeded spells each winter (Dec-Feb), more in the US, rare in China, never in Malaysia.
+    const spells = code => { K.use(code); let n = 0, bad = 0; for (let y = 0; y < 30; y++) for (const s of Amb.snowSpells(y)) { n++; if (s.from < y * 365 + 334 || s.melt > y * 365 + 334 + 90 || s.to <= s.from || s.melt < s.to) bad++; } return { n: n / 30, bad }; };
+    const uk = spells('uk'), us = spells('us'), cn = spells('cn'), my = spells('my');
+    check('Snow spells per winter: UK 1-2, US 3-5, China 0-1, Malaysia none, all inside Dec-Feb', uk.n >= 1 && uk.n <= 2 && us.n >= 2.5 && us.n <= 5 && cn.n <= 1 && my.n === 0 && !uk.bad && !us.bad && !cn.bad, JSON.stringify({ uk: uk.n, us: us.n, cn: cn.n, my: my.n }));
+    K.use('uk');
+    let agree = true, lying = 0, falling = 0;
+    for (let d = 0; d < 365 * 10; d++) { const a = Amb.snowAt(d), wx = Amb.weather(d).id === 'snow'; if (a.falling !== wx || (a.falling && !a.lying)) agree = false; if (a.lying) lying++; if (a.falling) falling++; }
+    check('Flakes fall only on spell days; the snow then lies a little longer (UK)', agree && falling > 0 && lying > falling, `${falling} falling, ${lying} lying days in 10 years`);
+    // The ground pass: grass and lawns frost in winter and turn white under snow; roads and painted greens stay.
+    const cv = document.createElement('canvas'); cv.width = 4; cv.height = 1; const g = cv.getContext('2d', { willReadFrequently: true });
+    const paint = () => { ['#7fb054', '#6fa04a', '#5d6168', '#1f3d2b'].forEach((c, i) => { g.fillStyle = c; g.fillRect(i, 0, 1, 1); }); };
+    const px = i => [...g.getImageData(i, 0, 1, 1).data].slice(0, 3);
+    paint(); Art.setSeason(null); Art.setSnow(false); Art.winterGround(g, 0, 0, 4, 1); const plain = [0, 1, 2, 3].map(px);
+    paint(); Art.setSeason('winter'); Art.winterGround(g, 0, 0, 4, 1); const frost = [0, 1, 2, 3].map(px);
+    paint(); Art.setSnow(true); Art.winterGround(g, 0, 0, 4, 1); const snow = [0, 1, 2, 3].map(px);
+    Art.setSnow(false); Art.setSeason(null);
+    const same = (a, b) => a.every((v, i) => v === b[i]);
+    check('Winter ground: grass and lawns frosty in winter, white under snow; roads and a green shopfront unchanged; nothing outside winter',
+      same(plain[0], [127, 176, 84]) && frost[0][0] > plain[0][0] + 15 && frost[0][1] < snow[0][1] && snow[0][0] > 210 && snow[1][0] > 200 && same(snow[2], plain[2]) && same(snow[3], plain[3]), JSON.stringify({ frost: frost[0], snow: snow[0] }));
+    // Ground textures are whole wherever a tile is painted first (they were once made with holes).
+    const c2 = document.createElement('canvas'); c2.width = 256; c2.height = 256; const g2 = c2.getContext('2d', { willReadFrequently: true });
+    const t2 = new LES.MapTiles(64); t2.setTown(w.town, 0); t2.paintArea(g2, Math.min(w.town.W * T - 300, 1700), Math.min(w.town.H * T - 300, 900), 256, 256);
+    const dd = g2.getImageData(0, 0, 256, 256).data; let holes = 0; for (let i = 3; i < dd.length; i += 4) if (dd[i] === 0) holes++;
+    check('A painted map area has no holes in its ground (grass, paving, roads)', holes === 0, `${holes} transparent pixels`);
+    K.ensure(LES.DEFAULTS);
+  }
+
   // C07: sustained mobility from income averaged over years, ranked within birth cohorts (research only).
   async function mobilityTests() {
     print('--- Sustained mobility (C07) ---', 'info');
@@ -1719,6 +1774,7 @@
       await nameTests();
       await compareTests();
       await peopleArtTests();
+      await buildingArtTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -1730,6 +1786,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, compareTests, peopleArtTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

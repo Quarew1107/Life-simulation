@@ -86,7 +86,7 @@
     if (gw && gw.gov && gw.gov.haze && HZ && day < gw.gov.haze.until && day >= gw.gov.haze.until - HZ.days) return ART().hazeSky || { id: 'haze', name: 'Haze (unhealthy air)' };
     const m = U.dayToDate(day).month, r = rnd(day * 31 + 7);
     if (aw) { // a country's own weather: rain chance by month, snow in winter
-      if (aw.snow && aw.snow.months.includes(m) && r < aw.snow.chance) return { id: 'snow', name: 'Snow' };
+      if (aw.snow && (aw.snow.spells ? A.snowAt(day).falling : aw.snow.months.includes(m) && r < aw.snow.chance)) return { id: 'snow', name: 'Snow' };
       if (r < aw.rain[m]) return { id: 'rain', name: r < aw.heavy ? 'Heavy rain' : 'Rain', heavy: r < aw.heavy };
       return { id: 'clear', name: m >= 5 && m <= 7 && r > 0.85 ? 'Sunny' : 'Clear' };
     }
@@ -95,6 +95,37 @@
     if (m >= 5 && m <= 8 && r > 0.9) return { id: 'haze', name: 'Haze' };
     return { id: 'clear', name: 'Clear' };
   };
+
+  // ---- Snow spells (review task 5): each winter (Dec-Feb) has a few spells, seeded by the winter alone
+  // (pack art.weather.snow: spells [min, max] per winter, days [min, max] of falling snow, lying = days it stays
+  // after). Falling days show flakes; snow lies on roofs and ground from the first day until it melts. The map
+  // is painted again only when a spell starts or ends. Presentation only.
+  const spellCache = new Map();
+  A.snowSpells = function (winter) {
+    const cfg = (ART().weather || {}).snow;
+    if (!cfg || !cfg.spells) return [];
+    const key = `${LES.Countries.active}|${winter}`;
+    let out = spellCache.get(key);
+    if (out) return out;
+    const start = winter * 365 + 334, n = cfg.spells[0] + Math.floor(rnd(winter * 97 + 13) * (cfg.spells[1] - cfg.spells[0] + 1));
+    out = [];
+    for (let k = 0; k < n; k++) {
+      const len = cfg.days[0] + Math.floor(rnd(winter * 131 + k * 17 + 5) * (cfg.days[1] - cfg.days[0] + 1));
+      const s = start + Math.floor(rnd(winter * 61 + k * 29 + 3) * (88 - len - (cfg.lying || 0)));
+      if (out.some(o => s <= o.melt + 2 && s + len + (cfg.lying || 0) >= o.from - 2)) continue; // keep spells apart
+      out.push({ from: s, to: s + len, melt: s + len + (cfg.lying || 0) });
+    }
+    if (spellCache.size > 64) spellCache.clear();
+    spellCache.set(key, out);
+    return out;
+  };
+  A.snowAt = function (day) {
+    if (day < 0) return { falling: false, lying: false };
+    const y = Math.floor(day / 365), winter = day - y * 365 >= 334 ? y : y - 1;
+    for (const s of A.snowSpells(winter)) if (day >= s.from && day < s.melt) return { falling: day < s.to, lying: true };
+    return { falling: false, lying: false };
+  };
+  A.snowCover = day => A.snowAt(day).lying;
 
   // ---- Night lights layer (built once per town version) ----
   // Night lights for an area of the map (world pixels; g is already translated): lit

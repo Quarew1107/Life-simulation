@@ -35,7 +35,13 @@
   const TEMPERATE = () => UKSTYLE() || USSTYLE() || CNSTYLE(); // no palms, lawns instead of sandy yards (UK, US: fields instead of paddies)
   const TILES = ['#efe9df', '#e4dccf', '#f2eadb', '#dfe3e6'], CNGREY = ['#9a9b97', '#a8a49a', '#8e9296'];
   const SIDING = ['#f4f1e8', '#cfe0e8', '#e8d9b5', '#d8e2cf', '#e9c9c0', '#d6d0e4'];
-  let SEASON = null;
+  let SEASON = null, SNOW = false, DAY = -1;
+  // Variant of a building's look (0..n-1), fixed by its id: rows of shops and towers do not repeat exactly.
+  const variant = (b, n) => hash(b.id * 7 + 3) % n;
+  // Stage of the builder's yard project: 0 foundations, 1 frame, 2 nearly finished; it moves on every two
+  // months by the date (each yard on its own timing). Presentation only (there is no build progress in the sim).
+  const siteStage = b => (DAY < 0 ? 1 : Math.floor((DAY + hash(b.id * 13 + 1) % 60) / 60) % 3);
+  const SNOWWHITE = '#f3f6fa', SNOWSHADE = '#d9e2ec';
   // Map sign words: Malaysia's by default, a pack's town.signs replaces them (keyed by the Malay text).
   const SG = text => { const t = LES.Countries.pack.town.signs; return (t && t[text]) || text; };
   const BRICK = ['#a5523d', '#b5614a', '#9a4b38', '#b8735a'], DOORS = ['#1d3557', '#7a2632', '#2d6a4f', '#14141a', '#f4f1e8'];
@@ -89,6 +95,19 @@
   function roof(g, X, Y, W, H, col, type, o) {
     o = o || {};
     if (H <= 0) return;
+    roofPaint(g, X, Y, W, H, col, type, o);
+    if (SNOW) snowRoof(g, X, Y, W, H, type);
+  }
+  // Lying snow on a roof: a white cover with a shaded lower edge (flat roofs keep their parapet).
+  function snowRoof(g, X, Y, W, H, type) {
+    if (type === 'flat') { rect(g, X + 2, Y + 2, W - 4, H - 4, SNOWWHITE); rect(g, X + 2, Y + H - 3, W - 4, 1, SNOWSHADE); return; }
+    if (type === 'shed') { rect(g, X, Y, W, Math.max(1, Math.round(H * 0.7)), SNOWWHITE); rect(g, X, Y + Math.round(H * 0.7), W, 1, SNOWSHADE); return; }
+    const ridge = Math.round(Y + H * 0.4);
+    rect(g, X, Y, W, ridge - Y, SNOWWHITE);
+    rect(g, X, ridge, W, Math.max(1, Y + H - ridge - 1), '#e9eef4');
+    rect(g, X, ridge - 1, W, 1, SNOWSHADE);
+  }
+  function roofPaint(g, X, Y, W, H, col, type, o) {
     if (type === 'flat') {
       rect(g, X, Y, W, H, shade(col, 1.05));
       rect(g, X + 2, Y + 2, W - 4, H - 4, col);
@@ -240,6 +259,7 @@
       for (const [dx, dy, len] of [[-1, 0.35, 0.45], [1, 0.3, 0.42], [-1, 0.6, 0.3], [1, 0.55, 0.32], [0, 0.1, 0.25]]) {
         const yy = Math.round(y + h * dy);
         for (let k = 0; k < Math.round(w * len); k++) rect(g, Math.round(bx + dx * k), yy - Math.round(k * 0.5), 1, 1, '#6b5440');
+        if (SNOW) for (let k = 2; k < Math.round(w * len); k += 3) rect(g, Math.round(bx + dx * k), yy - Math.round(k * 0.5) - 1, 1, 1, SNOWWHITE);
       }
       return;
     }
@@ -254,6 +274,7 @@
     g.fillStyle = PAL.shadow; g.beginPath(); g.ellipse(x + 7, y + 15, 5, 2, 0, 0, Math.PI * 2); g.fill();
     rect(g, x + 6, y + 12, 2, 4, '#5d4632');
     for (let r = 0; r < 5; r++) rect(g, x + 6 - r, y + 2 + r * 2, 2 + 2 * r, 2, r % 2 ? '#2f5d3a' : '#3b6e45');
+    if (SNOW) for (let r = 0; r < 5; r++) rect(g, x + 6 - r, y + 2 + r * 2, 1 + r, 1, SNOWWHITE);
   }
   function palm(g, x, y) {
     if (CNSTYLE()) { rainTree(g, x - 2, y - 2, 0.75); return; } // camphor and plane trees line Chinese streets
@@ -286,19 +307,25 @@
   // into a CPU one has to be read back from the GPU each time).
   const smallCanvas = (w, h) => { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; return cv; };
   const cpu2d = cv => cv.getContext('2d', { willReadFrequently: true });
-  const memo = (key, make) => { let p = patterns.get(key); if (!p) patterns.set(key, p = make()); return p; };
+  // (Made with the drawing area switched off: rect() skips anything outside the area being painted, which
+  // would leave holes in a pattern first made while painting a tile away from the map's corner.)
+  const memo = (key, make) => {
+    let p = patterns.get(key);
+    if (!p) { const v = VIEW; VIEW = false; try { p = make(); } finally { VIEW = v; } patterns.set(key, p); }
+    return p;
+  };
   const grassPattern = g => memo('grass', () => makeGrass(g));
   const tiledPattern = (g, base, line, size, mortar) => memo(`t${base}${line}${size}${mortar}`, () => makeTiled(g, base, line, size, mortar));
   const noisePattern = (g, base, a, b, n) => memo(`n${base}${a}${b}${n}`, () => makeNoise(g, base, a, b, n));
   function makeGrass(g) {
-    const cv = smallCanvas(64, 64);
+    const cv = smallCanvas(64, 64), G = { base: PAL.grass, tuft: PAL.tuft };
     const t = cpu2d(cv), R = new LES.RNG('grass-tile');
-    rect(t, 0, 0, 64, 64, PAL.grass[0]);
+    rect(t, 0, 0, 64, 64, G.base[0]);
     for (let y = 0; y < 64; y += 2) for (let x = 0; x < 64; x += 2) {
       const v = R.next();
-      if (v < 0.18) rect(t, x, y, 2, 2, PAL.grass[1]); else if (v < 0.3) rect(t, x, y, 2, 2, PAL.grass[2]); else if (v < 0.33) rect(t, x, y, 2, 2, PAL.grass[3]);
+      if (v < 0.18) rect(t, x, y, 2, 2, G.base[1]); else if (v < 0.3) rect(t, x, y, 2, 2, G.base[2]); else if (v < 0.33) rect(t, x, y, 2, 2, G.base[3]);
     }
-    for (let i = 0; i < 26; i++) { const x = R.int(0, 62), y = R.int(0, 61); rect(t, x, y, 1, 2, PAL.tuft); rect(t, x + 1, y + 1, 1, 1, PAL.tuft); }
+    for (let i = 0; i < 26; i++) { const x = R.int(0, 62), y = R.int(0, 61); rect(t, x, y, 1, 2, G.tuft); rect(t, x + 1, y + 1, 1, 1, G.tuft); }
     return g.createPattern(cv, 'repeat');
   }
   function makeTiled(g, base, line, size, mortar) {
@@ -315,6 +342,30 @@
     rect(t, 0, 0, 48, 48, base);
     for (let i = 0; i < n; i++) rect(t, R.int(0, 47), R.int(0, 47), 1 + R.int(0, 1), 1, R.next() < 0.5 ? a : b);
     return g.createPattern(cv, 'repeat');
+  }
+
+  // Winter ground (review task 5): grass and lawns turn frosty through the winter months, or white under
+  // lying snow (texture kept); roads, paving, water and painted greens stay as they are. Runs once per
+  // painted tile area, after the buildings (gardens are painted with their houses) and before the trees.
+  function winterGround(g, x0, y0, w, h) {
+    if (!SNOW && SEASON !== 'winter') return;
+    const m = g.getTransform(), cw = g.canvas.width, ch = g.canvas.height;
+    const dx = Math.max(0, Math.floor(m.a * x0 + m.e)), dy = Math.max(0, Math.floor(m.d * y0 + m.f));
+    const dw = Math.min(cw, Math.ceil(m.a * (x0 + w) + m.e)) - dx, dh = Math.min(ch, Math.ceil(m.d * (y0 + h) + m.f)) - dy;
+    if (dw <= 0 || dh <= 0) return;
+    const img = g.getImageData(dx, dy, dw, dh), px = new Uint32Array(img.data.buffer); // one 32-bit word per pixel (ABGR)
+    const k = SNOW ? 0.82 : 0.3, tr = SNOW ? 240 : 205, tg = SNOW ? 244 : 216, tb = SNOW ? 248 : 214;
+    let last = -1, out = 0;
+    for (let i = 0; i < px.length; i++) {
+      const v = px[i];
+      if (v === last) { px[i] = out; continue; } // runs of the same colour (most of the ground)
+      const r = v & 255, gg = (v >>> 8) & 255, b = (v >>> 16) & 255;
+      last = v; out = v;
+      // grass-like greens only (not green doors, awnings or roofs)
+      if (gg > 110 && r > 70 && gg > r + 15 && b < r) out = ((v & 0xff000000) | (Math.round(b + (tb - b) * k) << 16) | (Math.round(gg + (tg - gg) * k) << 8) | Math.round(r + (tr - r) * k)) >>> 0;
+      px[i] = out;
+    }
+    g.putImageData(img, dx, dy);
   }
 
   // Ground surface of each district block, before buildings are drawn on it.
@@ -591,18 +642,26 @@
     addLight(x, y, 4, 4, 1, 'rgba(255,90,60,0.95)');
   }
   function shopUK(g, b, X, Y, W, H) {
-    const R = W - 1, brick = BRICK[b.id % BRICK.length], paint = SHOPFRONT.uk[b.id % SHOPFRONT.uk.length];
+    // Variants: 0 brick with two sash windows, 1 brick with a wide oriel window and the chimney on the left,
+    // 2 painted stucco without window boxes.
+    const v = variant(b, 3), R = W - 1, brick = v === 2 ? ['#ece4d2', '#e4ddd0', '#efe6cf'][b.id % 3] : BRICK[b.id % BRICK.length], paint = SHOPFRONT.uk[b.id % SHOPFRONT.uk.length];
     castShadow(g, X, Y, R, H, 3);
-    roof(g, X, Y, R, 7, PAL.roof.slate, 'gable');
-    rect(g, X + R - 15, Y - 4, 9, 6, shade(brick, 0.9)); rect(g, X + R - 15, Y - 4, 9, 1, '#cfc6b0'); // chimney stack and pots
-    rect(g, X + R - 14, Y - 7, 2, 3, '#b5614a'); rect(g, X + R - 10, Y - 7, 2, 3, '#b5614a');
+    roof(g, X, Y, R, 7, v === 2 ? PAL.roof.slate : shade(PAL.roof.slate, v === 1 ? 0.9 : 1), 'gable');
+    const cx = v === 1 ? X + 6 : X + R - 15;
+    rect(g, cx, Y - 4, 9, 6, shade(v === 2 ? '#b5614a' : brick, 0.9)); rect(g, cx, Y - 4, 9, 1, '#cfc6b0'); // chimney stack and pots
+    rect(g, cx + 1, Y - 7, 2, 3, '#b5614a'); rect(g, cx + 5, Y - 7, 2, 3, '#b5614a');
     facade(g, X, Y + 6, R, 16, brick);
-    for (let y = Y + 10; y < Y + 21; y += 3) rect(g, X + 1, y, R - 2, 1, shade(brick, 0.92));
-    for (const wx of [X + 8, X + 41]) { // sash windows with stone lintels and a window box
+    if (v !== 2) for (let y = Y + 10; y < Y + 21; y += 3) rect(g, X + 1, y, R - 2, 1, shade(brick, 0.92));
+    if (v === 1) { // a wide oriel window on corbels
+      rect(g, X + 18, Y + 8, 26, 2, '#e8e1d0'); rect(g, X + 19, Y + 10, 24, 10, '#f7f4ec'); rect(g, X + 20, Y + 11, 22, 8, PAL.glass);
+      for (const mx of [X + 27, X + 34]) rect(g, mx, Y + 11, 1, 8, '#f7f4ec');
+      rect(g, X + 20, Y + 20, 22, 1, shade(brick, 0.7)); addLight(X + 20, Y + 11, 22, 8, 0.35);
+    }
+    if (v !== 1) for (const wx of [X + 8, X + 41]) { // sash windows with stone lintels and a window box
       rect(g, wx - 1, Y + 8, 16, 2, '#e8e1d0');
       rect(g, wx, Y + 10, 14, 9, '#f7f4ec'); rect(g, wx + 1, Y + 11, 12, 7, PAL.glass); rect(g, wx + 1, Y + 14, 12, 1, '#f7f4ec'); rect(g, wx + 6, Y + 11, 1, 7, '#f7f4ec');
       addLight(wx + 1, Y + 11, 12, 7, 0.35);
-      rect(g, wx, Y + 19, 14, 2, '#5b3a29'); for (let k = 0; k < 5; k++) rect(g, wx + 1 + k * 3, Y + 18, 2, 1, ['#f28482', '#f6d55c', '#ffffff'][(b.id + k) % 3]);
+      if (v === 0) { rect(g, wx, Y + 19, 14, 2, '#5b3a29'); for (let k = 0; k < 5; k++) rect(g, wx + 1 + k * 3, Y + 18, 2, 1, ['#f28482', '#f6d55c', '#ffffff'][(b.id + k) % 3]); }
     }
     rect(g, X, Y + 22, R, H - 22, paint); // the painted shopfront: fascia, pilasters, display window, recessed door
     rect(g, X, Y + 22, R, 1, shade(paint, 1.5)); rect(g, X, Y + 34, R, 1, shade(paint, 0.6));
@@ -615,14 +674,20 @@
     rect(g, X + 47, Y + 36, 12, 2, '#9fd3e0'); // fanlight
   }
   function shopUS(g, b, X, Y, W, H) {
-    const R = W - 1, wall = US_BRICK[b.id % US_BRICK.length], trim = SHOPFRONT.us[b.id % SHOPFRONT.us.length];
+    // Variants: 0 stepped false front, 1 flat cornice with dentils, 2 a tall name panel and arched windows.
+    const v = variant(b, 3), R = W - 1, wall = US_BRICK[b.id % US_BRICK.length], trim = SHOPFRONT.us[b.id % SHOPFRONT.us.length];
     castShadow(g, X, Y, R, H, 3);
-    rect(g, X + 18, Y - 3, R - 36, 5, wall); rect(g, X + 18, Y - 3, R - 36, 1, '#e8e1d0'); // stepped false-front parapet
+    if (v === 0) { rect(g, X + 18, Y - 3, R - 36, 5, wall); rect(g, X + 18, Y - 3, R - 36, 1, '#e8e1d0'); } // stepped false-front parapet
+    else if (v === 2) { rect(g, X + 10, Y - 6, R - 20, 8, wall); rect(g, X + 10, Y - 6, R - 20, 1, '#e8e1d0'); rect(g, X + 14, Y - 4, R - 28, 4, shade(wall, 0.8)); }
     rect(g, X, Y + 1, R, 6, '#6b6f76'); rect(g, X + 2, Y + 2, R - 4, 4, '#5d6168'); // flat roof behind it
     rect(g, X + 4, Y + 2, 6, 4, '#c9ced3'); rect(g, X + 5, Y + 3, 4, 2, '#8e969e'); // rooftop AC
     rect(g, X, Y + 6, R, 2, '#e8e1d0'); rect(g, X, Y + 8, R, 1, shade(wall, 0.6)); // cornice
+    if (v === 1) for (let dx = 1; dx < R - 1; dx += 3) rect(g, X + dx, Y + 8, 1, 1, '#e8e1d0'); // dentils
     facade(g, X, Y + 8, R, 14, wall);
-    for (const wx of [X + 6, X + 26, X + 46]) { rect(g, wx - 1, Y + 10, 13, 10, '#f4f1e8'); rect(g, wx, Y + 11, 11, 8, PAL.glass); rect(g, wx, Y + 14, 11, 1, '#f4f1e8'); addLight(wx, Y + 11, 11, 8, 0.35); }
+    for (const wx of [X + 6, X + 26, X + 46]) {
+      rect(g, wx - 1, Y + 10, 13, 10, '#f4f1e8'); rect(g, wx, Y + 11, 11, 8, PAL.glass); rect(g, wx, Y + 14, 11, 1, '#f4f1e8'); addLight(wx, Y + 11, 11, 8, 0.35);
+      if (v === 2) { rect(g, wx, Y + 11, 2, 1, wall); rect(g, wx + 9, Y + 11, 2, 1, wall); rect(g, wx, Y + 12, 1, 1, wall); rect(g, wx + 10, Y + 12, 1, 1, wall); } // arched tops
+    }
     rect(g, X, Y + 22, R, 13, shade(trim, 0.55)); rect(g, X, Y + 22, R, 1, shade(trim, 1.2)); // sign band
     awning(g, X + 1, Y + 35, R - 2, trim, '#f4f1e8');
     rect(g, X, Y + 40, R, H - 40, '#8d99a6'); // aluminium storefront with plate glass and a door in the middle
@@ -632,11 +697,15 @@
     rect(g, X + 27, Y + 41, 10, 7, '#5c6670'); rect(g, X + 28, Y + 42, 8, 5, '#9fd3e0'); rect(g, X + 34, Y + 44, 1, 1, '#d9d9d9');
   }
   function shopCN(g, b, X, Y, W, H) {
-    const R = W - 1, tile = TILES[b.id % TILES.length];
+    // Variants: 0 flat roof with a water tank and solar heater, 1 a grey tiled pitched roof, 2 flat roof with potted plants on the sill.
+    const v = variant(b, 3), R = W - 1, tile = TILES[b.id % TILES.length];
     castShadow(g, X, Y, R, H, 3);
-    roof(g, X, Y, R, 7, '#b7b9b5', 'flat');
-    rect(g, X + 6, Y + 1, 7, 4, '#e8e4da'); rect(g, X + 6, Y + 1, 7, 1, '#ffffff'); // water tank
-    for (let k = 0; k < 4; k++) rect(g, X + R - 20 + k * 3, Y + 1, 2, 5, '#2b4a7a'); // solar water heater
+    if (v === 1) roof(g, X, Y, R, 7, '#6c7378', 'gable');
+    else {
+      roof(g, X, Y, R, 7, '#b7b9b5', 'flat');
+      rect(g, X + 6, Y + 1, 7, 4, '#e8e4da'); rect(g, X + 6, Y + 1, 7, 1, '#ffffff'); // water tank
+      if (v === 0) for (let k = 0; k < 4; k++) rect(g, X + R - 20 + k * 3, Y + 1, 2, 5, '#2b4a7a'); // solar water heater
+    }
     facade(g, X, Y + 6, R, 16, tile);
     for (let y = Y + 9; y < Y + 21; y += 4) rect(g, X + 1, y, R - 2, 1, shade(tile, 0.94)); // tile courses
     for (const wx of [X + 5, X + 42]) { // windows behind steel security cages
@@ -646,6 +715,7 @@
     }
     rect(g, X + 25, Y + 11, 8, 6, '#e9ecef'); rect(g, X + 26, Y + 12, 6, 3, '#adb5bd'); // AC unit
     rect(g, X + 23, Y + 9, 15, 1, '#6c757d'); for (let k = 0; k < 4; k++) rect(g, X + 34 + (k % 2) * 2, Y + 10, 2, 3 + k % 2, ['#e63946', '#3a86ff', '#ffffff', '#f2c14e'][(b.id + k) % 4]); // laundry pole
+    if (v === 2) for (const wx of [X + 5, X + 42]) for (let k = 0; k < 4; k++) { rect(g, wx + 1 + k * 4, Y + 17, 3, 2, '#9c6644'); rect(g, wx + 1 + k * 4, Y + 15, 3, 2, k % 2 ? '#4f8a41' : '#6fb342'); } // potted plants
     rect(g, X, Y + 22, R, 12, '#b3261e'); rect(g, X, Y + 22, R, 1, '#f2c14e'); rect(g, X, Y + 33, R, 1, '#7a1712'); // red signboard
     rect(g, X, Y + 34, R, H - 34, shade(tile, 0.85)); // shopfront with a roll shutter half up
     rect(g, X + 3, Y + 35, R - 6, H - 37, '#5b4a3f'); rect(g, X + 3, Y + 35, R - 6, 3, '#9aa0a6'); rect(g, X + 3, Y + 37, R - 6, 1, '#7d838a');
@@ -1032,9 +1102,18 @@
         break;
       }
       case 'office': case 'techhub': {
-        const tech = b.kind === 'techhub';
-        const s = building(g, X + 2, Y, W - 4, H - 4, { wall: tech ? '#2e5f8a' : '#6c8aa3', roof: tech ? '#1d3b57' : '#3e4e5c', wallH: H - 22, details: tech ? 'solar' : 'mixed', seed: b.id });
-        windows(g, X + 5, s.wallY + 4, W - 10, s.wallH - 20, 4, 14, { col: tech ? '#7fd8f0' : '#a8c7dc', wide: 0.75, tall: 0.65 });
+        // Office variants: 0 blue-grey tower, 1 glass curtain wall with a dark crown, 2 stone-clad with punched windows and a spire.
+        const tech = b.kind === 'techhub', v = tech ? 0 : variant(b, 3);
+        const OW = ['#6c8aa3', '#4a7a96', '#cbb89a'][v], OR = ['#3e4e5c', '#2e4a5c', '#6d625a'][v];
+        if (v === 2) { rect(g, X + W / 2 - 1, Y - 14, 2, 14, '#9aa0a6'); rect(g, X + W / 2 - 3, Y - 4, 6, 4, '#b5a383'); }
+        const s = building(g, X + 2, Y, W - 4, H - 4, { wall: tech ? '#2e5f8a' : OW, roof: tech ? '#1d3b57' : OR, wallH: H - 22, details: tech ? 'solar' : ['mixed', 'ac', 'tanks'][v], seed: b.id });
+        if (v === 1) {
+          windows(g, X + 4, s.wallY + 3, W - 8, s.wallH - 18, 6, 16, { col: '#9fd8ef', wide: 0.92, tall: 0.82 });
+          rect(g, X + 2, s.wallY, W - 4, 3, '#1f3442');
+        } else if (v === 2) {
+          windows(g, X + 6, s.wallY + 5, W - 12, s.wallH - 22, 3, 12, { col: '#a8c7dc', wide: 0.5, tall: 0.6, sill: '#b5a383' });
+          for (let yy = s.wallY + 14; yy < Y + H - 20; yy += 14) rect(g, X + 2, yy, W - 4, 1, '#b5a383');
+        } else windows(g, X + 5, s.wallY + 4, W - 10, s.wallH - 20, 4, 14, { col: tech ? '#7fd8f0' : '#a8c7dc', wide: 0.75, tall: 0.65 });
         if (tech) for (let yy = s.wallY + 10; yy < Y + H - 20; yy += 28) rect(g, X + 2, yy, W - 4, 2, '#3ec7b5');
         rect(g, X + W / 2 - 1, Y - 8, 2, 8, '#ccc');
         door(g, X + W / 2, Y + H - 4, 14, 11, '#203040');
@@ -1085,11 +1164,22 @@
         if (UKSTYLE()) { shopUK(g, b, X, Y, W, H); break; }
         if (USSTYLE()) { shopUS(g, b, X, Y, W, H); break; }
         if (CNSTYLE()) { shopCN(g, b, X, Y, W, H); break; }
-        const col = SHOP_COLOURS[b.id % SHOP_COLOURS.length];
+        // Variants: 0 terracotta gable and three windows, 1 Straits style (ornate parapet, louvred shutters),
+        // 2 zinc roof with a balcony rail.
+        const col = SHOP_COLOURS[b.id % SHOP_COLOURS.length], v = variant(b, 3);
         castShadow(g, X, Y, W - 1, H, 3);
-        roof(g, X, Y, W - 1, 7, PAL.roof.terracotta, 'gable');
+        if (v === 1) {
+          roof(g, X, Y, W - 1, 7, '#d9cdb8', 'flat');
+          rect(g, X + W / 2 - 11, Y - 4, 22, 5, shade(col, 1.1)); rect(g, X + W / 2 - 11, Y - 4, 22, 1, '#ffffff'); rect(g, X + W / 2 - 3, Y - 6, 6, 2, shade(col, 1.1)); // pediment
+        } else roof(g, X, Y, W - 1, 7, v === 2 ? '#9aa3ab' : PAL.roof.terracotta, v === 2 ? 'shed' : 'gable');
         facade(g, X, Y + 6, W - 1, 22, col);
-        for (const wx of [X + 6, X + 25, X + 44]) { rect(g, wx, Y + 10, 12, 9, '#ffffff'); rect(g, wx + 1, Y + 11, 10, 7, PAL.glass); rect(g, wx + 6, Y + 11, 1, 7, '#ffffff'); }
+        if (v === 1) for (const wx of [X + 10, X + 38]) { // tall windows with green louvred shutters
+          rect(g, wx, Y + 9, 15, 13, '#ffffff'); rect(g, wx + 1, Y + 10, 13, 11, '#2d6a4f');
+          for (let ly = Y + 11; ly < Y + 21; ly += 2) rect(g, wx + 1, ly, 13, 1, '#3f8a63');
+          rect(g, wx + 7, Y + 10, 1, 11, '#ffffff');
+        }
+        else for (const wx of [X + 6, X + 25, X + 44]) { rect(g, wx, Y + 10, 12, 9, v === 2 ? '#3d5a80' : '#ffffff'); rect(g, wx + 1, Y + 11, 10, 7, PAL.glass); rect(g, wx + 6, Y + 11, 1, 7, v === 2 ? '#3d5a80' : '#ffffff'); }
+        if (v === 2) { rect(g, X + 2, Y + 20, W - 5, 1, '#3a3a3a'); for (let bx = X + 3; bx < X + W - 3; bx += 3) rect(g, bx, Y + 21, 1, 4, '#3a3a3a'); rect(g, X + 2, Y + 25, W - 5, 1, '#3a3a3a'); } // balcony rail
         addLight(X + 3, Y + 31, W - 7, 3, 0.5);
         rect(g, X, Y + 28, W - 1, H - 28, '#5b4a3f'); // five-foot way
         rect(g, X + 2, Y + 31, W - 5, H - 33, '#3a2f28');
@@ -1161,15 +1251,32 @@
         sign(g, SG('GUDANG'), X + W / 2, Y + 10, '#4a5861');
         break;
       }
-      case 'construction': {
-        rect(g, X, Y, W, H, '#c9ad7f');
+      case 'construction': { // the builder's yard: its project goes foundations -> frame -> nearly finished (siteStage)
+        const stage = siteStage(b);
+        rect(g, X, Y, W, H, SNOW ? '#e6e9ee' : '#c9ad7f');
         for (let i = 0; i < 40; i++) rect(g, X + R.int(0, W - 3), Y + R.int(0, H - 3), 3, 2, R.next() < 0.5 ? '#b39465' : '#d8bf92');
-        castShadow(g, X + 40, Y + 6, 80, 50, 5);
-        rect(g, X + 40, Y + 6, 80, 50, '#a7adb1');
-        for (let i = 0; i < 5; i++) rect(g, X + 40 + i * 20, Y + 6, 3, 50, '#7a8086');
-        for (let i = 0; i < 3; i++) rect(g, X + 40, Y + 6 + i * 20, 80, 3, '#7a8086');
-        for (let i = 0; i < 6; i++) rect(g, X + 44 + i * 12, Y + 10, 1, 46, '#d9b44a'); // scaffold poles
-        rect(g, X + 150, Y - 30, 5, 88, '#f4c430'); rect(g, X + 110, Y - 30, 100, 4, '#f4c430'); rect(g, X + 130, Y - 26, 1, 30, '#333'); rect(g, X + 126, Y + 4, 9, 6, PAL.woodLight);
+        if (stage === 0) { // foundations: an excavated pit, rebar mats, a poured slab, an excavator and a spoil heap
+          rect(g, X + 40, Y + 14, 80, 40, '#8a6f4a'); rect(g, X + 40, Y + 14, 80, 2, '#6d5636');
+          rect(g, X + 42, Y + 30, 36, 22, '#bfc3c6'); rect(g, X + 42, Y + 30, 36, 1, '#e1e4e6'); // poured slab
+          for (let x = X + 80; x < X + 118; x += 4) rect(g, x, Y + 18, 1, 34, '#5a3d24');
+          for (let y = Y + 18; y < Y + 52; y += 4) rect(g, X + 80, y, 38, 1, '#5a3d24'); // rebar
+          rect(g, X + 132, Y + 30, 22, 12, '#f4c430'); rect(g, X + 136, Y + 24, 10, 7, '#f4c430'); rect(g, X + 138, Y + 26, 6, 3, '#9fd3e0'); // excavator
+          rect(g, X + 130, Y + 42, 26, 5, '#2b2b2b'); for (let i = 0; i < 6; i++) rect(g, X + 154 + i * 3, Y + 22 - i * 2, 3, 3, '#e0b12a'); rect(g, X + 170, Y + 12, 6, 5, '#e0b12a');
+          g.fillStyle = '#9c7a4f'; g.beginPath(); g.ellipse(X + 192, Y + 42, 20, 11, 0, 0, Math.PI * 2); g.fill(); // spoil heap
+        } else if (stage === 1) { // the frame: slabs, columns and scaffolding
+          castShadow(g, X + 40, Y + 6, 80, 50, 5);
+          rect(g, X + 40, Y + 6, 80, 50, '#a7adb1');
+          for (let i = 0; i < 5; i++) rect(g, X + 40 + i * 20, Y + 6, 3, 50, '#7a8086');
+          for (let i = 0; i < 3; i++) rect(g, X + 40, Y + 6 + i * 20, 80, 3, '#7a8086');
+          for (let i = 0; i < 6; i++) rect(g, X + 44 + i * 12, Y + 10, 1, 46, '#d9b44a'); // scaffold poles
+        } else { // nearly finished: walls and windows in, scaffolding on one side
+          const s = building(g, X + 40, Y - 6, 80, 62, { wall: '#e6dccb', roof: '#8e969e', wallH: 44, details: 'ac', seed: b.id });
+          windows(g, X + 44, s.wallY + 4, 72, s.wallH - 10, 6, 3, { col: PAL.glass, wide: 0.6, tall: 0.6, lit: 0 });
+          for (let i = 0; i < 3; i++) rect(g, X + 98 + i * 8, Y - 2, 1, 56, '#d9b44a');
+          for (let yy = Y + 4; yy < Y + 54; yy += 12) rect(g, X + 96, yy, 24, 1, '#d9b44a');
+          rect(g, X + 97, Y, 22, 52, 'rgba(46,125,79,0.25)'); // safety netting
+        }
+        if (stage > 0) { rect(g, X + 150, Y - 30, 5, 88, '#f4c430'); rect(g, X + 110, Y - 30, 100, 4, '#f4c430'); rect(g, X + 130, Y - 26, 1, 30, '#333'); rect(g, X + 126, Y + 4, 9, 6, PAL.woodLight); }
         for (let i = 0; i < W; i += 10) rect(g, X + i, Y + H - 2, 6, 2, i % 20 ? '#f4c430' : '#222'); // hoarding
         sign(g, SG('TAPAK BINAAN'), X + 30, Y + H - 14, '#7a5a1d');
         break;
@@ -1655,5 +1762,9 @@
 
   // The season trees show; returns true when it changed (the renderer then repaints the map).
   const setSeason = s => { if (s === SEASON) return false; SEASON = s; return true; };
-  LES.Art = { memorialMarker, shopSignBox, setSeason, beginLights, takeLights, PAL, rect, shade, sign, building, roof, facade, windows, door, awning, castShadow, rainTree, palm, banana, shrub, drawGround, drawBuilding, drawGreenery, setView, vis, prng };
+  // Lying snow (set by the renderer from the weather); true when it changed, so the map is painted again.
+  const setSnow = on => { on = !!on; if (on === SNOW) return false; SNOW = on; return true; };
+  // The date, for the builder's yard stage (only the yards' tiles are painted again when a stage moves on).
+  const setDay = d => { if (d === DAY) return false; DAY = d; return true; };
+  LES.Art = { memorialMarker, shopSignBox, setSeason, setSnow, setDay, siteStage, variant, winterGround, beginLights, takeLights, PAL, rect, shade, sign, building, roof, facade, windows, door, awning, castShadow, rainTree, palm, banana, shrub, drawGround, drawBuilding, drawGreenery, setView, vis, prng };
 })(globalThis.LES = globalThis.LES || {});

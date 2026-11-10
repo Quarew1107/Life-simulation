@@ -56,6 +56,42 @@
 
 
 
+  // ---- Shop fronts drawn every frame (they follow who rents the shop) ----
+  // How an empty shop looks, fixed by its id: 'banner' (about one in three), 'shutters', 'posters' or 'clean'.
+  const VACANT_LOOKS = ['shutters', 'posters', 'clean'];
+  const vacantLook = id => { const h = hash(id * 2654435761 + 11); return h % 3 === 0 ? 'banner' : VACANT_LOOKS[(h >>> 8) % 3]; };
+  LES.vacantLook = vacantLook;
+  // The shop window / doorway area of each country's shop lot (art.js), relative to the lot.
+  const FRONT = { my: (W, H) => [2, 31, W - 5, H - 33], uk: (W, H) => [3, 35, W - 7, H - 36], us: (W, H) => [2, 40, W - 5, H - 41], cn: (W, H) => [3, 35, W - 7, H - 37] };
+  const POSTERS = ['#f4f1e8', '#f6d55c', '#f28482', '#a8dadc'];
+  function drawVacant(g, b, X, Y, W, H, style, look) {
+    const [fx, fy, fw, fh] = (FRONT[style] || FRONT.my)(W, H), x = X + fx, y = Y + fy, h = hash(b.id * 31 + 7);
+    if (look === 'clean') { // shutters up on a swept, empty room: dark inside, a bare floor
+      rect(g, x, y, fw, fh, '#2a2724'); rect(g, x, y + fh - 3, fw, 3, '#6b5a4c'); rect(g, x + 2, y + 2, fw - 4, 1, 'rgba(255,255,255,0.12)');
+      return;
+    }
+    rect(g, x, y, fw, fh, '#8f969c'); // roller shutter, pulled down
+    for (let yy = y + 2; yy < y + fh; yy += 3) rect(g, x, yy, fw, 1, '#737a80');
+    rect(g, x + fw / 2 - 1, y + fh - 3, 3, 2, '#c9a227'); // padlock
+    if (look === 'posters') {
+      for (let k = 0; k < 3; k++) {
+        const px = x + 3 + ((h >>> (k * 5)) % Math.max(1, fw - 10)), py = y + 1 + ((h >>> (k * 7 + 3)) % Math.max(1, fh - 8));
+        rect(g, px, py, 6, 7, POSTERS[(h + k) % POSTERS.length]); rect(g, px + 1, py + 2, 4, 1, 'rgba(0,0,0,0.35)'); rect(g, px + 1, py + 4, 3, 1, 'rgba(0,0,0,0.25)');
+      }
+      for (let k = 0; k < 8; k++) rect(g, x + 4 + k * 3, y + fh - 6 + (k % 3), 2, 1, ['#3a86ff', '#e63946'][h % 2]); // a scrawl of graffiti
+    }
+  }
+  // An awning in the business's colour: Malaysian five-foot ways and US storefronts; UK cafés and restaurants.
+  function shopAwning(g, X, Y, W, style, type, col) {
+    let ay, aw = W - 2;
+    if (style === 'my') ay = Y + 27;
+    else if (style === 'us') ay = Y + 35;
+    else if (style === 'uk' && type === 'restaurant') { ay = Y + 35; aw = 44; }
+    else return;
+    for (let x = 0; x < aw; x += 4) rect(g, X + 1 + x, ay, Math.min(4, aw - x), 4, (x / 4) % 2 ? '#f4f1e8' : col);
+    rect(g, X + 1, ay + 4, aw, 1, 'rgba(0,0,0,0.25)');
+  }
+
   // Building painters, ground and trees live in art.js (LES.Art).
 
   class Renderer {
@@ -331,7 +367,10 @@
     frame(t, fast, now) {
       const g = this.ctx, w = this.w;
       if (!w || !this.tiles) return;
-      if (LES.Art.setSeason(LES.Ambience.season(w.lastDay < 0 ? 0 : w.lastDay))) { this.tiles.reset(); this.buildStatic(); this.anim.clear(); } // trees change with the seasons (UK)
+      const today = w.lastDay < 0 ? 0 : w.lastDay;
+      const seasonMoved = LES.Art.setSeason(LES.Ambience.season(today)), snowMoved = LES.Art.setSnow(LES.Ambience.snowCover(today));
+      if (seasonMoved || snowMoved) { LES.Art.setDay(today); this.tiles.reset(); this.buildStatic(); this.anim.clear(); } // trees and ground change with the seasons and lying snow
+      else if (LES.Art.setDay(today)) this.tiles.refresh(); // a builder's yard may have reached its next stage
       else if (this.bgVersion !== w.townVersion) { this.buildStatic(); this.anim.clear(); }
       if (this.follow && this.selectedId >= 0) {
         const p = w.people[this.selectedId];
@@ -748,13 +787,19 @@
       // Malaysia: the sign covers the shophouse's upper floor; elsewhere it is a fascia above the shop window.
       const box = LES.Art.shopSignBox(), signs = LES.Countries.pack.town.signs, vacant = (signs && signs.SEWA) || 'SEWA';
       const VACANT = { uk: ['#ffffff', '#c1121f'], us: ['#c1121f', '#ffffff'], cn: ['#d62828', '#ffd166'] }[box.style];
+      const vx0 = this.cx - 80, vy0 = this.cy - 60, vx1 = this.cx + this.vw / this.z + 20, vy1 = this.cy + this.vh / this.z + 20, detail = this.z >= 0.8;
       for (const id of this.town.shoplots) {
         const b = this.town.buildings[id], X = b.x * T, Y = b.y * T;
+        if (X > vx1 || Y > vy1 || X + b.w * T < vx0 || Y + b.h * T < vy0) continue; // off screen
         const bizId = w.shoplotOwner[id];
         if (bizId === undefined) {
+          // Empty shops (review task 5): a rent banner on about one in three; the others have their shutters
+          // down, old posters on the shutters or window, or a clean empty front. Fixed per shop by its id.
+          const look = vacantLook(id);
+          if (look !== 'banner') { if (detail) drawVacant(g, b, X, Y, b.w * T, b.h * T, box.style, look); continue; }
           if (!VACANT) {
             rect(g, X + 14, Y + 12, 36, 10, '#e8e4da');
-            g.font = `8px ${FONT}`; g.fillStyle = '#7a2e1e'; g.fillText('SEWA', X + 20, Y + 13);
+            g.font = `8px ${FONT}`; g.fillStyle = '#7a2e1e'; g.fillText(vacant, X + 20, Y + 13);
             continue;
           }
           g.font = `8px ${FONT}`;
@@ -766,6 +811,7 @@
         }
         const biz = w.biz[bizId];
         const col = biz.type === 'restaurant' ? '#b23a48' : biz.type === 'workshop' ? '#3d5a80' : biz.type === 'retail' ? '#2a9d8f' : '#6a4c93';
+        if (detail) shopAwning(g, X, Y, b.w * T, box.style, biz.type, col);
         if (box.style !== 'my') { // fascia board: UK gold-lined with cream letters, China gold-lined with yellow, US plain
           const edge = box.style === 'us' ? 'rgba(255,255,255,0.4)' : '#c9a227';
           rect(g, X + 2, Y + box.y, 60, box.h, edge); rect(g, X + 3, Y + box.y + 1, 58, box.h - 2, col);

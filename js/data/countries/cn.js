@@ -578,7 +578,7 @@
       style: 'cn',
       latitude: 30.5,
       seasons: true,
-      weather: { rain: [0.3, 0.33, 0.42, 0.45, 0.45, 0.5, 0.42, 0.35, 0.3, 0.3, 0.28, 0.25], heavy: 0.18, snow: { months: [0, 1, 11], chance: 0.04 } },
+      weather: { rain: [0.3, 0.33, 0.42, 0.45, 0.45, 0.5, 0.42, 0.35, 0.3, 0.3, 0.28, 0.25], heavy: 0.18, snow: { months: [0, 1, 11], chance: 0.04, spells: [0, 1], days: [1, 2], lying: 1 } },
       hazeSky: { id: 'haze', name: 'Smog' },
       outfits: [['raya', { rel: 'islam' }, 'kurta', 'kurung'], ['christmas', { rel: 'christianity' }, 'office', 'office'], ['cny', {}, 'cny', 'cny'], ['nationalday', {}, 'office', 'office']],
       decor: { cny: 'lanterns', midautumn: 'lanterns', nationalday: 'flags', raya: 'homeLights', christmas: 'mallTree' },

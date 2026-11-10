@@ -649,7 +649,7 @@
       style: 'uk',
       latitude: 52.5, summerTime: [88, 300],
       seasons: true,
-      weather: { rain: [0.5, 0.42, 0.42, 0.38, 0.36, 0.34, 0.34, 0.38, 0.38, 0.45, 0.5, 0.5], heavy: 0.12, snow: { months: [0, 1, 11], chance: 0.05 } },
+      weather: { rain: [0.5, 0.42, 0.42, 0.38, 0.36, 0.34, 0.34, 0.38, 0.38, 0.45, 0.5, 0.5], heavy: 0.12, snow: { months: [0, 1, 11], chance: 0.05, spells: [1, 2], days: [1, 3], lying: 2 } },
       hazeSky: { id: 'heat', name: 'Heatwave' },
       outfits: [['raya', { rel: 'islam' }, 'kurta', 'kurung'], ['deepavali', { rel: 'hinduism' }, 'kurta', 'saree'], ['christmas', { rel: 'christianity' }, 'office', 'office'], ['easter', { rel: 'christianity' }, 'office', 'office']],
       decor: { raya: 'homeLights', deepavali: 'diyas', christmas: 'mallTree' },
