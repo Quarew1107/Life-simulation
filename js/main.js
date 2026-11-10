@@ -443,8 +443,10 @@
       if (drag && !drag.moved) {
         const rect = cv.getBoundingClientRect();
         const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
-        const id = r.pick(sx, sy);
-        if (id >= 0) app.select(id, false);
+        const badge = r.pickBadge(sx, sy); // '+N' over a crowded place: show the place and who is there
+        const id = badge >= 0 ? -1 : r.pick(sx, sy);
+        if (badge >= 0) UI.showBuilding(badge);
+        else if (id >= 0) app.select(id, false);
         else {
           const bid = r.pickBuilding(sx, sy);
           if (bid >= 0) {

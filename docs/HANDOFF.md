@@ -25,7 +25,7 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
 **To do (keep this list current; the same list is in `docs/ROADMAP.md`):**
 
 **Review follow-up (Nov 2026): 6 tasks from a UI/art/bug review, done one at a time.** Tasks 1 (pop-ups and
-small screens), 2 (side panel) and 3 (Report and Compare) are done (ticked below). Tasks 4-6 are open. Rules for each: UI and art tasks
+small screens), 2 (side panel), 3 (Report and Compare) and 4 (people art) are done (ticked below). Tasks 5-6 are open. Rules for each: UI and art tasks
 must not change simulation results (no `js/sim/` edits, never use the world RNG in render code; use hashes of
 ids/positions for variety); keep the full suite passing (`python tools/edge.py tests.html "await
 LES_TESTS.runAll(), document.getElementById('out').textContent" 1800`, 343/343 at 1a84ec6); keep a 2,500-founder
@@ -57,15 +57,26 @@ town no slower to draw (`docs/PERFORMANCE.md`); tick the item here when done.
   starts or ends. Task 6: rebase `c543efa`, drop the `CR.probe` debug hook, retune to +-30% of target, **tune
   Malaysia under rev 8 too** (254 vs 170), rev 8 default for new worlds. Delete the empty/finished worktrees in
   `.claude/worktrees/` once their work is merged.
-- [ ] **Task 4: People and crowd art** (`js/render/renderer.js`, `js/render/sprites.js`).
-  - Bug: uniforms are only drawn for people standing still (`renderer.js` ~line 417), but building-site jobs are
-    animated as walking, so construction workers, electricians and day labourers show street clothes. Show work
-    clothes while working; hi-vis vests for day labourers.
-  - Crowds: ~60 people stack on one building site in one blob. Spread them over the plot, draw at most ~15 per
-    spot with a "+N" marker; selecting people must still work.
-  - Variety: a few body builds, walking sticks for 75+, children near a parent / in small groups.
-  - Activity poses from what people are already doing: sitting at food stalls, benches/parks, queuing at shops.
-  - Zoomed out: slightly larger/clearer dots, light cosmetic road traffic scaled to how many people are out.
+- [x] **Task 4: People and crowd art** (Nov 2026, drawing only; `js/render/renderer.js`, `sprites.js`, `ambience.js`,
+      `js/main.js`). No simulation code or results changed; variety comes from hashes of ids, never the world RNG.
+  - Uniforms: `Renderer.activityAt(it, tm)` treats someone moving about their site (`it.area`, set by `wander`) as
+    at their place, so `outfitOf` gives construction workers and electricians their hard hats while they work.
+    Day labourers (GIG labour) wear the new `hivis` outfit (vest, reflective band, hard hat).
+  - Crowds: on building sites (and site jobs elsewhere, `SITE_JOBS`) each worker has a fixed 12x10 px patch of the
+    plot. `Renderer.arrange` (on-screen people only, sprite zoom only): at most `LES.CROWD_CAP` = 15 per place (the
+    selected person always shown; the same ones every frame, by hash), the rest in a teal "+N" badge; clicking it
+    (`pickBadge`, main.js) selects the building (Place tab lists "Here right now").
+  - Variety: builds 0 slim / 1 average / 2 broad (`Sprites.person(..., build, pose)`, by id hash); a walking stick
+    at 75+; children at the same place as a parent stand next to them.
+  - Poses: diners at a mamak/hawker take the seats beside its tables (`seatsOf`), others count as inside; a third
+    of park visitors sit on benches; some clinic/mall/cinema/bowling visitors and job seekers queue at the door
+    in one line of up to 8 (the rest inside). No activity bubbles for seated or queuing people.
+  - Zoomed out: 4 px dots (were 3), light cosmetic traffic on existing road pieces (up to 140 cars, one per 8
+    people on the move; routes worked out once per town); queues are not shown as dots.
+  - Speed (2,500 founders, steady frames, alternating old/new): z 0.9 1.15 -> 1.22 ms, z 2.5 1.30 -> 1.24 ms,
+    z 4 1.17 -> 1.23 ms, within run-to-run noise. Needed: one fixed object shape for people on the list (the
+    spread `{ p, ...pos }` with many shapes cost ~20%) and a cached look key in `Sprites.person`.
+  - Tests: `peopleArtTests` (12; tests.html now loads renderer.js). Full suite 364/364.
 - [ ] **Task 5: Buildings, site stages and winter** (`js/render/art.js`, `js/render/tiles.js`).
   - Empty shops: rows of identical red "FOR RENT" banners; vary them (shutters, faded posters, clean empty
     fronts), banner on only some.

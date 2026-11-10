@@ -3,7 +3,7 @@
 // top-left) and a thin outline. Sprites are cached per look / age group / view / frame.
 (function (LES) {
   'use strict';
-  const cache = new Map();
+  const cache = new Map(), lookKeys = new WeakMap();
 
   // Pattern characters map to the person's colours:
   // h hair, s skin, e eye, t shirt, a arm (shirt sleeve), k hand (skin), p pants, f shoes, c headscarf,
@@ -62,6 +62,11 @@
     side: ['.hhhh.', 'hhhhhh', 'hhssss', 'hsssse', '.ssss.', '.tttt.', '.ttat.', '.p..p.', 'ff..ff'],
   };
   const BABY = ['.hh.', 'ssss', 'eses', 'tttt', 'tttt'];
+  // Body builds for adults (review task 4), picked by a fixed rule from the person's id: 0 slim, 1 average, 2 broad.
+  const BUILD_BODY = { 0: ['..tttt..', '.atttta.', '.atttta.', '.k.tt.k.'], 2: ['tttttttt', 'atttttta', 'atttttta', 'kttttttk'] };
+  const BUILD_SIDE = { 2: ['.ttttt..', '.ttttt..', '.tttat..', '.tttkt..'] };
+  // Sitting (food stalls, park benches): knees forward, one row shorter.
+  const SIT_LEGS = ['.pppppp.', '.f....f.'], SIT_SKIRT = ['.tttttt.', '.f....f.'];
 
   // Work uniforms and festival clothes: shirt/pants overrides and a hat over the top rows.
   // A function receives the person's look (so festival clothes can use their own colours).
@@ -69,6 +74,7 @@
     chef: { shirt: '#f4f4f4', hat: '#ffffff' },
     medic: { shirt: '#f4f4f4', pants: '#7fb3cf' },
     hardhat: { shirt: '#ff8c42', hat: '#f4c430' },
+    hivis: { shirt: '#c9e23b', hat: '#f4c430', band: '#eef3f3' }, // day labourers: hi-vis vest with a reflective stripe
     rider: { shirt: '#2a9d8f', hat: '#e63946' },
     office: { pants: '#22223b' },
     school: { shirt: '#f8f8f8', pants: '#1d3557' },
@@ -144,7 +150,7 @@
     return rows;
   }
 
-  function rowsFor(group, style, view, frame) {
+  function rowsFor(group, style, view, frame, build, pose) {
     const v = view === 'sideL' ? 'side' : view;
     if (group === 'baby') return BABY.slice();
     if (group === 'child') {
@@ -153,9 +159,10 @@
       return r;
     }
     const skirt = style === 3;
-    if (v === 'side') return [...HEAD.side[style], ...SIDE_BODY, ...(skirt ? SIDE_SKIRT : SIDE_LEGS)[frame]];
-    const body = BODY.slice();
-    if (v === 'back') body[3] = 'k.tttt.k';
+    if (v === 'side') return [...HEAD.side[style], ...(BUILD_SIDE[build] || SIDE_BODY), ...(skirt ? SIDE_SKIRT : SIDE_LEGS)[frame]];
+    const body = (BUILD_BODY[build] || BODY).slice();
+    if (v === 'back' && build !== 0 && build !== 2) body[3] = 'k.tttt.k';
+    if (pose === 'sit') return [...HEAD[v][style], ...body, ...(skirt ? SIT_SKIRT : SIT_LEGS)];
     return [...HEAD[v][style], ...body, ...(skirt ? SKIRT : LEGS)[frame]];
   }
 
@@ -193,10 +200,16 @@
   LES.Sprites = {
     lookOf,
     // group: 'baby' | 'child' | 'adult' | 'elder'; frame 0/1 for walking legs;
-    // view: 'front' | 'back' | 'side' (facing right) | 'sideL' (facing left)
-    person(look, group, frame, outfit, view) {
+    // view: 'front' | 'back' | 'side' (facing right) | 'sideL' (facing left);
+    // build (adults): 0 slim, 1 average (default), 2 broad; pose: 'sit' or nothing
+    person(look, group, frame, outfit, view, build, pose) {
       view = view || 'front';
-      const key = `${look.skin}${look.hair}${look.shirt}${look.pants}${look.style}${look.scarf}${look.glasses || ''}${look.beard || ''}${look.hat || ''}${look.hatColour || ''}|${group}|${frame}|${outfit || ''}|${view}`;
+      const adultish = group === 'adult' || group === 'elder';
+      build = adultish && build !== undefined ? build : 1;
+      pose = adultish && pose === 'sit' ? 'sit' : '';
+      let lk = lookKeys.get(look); // looks are long-lived objects: build their part of the key once
+      if (lk === undefined) { lk = `${look.skin}${look.hair}${look.shirt}${look.pants}${look.style}${look.scarf}${look.glasses || ''}${look.beard || ''}${look.hat || ''}${look.hatColour || ''}`; lookKeys.set(look, lk); }
+      const key = `${lk}|${group}|${frame}|${outfit || ''}|${view}|${build}${pose}`;
       let cv = cache.get(key);
       if (cv) return cv;
       if (cache.size > 24000) { // bounded: forget the oldest quarter (Map keeps insertion order)
@@ -205,7 +218,7 @@
       }
       const def = OUTFITS[outfit];
       const of = typeof def === 'function' ? def(look) : def;
-      let rows = rowsFor(group, look.style in HEAD.front ? look.style : 0, view, frame);
+      let rows = rowsFor(group, look.style in HEAD.front ? look.style : 0, view, frame, build, pose);
       if ((group === 'adult' || group === 'elder') && (look.glasses || look.beard || look.hat)) rows = addExtras(rows, look, view === 'sideL' ? 'side' : view);
       if (view === 'sideL') rows = rows.map(r => [...r].reverse().join(''));
       const wpx = rows[0].length, hpx = rows.length;

@@ -46,7 +46,7 @@ The improvement plan agreed in November 2026. Each phase is one tested push.
 
 ## To do
 Kept in step with `docs/HANDOFF.md` section 0.
-- Review follow-up (details in HANDOFF section 0; tasks 1-3 done): 4 people and crowd art (uniforms bug, crowds, builds, poses, zoomed-out view); 5 building
+- Review follow-up (details in HANDOFF section 0; tasks 1-4 done): 5 building
   variety, site stages, winter snow; 6 crime outside Malaysia via rules revision 8 (cause found, retune pending).
 - C09c optional small gift (sandbox): deferred; only if the owner asks.
 - Optional 4.2 extras: tax competition between towns, real map thumbnails in the region view.

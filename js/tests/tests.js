@@ -1592,6 +1592,62 @@
     }
   }
 
+  // Review task 4: people and crowds on the map (drawing only: nothing here may change the simulation).
+  async function peopleArtTests() {
+    print('--- People and crowd art ---', 'info');
+    if (typeof document === 'undefined' || !LES.Renderer) { print('(browser only: skipped)'); return; }
+    const S = LES.Sprites, look = { skin: '#c68642', hair: '#222222', shirt: '#3a86ff', pants: '#333333', style: 0, scarf: '#8338ec' };
+    const px = cv => { const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i]) n++; return n; };
+    const slim = S.person(look, 'adult', 0, null, 'front', 0), avg = S.person(look, 'adult', 0, null, 'front', 1), broad = S.person(look, 'adult', 0, null, 'front', 2);
+    check('Three body builds draw differently (slim < average < broad)', px(slim) < px(avg) && px(avg) < px(broad), `${px(slim)} / ${px(avg)} / ${px(broad)}`);
+    const sit = S.person(look, 'adult', 0, null, 'front', 1, 'sit');
+    check('Sitting is one row shorter than standing; children never sit', sit.height === avg.height - 1 && S.person(look, 'child', 0, null, 'front', 1, 'sit').height === S.person(look, 'child', 0, null, 'front').height);
+    check('Day labourers wear a hi-vis vest, construction workers a hard hat', LES.Ambience.outfitFor({ job: null }, { act: 'GIG', label: 'Gig: Day labour' }) === 'hivis' && LES.OUTFITS.hivis.band && LES.Ambience.outfitFor({ job: { jobId: 'construction' } }, { act: 'WORK', sub: 'construction' }) === 'hardhat');
+
+    const w = new LES.World(Object.assign({}, LES.DEFAULTS, { seed: 'people-art', founders: 300 }));
+    for (let d = 0; d < 60; d++) w.step();
+    const cv = document.createElement('canvas'); cv.style.cssText = 'position:fixed;left:0;top:0;width:800px;height:600px;visibility:hidden';
+    document.body.appendChild(cv);
+    const r = new LES.Renderer(cv); r.setWorld(w);
+    const site = w.town.buildings[w.town.byKind.construction], T = w.town.T;
+    // Working on a site counts as being at work: the uniform shows although the worker moves about.
+    const worker = { id: 1e6, plan: [{ act: 'WORK', sub: 'construction', loc: site.id }, { act: 'REST', loc: 0 }], job: { jobId: 'construction' }, look, log: [], adult: false };
+    const pos = r.wander(worker, site, 300, worker.plan[0]);
+    const it = Object.assign({ p: worker }, pos);
+    check('A construction worker moving about the site wears the hard hat (it was only shown standing still)', pos.moving && pos.area && r.outfitOf(it, r.activityAt(it, 300), 0) === 'hardhat');
+    const walking = Object.assign({}, it, { area: false });
+    check('On the way there, street clothes', r.outfitOf(walking, r.activityAt(walking, 300), 0) === null);
+    // Sixty workers spread over the plot instead of one blob.
+    const spots = new Set(), xs = [];
+    for (let k = 0; k < 60; k++) { const q = r.wander({ id: k * 37 + 5 }, site, 300, { act: 'WORK', sub: 'construction' }); spots.add(`${Math.round(q.x / 12)},${Math.round(q.y / 10)}`); xs.push(q.x); }
+    check('Sixty site workers stand on many different patches across the plot', spots.size >= 30 && Math.max(...xs) - Math.min(...xs) > site.w * T * 0.6, `${spots.size} patches`);
+    // Crowd cap, queue line, seats and children (on a made-up list at one place).
+    const mk = (id, extra) => Object.assign({ p: { id, adult: true, parents: [] }, x: site.x * T + 50, y: site.y * T + 30, moving: false, at: site.id, skip: false, gone: false }, extra || {});
+    const crowd = []; for (let k = 0; k < 40; k++) crowd.push(mk(k));
+    r.selectedId = 39;
+    const badges = r.arrange(crowd, -1e9, -1e9, 1e9, 1e9), shown = crowd.filter(x => !x.skip);
+    const again = crowd.map(x => Object.assign({}, x, { skip: false })); r.arrange(again, -1e9, -1e9, 1e9, 1e9);
+    check('At most 15 people drawn at one place (plus the selected person), the rest counted in a +N badge', (shown.length === LES.CROWD_CAP || shown.length === LES.CROWD_CAP + 1) && !crowd[39].skip && badges.length === 1 && badges[0].n === 40 - shown.length && badges[0].bid === site.id, `${shown.length} shown, badge ${badges[0] && badges[0].n}`);
+    check('The same people are left out every frame', again.every((x, i) => x.skip === crowd[i].skip));
+    r.selectedId = -1;
+    const mall = w.town.buildings[w.town.byKind.mall], qs = []; for (let k = 0; k < 12; k++) qs.push(Object.assign(mk(100 + k, { queue: true, at: mall.id }), { x: mall.x * T + 30 }));
+    r.arrange(qs, -1e9, -1e9, 1e9, 1e9);
+    const inLine = qs.filter(x => !x.gone), qx = new Set(inLine.map(x => x.x));
+    check('A queue is one line of separate places (at most 8); the others wait inside', inLine.length >= 1 && inLine.length <= 8 && qx.size === inLine.length && qs.length - inLine.length === qs.filter(x => x.gone).length);
+    const mamak = w.town.buildings[w.town.byKind.mamak], ds = []; for (let k = 0; k < 14; k++) ds.push(mk(200 + k, { seat: true, sit: true, at: mamak.id }));
+    r.arrange(ds, -1e9, -1e9, 1e9, 1e9);
+    const seated = ds.filter(x => !x.gone);
+    check('Diners take separate seats beside the stall\'s tables', seated.length === r.seatsOf(mamak).length && new Set(seated.map(x => `${x.x},${x.y}`)).size === seated.length && seated.every(x => x.y > mamak.y * T && x.y < (mamak.y + mamak.h) * T));
+    const mum = mk(300, { x: 500, y: 400 }), kid = mk(301, { x: 900, y: 100 }); kid.p.adult = false; kid.p.parents = [300];
+    r.arrange([mum, kid], -1e9, -1e9, 1e9, 1e9);
+    check('A child at the same place as a parent stands beside them', Math.abs(kid.x - mum.x) === 7 && kid.y === mum.y + 1);
+    // Drawing never changes the world, at any zoom (people, crowds, traffic).
+    const h0 = w.stableHash();
+    for (const z of [0.5, 0.9, 2.5, 4]) { r.z = z; r.centerOn((site.x + site.w / 2) * T, (site.y + site.h / 2) * T, 1); for (let i = 0; i < 6; i++) r.frame(0.3 + i * 0.05, false, i * 200); }
+    check('Drawing frames at every zoom leaves the world exactly as it was', w.stableHash() === h0);
+    cv.remove();
+  }
+
   // C07: sustained mobility from income averaged over years, ranked within birth cohorts (research only).
   async function mobilityTests() {
     print('--- Sustained mobility (C07) ---', 'info');
@@ -1662,6 +1718,7 @@
       await payTests();
       await nameTests();
       await compareTests();
+      await peopleArtTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -1673,6 +1730,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, compareTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, compareTests, peopleArtTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);
