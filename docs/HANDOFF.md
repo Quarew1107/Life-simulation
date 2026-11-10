@@ -25,7 +25,7 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
 **To do (keep this list current; the same list is in `docs/ROADMAP.md`):**
 
 **Review follow-up (Nov 2026): 6 tasks from a UI/art/bug review, done one at a time.** Tasks 1 (pop-ups and
-small screens), 2 (side panel), 3 (Report and Compare), 4 (people art) and 5 (buildings and winter) are done (ticked below). Task 6 is open. Rules for each: UI and art tasks
+small screens), 2 (side panel), 3 (Report and Compare), 4 (people art), 5 (buildings and winter) and 6 (crime rev 8) are done (ticked below). The review follow-up is complete. Rules for each: UI and art tasks
 must not change simulation results (no `js/sim/` edits, never use the world RNG in render code; use hashes of
 ids/positions for variety); keep the full suite passing (`python tools/edge.py tests.html "await
 LES_TESTS.runAll(), document.getElementById('out').textContent" 1800`, 343/343 at 1a84ec6); keep a 2,500-founder
@@ -101,23 +101,33 @@ town no slower to draw (`docs/PERFORMANCE.md`); tick the item here when done.
     in many places. `memo()` now makes patterns with the drawing area switched off (a test checks for holes).
   - Frame time (2,500 founders, alternating old/new): z 0.9 1.22 -> 1.12 ms, z 2.5 1.35 -> 1.23 ms.
   - Tests: `buildingArtTests` (8). Full suite 372/372.
-- [ ] **Task 6: Crime outside Malaysia (rules revision 8).** Baseline (rev 7, Lively, 300 founders, 12 years,
-      index crimes per 100k): UK 7,867 vs target 2,000; US 2,828 vs 590; China 532 vs 150; Malaysia 254 vs 170.
-  - Cause found: `CR.CASES_PER_OFFICER` (cases one officer handles a month) was calibrated on Malaysia (170 per
-    100k, 4 officers per 1,000). The UK has 12x the crime and 2.4 officers per 1,000, so police capacity falls to
-    0.10 (US 0.25, MY 1.0), perceived chance of being caught to 0.03 (MY 0.68), and crime spirals; the packs'
-    `crimeTuning.opportunity` (UK x5, US x1.75) adds to it.
-  - Started (not on main; a local WIP commit `c543efa` on branch `claude/crime-balance-baa930` of the owner's
-    machine, not pushed): in `js/sim/crime.js`, `CR.REV = 8`, `CR.rev8(w)`; `CR.casesPerOfficer(w)` scales
-    capacity by `(CR.REF.index / 170) * (4 / pack.gov.policePer1000)` under rev 8 (Malaysia stays 1); the notional
-    force without a government uses the pack's police per 1,000 under rev 8; every `TUNE.x` use goes through
-    `T(w)`, which under rev 8 uses `TUNE8 = {...TUNE, ...pack.crimeTuningRev8}`. The capacity change alone gave
-    UK 7,192, US 1,711, China 547: not enough.
-  - To do: retune each pack's `crimeTuningRev8` (mainly `opportunity`, maybe `clear`) until each country lands
-    within ~±30% of target over several seeds and sizes (300 and 1,000 founders, 10+ years) without moving
-    employment, wages, wealth, births/deaths; make rev 8 the default (`params.js` DEFAULTS and national preset,
-    revision comment); revisions 1-7 must behave exactly as before; add a rev-gating test and a fast per-country
-    crime-band test; before/after table here and in `docs/ROADMAP.md`.
+- [x] **Task 6: Crime outside Malaysia (rules revision 8, the new default; Nov 2026).**
+  - Cause: `CR.CASES_PER_OFFICER` was calibrated on Malaysia (170 index crimes per 100k, 4 officers per 1,000).
+    The UK has 12x the crime and 2.4 officers per 1,000, so police capacity fell to ~0.1, the felt chance of being
+    caught collapsed and crime spiralled; the packs' `crimeTuning.opportunity` (UK x5, US x1.75) added to it.
+  - Rule (`js/sim/crime.js`, `CR.REV = 8`, `CR.rev8(w)`): `CR.casesPerOfficer(w)` scales case capacity by
+    `(pack.crime.index / 170) * (4 / pack.gov.policePer1000)` (Malaysia x1, UK x19.6, US x6.0, China x1.5); the
+    notional force without a government uses the pack's police per 1,000; every tuning use goes through
+    `CR.tuning(w)`, which under rev 8 is `{...crimeTuning, ...pack.crimeTuningRev8}`. Pack values (opportunity
+    only): MY 0.8, UK 1.5, US 0.6, CN 0.18. Revisions 1-7 and older saves are unchanged (tested).
+  - Measured (national preset, 10 years, crime averaged over Decembers after year 5; 8 seeds at 300 founders,
+    6 seeds at 1,000 for rev 8, 4 for rev 7; index crime per 100k, % of the official figure):
+
+    | Country (target) | rev 7, 300 | rev 8, 300 | rev 7, 1,000 | rev 8, 1,000 | prisoners/100k rev 8 (target) |
+    |---|---|---|---|---|---|
+    | Malaysia (170) | 243 (143%) | 208 (122%) | 164 (96%) | 138 (81%) | 377 / 294 (256) |
+    | UK (2,000) | 8,060 (403%) | 1,728 (86%) | 6,658 (333%) | 1,770 (88%) | 133 / 126 (142) |
+    | US (590) | 2,425 (411%) | 573 (97%) | 2,207 (374%) | 518 (88%) | 424 / 342 (540) |
+    | China (150) | 687 (458%) | 144 (96%) | 449 (299%) | 115 (77%) | 38 / 27 (120) |
+
+    Unemployment, median wage, household Gini, median wealth and births are the same within noise (e.g. UK
+    1,000: unemployment 19.0 -> 19.7%, wage GBP 2,846 -> 2,838, Gini 0.209 -> 0.216, births 323 -> 325). Deaths
+    fall (UK 64 -> 32, US 104 -> 63 over 10 years at 1,000 founders) because far fewer crimes end in a killing.
+  - Notes: single seeds vary a lot (Malaysia 300 founders: 58-406), and small towns run ~20-40% above large ones
+    (more unemployment); small opportunity changes are partly undone by the police feedback, so the values were set
+    from many seeds, not one. China's prison population stays low (27-38 vs 120: short `sentence` 0.15 from Phase 6).
+  - Tests: `crimeRevTests` (4: default is rev 8; capacity factor and tuning per revision; a rev-7 world ignores
+    rev-8 settings; one quick 400-founder x 8-year crime band per country, +-40%). Full suite 376/376.
 
 - [ ] C09c optional small gift (sandbox, blueprint 10.4): deferred by the owner; build only if asked.
 - [ ] Optional extras from 4.2: tax competition between towns, real map thumbnails for the region view.

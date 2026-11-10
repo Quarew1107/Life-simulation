@@ -556,6 +556,7 @@
     // long ones (plea deals, mandatory minimums), prison from the second possession arrest, and guns make
     // fights and robberies four times as deadly.
     crimeTuning: { opportunity: 1.75, clear: 0.5, community: 0.15, drugRepeat: 1, sentence: 1.2, lethal: 4, drugUse: 1.6 }, // (Phase 6: 805 prisoners and 426 users at sentence 2, drugUse 1)
+    crimeTuningRev8: { opportunity: 0.6 }, // Rules revision 8 (Nov 2026): with police case capacity measured against this country's own crime level, index crime lands near 590 per 100k (was ~2,600).
     events: {
       flood: { doy: 95, chance: 0.2, relief: 750, name: 'Spring floods' },
       haze: { doy: 200, chance: 0.3, days: 10, name: 'Heat wave', text: 'Heat wave: the hot weeks are hard on the old and the very young' },

@@ -997,6 +997,7 @@
     defaults: { goalRM: 100000000, marketOutsideRM: 200000000, mortMult: 1.9, leaderTitle: 'president', termYears: 5, inflMin: -0.5, inflMax: 4.5 },
     // Reference crime rates per 100k a year (DOSM Crime Statistics 2025, AADK 2024, World Prison Brief).
     crime: { index: 170, violent: 32, property: 138, murder: 0.7, users: 586, prison: 256 },
+    crimeTuningRev8: { opportunity: 0.8 }, // Rules revision 8 (Nov 2026): a little fewer chances to offend; index crime was ~190-300 per 100k against 170 (small towns highest).
     // Town events: north-east monsoon floods (relief like Bantuan Wang Ihsan) and haze.
     events: {
       flood: { doy: 325, chance: 0.35, relief: 1000, name: 'Monsoon floods' },

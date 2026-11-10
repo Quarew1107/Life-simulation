@@ -600,6 +600,7 @@
     // police solve more than in Malaysia, short sentences and many suspended ones, compulsory rehab before
     // prison, few guns, and far less drug use.
     crimeTuning: { opportunity: 0.5, clear: 0.7, community: 0.55, drugRepeat: 2, sentence: 0.15, lethal: 0.5, drugUse: 0.1 }, // (Phase 6: index 243, 214 prisoners, 187 users at 1.15 / 0.3 / 0.15)
+    crimeTuningRev8: { opportunity: 0.18 }, // Rules revision 8 (Nov 2026): with police case capacity measured against this country's own crime level, index crime lands near 150 per 100k (was ~500-650).
     events: {
       flood: { doy: 180, chance: 0.3, relief: 2000, name: 'Summer floods' },
       haze: { doy: 340, chance: 0.4, days: 14, name: 'Smog', text: 'Winter smog: the air is unhealthy for two weeks' },

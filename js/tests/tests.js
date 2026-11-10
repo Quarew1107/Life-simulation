@@ -1390,7 +1390,7 @@
   async function nameTests() {
     print('--- More names (rules revision 7) ---', 'info');
     const C = LES.C, D = LES.DEFAULTS;
-    check('Revision 7 is the default', D.rulesRev === 7 && LES.PRESETS.national.values.rulesRev === 7);
+    check('Revision 7 or later is the default (more names stay on)', D.rulesRev >= 7 && LES.PRESETS.national.values.rulesRev >= 7);
     let ok = true, info = [];
     for (const c of ['my', 'uk', 'us', 'cn']) {
       LES.Countries.use(c);
@@ -1703,6 +1703,50 @@
     K.ensure(LES.DEFAULTS);
   }
 
+  // Review task 6: crime outside Malaysia (rules revision 8): police case capacity measured against each
+  // country's own crime level and police staffing, and each pack's crimeTuningRev8.
+  async function crimeRevTests() {
+    print('--- Crime rules revision 8 ---', 'info');
+    const K = LES.Countries, CR = LES.Crime, D = LES.DEFAULTS;
+    const cfgOf = (c, rev, extra) => { K.use(c); return Object.assign({}, D, LES.PRESETS.national.values, { country: c, scenario: 'none', preset: 'national', rulesRev: rev }, extra || {}); };
+    check('New worlds use rules revision 8; today\'s rules preset too', D.rulesRev === 8 && LES.PRESETS.national.values.rulesRev === 8 && CR.REV === 8);
+    // Revision gating: revision 7 keeps the Malaysian case capacity and the old tuning everywhere.
+    let gate = true; const info = [];
+    for (const c of ['my', 'uk', 'us', 'cn']) {
+      const w7 = new LES.World(cfgOf(c, 7, { seed: `rev-${c}`, founders: 30 })), w8 = new LES.World(cfgOf(c, 8, { seed: `rev-${c}`, founders: 30 }));
+      const pk = K.get(c), want = (pk.crime.index / 170) * (4 / pk.gov.policePer1000);
+      const t7 = CR.tuning(w7), t8 = CR.tuning(w8), r8 = pk.crimeTuningRev8 || {};
+      const ok = CR.casesPerOfficer(w7) === CR.CASES_PER_OFFICER && Math.abs(CR.casesPerOfficer(w8) / CR.CASES_PER_OFFICER - want) < 1e-9
+        && Object.keys(r8).every(k => t8[k] === r8[k]) && Object.keys(pk.crimeTuning || {}).every(k => t7[k] === pk.crimeTuning[k]);
+      if (!ok) gate = false;
+      info.push(`${c} x${want.toFixed(2)}`);
+    }
+    check('Revision 8 scales police case capacity by the country\'s crime level and staffing (Malaysia x1) and uses crimeTuningRev8; revision 7 keeps the old capacity and tuning', gate, info.join(', '));
+    // A revision-7 world is untouched by the revision-8 settings.
+    const run = async extreme => {
+      const saved = K.packs.uk.crimeTuningRev8;
+      if (extreme) { K.packs.uk.crimeTuningRev8 = { opportunity: 9, clear: 0.01 }; delete K.scaledCache.uk; K.active = null; }
+      const w = new LES.World(cfgOf('uk', 7, { seed: 'rev7-uk', founders: 80 }));
+      for (let d = 0; d < 365 * 2; d++) { w.step(); if (d % 400 === 0) await yieldUI(); }
+      const h = w.stableHash();
+      if (extreme) { K.packs.uk.crimeTuningRev8 = saved; delete K.scaledCache.uk; K.active = null; K.use('uk'); }
+      return h;
+    };
+    check('A revision-7 world runs exactly the same whatever the revision-8 settings say', (await run(false)) === (await run(true)));
+    // Crime lands near each country's official level (one fixed seed each: a quick guard, not the calibration).
+    const res = [];
+    let inBand = true;
+    for (const c of ['my', 'uk', 'us', 'cn']) {
+      const w = new LES.World(cfgOf(c, 8, { seed: `band-${c}`, founders: 400 }));
+      for (let d = 0; d < 365 * 8; d++) { w.step(); if (d % 400 === 0) await yieldUI(); }
+      const idx = LES.Calibration.measure(w).crimeIdx, target = K.get(c).crime.index;
+      res.push(`${c} ${Math.round(idx)}/${target}`);
+      if (!(idx > target * 0.6 && idx < target * 1.4)) inBand = false;
+    }
+    check('Index crime per 100k within 40% of the official figure in Malaysia, the UK, the US and China (400 founders, 8 years)', inBand, res.join(', '));
+    K.ensure(D);
+  }
+
   // C07: sustained mobility from income averaged over years, ranked within birth cohorts (research only).
   async function mobilityTests() {
     print('--- Sustained mobility (C07) ---', 'info');
@@ -1775,6 +1819,7 @@
       await compareTests();
       await peopleArtTests();
       await buildingArtTests();
+      await crimeRevTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -1786,6 +1831,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

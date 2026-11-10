@@ -671,6 +671,7 @@
     // order or fine (sentencing statistics: few offenders go to prison), sentences are shorter, and
     // possession leads to prison only after repeated arrests (diversion schemes).
     crimeTuning: { opportunity: 5, clear: 0.45, community: 0.85, drugRepeat: 4, sentence: 0.5 },
+    crimeTuningRev8: { opportunity: 1.5 }, // Rules revision 8 (Nov 2026): with police case capacity measured against this country's own crime level, index crime lands near 2,000 per 100k (was ~7,000-8,000 under revision 7).
     crime: { index: 2000, violent: 960, property: 1040, murder: 0.9, users: 550, prison: 142 },
     events: {
       flood: { doy: 15, chance: 0.3, relief: 500, name: 'Winter floods' },
