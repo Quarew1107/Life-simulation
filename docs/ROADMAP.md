@@ -46,6 +46,9 @@ The improvement plan agreed in November 2026. Each phase is one tested push.
 
 ## To do
 Kept in step with `docs/HANDOFF.md` section 0.
+- Review follow-up (details in HANDOFF section 0; tasks 1-2 done): 3 Report in-app and Compare without the
+  Malaysia flash; 4 people and crowd art (uniforms bug, crowds, builds, poses, zoomed-out view); 5 building
+  variety, site stages, winter snow; 6 crime outside Malaysia via rules revision 8 (cause found, retune pending).
 - C09c optional small gift (sandbox): deferred; only if the owner asks.
 - Optional 4.2 extras: tax competition between towns, real map thumbnails in the region view.
 - Performance follow-ups if wanted: compare/calibration runs in a Web Worker; one worker per town for big regions.

@@ -23,6 +23,60 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
 
 ## 0. Where to pick up (status at the end of the last session)
 **To do (keep this list current; the same list is in `docs/ROADMAP.md`):**
+
+**Review follow-up (Nov 2026): 6 tasks from a UI/art/bug review, done one at a time.** Tasks 1 (pop-ups and
+small screens) and 2 (side panel) are done (ticked below). Tasks 3-6 are open. Rules for each: UI and art tasks
+must not change simulation results (no `js/sim/` edits, never use the world RNG in render code; use hashes of
+ids/positions for variety); keep the full suite passing (`python tools/edge.py tests.html "await
+LES_TESTS.runAll(), document.getElementById('out').textContent" 1800`, 343/343 at 1a84ec6); keep a 2,500-founder
+town no slower to draw (`docs/PERFORMANCE.md`); tick the item here when done.
+- [ ] **Task 3: Report and Compare** (`js/ui/compare.js`, `js/ui/report.js`).
+  - Bug: "Compare with Classic rules" runs a Malaysian world in slices and the map draws in between, so during a
+    China comparison most frames show RM instead of ¥ and Malaysian signs/style, and tiles painted then keep the
+    Malaysian look (`compare.js` ~line 63: the country pack is swapped globally). The live world's look and
+    currency must never change during a comparison.
+  - On a non-Malaysian world the comparison is against Malaysia; offer "same country, extra systems off" (same
+    pack, Classic-style rules) and label clearly what is compared.
+  - The Report opens with `window.open` in a new tab (blocked by in-app browsers; its blob URL is never revoked).
+    Show it in-app (overlay, Esc/close), styled like the app (fonts, pixel headings, colours, charts via
+    `js/ui/charts.js` if cheap), keep a download option, revoke object URLs. Report-text hash tests (REPORT in
+    `js/tests/tests.js`) pin the report; re-record them only for intended wording/markup changes.
+- [ ] **Task 4: People and crowd art** (`js/render/renderer.js`, `js/render/sprites.js`).
+  - Bug: uniforms are only drawn for people standing still (`renderer.js` ~line 417), but building-site jobs are
+    animated as walking, so construction workers, electricians and day labourers show street clothes. Show work
+    clothes while working; hi-vis vests for day labourers.
+  - Crowds: ~60 people stack on one building site in one blob. Spread them over the plot, draw at most ~15 per
+    spot with a "+N" marker; selecting people must still work.
+  - Variety: a few body builds, walking sticks for 75+, children near a parent / in small groups.
+  - Activity poses from what people are already doing: sitting at food stalls, benches/parks, queuing at shops.
+  - Zoomed out: slightly larger/clearer dots, light cosmetic road traffic scaled to how many people are out.
+- [ ] **Task 5: Buildings, site stages and winter** (`js/render/art.js`, `js/render/tiles.js`).
+  - Empty shops: rows of identical red "FOR RENT" banners; vary them (shutters, faded posters, clean empty
+    fronts), banner on only some.
+  - Shophouse rows and office towers repeat exactly: 2-3 variants each (awning colour, roofline, windows), and an
+    occupied shop's sign/awning matching its business type.
+  - Building sites: stages (foundation -> frame -> nearly finished) from construction progress (read-only);
+    repaint the tile only when the stage changes.
+  - Light snow/frost in UK, China (and US where it fits) winters through the existing season repaint (back
+    buffer in `tiles.js`), so no per-frame cost. No snow in Malaysia. Keep the map-tile seam test passing.
+- [ ] **Task 6: Crime outside Malaysia (rules revision 8).** Baseline (rev 7, Lively, 300 founders, 12 years,
+      index crimes per 100k): UK 7,867 vs target 2,000; US 2,828 vs 590; China 532 vs 150; Malaysia 254 vs 170.
+  - Cause found: `CR.CASES_PER_OFFICER` (cases one officer handles a month) was calibrated on Malaysia (170 per
+    100k, 4 officers per 1,000). The UK has 12x the crime and 2.4 officers per 1,000, so police capacity falls to
+    0.10 (US 0.25, MY 1.0), perceived chance of being caught to 0.03 (MY 0.68), and crime spirals; the packs'
+    `crimeTuning.opportunity` (UK x5, US x1.75) adds to it.
+  - Started (not on main; a local WIP commit `c543efa` on branch `claude/crime-balance-baa930` of the owner's
+    machine, not pushed): in `js/sim/crime.js`, `CR.REV = 8`, `CR.rev8(w)`; `CR.casesPerOfficer(w)` scales
+    capacity by `(CR.REF.index / 170) * (4 / pack.gov.policePer1000)` under rev 8 (Malaysia stays 1); the notional
+    force without a government uses the pack's police per 1,000 under rev 8; every `TUNE.x` use goes through
+    `T(w)`, which under rev 8 uses `TUNE8 = {...TUNE, ...pack.crimeTuningRev8}`. The capacity change alone gave
+    UK 7,192, US 1,711, China 547: not enough.
+  - To do: retune each pack's `crimeTuningRev8` (mainly `opportunity`, maybe `clear`) until each country lands
+    within ~±30% of target over several seeds and sizes (300 and 1,000 founders, 10+ years) without moving
+    employment, wages, wealth, births/deaths; make rev 8 the default (`params.js` DEFAULTS and national preset,
+    revision comment); revisions 1-7 must behave exactly as before; add a rev-gating test and a fast per-country
+    crime-band test; before/after table here and in `docs/ROADMAP.md`.
+
 - [ ] C09c optional small gift (sandbox, blueprint 10.4): deferred by the owner; build only if asked.
 - [ ] Optional extras from 4.2: tax competition between towns, real map thumbnails for the region view.
 - [ ] Expansion 1 deferred item: 'Social butterfly' goal (needs real friendships; `p.friends` only counts socialising).
