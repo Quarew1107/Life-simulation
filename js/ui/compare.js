@@ -1,16 +1,40 @@
 // Compare with a normal world (Phase 6): run the same seed, founders and length under today's rules (or
-// under Classic when this world already uses today's rules) and set the two side by side. The run goes in
+// under Classic settings when this world already uses today's rules) and set the two side by side. The run goes in
 // small slices so the page stays responsive; the result also appears in the report. One town only.
 (function (LES) {
   'use strict';
   const U = LES.U, P = LES.P, esc = U.esc;
   const CMP = LES.Compare = {};
 
-  CMP.target = cfg => ((!cfg.scenario || cfg.scenario === 'none') && LES.presetOf(cfg) === 'national' ? 'classic' : 'national');
-  CMP.label = cfg => (CMP.target(cfg) === 'classic' ? 'Classic rules' : "today's rules");
-  CMP.config = function (cfg) {
-    const t = CMP.target(cfg), c = Object.assign({}, cfg, LES.PRESETS[t].values, { scenario: 'none', preset: t });
-    if (t === 'classic') c.country = 'my'; // Classic rules are Malaysia only
+  // What a world can be compared with:
+  //   'national' today's rules in the same country (for a scenario, Classic or custom world);
+  //   'basic'    the same country under the Classic settings, with the extra systems off (for a world under
+  //              today's rules outside Malaysia: same prices, wages and people, so amounts stay comparable);
+  //   'classic'  the original Classic rules, which belong to Malaysia.
+  CMP.targets = function (cfg) {
+    const today = (!cfg.scenario || cfg.scenario === 'none') && LES.presetOf(cfg) === 'national';
+    if (!today) return ['national'];
+    return LES.Countries.of(cfg) === LES.Countries.DEFAULT ? ['classic'] : ['basic', 'classic'];
+  };
+  CMP.target = (cfg, kind) => { const t = CMP.targets(cfg); return t.includes(kind) ? kind : t[0]; };
+  const countryName = code => { const p = LES.Countries.get(code); return p ? p.name : code; };
+  CMP.label = function (cfg, kind) {
+    const t = CMP.target(cfg, kind), here = LES.Countries.of(cfg) === LES.Countries.DEFAULT;
+    if (t === 'national') return "today's rules";
+    if (t === 'basic') return `Classic rules in ${countryName(LES.Countries.of(cfg))}`;
+    return here ? 'Classic rules' : `Classic rules in ${countryName(LES.Countries.DEFAULT)}`;
+  };
+  // One line on what the other world is, for the window and the option buttons.
+  CMP.describe = function (cfg, kind) {
+    const t = CMP.target(cfg, kind), c = countryName(LES.Countries.of(cfg));
+    if (t === 'national') return `${c} under today's rules, with no scenario.`;
+    if (t === 'basic') return `${c} with the same prices, wages and people, under the Classic settings: no safety net, no class and religion, no crime and no government.`;
+    return `${countryName(LES.Countries.DEFAULT)} under the original Classic rules (the harsh first engine, made for Malaysia).`;
+  };
+  CMP.config = function (cfg, kind) {
+    const t = CMP.target(cfg, kind), preset = t === 'national' ? 'national' : 'classic';
+    const c = Object.assign({}, cfg, LES.PRESETS[preset].values, { scenario: 'none', preset });
+    if (t === 'classic') c.country = LES.Countries.DEFAULT; // the original rules are Malaysia's
     return c;
   };
   CMP.summary = function (w) {
@@ -59,35 +83,52 @@
     return `<p class="note"><b>How to read this.</b> This is a <b>same-seed world comparison</b>, not a matched experiment. Both worlds start from the same seed and founders, but once the rules differ, events use the random numbers in a different order and later lives diverge. A difference shows what happened in these two runs; one pair of runs cannot prove that the rule change caused it. Repeat with several seeds before drawing a conclusion.</p>${warn.length ? `<ul class="note">${warn.map(x => `<li>${x}</li>`).join('')}</ul>` : ''}`;
   };
 
-  // Run the comparison world to the same day; onProgress(share) while it runs.
-  CMP.run = function (w, onProgress) {
+  // Run the comparison world to the same day; onProgress(share) while it runs. The other world may use
+  // another country pack, and the country tables are shared (money sign, signs, art style, names): every
+  // slice puts back the pack that was active before it, so nothing drawn between slices ever shows the
+  // other world's country, and the map's cached tiles are never painted with it.
+  CMP.run = function (w, onProgress, kind) {
+    const K = LES.Countries;
+    const guarded = fn => { const before = K.active; try { return fn(); } finally { if (K.active !== before) K.use(before); } };
     return new Promise((resolve, reject) => {
       let b;
-      try { b = new LES.World(CMP.config(w.cfg)); } catch (e) { reject(e); return; }
+      try { b = guarded(() => new LES.World(CMP.config(w.cfg, kind))); } catch (e) { reject(e); return; }
       const end = w.day, slice = () => {
+        let s = null;
         try {
-          const stop = Math.min(end, b.day + 60);
-          while (!b.ended && b.day < stop) b.step();
-          if (onProgress) onProgress(b.day / Math.max(1, end));
-          if (b.ended || b.day >= end) { const s = CMP.summary(b); LES.Countries.ensure(w.cfg); resolve(s); } else setTimeout(slice, 0);
-        } catch (e) { LES.Countries.ensure(w.cfg); reject(e); }
+          guarded(() => {
+            const stop = Math.min(end, b.day + 60);
+            while (!b.ended && b.day < stop) b.step();
+            if (b.ended || b.day >= end) { K.ensure(b.cfg); s = CMP.summary(b); } // read in the other world's money
+          });
+        } catch (e) { reject(e); return; }
+        if (onProgress) onProgress(s ? 1 : b.day / Math.max(1, end));
+        if (s) resolve(s); else setTimeout(slice, 0);
       };
       setTimeout(slice, 0);
     });
   };
 
-  CMP.open = function (app) {
-    const w = app.world, $ = id => document.getElementById(id), card = $('modal-card'), label = CMP.label(w.cfg);
+  // kind: which comparison (see CMP.targets); without one, the last one run for this world or the first option.
+  CMP.open = function (app, kind) {
+    const w = app.world, $ = id => document.getElementById(id), card = $('modal-card');
+    const last = app.compare && app.compare.seed === w.cfg.seed && app.compare.day === w.day ? app.compare : null;
+    const t = CMP.target(w.cfg, kind || (last && last.kind)), label = CMP.label(w.cfg, t), opts = CMP.targets(w.cfg);
     card.classList.add('wide'); card.onclick = null;
-    const show = body => { card.innerHTML = `<h1>Compare with ${esc(label)}</h1><p class="lead">The same seed, founders and ${Math.floor(w.day / 365)} years, under ${esc(label)}${CMP.target(w.cfg) === 'classic' ? ' (the original harsh engine, Malaysia only)' : ' with no scenario'}.</p>${body}<div class="modal-actions"><span class="spacer"></span><button class="primary" id="cmp-close">Close</button></div>`; $('cmp-close').onclick = () => $('modal').classList.add('hidden'); };
+    const pick = busy => (opts.length > 1 ? `<div class="cmp-pick"><span class="muted">Compare with:</span><div class="seg wrap">${opts.map(k => `<button type="button" data-cmp="${k}" class="${k === t ? 'on' : ''}"${busy ? ' disabled' : ''} title="${esc(CMP.describe(w.cfg, k))}">${esc(CMP.label(w.cfg, k))}</button>`).join('')}</div></div>` : '');
+    const show = (body, busy) => {
+      card.innerHTML = `<h1>Compare with ${esc(label)}</h1>${pick(busy)}<p class="lead">This world against the same seed, founders and ${Math.floor(w.day / 365)} years in ${esc(CMP.describe(w.cfg, t))}</p>${body}<div class="modal-actions"><span class="spacer"></span><button class="primary" id="cmp-close">Close</button></div>`;
+      $('cmp-close').onclick = () => $('modal').classList.add('hidden');
+      for (const btn of card.querySelectorAll('[data-cmp]')) btn.onclick = () => { if (btn.dataset.cmp !== t) CMP.open(app, btn.dataset.cmp); };
+    };
     if (app.region) { show('<p class="note">Comparisons run for single towns only.</p>'); $('modal').classList.remove('hidden'); return; }
-    const done = app.compare && app.compare.seed === w.cfg.seed && app.compare.day === w.day && app.compare.label === label ? app.compare : null;
+    const done = last && last.label === label ? last : null;
     if (done) { show(CMP.table(CMP.summary(w), done.base, label) + '<p class="note">The report includes this table too.</p>'); $('modal').classList.remove('hidden'); return; }
-    show('<p>Running the comparison world… <b id="cmp-pct">0%</b></p><div class="track"><i id="cmp-bar" style="width:0%"></i></div><p class="note">It runs in the background in slices; the main simulation is paused meanwhile.</p>');
+    show('<div class="cmp-run"><p>Running the comparison world… <b id="cmp-pct">0%</b></p><div class="track"><i id="cmp-bar" style="width:0%"></i></div><p class="note">It runs in the background in slices; the main simulation is paused meanwhile.</p></div>', true);
     $('modal').classList.remove('hidden');
     const wasPaused = app.paused; app.paused = true;
-    CMP.run(w, f => { const e = $('cmp-pct'), bar = $('cmp-bar'); if (e) e.textContent = `${Math.round(f * 100)}%`; if (bar) bar.style.width = `${Math.round(f * 100)}%`; })
-      .then(base => { app.compare = { seed: w.cfg.seed, day: w.day, label, base }; app.paused = wasPaused; if (!$('modal').classList.contains('hidden')) show(CMP.table(CMP.summary(w), base, label) + '<p class="note">The report includes this table too.</p>'); })
+    CMP.run(w, f => { const e = $('cmp-pct'), bar = $('cmp-bar'); if (e) e.textContent = `${Math.round(f * 100)}%`; if (bar) bar.style.width = `${Math.round(f * 100)}%`; }, t)
+      .then(base => { app.compare = { seed: w.cfg.seed, day: w.day, kind: t, label, base }; app.paused = wasPaused; if (!$('modal').classList.contains('hidden') && $('cmp-pct')) show(CMP.table(CMP.summary(w), base, label) + '<p class="note">The report includes this table too.</p>'); })
       .catch(e => { app.paused = wasPaused; show(`<p class="neg">The comparison failed: ${esc(e.message)}</p>`); });
   };
 })(globalThis.LES = globalThis.LES || {});

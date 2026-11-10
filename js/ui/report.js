@@ -400,7 +400,10 @@ ${cal ? `<tr><td>Openings filled from outside town</td><td>${st.vacOutside || 0}
     return `<section><h2>${esc(LES.News.name(w))}: a front page a decade</h2><div class="grid">${picks.map(i => `<div>${LES.NewsUI.frontPage(w, i, true)}</div>`).join('')}</div></section>`;
   }
 
-  R.html = function (w, prev) {
+  // The report in three parts: head (title and subtitle), tools (the file's own Download and Print
+  // buttons) and body (everything else), plus the page title and style of the stand-alone file.
+  // R.html joins them into the file; R.open shows head and body inside the app.
+  R.parts = function (w, prev) {
     const a = R.analyse(w), h = w.history, cfg = w.cfg;
     const yr = r => r.day / 365;
     const money = v => U.fmtMoney(v).replace(U.sym(), '');
@@ -416,14 +419,13 @@ ${cal ? `<tr><td>Openings filled from outside town</td><td>${st.vacOutside || 0}
       <p class="note">Changed settings: ${Object.keys(cfg).filter(k => JSON.stringify(cfg[k]) !== JSON.stringify(prev.cfg[k])).map(esc).join(', ') || 'none (only randomness)'}. Differences come from the changed settings and from chance taking another path; one pair of runs cannot tell the two apart.</p></section>` : '';
     const ap = LES.UI && LES.UI.app, cm = ap && ap.compare && ap.compare.seed === cfg.seed && ap.compare.day === w.day && LES.Compare ? ap.compare : null;
     const compareNormal = cm ? `<section><h2>Compared with ${esc(cm.label)}</h2>${LES.Compare.table(LES.Compare.summary(w), cm.base, cm.label)}</section>` : '';
-    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Simulation Report – ${esc(LES.townName(w))}</title>
-<style>
-:root{--bg:#f6f3ec;--fg:#1d232b;--muted:#5d6875;--card:#fff;--line:#e3ddd0;--acc:#b8862b}
-@media (prefers-color-scheme:dark){:root{--bg:#11161c;--fg:#e8edf2;--muted:#94a3b4;--card:#18212b;--line:#2a3542;--acc:#f2c14e}}
+    const title = `Simulation Report – ${esc(LES.townName(w))}`;
+    const css = `:root{--bg:#f6f3ec;--fg:#1d232b;--muted:#5d6875;--card:#fff;--line:#e3ddd0;--acc:#b8862b;--pixel:Silkscreen,'Press Start 2P',monospace;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0f141a;--fg:#e8edf2;--muted:#8c9aab;--card:#161d25;--line:#2a3542;--acc:#f2c14e;color-scheme:dark}}
+html.app{--bg:#0f141a;--fg:#e8edf2;--muted:#8c9aab;--card:#161d25;--line:#2a3542;--acc:#f2c14e;color-scheme:dark}
 body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 Inter,system-ui,Segoe UI,sans-serif}
 main{max-width:980px;margin:0 auto;padding:28px 16px 60px}
-h1{font-size:28px;margin:0}h2{font-size:19px;margin:30px 0 10px;border-bottom:2px solid var(--acc);display:inline-block}
+h1{font:700 22px/1.3 var(--pixel);margin:0;letter-spacing:.5px}h2{font:700 15px/1.4 var(--pixel);letter-spacing:.5px;margin:30px 0 10px;border-bottom:2px solid var(--acc);display:inline-block}
 .sub{color:var(--muted)}section{margin-top:8px}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:18px 0}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}.kpi b{display:block;font-size:20px}.kpi span{color:var(--muted);font-size:12px}
@@ -433,10 +435,12 @@ svg.chart{width:100%;height:auto;color:var(--fg)}table{border-collapse:collapse;
 .paper{background:#f4efe2;color:#1f1d1a;border-radius:6px;padding:10px 14px;font-family:Georgia,serif}.paper-mast{display:flex;justify-content:space-between;gap:8px;border-bottom:3px double #1f1d1a;font-size:11px;margin-bottom:6px}.paper-mast b{font-size:17px;flex:1;text-align:center}.paper small{text-transform:uppercase;letter-spacing:1px;font:700 10px system-ui;color:#8a2c1f}.paper-h{font:700 16px Georgia,serif;margin:2px 0 6px}.paper-cols{display:grid;gap:4px 12px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));border-top:1px solid #b9b09b;padding-top:4px}.paper-story p{margin:2px 0;font-size:12px;line-height:1.3}.award b{color:var(--acc)}.bio li{margin:2px 0}.note{color:var(--muted);font-size:13px}.disc{margin-top:30px;padding:12px;border:1px dashed var(--line);border-radius:10px;color:var(--muted)}
 button{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer}
 @media print{button{display:none}}
-</style></head><body><main>
-<h1>${esc(LES.townName(w))} — ${a.years}-year simulation report</h1>
+`;
+    const head = `<h1>${esc(LES.townName(w))} — ${a.years}-year simulation report</h1>
 <div class="sub">Seed “${esc(cfg.seed)}” · ${cfg.founders} founders · ${esc(LES.MAP_SIZES[w.mapSize].name)} map · generated ${esc(U.fmtDate(Math.max(0, w.lastDay)))} ${w.ended ? '(finished)' : '(in progress)'}</div>
-<p><button onclick="(function(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([document.documentElement.outerHTML],{type:'text/html'}));a.download='les-report-${esc(cfg.seed).replace(/[^a-z0-9-]/gi, '_')}.html';a.click();})()">Download this report</button> <button onclick="print()">Print / PDF</button></p>${LES.God && LES.God.intervened(w) ? `<p class="disc" style="border-style:solid;color:inherit"><b>Sandbox world.</b> ${w.intervention.applied || w.intervention.events.filter(e => e.status === 'applied').length} intervention(s) by you (Fate): this is not a controlled research run, so compare it with an unchanged run of the same seed. Fate deaths are left out of life expectancy.</p>` : ''}
+`;
+    const tools = `<p><button onclick="(function(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([document.documentElement.outerHTML],{type:'text/html'}));a.download='les-report-${esc(cfg.seed).replace(/[^a-z0-9-]/gi, '_')}.html';a.click();setTimeout(function(){URL.revokeObjectURL(a.href);},1000);})()">Download this report</button> <button onclick="print()">Print / PDF</button></p>`;
+    const body = `${LES.God && LES.God.intervened(w) ? `<p class="disc" style="border-style:solid;color:inherit"><b>Sandbox world.</b> ${w.intervention.applied || w.intervention.events.filter(e => e.status === 'applied').length} intervention(s) by you (Fate): this is not a controlled research run, so compare it with an unchanged run of the same seed. Fate deaths are left out of life expectancy.</p>` : ''}
 <div class="kpis">
 <div class="kpi"><b>${w.winner ? '🏆 ' + esc(P.name(w.people[w.winner.pid])) : 'No winner'}</b><span>${w.winner ? `reached ${U.fmtMoney(w.goal)} in Year ${U.dayToDate(w.winner.day).year}` : `goal ${U.fmtMoney(w.goal)}`}</span></div>
 <div class="kpi"><b>${a.top[0] ? U.fmtMoney(a.top[0].peakReal) : '—'}</b><span>richest ever (Year-1 money)</span></div>
@@ -473,7 +477,20 @@ ${govSection(w)}
 <li><b>Export the data</b> (CSV) from the Stats tab and analyse it in Excel.</li>
 <li>Follow one family over generations in the Leaderboard → All-time view.</li></ul></section>
 <section><h2>Settings</h2><table>${settings}</table></section>
-<div class="disc">Results describe outcomes of this simulation under its specified assumptions, calibration choices and random seed; they do not establish universal real-world causes of success.</div>
+<div class="disc">Results describe outcomes of this simulation under its specified assumptions, calibration choices and random seed; they do not establish universal real-world causes of success.</div>`;
+    return { title, css, head, tools, body };
+  };
+
+  // inApp: the copy shown inside the app (dark like the app, no Download/Print buttons of its own:
+  // the overlay's bar has them).
+  R.html = function (w, prev, inApp) {
+    const r = R.parts(w, prev);
+    return `<!doctype html><html lang="en"${inApp ? ' class="app"' : ''}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${r.title}</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<style>
+${r.css}</style></head><body><main>
+${r.head}${inApp ? '' : r.tools}${r.body}
 </main></body></html>`;
   };
 
@@ -482,12 +499,48 @@ ${govSection(w)}
     return { seed: w.cfg.seed, cfg: Object.assign({}, w.cfg), winner: w.winner ? P.name(w.people[w.winner.pid]) : 'none', richest: a.top[0] ? U.fmtMoney(a.top[0].peakReal) : '—', median: U.fmtMoney(h.median), pop: h.pop, failed: w.stats.bizFailed };
   };
 
+  // Save the stand-alone report file (light or dark with the system); the link is freed once used.
+  R.download = function (w, prev) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([R.html(w, prev)], { type: 'text/html' }));
+    a.download = `les-report-${String(w.cfg.seed).replace(/[^a-z0-9-]/gi, '_')}.html`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+  // The report inside the app: a full-screen overlay with the report in a frame (its own styles stay
+  // apart from the app's), Download, Print and Close. Esc closes it; other shortcuts wait meanwhile.
+  R.isOpen = () => { const o = document.getElementById('report-overlay'); return !!o && !o.classList.contains('hidden'); };
+  R.close = function () {
+    const o = document.getElementById('report-overlay');
+    if (!o || o.classList.contains('hidden')) return;
+    o.classList.add('hidden');
+    const f = o.querySelector('iframe'); if (f) f.srcdoc = '';
+    const ap = LES.UI && LES.UI.app;
+    if (LES.Audio && LES.Audio.scene === 'report' && !(ap && ap.world && ap.world.ended)) LES.Audio.setScene(null);
+    if (R.lastFocus && R.lastFocus.focus) R.lastFocus.focus();
+  };
   R.open = function (w, prev) {
-    LES.Audio.setScene('report'); // back to the town's music when you return to this tab
-    const blob = new Blob([R.html(w, prev)], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const win = window.open(url, '_blank');
-    if (!win) { const a = document.createElement('a'); a.href = url; a.download = `les-report-${w.cfg.seed}.html`; a.click(); }
+    if (LES.Audio) LES.Audio.setScene('report'); // the report music while reading; back to the town's when closed
+    let o = document.getElementById('report-overlay');
+    if (!o) {
+      o = document.createElement('div');
+      o.id = 'report-overlay'; o.className = 'report-overlay hidden';
+      o.setAttribute('role', 'dialog'); o.setAttribute('aria-modal', 'true'); o.setAttribute('aria-label', 'Simulation report');
+      o.innerHTML = '<div class="report-bar"><b class="report-title">Report</b><span class="spacer"></span><button type="button" id="report-dl" title="Save the report as a file">⬇ Download</button><button type="button" id="report-print" title="Print or save as PDF">🖨 Print</button><button type="button" class="primary" id="report-close" title="Close (Esc)">✕ Close</button></div><iframe title="Simulation report"></iframe>';
+      document.body.appendChild(o);
+      const esc = e => { if (e.key === 'Escape' && R.isOpen()) { e.preventDefault(); e.stopImmediatePropagation(); R.close(); } };
+      window.addEventListener('keydown', e => { if (!R.isOpen()) return; if (e.key === 'Escape') esc(e); else if (!e.target.closest || !e.target.closest('.report-bar')) e.stopImmediatePropagation(); }, true);
+      o.querySelector('iframe').addEventListener('load', function () { try { this.contentWindow.addEventListener('keydown', esc); } catch (e) { /* not reachable: Close still works */ } });
+      o.querySelector('#report-close').onclick = () => R.close();
+      o.querySelector('#report-print').onclick = () => { const f = o.querySelector('iframe'); try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { R.download(R.cur.w, R.cur.prev); } };
+      o.querySelector('#report-dl').onclick = () => R.download(R.cur.w, R.cur.prev);
+    }
+    R.cur = { w, prev };
+    R.lastFocus = document.activeElement;
+    o.querySelector('.report-title').textContent = `Report · ${LES.townName(w)}`;
+    o.querySelector('iframe').srcdoc = R.html(w, prev, true);
+    o.classList.remove('hidden');
+    o.querySelector('#report-close').focus();
   };
 
   // CSV export of every person (for Excel / research).
@@ -505,5 +558,6 @@ ${govSection(w)}
     a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
     a.download = `les-people-${w.cfg.seed}.csv`;
     a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   };
 })(globalThis.LES = globalThis.LES || {});

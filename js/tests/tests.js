@@ -781,7 +781,7 @@
       'my-save': '93a0eff009e13bbf0631071fc098447a',
     };
     // 4a.6: the report names the drug policy instead of printing its key; 4b.1: a Country row in the settings table and "Today's rules".
-    const REPORT = { 'my-default': 'ab1b27f1', 'my-pandemic-lawless': 'f1c1593e', 'my-region': 'b2dad035' }; // Nov 2026: 'Town name' moved up the settings table (main setup page). Before that, C07 (report text only): sustained-mobility status and the four wealth origins (before: 6d4336bf, 53df8f5a, 1373d1e7). // C10 (report text only, engine fingerprints unchanged): 'How to read this', softer cause wording (before: caaeab0d, b9679882, 5a42d376). C08: a 'Town name' row in the settings table (before: 552b2b16, bca4204f, 821ba9a8). C06: new histories (rules revision 4). // C01 (report text only, engine fingerprints unchanged): tie-aware Spearman, n/a values, inheritance wording. Before C01: f66c05b8, 62c7b2a, cb8afa3d. Phase 6.2: official figures, work and business, the paper; // 4b.3: a 'Starting wealth by group' row; Phase 6: new histories and a 'Business and job markets' row
+    const REPORT = { 'my-default': '3dd8644c', 'my-pandemic-lawless': '3a0930ad', 'my-region': '20db8eae' }; // Nov 2026 review task 3 (styling only: pixel headings, the app's dark colours, font link, download link freed; before: ab1b27f1, f1c1593e, b2dad035). Nov 2026: 'Town name' moved up the settings table (main setup page). Before that, C07 (report text only): sustained-mobility status and the four wealth origins (before: 6d4336bf, 53df8f5a, 1373d1e7). // C10 (report text only, engine fingerprints unchanged): 'How to read this', softer cause wording (before: caaeab0d, b9679882, 5a42d376). C08: a 'Town name' row in the settings table (before: 552b2b16, bca4204f, 821ba9a8). C06: new histories (rules revision 4). // C01 (report text only, engine fingerprints unchanged): tie-aware Spearman, n/a values, inheritance wording. Before C01: f66c05b8, 62c7b2a, cb8afa3d. Phase 6.2: official figures, work and business, the paper; // 4b.3: a 'Starting wealth by group' row; Phase 6: new histories and a 'Business and job markets' row
     // Expansion 1 (rules revision 5) adds jobs, degrees and goals, so these stored fingerprints are pinned to
     // revision 4, which must keep reproducing them exactly (revision 5 is checked in expansionTests).
     const D = LES.DEFAULTS, base = { founders: 80, migration: 'normal', rulesRev: 4 };
@@ -1556,6 +1556,42 @@
     check('A sandbox world is marked in the comparison and the report', sb.sandbox && /a sandbox world/.test(CMP.table(sb, cur, 'x')) && /sandbox world changed by you/.test(R.html(w)) && w.intervention.applied === 1);
   }
 
+  // Review task 3: comparing in another country never shows that country on the live world, and the
+  // report opens inside the app.
+  async function compareTests() {
+    print('--- Compare and the in-app report ---', 'info');
+    const D = LES.DEFAULTS, CMP = LES.Compare, R = LES.Report, K = LES.Countries;
+    const nat = c => { K.ensure({ country: c }); return Object.assign({}, D, LES.PRESETS.national.values, { country: c, scenario: 'none', preset: 'national' }); }; // the preset's values are the country's (e.g. mortality)
+    check('Options: Malaysia under today\'s rules -> Classic; another country -> its own Classic first, then Malaysia\'s; a scenario -> today\'s rules',
+      CMP.targets(nat('my')).join() === 'classic' && CMP.targets(nat('uk')).join() === 'basic,classic' && CMP.targets(nat('us')).join() === 'basic,classic' && CMP.targets(Object.assign(nat('cn'), { scenario: 'pandemic' })).join() === 'national'
+      && CMP.config(nat('uk'), 'basic').country === 'uk' && CMP.config(nat('uk'), 'basic').government === 'off' && CMP.config(nat('uk'), 'classic').country === 'my');
+    for (const c of ['uk', 'us', 'cn']) {
+      const w = new LES.World(Object.assign(nat(c), { seed: `cmp-${c}`, founders: 40 }));
+      for (let d = 0; d < 200; d++) w.step();
+      for (const kind of ['basic', 'classic']) {
+        let ok = true, ticks = 0;
+        const iv = setInterval(() => { ticks++; if (K.active !== c) ok = false; }, 0); // what the map would draw with between slices
+        const s = await CMP.run(w, () => { if (K.active !== c) ok = false; }, kind);
+        clearInterval(iv);
+        const want = kind === 'basic' ? K.get(c).name : K.get('my').name;
+        check(`${K.get(c).name}: "${CMP.label(w.cfg, kind)}" runs, and the live world keeps its own country between slices`, ok && K.active === c && s.country === want && s.pop > 20 && s.years === 0, JSON.stringify({ ok, ticks, country: s.country, pop: s.pop }));
+      }
+    }
+    K.ensure(D);
+    const w = new LES.World(Object.assign({}, D, { seed: 'cmp-report', founders: 40 }));
+    for (let d = 0; d < 120; d++) w.step();
+    const app = R.html(w, null, true), file = R.html(w);
+    check('The in-app copy uses the app\'s dark look and leaves out the file\'s own buttons; the file keeps them and frees its download link',
+      /<html lang="en" class="app">/.test(app) && !/Download this report/.test(app) && /Download this report/.test(file) && /revokeObjectURL/.test(file) && /var\(--pixel\)/.test(file));
+    if (typeof document !== 'undefined' && document.body) {
+      R.open(w, null);
+      const o = document.getElementById('report-overlay'), f = o && o.querySelector('iframe');
+      const shown = R.isOpen() && f && f.srcdoc.includes(LES.townName(w));
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      check('The report opens in an overlay inside the page (no new tab) and Esc closes it', shown && !R.isOpen() && f.srcdoc === '');
+    }
+  }
+
   // C07: sustained mobility from income averaged over years, ranked within birth cohorts (research only).
   async function mobilityTests() {
     print('--- Sustained mobility (C07) ---', 'info');
@@ -1625,6 +1661,7 @@
       await expansionTests();
       await payTests();
       await nameTests();
+      await compareTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -1636,6 +1673,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, compareTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

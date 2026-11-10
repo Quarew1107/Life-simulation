@@ -25,22 +25,38 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
 **To do (keep this list current; the same list is in `docs/ROADMAP.md`):**
 
 **Review follow-up (Nov 2026): 6 tasks from a UI/art/bug review, done one at a time.** Tasks 1 (pop-ups and
-small screens) and 2 (side panel) are done (ticked below). Tasks 3-6 are open. Rules for each: UI and art tasks
+small screens), 2 (side panel) and 3 (Report and Compare) are done (ticked below). Tasks 4-6 are open. Rules for each: UI and art tasks
 must not change simulation results (no `js/sim/` edits, never use the world RNG in render code; use hashes of
 ids/positions for variety); keep the full suite passing (`python tools/edge.py tests.html "await
 LES_TESTS.runAll(), document.getElementById('out').textContent" 1800`, 343/343 at 1a84ec6); keep a 2,500-founder
 town no slower to draw (`docs/PERFORMANCE.md`); tick the item here when done.
-- [ ] **Task 3: Report and Compare** (`js/ui/compare.js`, `js/ui/report.js`).
-  - Bug: "Compare with Classic rules" runs a Malaysian world in slices and the map draws in between, so during a
-    China comparison most frames show RM instead of ¥ and Malaysian signs/style, and tiles painted then keep the
-    Malaysian look (`compare.js` ~line 63: the country pack is swapped globally). The live world's look and
-    currency must never change during a comparison.
-  - On a non-Malaysian world the comparison is against Malaysia; offer "same country, extra systems off" (same
-    pack, Classic-style rules) and label clearly what is compared.
-  - The Report opens with `window.open` in a new tab (blocked by in-app browsers; its blob URL is never revoked).
-    Show it in-app (overlay, Esc/close), styled like the app (fonts, pixel headings, colours, charts via
-    `js/ui/charts.js` if cheap), keep a download option, revoke object URLs. Report-text hash tests (REPORT in
-    `js/tests/tests.js`) pin the report; re-record them only for intended wording/markup changes.
+- [x] **Task 3: Report and Compare** (Nov 2026, UI only; `js/ui/compare.js`, `js/ui/report.js`, `css/style.css`).
+  - The comparison world runs in slices; every slice puts back the live world's country pack before it yields
+    (`CMP.run`, `guarded`), so the map, money and tiles never show the other country between slices.
+  - Options (`CMP.targets`): Malaysia under today's rules -> Classic rules; another country under today's rules ->
+    "Classic rules in <country>" ('basic': same pack, Classic settings, extra systems off; the default) or
+    "Classic rules in Malaysia" ('classic'); a scenario, Classic or custom world -> today's rules. Buttons in the
+    Compare window switch between them; each option has a one-line description (`CMP.describe`). 10-year runs of
+    'basic' in the UK, US and China keep invariants clean.
+  - The report opens in-app (`R.open`): full-screen overlay `#report-overlay` with the report in an iframe
+    (`srcdoc` = `R.html(w, prev, true)`: `html.app` dark look, no buttons of its own), bar with Download, Print and
+    Close; Esc closes it (also from inside the frame) and other shortcuts wait meanwhile; the report music stops on
+    close unless the world has ended. `R.download` saves the stand-alone file (light/dark with the system) and
+    frees its link; the file's own Download button and the CSV export free theirs too. Report styling: pixel-font
+    headings, app colours. REPORT check-values re-recorded for the styling (before: ab1b27f1, f1c1593e, b2dad035).
+  - Tests: `compareTests` (options, UK/US/China runs in both modes with the live pack checked between slices, the
+    in-app copy, overlay open and Esc). Full suite 352/352.
+- **Owner-approved plan for tasks 4-6 (Nov 2026, as recommended):** order 4, then 5, then 6 is fine but 6 may
+  come first. Task 4: work clothes while working on a site (hi-vis vest for day labourers); each worker a fixed
+  patch of the plot; at most ~15 drawn per place with a "+N" badge that selects the building; 3 body builds by id
+  hash; sticks at 75+; children near a parent; sitting/queuing poses; bigger dots and cosmetic traffic zoomed out.
+  Task 5: 4 empty-shop looks (rent banner on ~1 in 3); 2-3 shophouse/office variants and signs by business type;
+  the construction yard cycles foundation -> frame -> nearly finished every 2 months by date (render only; there
+  is no build progress in the sim; new estates as building sites was *not* chosen); frost through UK/US/China
+  winters and 1-2 (UK), more (US), rare (China) seeded snow spells with flakes, repainting only when a spell
+  starts or ends. Task 6: rebase `c543efa`, drop the `CR.probe` debug hook, retune to +-30% of target, **tune
+  Malaysia under rev 8 too** (254 vs 170), rev 8 default for new worlds. Delete the empty/finished worktrees in
+  `.claude/worktrees/` once their work is merged.
 - [ ] **Task 4: People and crowd art** (`js/render/renderer.js`, `js/render/sprites.js`).
   - Bug: uniforms are only drawn for people standing still (`renderer.js` ~line 417), but building-site jobs are
     animated as walking, so construction workers, electricians and day labourers show street clothes. Show work

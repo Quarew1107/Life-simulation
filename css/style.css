@@ -427,3 +427,16 @@ button.primary { border-radius: 6px; box-shadow: 3px 3px 0 #7d5f17; }
   #btn-report, #btn-save { font-size: 0; padding: 5px 7px; }
   #btn-step, #btn-cast { padding: 6px 8px; }
 }
+
+/* Report inside the app (js/ui/report.js R.open) and the Compare window's options and progress bar */
+.report-overlay { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; background: var(--bg); }
+.report-overlay.hidden { display: none; }
+.report-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--line); }
+.report-bar .report-title { font: 700 12px var(--pixel); letter-spacing: .5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.report-bar .spacer { flex: 1; }
+.report-bar button:not(.primary) { background: var(--panel-2); border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 7px 12px; }
+.report-overlay iframe { flex: 1; width: 100%; border: 0; background: var(--bg); }
+@media (max-width: 600px) { .report-bar { padding: 6px 8px; gap: 6px; } .report-bar button { padding: 6px 8px; font-size: 12px; } }
+.cmp-pick { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0 10px; }
+.cmp-run .track { height: 8px; background: #121920; border-radius: 4px; overflow: hidden; margin: 6px 0; }
+.cmp-run .track i { display: block; height: 100%; background: var(--gold); transition: width .2s; }
