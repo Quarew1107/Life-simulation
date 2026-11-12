@@ -100,10 +100,12 @@
       if (b && b.open && b.cash >= gross + er) {
         w.ledger.move(b, 'cash', p, 'cash', gross - ee);
         w.ledger.move(b, 'cash', p, 'epf', ee + er);
+        LES.Finance.retireIn(w, p, ee + er);
         b.payrollNow = (b.payrollNow || 0) + gross + er;
       } else {
         w.ledger.pay('EMPLOYER', p, 'cash', gross - ee);
         w.ledger.pay('EMPLOYER', p, 'epf', ee + er);
+        LES.Finance.retireIn(w, p, ee + er);
       }
       let tax;
       if (w.gov) tax = LES.Fiscal.onPay(w, p, job, gross, er); // LHDN PCB and EIS; the treasury pays public servants
@@ -263,6 +265,7 @@
     if (e.feeMonthly > 0 && e.monthsPaid < course.months) {
       const fee = e.feeMonthly;
       const SL = LES.Countries.pack.education && LES.Countries.pack.education.loans; // UK: the Student Loans Company pays every fee
+      if (!SL && p.cash < fee + p.mcost) LES.Finance.useWellbeing(w, p, fee + p.mcost - p.cash, 'study fees'); // rev 9 Malaysia
       if (SL || p.cash < fee + p.mcost) {
         if (!SL && p.bankruptUntil >= w.day) { L.dropOut(w, p, 'could not pay fees'); return; }
         Ld.pay('BANK', p, 'cash', fee); // PTPTN-style study loan

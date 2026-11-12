@@ -7,6 +7,59 @@
   const U = LES.U, C = LES.C, P = LES.P, M = LES.Market;
   const F = LES.Finance = {};
 
+  // Rules revision 9 (wealth you can use): lifestyle budgets and spending out of wealth count only money a
+  // person can actually reach (cash, investments, Malaysia's EPF Akaun Fleksibel), not locked retirement
+  // savings; Malaysia's EPF is split into its three accounts (KWSP, from May 2024); bills that cannot be paid
+  // are summed into one monthly line in the town news instead of one line per person.
+  F.WEALTH_REV = 9;
+  F.wealthRev = w => !!w && !!w.cfg && w.cfg.rulesRev >= F.WEALTH_REV;
+  // Retirement accounts of the country pack (retirement.accounts: { flexible, wellbeing } shares of each
+  // contribution), only under revision 9.
+  F.accounts = w => (F.wealthRev(w) && FRT && FRT.accounts) || null;
+  F.liquid = (w, p) => p.cash + P.invValue(w, p) + (p.epfFlex || 0);
+  F.locked = (w, p) => p.trust + p.epf - (p.epfFlex || 0);
+  // The goal shown honestly (UI): the real share of it as text ('<0.1%', '0.7%', '56%'), and the next milestone
+  // above a goal worth (100 thousand, 1 million, 10 million, the goal) with how far along it is.
+  F.goalShare = function (w, gw) {
+    const s = Math.max(0, gw) / w.goal * 100;
+    return s >= 100 ? '100%' : s >= 10 ? `${Math.floor(s)}%` : s >= 0.1 ? `${s.toFixed(1)}%` : '<0.1%';
+  };
+  F.nextMilestone = function (w, gw) {
+    const list = w.milestoneList || [w.goal], th = list.find(x => x > gw) || w.goal;
+    return { th, frac: U.clamp(Math.max(0, gw) / th, 0, 1) };
+  };
+  // A new contribution (or the founders' starting balance) into retirement savings: part of it goes to the
+  // flexible and wellbeing accounts where the country has them.
+  F.retireIn = function (w, p, amt) {
+    const A = F.accounts(w);
+    if (!A || amt <= 0) return;
+    p.epfFlex = (p.epfFlex || 0) + Math.round(amt * A.flexible);
+    p.epfWell = (p.epfWell || 0) + Math.round(amt * A.wellbeing);
+  };
+  // The yearly dividend grows each account in step; rounding never lets them exceed the whole balance.
+  F.retireDividend = function (w, p, div) {
+    if (!F.accounts(w) || !(p.epfFlex || p.epfWell)) return;
+    p.epfFlex = Math.round((p.epfFlex || 0) * (1 + div));
+    p.epfWell = Math.round((p.epfWell || 0) * (1 + div));
+    F.retireClamp(p);
+  };
+  F.retireClamp = function (p) {
+    if (!(p.epfFlex || p.epfWell)) return;
+    p.epfFlex = Math.max(0, Math.min(p.epfFlex || 0, p.epf));
+    p.epfWell = Math.max(0, Math.min(p.epfWell || 0, p.epf - p.epfFlex));
+  };
+  // Everything left the retirement account (old age, death, leaving the country, a reset).
+  F.retireEmpty = p => { if (p.epfFlex || p.epfWell) { p.epfFlex = 0; p.epfWell = 0; } };
+  // Take up to `need` from the wellbeing account (education and medical bills only).
+  F.useWellbeing = function (w, p, need, what) {
+    if (!F.accounts(w) || !(p.epfWell > 0) || need <= 0) return 0;
+    const amt = Math.min(need, p.epfWell, p.epf);
+    if (amt <= 0 || !w.ledger.move(p, 'epf', p, 'cash', amt)) return 0;
+    p.epfWell -= amt;
+    P.log(w, p, `Used ${U.fmtMoney(amt)} from ${FNM.retirement} Akaun Sejahtera for ${what}`, 'money', 0);
+    return amt;
+  };
+
   F.tierCost = function (w, cat, t) {
     let base = U.RM(C.TIERS[cat][t].cost) * w.price;
     if (w.taxPx) base *= w.taxPx[cat][t]; // sales-tax law (GST vs SST)
@@ -34,7 +87,11 @@
   // Sell investments to cover a shortfall (index fund first, then biggest shareholdings).
   F.raiseCash = function (w, p, need, why) {
     let got = 0;
-    if (need > 0 && p.inv.idx > 0) got += F.sell(w, p, 'idx', need, why || 'needed cash');
+    if (need > 0 && p.epfFlex > 0 && F.accounts(w)) { // Malaysia (rev 9): the EPF flexible account first, then investments
+      const amt = Math.min(need, p.epfFlex, p.epf);
+      if (amt > 0 && w.ledger.move(p, 'epf', p, 'cash', amt)) { p.epfFlex -= amt; got += amt; }
+    }
+    if (need - got > 0 && p.inv.idx > 0) got += F.sell(w, p, 'idx', need - got, why || 'needed cash'); // (got is 0 here before rules revision 9)
     if (need - got > 0) {
       const tks = Object.keys(p.inv.st).sort((a, b) => p.inv.st[b] * w.mkt.byTk[b].price - p.inv.st[a] * w.mkt.byTk[a].price);
       for (const tk of tks) {
@@ -81,7 +138,9 @@
       const from = C.TIERS[cat][p.tiers[cat]].name;
       if (cat === 'housing') F.moveHome(w, p, 0, true);
       else p.tiers[cat] = 0;
-      P.log(w, p, `Could not afford ${from}; downgraded`, 'money', 1);
+      const rev9 = F.wealthRev(w);
+      if (rev9) w.cutbacks = (w.cutbacks || 0) + 1; // one line a month in the town news (World.monthClose)
+      P.log(w, p, `Could not afford ${from}; downgraded`, 'money', rev9 ? 0 : 1);
     } else {
       p.stress = Math.min(100, p.stress + 8);
       p.health = Math.max(0, p.health - 2);
@@ -106,7 +165,7 @@
     if (p.inst) return; // no lifestyle choices in prison or rehab
     const pat = (p.pers.pat - 50) / 50, dis = (p.pers.dis - 50) / 50;
     const spendRate = U.clamp(1.0 - 0.3 * pat - 0.15 * dis + LES.Goals.spendDelta(p), 0.5, 1.2);
-    const budget = p.incomeEMA * spendRate + Math.max(0, p.nw) * 0.004 - F.careShare(w, p);
+    const budget = p.incomeEMA * spendRate + Math.max(0, F.wealthRev(w) ? F.liquid(w, p) : p.nw) * 0.004 - F.careShare(w, p);
     const t = { food: 0, housing: p.isHead ? 0 : p.tiers.housing, transport: 0, leisure: 0 };
     let cost = F.tierCost(w, 'food', 0) + F.tierCost(w, 'transport', 0) + F.tierCost(w, 'leisure', 0) + (p.isHead ? F.tierCost(w, 'housing', 0) : 0);
     const order = ['food', 'housing', 'transport', 'leisure', 'housing', 'food', 'leisure', 'transport', 'housing', 'food', 'housing', 'transport', 'leisure'];
@@ -640,6 +699,7 @@
     if (P.age(w, p) >= FRT.accessAge && p.epf > 0) {
       const amt = p.epf;
       L.move(p, 'epf', p, 'cash', amt);
+      F.retireEmpty(p);
       P.log(w, p, `Withdrew ${U.fmtMoney(amt)} of ${FNM.retirement} retirement savings`, 'money', 0);
     }
     if (p.isHead) F.payBill(w, p, 'housing');
@@ -649,7 +709,7 @@
     F.debtMonth(w, p);
     // Wealthier people consume part of their wealth (family support, luxuries,
     // donations): ~3.6%/year of net worth above RM300k (Year-1 money).
-    const rich = p.nw - w.px(3e5);
+    const rich = (F.wealthRev(w) ? p.nw - F.locked(w, p) : p.nw) - w.px(3e5); // rev 9: not out of locked retirement savings
     if (rich > 0) {
       const lux = Math.round(rich * 0.003);
       if (p.cash < lux) F.raiseCash(w, p, lux - p.cash);

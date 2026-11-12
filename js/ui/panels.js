@@ -75,6 +75,22 @@
     UI.update(true);
   };
 
+  // ---- The goal, shown honestly: the real share of it, and the next milestone on the way ----
+  UI.goalShare = (w, gw) => LES.Finance.goalShare(w, gw); // (pure helpers in finance.js, so the tests can reach them)
+  UI.nextMilestone = (w, gw) => LES.Finance.nextMilestone(w, gw);
+  // The town's milestone race: who passed 1 million, 10 million and the goal first (world.firsts).
+  UI.firstsHtml = function (w) {
+    const list = (w.milestoneList || []).filter((x, i) => i >= 1); // 1 million and up
+    if (!list.length) return '';
+    const f = w.firsts || {};
+    return `<ul class="list-plain milestones">${list.map(th => {
+      const r = f[th];
+      return `<li><span>${th === w.goal ? '🏆' : '★'} First to ${U.fmtMoney(th)}</span><span>${r ? `${UI.plink(w, r.pid)} <span class="muted">Y${U.dayToDate(r.day).year}, age ${r.age}</span>` : '<span class="muted">nobody yet</span>'}</span></li>`;
+    }).join('')}</ul>`;
+  };
+  // Old saves (rules revision 8 and before) logged every unpaid bill into the town news; the All view skips them.
+  const CUTBACK = /^Could not afford .*; downgraded$/;
+
   UI.plink = function (w, id) {
     const p = w.people[id];
     if (!p) return '?';
@@ -157,10 +173,9 @@
       goalEl.className = 'goal won';
       goalEl.innerHTML = `<div class="row"><span>🏆 <a class="plink" data-pid="${win.id}">${esc(P.name(win))}</a> won</span><span class="muted">Y${U.dayToDate(w.winner.day).year}, age ${w.winner.age}</span></div><div class="bar"><i style="width:100%"></i></div>`;
     } else {
-      const gw = rich ? P.goalWorth(w, rich) : 0;
-      const pr = rich ? U.clamp((Math.log10(Math.max(1, gw / 100)) - 4) / (Math.log10(w.goal / 100) - 4), 0, 1) : 0;
+      const gw = rich ? P.goalWorth(w, rich) : 0, nx = UI.nextMilestone(w, gw);
       goalEl.className = 'goal';
-      goalEl.innerHTML = `<div class="row"><span>Goal ${U.fmtMoney(w.goal)}${w.cfg.goalMode === 'real' ? ' (Y1 money)' : ''}</span><span class="muted">${rich ? `${esc(rich.first)} ${U.fmtMoney(gw)}` : ''}</span></div><div class="bar" title="Richest person's progress (log scale from RM10k)"><i style="width:${(pr * 100).toFixed(1)}%"></i></div>`;
+      goalEl.innerHTML = `<div class="row"><span>Goal ${U.fmtMoney(w.goal)}${w.cfg.goalMode === 'real' ? ' (Y1 money)' : ''}</span><span class="muted">${rich ? `${esc(rich.first)} ${U.fmtMoney(gw)} · ${UI.goalShare(w, gw)}` : ''}</span></div><div class="bar" title="Richest person on the way to the next milestone, ${U.fmtMoney(nx.th)}: ${Math.round(nx.frac * 100)}% (${UI.goalShare(w, gw)} of the goal)"><i style="width:${(nx.frac * 100).toFixed(1)}%"></i></div>`;
     }
     goalEl.onclick = e => { const l = e.target.closest('[data-pid]'); if (l) app.select(Number(l.dataset.pid), true); else if (rich) app.select(rich.id, true); };
   };
@@ -200,7 +215,7 @@
 
     const nw = p.nw, goal = w.goal;
     const realNw = P.realWorth(w, p);
-    const prog = U.clamp((Math.log10(Math.max(1, P.goalWorth(w, p) / 100)) - 3) / (Math.log10(goal / 100) - 3), 0, 1);
+    const gwP = P.goalWorth(w, p), nxP = UI.nextMilestone(w, gwP);
     const invIdx = Math.round(p.inv.idx * w.mkt.idx), invStk = P.stockValue(w, p);
     const holdings = Object.keys(p.inv.st).map(tk => `${tk} ${U.fmtMoney(p.inv.st[tk] * w.mkt.byTk[tk].price)}`).join(', ');
     const e = p.earned;
@@ -218,12 +233,13 @@
       ${UI.toolbarHtml(app, p)}
       <div class="card">
         <h3>Net worth <small class="muted">peak ${U.fmtMoney(p.peakNw)}</small></h3>
-        <div class="networth"><span class="big ${nw < 0 ? 'neg' : ''}">${U.fmtMoney(nw)}</span><span class="muted">${(prog * 100).toFixed(0)}% to goal (log)</span></div>
+        <div class="networth"><span class="big ${nw < 0 ? 'neg' : ''}">${U.fmtMoney(nw)}</span><span class="muted">${UI.goalShare(w, gwP)} of the goal${gwP < goal ? ` · next ${U.fmtMoney(nxP.th)}: ${Math.round(nxP.frac * 100)}%` : ''}</span></div>
         ${w.price > 1.01 ? `<div class="note">In Year-1 money: <b>${U.fmtMoney(realNw)}</b> (prices are ×${w.price.toFixed(2)} since Year 1)</div>` : ''}
-        <div class="progress"><i style="width:${(prog * 100).toFixed(1)}%"></i></div>
+        <div class="progress" title="On the way to the next milestone, ${U.fmtMoney(nxP.th)}"><i style="width:${(nxP.frac * 100).toFixed(1)}%"></i></div>
         <div class="grid2">
           <div><span class="muted">Cash</span><span>${U.fmtMoney(p.cash)}</span></div>
           <div><span class="muted">${LES.Countries.pack.names.retirement}</span><span>${U.fmtMoney(p.epf)}</span></div>
+          ${p.epfFlex || p.epfWell ? `<div title="Akaun Fleksibel can be withdrawn any time; Akaun Sejahtera pays study and medical bills; the rest (Akaun Persaraan) is locked until ${LES.Countries.pack.retirement.accessAge}"><span class="muted">· Fleksibel / Sejahtera</span><span>${U.fmtMoney(p.epfFlex || 0)} / ${U.fmtMoney(p.epfWell || 0)}</span></div>` : ''}
           <div><span class="muted">Index fund</span><span>${U.fmtMoney(invIdx)}</span></div>
           <div title="${esc(holdings)}"><span class="muted">Shares</span><span>${U.fmtMoney(invStk)}</span></div>
           <div><span class="muted">Business equity</span><span>${U.fmtMoney(P.bizValue(w, p))}</span></div>
@@ -414,11 +430,10 @@
   // "Town at a glance": shown on the Person tab once time has moved on and nobody is selected.
   UI.glanceHtml = function (w) {
     const app = UI.app, goal = w.goal;
-    const prog = p => U.clamp((Math.log10(Math.max(1, P.goalWorth(w, p) / 100)) - 3) / (Math.log10(goal / 100) - 3), 0, 1);
     const race = w.living.filter(p => p.alive && p.adult && !p.away).sort((a, b) => (P.goalWorth(w, b) - P.goalWorth(w, a)) || (a.id - b.id)).slice(0, 3);
     let raceHtml;
     if (w.winner) raceHtml = `<p style="margin:0">🏆 ${UI.plink(w, w.winner.pid)} reached the goal in Year ${U.dayToDate(w.winner.day).year}, aged ${w.winner.age}.</p>`;
-    else raceHtml = `<ul class="list-plain glance-race">${race.map(p => `<li><span>${UI.plink(w, p.id)} <span class="muted">${Math.floor(P.age(w, p))} · ${C.STRATEGY_NAMES[p.strategy]}</span></span><span>${U.fmtMoney(P.goalWorth(w, p))} <span class="muted">${Math.round(prog(p) * 100)}%</span></span></li>`).join('')}</ul>`;
+    else raceHtml = `<ul class="list-plain glance-race">${race.map(p => `<li><span>${UI.plink(w, p.id)} <span class="muted">${Math.floor(P.age(w, p))} · ${C.STRATEGY_NAMES[p.strategy]}</span></span><span>${U.fmtMoney(P.goalWorth(w, p))} <span class="muted">${UI.goalShare(w, P.goalWorth(w, p))}</span></span></li>`).join('')}</ul>`;
     // Big events: the last 7 days, or else the most recent ones.
     const big = w.feed.filter(e => e.imp >= 2);
     let recent = big.filter(e => e.day >= w.lastDay - 6), evTitle = 'This week';
@@ -603,6 +618,7 @@
     for (let i = w.feed.length - 1; i >= 0 && rows.length < 250; i--) {
       const e = w.feed[i];
       if (f === 'cast' ? !(e.pid >= 0 && w.people[e.pid].custom) : f !== 'all' && !(e.cat === f || (f === 'wealth' && e.cat === 'money'))) continue;
+      if (f === 'all' && e.cat === 'money' && CUTBACK.test(e.text)) continue; // (old saves) these are under Wealth
       const name = e.pid >= 0 ? `<span class="nm">${esc(P.name(w.people[e.pid]))}</span> — ` : '';
       rows.push(`<div class="feed-row imp${e.imp}" data-pid="${e.pid}"><span class="when">${U.fmtMonthYear(e.day)}</span><span>${CAT_ICON[e.cat] || '•'}</span><span class="txt">${name}${esc(e.text)}</span></div>`);
     }
@@ -633,7 +649,7 @@
     const st = w.stats;
     const xs = x => `Y${Math.floor(x) + 1}`;
     const series = (k, label, color) => ({ label, color, data: h.map(r => [r.day / 365, r[k]]) });
-    const race = w.living.filter(p => p.alive && p.adult).sort((a, b) => b.nw - a.nw).slice(0, 5);
+    const race = w.living.filter(p => p.alive && p.adult).sort((a, b) => P.goalWorth(w, b) - P.goalWorth(w, a)).slice(0, 5);
     const scn = LES.Scenarios.current(w);
     el.innerHTML = `${UI.app.region ? '' : `<div class="tab-tools"><button class="ghost" data-act="compare">${LES.icon('compare', 16)} Compare with ${U.esc(LES.Compare.label(w.cfg))}</button></div>`}${UI.regionCard(w)}
       ${scn ? `<div class="card"><h3><span>${LES.icon(scn.icon, 14)} Scenario: ${U.esc(scn.name)}</span></h3><div class="note">${U.esc(scn.short)}</div><div class="scn-status">${scn.status(w)}</div><canvas class="chart" id="st-scn"></canvas></div>` : ''}
@@ -645,8 +661,9 @@
         <div class="stat"><div class="v">${st.bizStarted}/${st.bizFailed}</div><div class="l">businesses started / failed</div></div>
         <div class="stat"><div class="v">${st.graduations}</div><div class="l">graduations</div></div>
       </div>
-      <div class="card"><h3>Race to ${U.fmtMoney(w.goal)}</h3><ul class="list-plain">
-        ${race.map(p => `<li><span>${UI.plink(w, p.id)} <span class="muted">${Math.floor(P.age(w, p))} · ${C.STRATEGY_NAMES[p.strategy]}</span></span><span>${U.fmtMoney(p.nw)}</span></li>`).join('')}</ul>
+      <div class="card"><h3>Race to ${U.fmtMoney(w.goal)}${w.cfg.goalMode === 'real' ? ' <small class="muted">Year-1 money</small>' : ''}</h3><ul class="list-plain">
+        ${race.map(p => `<li><span>${UI.plink(w, p.id)} <span class="muted">${Math.floor(P.age(w, p))} · ${C.STRATEGY_NAMES[p.strategy]}</span></span><span>${U.fmtMoney(P.goalWorth(w, p))} <span class="muted">${UI.goalShare(w, P.goalWorth(w, p))}</span></span></li>`).join('')}</ul>
+        ${UI.firstsHtml(w)}
         ${w.winner ? `<div class="note">🏆 First to the goal: ${UI.plink(w, w.winner.pid)} in Y${U.dayToDate(w.winner.day).year} at age ${w.winner.age}.</div>` : ''}</div>
       <div class="card"><h3>Life goals <small class="muted">achieved so far · median happiness ${Math.round(last.happy || 0)}/100</small></h3><canvas class="chart" id="st-goals"></canvas>
         <div class="note">Not everyone is chasing money: each person has their own goal. Bars show how many times each goal has been achieved in this world.</div></div>

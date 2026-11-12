@@ -123,6 +123,7 @@
     const L = w.ledger;
     let wealth = 0;
     for (const k of ['cash', 'trust', 'epf']) { wealth += p[k]; L.spend(p, k, 'ABROAD', p[k]); }
+    LES.Finance.retireEmpty(p);
     F.setHome(w, p, -1);
     p.away = { since: w.day, wealth, reason };
     p.plan = null; p.why = null;

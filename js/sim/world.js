@@ -72,7 +72,10 @@
       }
       if (this.cfg.rulesRev >= C.EXPANSION_REV) World.placeResearchCentre(this);
       this.goal = this.derived.goal;
-      this.milestoneList = [...new Set([U.RM(1e5), U.RM(1e6), U.RM(1e7), this.goal])].filter(x => x <= this.goal).sort((a, b) => a - b);
+      // Rev 9: 100 thousand, 1 million and 10 million in the country's own money (before: in ringgit-sized units).
+      const mk = F.wealthRev(this) ? LES.Countries.scale() : 1;
+      this.milestoneList = [...new Set([Math.ceil(U.RM(1e5) / mk), Math.ceil(U.RM(1e6) / mk), Math.ceil(U.RM(1e7) / mk), this.goal])].filter(x => x <= this.goal).sort((a, b) => a - b);
+      this.firsts = {}; // threshold -> the first person in town to pass it { pid, day, age }
       this.initFounders();
       for (const s of this.sys.init) s.init(this);
       F.updateRent(this);
@@ -190,6 +193,7 @@
         };
         p.xp[j.cat] = Math.min(5, Math.max(0, age - 18) * 0.25 * R.range(0.3, 1));
         this.ledger.pay(source, p, 'epf', Math.round(salary * 0.24 * 12 * Math.max(0, age - 20) * 0.5));
+        F.retireIn(this, p, p.epf);
         p.incomeEMA = Math.round(p.job.salary * 0.89);
       } else {
         p.incomeEMA = this.px(800);
@@ -348,6 +352,9 @@
         if (gw < th || p.milestones.includes(th)) continue;
         p.milestones.push(th);
         const age = Math.floor(P.age(this, p));
+        if (!this.firsts) this.firsts = {}; // saves from before the town record
+        const first = !this.firsts[th];
+        if (first) this.firsts[th] = { pid: p.id, day: this.day, age };
         if (th === this.goal) {
           if (!this.winner) {
             this.winner = { pid: p.id, day: this.day, age, nw: p.nw, real: P.realWorth(this, p) };
@@ -356,6 +363,8 @@
           } else {
             P.log(this, p, `Also reached the ${U.fmtMoney(th)} goal at age ${age}`, 'wealth', 2);
           }
+        } else if (first && F.wealthRev(this) && th >= this.milestoneList[1]) { // rev 9: the town's milestone race
+          P.log(this, p, `First in ${LES.townName(this)} to pass ${U.fmtMoney(th)}${this.cfg.goalMode === 'real' ? ' (Year-1 money)' : ''}, at age ${age}`, 'wealth', 2);
         } else {
           P.log(this, p, `Net worth passed ${U.fmtMoney(th)}${this.cfg.goalMode === 'real' ? ' in Year-1 money' : ''} at age ${age}`, 'wealth', th >= U.RM(1e7) ? 2 : 1);
         }
@@ -380,6 +389,11 @@
         LES.Goals.monthly(this, p);
         p.happyAvg = p.happyAvg * 0.9 + p.happy * 0.1;
         p.netMonth = 0;
+      }
+      if (this.cutbacks) { // rev 9: one line for everyone who could not keep up a bill this month
+        const n = this.cutbacks;
+        this.pushFeed({ day: this.day, pid: -1, text: `${n} ${n === 1 ? 'person' : 'people'} could not keep up their spending and cut back this month`, cat: 'money', imp: 1 });
+        this.cutbacks = 0;
       }
       Fa.monthCouples(this);
       LES.Migration.monthly(this);
@@ -582,6 +596,7 @@
       for (const p of this.people) {
         total += p.cash + p.trust + p.epf;
         for (const k of ['cash', 'trust', 'epf']) if (!Number.isInteger(p[k]) || p[k] < 0) errs.push(`P${p.id} ${k}=${p[k]}`);
+        if ((p.epfFlex || p.epfWell) && (p.epfFlex < 0 || p.epfWell < 0 || (p.epfFlex || 0) + (p.epfWell || 0) > p.epf)) errs.push(`P${p.id} EPF accounts ${p.epfFlex}+${p.epfWell} > ${p.epf}`);
         if (!p.alive && (p.cash || p.trust || p.epf || p.inv.idx || Object.keys(p.inv.st).length)) errs.push(`dead P${p.id} still holds money`);
         if (!p.alive && (p.job || p.enrol || p.manages >= 0 || p.careOf.length || p.partnerId !== null)) errs.push(`dead P${p.id} still active`);
         if (p.away && (p.cash || p.trust || p.epf || p.job || p.manages >= 0 || Object.keys(p.shares).length || p.homeId >= 0)) errs.push(`away P${p.id} still holds town assets`);

@@ -116,6 +116,10 @@
     } else {
       out.paras.push(`Nobody reached the ${U.fmtMoney(w.goal)} goal in ${years} years. The richest person ever was <b>${richest ? esc(P.name(richest.p)) : '—'}</b> with a peak of ${richest ? U.fmtMoney(richest.peakReal) : '—'} in Year-1 money — ${richest ? (richest.peakReal / w.goal * 100).toFixed(1) : 0}% of the goal. In this run nobody got there: under these rules a salary alone cannot reach it, and only rare business breakthroughs come close.`);
     }
+    if (LES.Finance.wealthRev(w)) { // rules revision 9: the town's milestone race on the way to the goal
+      const ms = (w.milestoneList || []).filter((x, i) => i >= 1 && x < w.goal), f = w.firsts || {};
+      if (ms.length) out.paras.push(`<b>Milestones.</b> ${ms.map(th => { const r = f[th]; return r ? `First to ${U.fmtMoney(th)}: <b>${esc(P.name(w.people[r.pid]))}</b> in Year ${U.dayToDate(r.day).year}, aged ${r.age}` : `Nobody passed ${U.fmtMoney(th)}`; }).join('; ')}.${w.cfg.goalMode === 'real' ? ' (Year-1 money.)' : ''}`);
+    }
 
     // How to read this section (C10): one simulated town, associations not causes, and its sample size.
     out.paras.push(`<b>How to read this.</b> These findings come from ${rows.length} adults who reached 30 in one simulated town over ${years} year${years === 1 ? '' : 's'}. When two things go together here (correlation), it does not prove that one caused the other, and the model's rules are assumptions, not measurements of the real world.${rows.length < 30 ? ' <b>Too few people for firm conclusions:</b> let the run go longer or use more founders.' : ''}${LES.God && LES.God.intervened(w) ? ' This is a sandbox world changed by you (Fate).' : ''}`);

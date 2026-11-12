@@ -129,6 +129,43 @@ town no slower to draw (`docs/PERFORMANCE.md`); tick the item here when done.
   - Tests: `crimeRevTests` (4: default is rev 8; capacity factor and tuning per revision; a rev-7 world ignores
     rev-8 settings; one quick 400-founder x 8-year crime band per country, +-40%). Full suite 376/376.
 
+**Second review (Nov 2026), owner's priorities in order:** (1) goal and wealth — done below; (2) founder ages:
+every founder is a young adult (about 18-35), so for 20-30 years there are no elderly, life expectancy shows
+artifacts (98.6 in a 15-year UK town), and unemployment starts very high (UK 31% in year 1, 6% by year 14) — next
+to plan; then smaller items: China's crime falls to ~45% of target over 40 years (rev 8 was tuned on years 6-10);
+prisoners (Malaysia ~2x, China ~1/4 of official); "Criminal record: none" while in prison for drug possession;
+map labels in today's money vs the glance card in Year-1 money; awards (one person takes 4; "Longest life" for a
+living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top bar ~40% of the screen.
+- [x] **Goal and wealth (rules revision 9, the new default; Nov 2026).** `Finance.WEALTH_REV = 9`.
+  - Found: lifestyle budgets (`reviewTiers`: `+ 0.004 x net worth`) and the "rich spend some wealth" rule counted
+    locked retirement savings, so people chose lives their cash could not pay for: 110-175 "Could not afford ...;
+    downgraded" a year, 35-65% of the town news; the luxury rule sold index funds to pay for it.
+  - Rule: both now use usable wealth (`F.liquid` = cash + investments + EPF Fleksibel; luxury: net worth minus
+    `F.locked`). Malaysia's EPF has its three accounts (pack `retirement.accounts`: Fleksibel 10%, Sejahtera 15%,
+    rest Persaraan; KWSP May 2024) as sub-balances of `p.epf` (`p.epfFlex`, `p.epfWell`; `F.retireIn`,
+    `retireDividend`, `retireClamp`, `retireEmpty` at 55/death/emigration/Great Reset; invariant checks them).
+    `raiseCash` uses Fleksibel before selling investments (and now sells only the remainder); Sejahtera pays study
+    fees (before a study loan) and medical bills (`F.useWellbeing`). Unpaid bills stay in the person's log (imp 0)
+    and the town news gets one line a month ("N people could not keep up their spending and cut back"); the Events
+    "All" view also hides old saves' per-person lines (they stay under Wealth).
+  - Goal: milestones 100k / 1M / 10M are in the country's own money under rev 9 (`world.milestoneList`; before they
+    were ringgit-sized, so $1.75M in the US); `world.firsts` records the first person past each one (any revision;
+    the news line "First in <town> to pass ..." only under rev 9). Display: real share of the goal
+    (`F.goalShare`: '<0.1%', '1.4%') and the next milestone (`F.nextMilestone`) in the top bar, person panel and
+    glance card (the log-scale "56% to goal" is gone); the Stats race card uses Year-1 money and lists the
+    milestone race (`UI.firstsHtml`); the Report adds a Milestones paragraph (rev 9 only, so pinned report texts of
+    older revisions are unchanged); setup warns when the goal is over 3x the pack's `typicalTop` (richest fortune
+    of a 300-founder town after 40 years: MY RM12M, UK 14M, US 50M (single towns $36M-$242M), CN 50M).
+  - Measured, 300 founders x 40 years x 2 seeds, rev 8 -> 9: downgrades a year MY 174/160 -> 27/18, UK 141/109 ->
+    60/55, US 139/111 -> 55/86, CN 151/158 -> 94/148; downgrade lines in the town news -> 0; richest MY RM8.3M/6.9M
+    -> 12.4M/11.8M, UK 9.0M/16.1M -> 12.4M/15.1M, US $242M/144M -> 36M/60M (lottery-like), CN 23M/38M -> 48M/59M;
+    more firms started (MY +30-50%).
+  - 80-year calibration (150 founders, realistic crime, laws fixed, 3 seeds), rev 8 -> 9: household Gini MY 0.41 ->
+    0.40 (target 0.39), UK 0.35 -> 0.42 (0.38), US 0.43 -> 0.46 (0.48), CN 0.45 -> 0.43 (0.465), all within +-0.06;
+    unemployment MY 4.7 -> 5.2%, UK 5.0 -> 6.4%, US 6.0 -> 3.1%, CN 3.3 -> 4.0%; median wage MY RM2,980 -> 2,820,
+    UK 3,150 -> 2,810. Malaysia's public revenue per person stays low (~RM500 vs 815; unchanged by this work).
+  - Tests: `wealthRevTests` (14). The rev-8 crime test now checks `>= 8`.
+
 - [ ] C09c optional small gift (sandbox, blueprint 10.4): deferred by the owner; build only if asked.
 - [ ] Optional extras from 4.2: tax competition between towns, real map thumbnails for the region view.
 - [ ] Expansion 1 deferred item: 'Social butterfly' goal (needs real friendships; `p.friends` only counts socialising).

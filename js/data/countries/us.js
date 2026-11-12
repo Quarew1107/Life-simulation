@@ -546,6 +546,7 @@
     // Share of job openings that go to someone from outside town (Phase 6: sets unemployment).
     labour: { outsideHire: 0.45, paySd: 0.55, market: 1.6 }, // market: US firms reach bigger markets (more large firms, more top incomes) // US pay is more spread out (BLS: P90/P10 ~5 against ~3.5 in the UK)
     demography: { fertMult: 0.75, mortMult: 1.05 }, // Phase 6 markets: TFR 1.28 at 0.6, life expectancy 77.4 at 1.2; // 80-year runs: TFR 1.10 at 0.42 (US child costs are high) and life expectancy 77.1 at 1.3
+    typicalTop: 50000000, // about the richest fortune of a 300-founder town after 40 years under rules revision 9 (single towns ranged $36M-$242M) (Year-1 money; two test seeds, Nov 2026): the setup hint
     defaults: { goalRM: 200000000, marketOutsideRM: 350000000, mortMult: 1.05, leaderTitle: 'mayor', termYears: 4, inflMin: 0, inflMax: 6 },
     // Crime per 100k a year for the offences the engine models (FBI 2025): burglary ~160, vehicle theft ~147,
     // robbery ~50, aggravated assault ~210, murder 4.1, theft from the person ~15. Prisons and jails ~1.85m

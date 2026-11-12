@@ -1709,7 +1709,7 @@
     print('--- Crime rules revision 8 ---', 'info');
     const K = LES.Countries, CR = LES.Crime, D = LES.DEFAULTS;
     const cfgOf = (c, rev, extra) => { K.use(c); return Object.assign({}, D, LES.PRESETS.national.values, { country: c, scenario: 'none', preset: 'national', rulesRev: rev }, extra || {}); };
-    check('New worlds use rules revision 8; today\'s rules preset too', D.rulesRev === 8 && LES.PRESETS.national.values.rulesRev === 8 && CR.REV === 8);
+    check('New worlds use rules revision 8 or later; today\'s rules preset too', D.rulesRev >= 8 && LES.PRESETS.national.values.rulesRev >= 8 && CR.REV === 8);
     // Revision gating: revision 7 keeps the Malaysian case capacity and the old tuning everywhere.
     let gate = true; const info = [];
     for (const c of ['my', 'uk', 'us', 'cn']) {
@@ -1744,6 +1744,56 @@
       if (!(idx > target * 0.6 && idx < target * 1.4)) inBand = false;
     }
     check('Index crime per 100k within 40% of the official figure in Malaysia, the UK, the US and China (400 founders, 8 years)', inBand, res.join(', '));
+    K.ensure(D);
+  }
+
+  // Rules revision 9: spending from usable wealth, EPF's three accounts, one cut-back line a month, milestones.
+  async function wealthRevTests() {
+    print('--- Usable wealth, EPF accounts and milestones (rules revision 9) ---', 'info');
+    const K = LES.Countries, F = LES.Finance, D = LES.DEFAULTS, U = LES.U;
+    const cfgOf = (c, rev, extra) => { K.use(c); return Object.assign({}, D, LES.PRESETS.national.values, { country: c, scenario: 'none', preset: 'national', rulesRev: rev }, extra || {}); };
+    check('New worlds use rules revision 9', D.rulesRev === 9 && LES.PRESETS.national.values.rulesRev === 9 && F.WEALTH_REV === 9);
+    // Two Malaysian towns, revision 8 and 9, five years.
+    const run = async rev => { const w = new LES.World(cfgOf('my', rev, { seed: 'w9-my', founders: 200 })); for (let d = 0; d < 365 * 5; d++) { w.step(); if (d % 400 === 0) await yieldUI(); } return w; };
+    const w8 = await run(8), w9 = await run(9);
+    const down = w => w.people.reduce((s, p) => s + p.log.filter(e => /Could not afford .*; downgraded/.test(e.text)).length, 0);
+    const feedDown = w => w.feed.filter(e => /Could not afford .*; downgraded/.test(e.text)).length, summary = w => w.feed.filter(e => /could not keep up their spending and cut back/.test(e.text)).length;
+    check('Revision 8 unchanged: unpaid bills each make a news line, no EPF accounts', feedDown(w8) > 0 && summary(w8) === 0 && w8.people.every(p => !p.epfFlex && !p.epfWell), `${feedDown(w8)} lines`);
+    check('Revision 9: unpaid bills stay in each person\'s log, the town news gets one line a month, and there are fewer of them (budgets count only usable money)', feedDown(w9) === 0 && summary(w9) > 0 && down(w9) < down(w8), `downgrades ${down(w8)} -> ${down(w9)}, ${summary(w9)} monthly lines`);
+    check('Invariants hold in both', !w8.checkInvariants().length && !w9.checkInvariants().length, (w9.checkInvariants()[0] || ''));
+    // EPF's three accounts (Malaysia): about 10% flexible and 15% wellbeing; never more than the balance.
+    const savers = w9.living.filter(p => p.alive && p.epf > 0 && p.epfFlex > 0);
+    const ratio = savers.reduce((s, p) => s + (p.epfFlex + p.epfWell) / p.epf, 0) / Math.max(1, savers.length);
+    check('EPF splits into Persaraan, Sejahtera and Fleksibel; the two usable accounts hold up to a quarter of the balance', savers.length > 20 && ratio > 0.05 && ratio <= 0.25 + 1e-9 && w9.living.every(p => !(p.epfFlex || p.epfWell) || p.epfFlex + p.epfWell <= p.epf), `${savers.length} savers, ${(ratio * 100).toFixed(1)}%`);
+    const uk = new LES.World(cfgOf('uk', 9, { seed: 'w9-uk', founders: 60 })); for (let d = 0; d < 200; d++) uk.step();
+    check('Other countries keep their pensions fully locked', uk.people.every(p => !p.epfFlex && !p.epfWell) && uk.people.some(p => p.epf > 0));
+    // Cash runs short: the flexible account is used before investments are sold.
+    K.use('my');
+    const p = savers.find(q => q.epfFlex > U.RM(500)), flex0 = p.epfFlex, idx0 = p.inv.idx, got = F.raiseCash(w9, p, Math.min(U.RM(200), flex0));
+    check('Short of cash, Akaun Fleksibel is used before any investment is sold', got > 0 && p.epfFlex === flex0 - got && p.inv.idx === idx0, JSON.stringify({ flex0, flex1: p.epfFlex, got, idx0, idx1: p.inv.idx, active: K.active }));
+    // Lifestyle budgets: a person with a big locked pension and little cash picks a cheaper life under revision 9.
+    const q = w9.living.find(x => x.alive && x.adult && x.isHead && !x.inst), keep = { epf: q.epf, flex: q.epfFlex, well: q.epfWell, nw: q.nw, tiers: Object.assign({}, q.tiers), home: q.homeId };
+    q.epf = U.RM(3e6); q.epfFlex = 0; q.epfWell = 0; q.nw = LES.P.netWorth(w9, q);
+    const lifeCost = () => { F.reviewTiers(w9, q); return F.tierCost(w9, 'food', q.tiers.food) + F.tierCost(w9, 'leisure', q.tiers.leisure) + F.tierCost(w9, 'transport', q.tiers.transport); };
+    const c9 = lifeCost(); w9.cfg.rulesRev = 8; const c8 = lifeCost(); w9.cfg.rulesRev = 9;
+    Object.assign(q, { epf: keep.epf, epfFlex: keep.flex, epfWell: keep.well, nw: keep.nw }); F.reviewTiers(w9, q);
+    check('Locked retirement money no longer pays for a lifestyle (revision 8 counted it)', c9 < c8, `${U.fmtMoney(c8)} -> ${U.fmtMoney(c9)} a month`);
+    // Save and load keep the accounts and the run identical.
+    const w2 = LES.Save.fromJSON(LES.Save.toJSON(w9));
+    for (let d = 0; d < 120; d++) { w9.step(); w2.step(); }
+    check('Save and load keep the EPF accounts and continue identically', w2.stableHash() === w9.stableHash() && w2.people.reduce((s, x) => s + (x.epfFlex || 0), 0) === w9.people.reduce((s, x) => s + (x.epfFlex || 0), 0));
+    // Milestones in local money and the town's record.
+    const us8 = new LES.World(cfgOf('us', 8, { seed: 'w9-us', founders: 20 })), us9 = new LES.World(cfgOf('us', 9, { seed: 'w9-us', founders: 20 }));
+    check('Milestones are 100 thousand, 1 million and 10 million in the country\'s own money (revision 9; revision 8 kept ringgit-sized steps)', U.fmtMoney(us9.milestoneList[1]) === '$1.00M' && U.fmtMoney(us8.milestoneList[1]) !== '$1.00M', `${U.fmtMoney(us8.milestoneList[1])} -> ${U.fmtMoney(us9.milestoneList[1])}`);
+    K.use('my');
+    const rich = w9.living.find(x => x.alive && x.adult), m1 = w9.milestoneList[1], cash0 = rich.cash;
+    w9.ledger.pay('LUCK', rich, 'cash', m1 * Math.ceil(w9.price) * 2); rich.nw = LES.P.netWorth(w9, rich); w9.checkMilestones(rich);
+    const rec = w9.firsts[m1];
+    check('The first person past 1 million is recorded for the town, with a news line', rec && rec.pid === rich.id && w9.feed.some(e => e.pid === rich.id && /^First in .* to pass/.test(e.text)));
+    check('The goal is shown as its real share and the next milestone', F.goalShare(w9, w9.goal * 0.007) === '0.7%' && F.goalShare(w9, w9.goal * 0.56) === '56%' && F.goalShare(w9, 1) === '<0.1%' && F.nextMilestone(w9, m1 / 2).th === m1 && Math.abs(F.nextMilestone(w9, m1 / 2).frac - 0.5) < 1e-9);
+    // Setup hint when the goal is far above what towns of this kind reach.
+    const hint = (c, goal) => LES.validateConfig(Object.assign({}, D, LES.Countries.get(c).defaults, { country: c }, goal ? { goalRM: goal } : {})).warnings.some(x => /rarely reached/.test(x));
+    check('Setup warns that the default goal is rarely reached in a town of a few hundred, but not about a goal within reach', hint('my') && hint('uk') && !hint('my', 2e7) && !hint('us', 1e8));
     K.ensure(D);
   }
 
@@ -1820,6 +1870,7 @@
       await peopleArtTests();
       await buildingArtTests();
       await crimeRevTests();
+      await wealthRevTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -1831,6 +1882,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

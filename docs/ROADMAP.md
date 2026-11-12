@@ -43,10 +43,12 @@ The improvement plan agreed in November 2026. Each phase is one tested push.
 | Pay ceiling (Nov 2026) | Jobs without qualifications: narrower offers and +6% promotions (rules revision 6); a China rider tops out near CNY 10.3k instead of 17k | Done |
 | More names (Nov 2026) | Two to three times as many first names per group in every country, more family names (rules revision 7) | Done |
 | Review follow-up (Nov 2026) | Pop-ups and small screens, side panel, Report in-app and Compare without the other country's look, people and crowd art, building variety, yard stages and winter snow, crime outside Malaysia (rules revision 8: police case capacity per country; UK 2,000, US 590, China 150, Malaysia 170 within about 30%) | Done |
+| Goal and wealth (Nov 2026) | Rules revision 9: spending from usable wealth only, EPF's three accounts (Malaysia), one monthly cut-back line, milestones in local money with the town's first to 1M / 10M, the goal's real share, a setup hint when the goal is out of reach | Done |
 | Country looks | Shop lots, eateries, pub/bar, town hall flags, rent signs, police, court, sports court, memorial, hills, lakes and forests drawn in each country's style | Done for UK, US, China |
 
 ## To do
 Kept in step with `docs/HANDOFF.md` section 0.
+- Second review (HANDOFF section 0): founder ages next (all founders are young adults: no elderly for decades, early unemployment and life-expectancy artifacts), then the smaller items listed there.
 - C09c optional small gift (sandbox): deferred; only if the owner asks.
 - Optional 4.2 extras: tax competition between towns, real map thumbnails in the region view.
 - Performance follow-ups if wanted: compare/calibration runs in a Web Worker; one worker per town for big regions.

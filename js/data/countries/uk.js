@@ -660,6 +660,7 @@
     // Share of job openings that go to someone from outside town (Phase 6: sets unemployment).
     labour: { outsideHire: 0.6 },
     demography: { fertMult: 0.57, mortMult: 0.85 }, // Phase 6 markets: TFR 1.04 at 0.42 and life expectancy 77.3 at 1.1 (before: 1.52 and 80.1)
+    typicalTop: 14000000, // about the richest fortune of a 300-founder town after 40 years under rules revision 9 (Year-1 money; two test seeds, Nov 2026): the setup hint
     defaults: { goalRM: 100000000, marketOutsideRM: 200000000, mortMult: 0.85, leaderTitle: 'mayor', termYears: 4, inflMin: 0, inflMax: 5 },
     // Police-recorded crime per 100k a year, England and Wales, year ending March 2026 (~61.8m people),
     // for the offences the engine models: theft from the person, residential burglary, vehicle offences,

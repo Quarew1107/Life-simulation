@@ -462,7 +462,7 @@
     w.infl = U.clamp(w.infl - 0.2 * (next - FS.MY_OPR), w.cfg.inflMin / 100, w.cfg.inflMax / 100); // tighter money cools prices
     // EPF dividend on retirement savings (KWSP: ~5.5-6.3% in recent years).
     const div = w.regime in RT.dividend ? RT.dividend[w.regime] : RT.dividend.normal; // (0 is a real return)
-    for (const p of w.living) if (p.alive && !p.away && p.epf > 0) L.pay('MARKET', p, 'epf', Math.round(p.epf * div));
+    for (const p of w.living) if (p.alive && !p.away && p.epf > 0) { L.pay('MARKET', p, 'epf', Math.round(p.epf * div)); LES.Finance.retireDividend(w, p, div); }
     // The fund pays 4% of its value to the treasury each year.
     const fv = FS.fundValue(w);
     if (fv > 0) {

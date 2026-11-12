@@ -277,6 +277,7 @@
     F.raiseCash(w, p, P.invValue(w, p) + 1, 'estate');
     p.inv = { idx: 0, st: {}, cost: 0 };
     if (p.epf > 0) L.move(p, 'epf', p, 'cash', p.epf);
+    LES.Finance.retireEmpty(p);
     if (p.trust > 0) L.move(p, 'trust', p, 'cash', p.trust);
     const pay = Math.min(p.cash, p.debt.study);
     L.spend(p, 'cash', 'BANK', pay);
@@ -354,6 +355,7 @@
     F.raiseCash(w, p, P.invValue(w, p) + 1, 'estate');
     p.inv = { idx: 0, st: {}, cost: 0 };
     if (p.epf > 0) L.move(p, 'epf', p, 'cash', p.epf);
+    LES.Finance.retireEmpty(p);
     if (p.trust > 0) L.move(p, 'trust', p, 'cash', p.trust);
     const debts = { study: 0, medical: 0, writtenOff: 0 };
     const settle = (key, sector) => {

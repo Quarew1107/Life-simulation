@@ -591,6 +591,7 @@
     // Share of job openings that go to someone from outside town (Phase 6: sets unemployment).
     labour: { outsideHire: 0.5, paySd: 0.55, market: 1.3 },
     demography: { fertMult: 0.47, mortMult: 1 }, // Phase 6 markets: TFR 0.73 at 0.34; // 80-year runs: TFR 0.88 at 0.3 and life expectancy 76.9 at 1.15
+    typicalTop: 50000000, // about the richest fortune of a 300-founder town after 40 years under rules revision 9 (Year-1 money; two test seeds, Nov 2026): the setup hint
     defaults: { goalRM: 200000000, marketOutsideRM: 460000000, mortMult: 1, leaderTitle: 'president', termYears: 5, inflMin: -1, inflMax: 4 },
     // Crime per 100k a year for the offences the engine models (approximate: the MPS reports ~3.1m criminal
     // cases filed in 2024, ~220 per 100k, after a 25.7% fall; thefts, robbery and violence are about two

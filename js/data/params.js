@@ -70,7 +70,7 @@
     catCap: 0.02,
     shiftsPerMonth: 20,
     vacancyRate: 2.2,
-    rulesRev: 8, // rule corrections from the 2026-11 blueprint (2: catastrophe cap after the risk multiplier, C03; 3: estates in equal value, C04b; 4: founders' credentials by age and limited study places, C06; 5: Expansion 1 jobs, degrees, specialisations, goals and the research centre; 6: a lower pay ceiling for jobs that need no qualification, Labour.offerSpread; 7: more first and family names, C.namesFor; 8: crime outside Malaysia, police case capacity per country and pack crimeTuningRev8, Crime.casesPerOfficer); Classic and older saves: 1
+    rulesRev: 9, // rule corrections from the 2026-11 blueprint (2: catastrophe cap after the risk multiplier, C03; 3: estates in equal value, C04b; 4: founders' credentials by age and limited study places, C06; 5: Expansion 1 jobs, degrees, specialisations, goals and the research centre; 6: a lower pay ceiling for jobs that need no qualification, Labour.offerSpread; 7: more first and family names, C.namesFor; 8: crime outside Malaysia, police case capacity per country and pack crimeTuningRev8, Crime.casesPerOfficer; 9: spending from usable wealth only, EPF's three accounts, one monthly cut-back line, milestones in local money, Finance.WEALTH_REV); Classic and older saves: 1
     econModel: 'calibrated', // calibrated: firms share a market the size of the town, wider pay spread, some jobs go to outsiders; original: the first engine
     vacancyDaysMin: 3,
     vacancyDaysMax: 30,
@@ -84,7 +84,7 @@
   // Presets fill the setup form. Classic reproduces the original engine (harsher, more
   // children, longer lives); Malaysia is calibrated to DOSM figures (tools/calibration.html).
   LES.PRESETS = {
-    national: { name: "Today's rules", values: { safetyNet: 'on', fertility: 'national', mortMult: 1.9, layout: 'varied', society: 'on', ethnicMix: 'national', crime: 'lively', government: 'on', vacancyRate: 2.2, econModel: 'calibrated', rulesRev: 8 } },
+    national: { name: "Today's rules", values: { safetyNet: 'on', fertility: 'national', mortMult: 1.9, layout: 'varied', society: 'on', ethnicMix: 'national', crime: 'lively', government: 'on', vacancyRate: 2.2, econModel: 'calibrated', rulesRev: 9 } },
     classic: { name: 'Classic (original rules)', values: { safetyNet: 'off', fertility: 'normal', mortMult: 1, layout: 'grid', society: 'off', ethnicMix: 'classic', crime: 'off', government: 'off', vacancyRate: 2.5, econModel: 'original', rulesRev: 1 } },
   };
   // Older saves and stored settings called the national option 'malaysia'.
@@ -240,6 +240,10 @@
 
     if (!blockers.length) {
       if (cfg.goalRM > 1e9) warnings.push(`A goal above ${LES.U.sym()}1 billion will very likely never be reached.`);
+      else { // a goal far above what towns of this kind usually reach (pack defaults.typicalTop)
+        const pk = LES.Countries.get(cfg.country || LES.Countries.DEFAULT), top = pk && pk.typicalTop;
+        if (top && cfg.goalRM > 3 * top) warnings.push(`In test towns of a few hundred people the richest fortune after 40 years was about ${pk.money.symbol}${Math.round(top / 1e6)} million, so ${pk.money.symbol}${Math.round(cfg.goalRM / 1e6)} million is rarely reached. The milestones (1 million, 10 million) track the way there.`);
+      }
       if (cfg.towns !== '1' && totalFounders > 800) warnings.push(`Several towns with ${totalFounders} founders in all will run noticeably slower.`);
       if (cfg.founders > 1500) warnings.push('Very large populations run slower (120 years can take 10-15 minutes at MAX); people are drawn as dots when zoomed out.');
       else if (cfg.founders > 300) warnings.push('Large populations can grow past 1,000 people and slow down the visual mode.');

@@ -49,6 +49,7 @@
           p.ageing = { bOnset: A.bOnset[0], bRate: A.bRate[0], bFloor: (A.bFloor[0] + A.bFloor[1]) / 2, mOnset: A.mOnset[0], mRate: A.mRate[0], mFloor: (A.mFloor[0] + A.mFloor[1]) / 2 };
           p.quals = []; delete p.specs; p.health = 85;
           if (p.epf > 0) L.spend(p, 'epf', 'GENESIS', p.epf);
+          LES.Finance.retireEmpty(p);
           const want = w.px(10000);
           if (p.cash > want) L.spend(p, 'cash', 'GENESIS', p.cash - want); else if (p.cash < want) L.pay('GENESIS', p, 'cash', want - p.cash);
           p.xp = Object.fromEntries(C.XP_CATS.map(k => [k, 0]));

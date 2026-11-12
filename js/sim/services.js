@@ -210,6 +210,7 @@
   // private (dearer, quicker). Classic engine: the patient pays the whole bill.
   SV.medicalBill = function (w, p, bill, minor, full) {
     const L = w.ledger;
+    if (bill > 0 && p.cash < bill && !minor) LES.Finance.useWellbeing(w, p, bill - p.cash, 'medical bills'); // rev 9 Malaysia
     if (!w.gov) { L.spend(p, 'cash', 'HEALTH', bill); return bill; }
     const H = LES.Countries.pack.health;
     if (H) return usBill(w, p, Math.round((full || bill) * H.priceMult), H); // US: insurance, deductibles, medical debt

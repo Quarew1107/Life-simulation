@@ -749,7 +749,11 @@
     // Central bank: Bank Negara OPR 2.75% (July 2025); the yearly rule keeps it between floor and ceiling.
     bank: { policyRate: 0.0275, floor: 0.0175, ceiling: 0.0375 },
     // Retirement savings: EPF 11% from the worker, 13% from the employer, withdrawn at 55; yearly dividend by phase of the economy (KWSP ~5.5-6.3%).
-    retirement: { employee: 0.11, employer: 0.13, accessAge: 55, dividend: { growth: 0.063, normal: 0.055, recession: 0.045 } },
+    retirement: { employee: 0.11, employer: 0.13, accessAge: 55, dividend: { growth: 0.063, normal: 0.055, recession: 0.045 },
+      // KWSP account restructuring (May 2024): each contribution goes 75% to Akaun Persaraan (locked until 55),
+      // 15% to Akaun Sejahtera (housing, education, medical) and 10% to Akaun Fleksibel (withdraw any time).
+      // Used from rules revision 9 (Finance.accounts).
+      accounts: { flexible: 0.10, wellbeing: 0.15 } },
     // Sovereign fund (Khazanah Rezeki): pays this share of its value to the treasury each year.
     fund: { payout: 0.04 },
     // Government: the law catalogue (option values are what the engine uses), leader titles, the leader's pay (share of monthly revenue, min, max), police per 1,000 people (PDRM), monthly cost of public servants, the city council, training cost per trainee a month, the groups outside officials are drawn from.
@@ -994,6 +998,7 @@
     labour: { outsideHire: 0.3 },
     demography: { fertMult: 0.42, mortMult: 1.9 },
     // Settings a new world starts from in this country (applied when the country is picked in setup).
+    typicalTop: 12000000, // about the richest fortune of a 300-founder town after 40 years under rules revision 9 (Year-1 money; two test seeds, Nov 2026): the setup hint
     defaults: { goalRM: 100000000, marketOutsideRM: 200000000, mortMult: 1.9, leaderTitle: 'president', termYears: 5, inflMin: -0.5, inflMax: 4.5 },
     // Reference crime rates per 100k a year (DOSM Crime Statistics 2025, AADK 2024, World Prison Brief).
     crime: { index: 170, violent: 32, property: 138, murder: 0.7, users: 586, prison: 256 },
