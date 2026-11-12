@@ -1752,7 +1752,7 @@
     print('--- Usable wealth, EPF accounts and milestones (rules revision 9) ---', 'info');
     const K = LES.Countries, F = LES.Finance, D = LES.DEFAULTS, U = LES.U;
     const cfgOf = (c, rev, extra) => { K.use(c); return Object.assign({}, D, LES.PRESETS.national.values, { country: c, scenario: 'none', preset: 'national', rulesRev: rev }, extra || {}); };
-    check('New worlds use rules revision 9', D.rulesRev === 9 && LES.PRESETS.national.values.rulesRev === 9 && F.WEALTH_REV === 9);
+    check('New worlds use rules revision 9 or later', D.rulesRev >= 9 && LES.PRESETS.national.values.rulesRev >= 9 && F.WEALTH_REV === 9);
     // Two Malaysian towns, revision 8 and 9, five years.
     const run = async rev => { const w = new LES.World(cfgOf('my', rev, { seed: 'w9-my', founders: 200 })); for (let d = 0; d < 365 * 5; d++) { w.step(); if (d % 400 === 0) await yieldUI(); } return w; };
     const w8 = await run(8), w9 = await run(9);
@@ -1794,6 +1794,55 @@
     // Setup hint when the goal is far above what towns of this kind reach.
     const hint = (c, goal) => LES.validateConfig(Object.assign({}, D, LES.Countries.get(c).defaults, { country: c }, goal ? { goalRM: goal } : {})).warnings.some(x => /rarely reached/.test(x));
     check('Setup warns that the default goal is rarely reached in a town of a few hundred, but not about a goal within reach', hint('my') && hint('uk') && !hint('my', 2e7) && !hint('us', 1e8));
+    K.ensure(D);
+  }
+
+  // Rules revision 10: founders are households of all ages from the country's age mix.
+  async function founderTests() {
+    print('--- Founders of all ages (rules revision 10) ---', 'info');
+    const K = LES.Countries, D = LES.DEFAULTS, P = LES.P;
+    const cfgOf = (c, rev, extra) => { K.use(c); return Object.assign({}, D, LES.PRESETS.national.values, { country: c, scenario: 'none', preset: 'national', rulesRev: rev }, extra || {}); };
+    check('New worlds use rules revision 10 with founders of all ages', D.rulesRev === 10 && LES.PRESETS.national.values.rulesRev === 10 && D.founderAges === 'mixed' && LES.World.FOUNDER_REV === 10);
+    // The age mix of each country, pooled over a few towns.
+    const res = [];
+    let ok = true;
+    for (const c of ['my', 'uk', 'us', 'cn']) {
+      let n = 0, kids = 0, old = 0;
+      for (const sd of ['a', 'b', 'c']) {
+        const w = new LES.World(cfgOf(c, 10, { seed: `ages-${c}-${sd}`, founders: 300 }));
+        for (const p of w.people) { n++; if (!p.adult) kids++; if (P.age(w, p) >= 65) old++; }
+      }
+      const A = K.get(c).ages, tot = A.reduce((s, x) => s + x, 0), want18 = (A[0] + A[1] + A[2] + 0.6 * A[3]) / tot * 100, want65 = A.slice(13).reduce((s, x) => s + x, 0) / tot * 100;
+      const k = kids / n * 100, o = old / n * 100;
+      if (Math.abs(k - want18) > 3 || Math.abs(o - want65) > 3) ok = false;
+      res.push(`${c} <18 ${k.toFixed(1)}/${want18.toFixed(1)}, 65+ ${o.toFixed(1)}/${want65.toFixed(1)}`);
+    }
+    check('Founders follow each country\'s official age mix (under 18 and 65+ within 3 points)', ok, res.join('; '));
+    // Households hang together.
+    const w = new LES.World(cfgOf('my', 10, { seed: 'hh-my', founders: 300 }));
+    const ad = w.people.filter(p => p.adult), kids = w.people.filter(p => !p.adult);
+    const partnersOk = ad.every(p => p.partnerId === null || (w.people[p.partnerId].partnerId === p.id && w.people[p.partnerId].homeId === p.homeId && (p.isHead !== w.people[p.partnerId].isHead)));
+    const kidsOk = kids.length > 40 && kids.every(c => c.parents.length === 2 && c.parents.every(id => w.people[id].homeId === c.homeId && w.people[id].careOf.includes(c.id)));
+    const retOk = ad.filter(p => p.retired).every(p => !p.job && P.age(w, p) >= 50) && ad.some(p => p.retired);
+    check('Exactly the founding population; couples share a home, children live with and are cared for by both parents, retirees do not work', w.people.length === 300 && partnersOk && kidsOk && retOk && !w.checkInvariants().length, `${kids.length} children`);
+    const unemp = ws => { let u = 0, e = 0; for (const p of ws.people) { if (!p.adult) continue; if (p.job) e++; else if (!p.retired && P.age(ws, p) < 64) u++; } return u / (u + e) * 100; };
+    const young = new LES.World(cfgOf('my', 10, { seed: 'hh-my', founders: 300, founderAges: 'young' }));
+    check('Most working-age founders start in work (young strangers started about a third jobless)', unemp(w) < 15 && unemp(young) > 25, `${unemp(w).toFixed(1)}% vs ${unemp(young).toFixed(1)}%`);
+    const old = ad.filter(p => P.age(w, p) >= 75), body = p => LES.C.BODY_ATTRS.reduce((s, a) => s + p.att[a] / p.peak[a], 0) / 3;
+    check('Older founders arrive with the ageing of the years they have lived', old.length && old.every(p => body(p) < 0.9), `${old.length} aged 75+`);
+    const wealth = (lo, hi) => { const g = ad.filter(p => P.age(w, p) >= lo && P.age(w, p) < hi).map(p => p.nw).sort((a, b) => a - b); return g[g.length >> 1] || 0; };
+    check('Starting wealth rises with age', wealth(18, 25) < wealth(45, 60), `${LES.U.fmtMoney(wealth(18, 25))} vs ${LES.U.fmtMoney(wealth(45, 60))}`);
+    // The old behaviour: revision 9, or the 'young' setting, run exactly as before.
+    const r9 = new LES.World(cfgOf('my', 9, { seed: 'same-my', founders: 120 })), r10y = new LES.World(cfgOf('my', 10, { seed: 'same-my', founders: 120, founderAges: 'young' }));
+    check('Revision 9, and "young adults only" under revision 10, found the town exactly as before (18-35)', r9.stableHash() === r10y.stableHash() && r9.hash() === r10y.hash() && r9.people.filter(p => p.gen === 0 && !p.migrant).every(p => P.age(r9, p) >= 18 && P.age(r9, p) < 37));
+    // Save and load.
+    const w2 = LES.Save.fromJSON(LES.Save.toJSON(w));
+    for (let d = 0; d < 90; d++) { w.step(); w2.step(); }
+    check('Save and load continue a town of all ages identically', w2.stableHash() === w.stableHash());
+    // Life expectancy needs deaths and years lived at older ages.
+    const y = new LES.World(cfgOf('my', 9, { seed: 'e0-young', founders: 150 }));
+    for (let d = 0; d < 365 * 12; d++) { y.step(); if (d % 1000 === 0) await yieldUI(); }
+    check('A young town with no old people yet shows no life expectancy (it used to show figures like 98.6)', !Number.isFinite(LES.Calibration.measure(y).e0));
     K.ensure(D);
   }
 
@@ -1871,6 +1920,7 @@
       await buildingArtTests();
       await crimeRevTests();
       await wealthRevTests();
+      await founderTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -1882,6 +1932,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

@@ -129,6 +129,8 @@ town no slower to draw (`docs/PERFORMANCE.md`); tick the item here when done.
   - Tests: `crimeRevTests` (4: default is rev 8; capacity factor and tuning per revision; a rev-7 world ignores
     rev-8 settings; one quick 400-founder x 8-year crime band per country, +-40%). Full suite 376/376.
 
+**>>> PICK UP HERE: see the IN PROGRESS item (rules revision 10) just below the goal-and-wealth entry. <<<**
+
 **Second review (Nov 2026), owner's priorities in order:** (1) goal and wealth — done below; (2) founder ages:
 every founder is a young adult (about 18-35), so for 20-30 years there are no elderly, life expectancy shows
 artifacts (98.6 in a 15-year UK town), and unemployment starts very high (UK 31% in year 1, 6% by year 14) — next
@@ -165,6 +167,29 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
     unemployment MY 4.7 -> 5.2%, UK 5.0 -> 6.4%, US 6.0 -> 3.1%, CN 3.3 -> 4.0%; median wage MY RM2,980 -> 2,820,
     UK 3,150 -> 2,810. Malaysia's public revenue per person stays low (~RM500 vs 815; unchanged by this work).
   - Tests: `wealthRevTests` (14). The rev-8 crime test now checks `>= 8`.
+
+- [ ] **IN PROGRESS (Nov 13 2026): rules revision 10 = founders of all ages + population balance.** Work is on branch
+  `wip/rev10-founders` (pushed; NOT on main). Owner approved both plans "as recommended".
+  - Done (code + tests): founder households from each pack's `ages` (5-year bands, DOSM/ONS/Census/NBS shares;
+    `World.initHouseholds`, `World.ageFounder`, `World.mixedFounders`, `cfg.founderAges` 'mixed'|'young' under
+    Advanced); life expectancy NaN without >= 30 deaths and >= 100 person-years at 65+ (`calibration.js`);
+    `founderTests` (9, pass). DEFAULTS and the national preset are rulesRev 10.
+  - Found: with realistic ages towns shrink (100 founders -> 14-48 people by year 120). Cause: TFR ~0.2 low
+    (MY 1.41/1.6, UK 1.20/1.41, US 1.35/1.6, CN 0.97/1.0), towns age faster than countries, no national migration.
+  - Population balance (approved, first guesses, NOT yet calibrated): pack `demography.fertMultRev10` (MY 0.475,
+    UK 0.667, US 0.885, CN 0.47), `mortRev10` (factor on old-age mortality, `World.mortRev10()`: MY 0.74, UK 0.96,
+    US 0.8, CN 1.36; targets e0 MY 75.3, UK 81, US 79, CN 79), `netMigration` per 1,000 a year (MY 0, UK 5.0,
+    US 2.7, CN 0; added in `Migration.monthly` as extra newcomer households of ~1.7 people), fertility via
+    `params.derive` under rev >= 10.
+  - NEXT: run calibration round 1 (scratchpad scripts are gone; recreate: 80-year towns, 150 founders, realistic
+    crime, laws fixed, 3 seeds per country, measure e0, pooled TFR, Gini, unemployment, population; plus 120-year
+    default towns of 100 founders, 2 seeds) -> adjust the three values per country until e0 and TFR are in band and
+    towns roughly keep their size (UK/US grow a little, MY steady, CN slowly shrinks, none die out) -> add tests
+    (population after 60/120 years in a band, TFR/e0 in band, net migration near the official rate) -> full suite
+    -> merge into main, push, update this section and ROADMAP. The founderTests check "young adults only ==
+    revision 9" now compares only the founding day (rev 10 also changes births, deaths and migration).
+  - Sources for the plan: ONS LTIM YE Dec 2024 (+345k revised) and long-term assumption +340k/yr; Census Vintage
+    2024 (+2.8M) and projections (~0.9M/yr); DOSM CPE 2024/2026; NBS 2024 communique.
 
 - [ ] C09c optional small gift (sandbox, blueprint 10.4): deferred by the owner; build only if asked.
 - [ ] Optional extras from 4.2: tax competition between towns, real map thumbnails for the region view.

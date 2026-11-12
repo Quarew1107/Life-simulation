@@ -57,6 +57,9 @@
       }
       if (p.deathDay !== null && p.deathDay >= start && !p.fate) D[Math.min(bands - 1, Math.floor((p.deathDay - birth) / 365 / 5))]++;
     }
+    // Too few deaths, or too few years lived at 65+ (a young town has no old people yet): no figure.
+    const deaths = D.reduce((s, x) => s + x, 0), oldYears = E.slice(13).reduce((s, x) => s + x, 0);
+    if (deaths < DEFS.e0.minN || oldYears < 100) return NaN;
     let alive = 1, e0 = 0;
     for (let b = 0; b < bands; b++) {
       const m = E[b] > 0 ? D[b] / E[b] : (b === bands - 1 ? 0.3 : 0);

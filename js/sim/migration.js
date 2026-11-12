@@ -54,7 +54,11 @@
     }
 
     // ---- Moving in ----
-    const lambda = C.MIG_BASE_IN * mult * w.cfg.migInMult * w.counts.adults * ind.attract;
+    let lambda = C.MIG_BASE_IN * mult * w.cfg.migInMult * w.counts.adults * ind.attract;
+    // Rules revision 10: on top, the country's own net migration (pack demography.netMigration, people per 1,000
+    // residents a year), in newcomer households of about 1.7 people.
+    const NM = w.cfg.rulesRev >= 10 ? (LES.Countries.pack.demography || {}).netMigration : 0;
+    if (NM > 0) lambda += NM / 1000 / 12 * w.counts.living / 1.7 * mult * w.cfg.migInMult;
     const n = R.poisson(lambda);
     for (let i = 0; i < n; i++) Mi.arrive(w);
   };
