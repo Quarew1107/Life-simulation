@@ -170,33 +170,160 @@
       <p class="note">${esc(T('jobs.note'))}</p>`;
   }
 
-  function decisionsHtml(w) {
-    const inbox = w.player.inbox || [];
-    if (!inbox.length) return `<p class="muted">${esc(T('life.noDecisions'))}</p>`;
-    return inbox.map(item => {
-      const e = Pl.eventById(item.ev), left = item.expires - w.day, ps = Object.assign({ name: P.name(Pl.person(w)) }, item.params || {});
-      return `<div class="life-event" role="group" aria-label="${esc(T(`ev.${e.id}.title`))}">
-        <div class="life-event-head"><b>${esc(T(`ev.${e.id}.title`, ps))}</b><small class="muted">${esc(T('life.daysLeft', { count: left }))}</small></div>
-        <p>${esc(T(`ev.${e.id}.body`, ps))}</p>
-        <div class="life-choices">${e.choices.map(c => `<button class="ghost" data-uid="${esc(item.uid)}" data-choice="${esc(c.id)}">${esc(T(`ev.${e.id}.${c.id}`, ps))}</button>`).join('')}
-          <button class="link" data-pass="${esc(item.uid)}">${esc(T('life.delegate'))}</button></div>
-      </div>`;
-    }).join('');
+  // ======================= View A: the life hub (default) =======================
+  // Who you are (mood, goal), decisions (important ones first), tomorrow's plan, six tiles that open their own
+  // page, the latest lines of your story, settings. Views B (planner) and C (story) come next.
+  const ICON = { work: '💼', money: '💰', love: '❤️', health: '🩺', learn: '🎓', community: '🤝', care: '🧸', friends: '👫' };
+  const GROUP = { // the colour of a planned request in the day bar
+    work: ['APPLY_JOB', 'ASK_RAISE', 'QUIT_JOB', 'START_BIZ', 'INJECT', 'SELL_BIZ', 'CLOSE_BIZ', 'RETIRE', 'KEEP_WORKING'],
+    money: ['INVEST', 'SELL', 'BUY_STOCK', 'SELL_STOCK', 'MOVE_HOME', 'BUY_TICKET'],
+    love: ['ASK_DATE', 'ASK_PARTNER', 'PROPOSE', 'SEPARATE', 'COUNSEL', 'BABY_WISH', 'CARE_CHILD', 'CHOOSE_SCHOOL', 'VISIT', 'GIFT', 'AFFAIR', 'END_AFFAIR', 'MAKE_FRIEND', 'ASK_CARE'],
+    health: ['SEE_DOCTOR', 'COUNSELLING', 'REST', 'SET_EXERCISE', 'TRAVEL'],
+    learn: ['ENROLL', 'DROP_OUT', 'SET_EFFORT', 'ASK_CLUB', 'QUIT_CLUB', 'ASK_SCHOOL', 'SET_PLAN', 'ASK_ALLOWANCE', 'STOP_SPENDING', 'SET_GOAL'],
+    community: ['DONATE', 'VOLUNTEER', 'STAND', 'WELCOME'],
+  };
+  const groupOf = k => Object.keys(GROUP).find(g => GROUP[g].includes(k)) || 'work';
+  const name1 = p => (p ? p.first.split(' ')[0] : '');
+
+  // Every button that asks for something: its request kind and arguments (clicks, and greying out what cannot happen).
+  const num = v => Number(v);
+  const ACTIONS = {
+    apply: ['APPLY_JOB', v => ({ vac: num(v) })], care: ['ASK_CARE', () => ({})], effort: ['SET_EFFORT', v => ({ level: v })], club: ['ASK_CLUB', v => ({ club: v })],
+    quitclub: ['QUIT_CLUB', () => ({})], allow: ['ASK_ALLOWANCE', v => ({ chores: v === '1' })], friend: ['MAKE_FRIEND', v => ({ pid: num(v) })], school: ['ASK_SCHOOL', v => ({ tier: v })],
+    plan: ['SET_PLAN', v => ({ plan: v })], raise: ['ASK_RAISE', () => ({})], quit: ['QUIT_JOB', () => ({})], enroll: ['ENROLL', v => ({ course: v })], dropout: ['DROP_OUT', () => ({})],
+    invest: ['INVEST', v => ({ share: num(v) })], sell: ['SELL', v => ({ share: num(v) })], home: ['MOVE_HOME', v => ({ tier: num(v) })],
+    buystock: ['BUY_STOCK', v => ({ tk: v, shares: Math.floor(num(($(`stk-${v}`) || {}).value)) || 1 })], sellstock: ['SELL_STOCK', v => ({ tk: v, shares: Math.floor(num(($(`stk-${v}`) || {}).value)) || 1 })],
+    sellall: ['SELL_STOCK', (v, w) => ({ tk: v, shares: Pl.held(Pl.person(w), v) || 1 })], retire: ['RETIRE', () => ({}), 'work.retireSure'], keep: ['KEEP_WORKING', () => ({})],
+    doctor: ['SEE_DOCTOR', () => ({})], counselling: ['COUNSELLING', () => ({})], rest: ['REST', () => ({})], exercise: ['SET_EXERCISE', v => ({ level: v })], travel: ['TRAVEL', v => ({ kind: v })],
+    startbiz: ['START_BIZ', v => ({ type: v })], inject: ['INJECT', v => ({ share: num(v) })], sellbiz: ['SELL_BIZ', () => ({}), 'biz.sure'], closebiz: ['CLOSE_BIZ', () => ({}), 'biz.sure'],
+    ticket: ['BUY_TICKET', () => ({})], donate: ['DONATE', v => ({ amt: num(v) })], volunteer: ['VOLUNTEER', () => ({})], stand: ['STAND', () => ({})], welcome: ['WELCOME', v => ({ pid: num(v) })],
+    date: ['ASK_DATE', v => ({ pid: num(v) })], partner: ['ASK_PARTNER', v => ({ pid: num(v) })], propose: ['PROPOSE', v => ({ kind: v })], counsel: ['COUNSEL', () => ({})],
+    separate: ['SEPARATE', () => ({}), 'love.sure'], baby: ['BABY_WISH', v => ({ wish: v })], endaffair: ['END_AFFAIR', () => ({})], carekid: ['CARE_CHILD', v => ({ pid: num(v) })],
+    visit: ['VISIT', v => ({ pid: num(v) })], gift: ['GIFT', v => ({ pid: num(v), share: 0.1 })], goal: ['SET_GOAL', v => ({ goal: v })],
+  };
+  const actionOf = b => { for (const k of Object.keys(ACTIONS)) if (b.dataset[k] !== undefined && b.dataset[k] !== '') return [k, ACTIONS[k]]; return null; };
+  const whyText = (w, kind, args, r) => LES.I18n.render(Pl.whyNot(w, kind, args, r));
+  // After a redraw: grey out what cannot happen tomorrow (it can still be clicked, to say why).
+  function markAvailability(el, w) {
+    for (const b of el.querySelectorAll('button')) {
+      if (b.disabled || b.dataset.choice) continue;
+      const a = actionOf(b);
+      if (!a) continue;
+      const [, [kind, argsOf]] = a, args = argsOf(a[0] === 'buystock' || a[0] === 'sellstock' ? b.dataset[a[0]] : b.dataset[a[0]], w), r = Pl.check(w, kind, args);
+      if (!r.ok) { b.classList.add('off'); b.setAttribute('aria-disabled', 'true'); b.title = whyText(w, kind, args, r); }
+    }
   }
 
-  // Requests waiting for tomorrow, each with a cancel button (nothing has happened yet).
-  function queueHtml(w) {
+  function portrait(c, w, p) {
+    if (!c || !p) return;
+    const g = c.getContext('2d'), age = P.age(w, p);
+    g.clearRect(0, 0, c.width, c.height); g.imageSmoothingEnabled = false;
+    const spr = LES.Sprites.person(LES.Sprites.lookOf(p, age), age < 3 ? 'baby' : !p.adult ? 'child' : age >= 65 ? 'elder' : 'adult', 0);
+    const k = Math.max(1, Math.floor(Math.min((c.width - 4) / spr.width, (c.height - 8) / spr.height)));
+    g.drawImage(spr, Math.round((c.width - spr.width * k) / 2), Math.round((c.height - spr.height * k) / 2), spr.width * k, spr.height * k);
+  }
+  const ring = (v, label, colour) => `<div class="life-ring" style="--v:${U.clamp(Math.round(v), 0, 100)};--c:${colour}"><b>${Math.round(v)}</b><small>${esc(label)}</small></div>`;
+
+  function headHtml(w, p, sm) {
+    const goal = p.goal && LES.Goals ? LES.Goals.DEFS[p.goal.id] : null, prog = goal && goal.progress ? U.clamp(goal.progress(w, p, p.goal), 0, 1) : 0;
+    const goals = P.age(w, p) >= 16 && Pl.goals ? Pl.goals(w, p) : [];
+    return `<div class="card life-head">
+        <canvas class="portrait" id="life-portrait" width="64" height="88" aria-hidden="true"></canvas>
+        <div class="life-who"><div class="life-name">${esc(sm.name)}</div>
+          <div class="muted">${esc(T('life.ageStage', { age: sm.age, stage: T(`life.${sm.stage}`) }))}${UI.app.region ? ` · ${esc(LES.townName(w))}` : ''}</div>
+          <div>${esc(status(w, p))}</div>
+          ${p.alive ? `<div class="life-mood">“${esc(LES.I18n.render(Pl.mood(w, p)))}”</div>` : ''}
+          ${p.adult || p.nw > 0 ? `<div class="life-money">${esc(T('life.cash'))} <b>${U.fmtMoney(p.cash)}</b> · ${esc(T('life.worth'))} <b>${U.fmtMoney(p.nw)}</b></div>` : ''}</div>
+        ${p.alive ? `<div class="life-rings">${ring(p.health, T('life.health'), 'var(--green)')}${ring(p.happy, T('life.happy'), 'var(--teal)')}${ring(p.stress, T('life.stress'), 'var(--red)')}</div>` : ''}
+      </div>
+      ${goals.length && p.alive ? `<details class="card life-goal" ${keep('goal')}><summary>${goal ? `${goal.icon} <b>${esc(LES.Goals.text(p.goal))}</b><span class="life-goalbar"><i style="width:${Math.round(prog * 100)}%"></i></span>` : esc(T('goal.none'))} <small class="muted">${esc(T('goal.change'))}</small></summary>
+        <div class="life-cats">${goals.map(id => { const d = LES.Goals.DEFS[id]; return `<button data-goal="${id}" class="${goal && p.goal.id === id ? 'on' : ''}">${d.icon} ${esc(d.name)}</button>`; }).join('')}</div><p class="note">${esc(T('goal.note'))}</p></details>` : ''}`;
+  }
+
+  function decisionsHtml(w, p) {
+    const inbox = (w.player.inbox || []).slice().sort((a, b) => (Pl.isImportant(b) ? 1 : 0) - (Pl.isImportant(a) ? 1 : 0));
+    if (!inbox.length) return '';
+    return `<div class="card life-decisions"><h3>${esc(T('life.decisions'))} <small class="life-count">${inbox.length}</small></h3>${inbox.map(item => {
+      const e = Pl.eventById(item.ev), imp = Pl.isImportant(item), left = item.expires - w.day, ps = Object.assign({ name: P.name(p) }, item.params || {});
+      const choices = e.choices.map(c => {
+        let why = '';
+        if (!c.story) { const args = c.target ? Pl.TARGETS[c.target](w, p, item) : {}; if (!args) why = T('cmd.error.no_target'); else { const r = Pl.check(w, c.cmd, args); if (!r.ok) why = whyText(w, c.cmd, args, r); } }
+        return `<button class="ghost ${why ? 'off' : ''}" data-uid="${esc(item.uid)}" data-choice="${esc(c.id)}" ${why ? `aria-disabled="true" title="${esc(why)}"` : ''}>${esc(T(`ev.${e.id}.${c.id}`, ps))}${why ? `<small>${esc(why)}</small>` : ''}</button>`;
+      }).join('');
+      return `<div class="life-event ${imp ? 'imp' : ''}" role="group" aria-label="${esc(T(`ev.${e.id}.title`, ps))}">
+        <div class="life-event-head"><b>${imp ? '★ ' : ''}${esc(T(`ev.${e.id}.title`, ps))}</b><small class="muted">${imp ? esc(T('life.important')) : esc(T('life.daysLeft', { count: left }))}</small></div>
+        <p>${esc(T(`ev.${e.id}.body`, ps))}</p>
+        <div class="life-choices">${choices}<button class="link" data-auto="${esc(item.uid)}">${esc(T('life.letDecide', { name: name1(p) }))}</button></div>
+      </div>`;
+    }).join('')}</div>`;
+  }
+
+  // Tomorrow: an 8-hour bar (one block per planned request), the requests with a cancel cross, and their cost.
+  function tomorrowHtml(w, p) {
     const s = w.player, list = s.pending || [];
-    if (!list.length) return '';
-    const hrs = list.reduce((t, c) => t + ((Pl.HANDLERS[c.kind] || {}).hours || 0), 0);
-    return `<div class="card life-queue"><h3>${esc(T('queue.title'))} <small class="life-count">${list.length}</small></h3>
-      <ul class="list-plain">${list.map(c => { const h = (Pl.HANDLERS[c.kind] || {}).hours || 0; return `<li><span>⏳ ${esc(LES.I18n.render(Pl.describe(w, c)))} <small class="muted">${esc(T('queue.hours', { count: h }))}</small></span><button class="ghost small" data-cancel="${esc(c.id)}" aria-label="${esc(T('queue.cancel'))}">✕ ${esc(T('queue.cancel'))}</button></li>`; }).join('')}</ul>
-      <p class="note">${esc(T(hrs > Pl.DAY_HOURS ? 'queue.over' : 'queue.note', { hours: hrs, max: Pl.DAY_HOURS }))}</p></div>`;
+    const hrs = list.reduce((t, c) => t + ((Pl.HANDLERS[c.kind] || {}).hours || 0), 0), cost = list.reduce((t, c) => t + Pl.costOf(w, p, c.kind, c.args), 0);
+    const seg = [];
+    for (const c of list) for (let i = 0; i < ((Pl.HANDLERS[c.kind] || {}).hours || 0); i++) seg.push(groupOf(c.kind));
+    while (seg.length < Pl.DAY_HOURS) seg.push('');
+    return `<div class="card life-queue"><div class="life-qhead"><h3>${esc(T('tomorrow.title'))}</h3><small class="muted">${esc(T('tomorrow.used', { hours: hrs, max: Pl.DAY_HOURS }))}${cost ? ` · ${esc(T('tomorrow.cost', { cost: U.fmtMoney(cost) }))}` : ''}</small></div>
+      <div class="life-day" aria-hidden="true">${seg.slice(0, Math.max(Pl.DAY_HOURS, seg.length)).map(g => `<i class="${g ? `g-${g}` : ''}"></i>`).join('')}</div>
+      ${list.length ? `<div class="life-chips">${list.map(c => `<span class="life-chip g-${groupOf(c.kind)}">${ICON[groupOf(c.kind)] || ''} ${esc(LES.I18n.render(Pl.describe(w, c)))} <small>${esc(T('queue.hours', { count: (Pl.HANDLERS[c.kind] || {}).hours || 0 }))}</small><button class="x" data-cancel="${esc(c.id)}" aria-label="${esc(T('queue.cancel'))}" title="${esc(T('queue.cancel'))}">✕</button></span>`).join('')}</div>`
+        : `<p class="muted small">${esc(T('tomorrow.empty', { name: name1(p) }))}</p>`}</div>`;
+  }
+
+  // The six areas of life (three for children), each a tile with how things stand, opening its own page.
+  function tileInfo(w, p, k) {
+    const s = w.player, q = p.partnerId !== null ? w.people[p.partnerId] : null;
+    switch (k) {
+      case 'work': return { text: status(w, p), idea: p.job ? Pl.check(w, 'ASK_RAISE', {}).ok : !p.retired && P.isAdult(w, p) && Pl.openings(w, p).length > 0 };
+      case 'money': return { text: T('tile.money', { cash: U.fmtMoney(p.cash), inv: U.fmtMoney(P.invValue(w, p)) }), idea: p.cash > 6 * p.mcost && P.invValue(w, p) < p.cash * 0.2 };
+      case 'love': {
+        const kids = p.careOf.filter(id => w.people[id].alive && !P.isAdult(w, w.people[id])).length;
+        const base = q && q.alive ? T(s.married && s.married.pid === q.id ? 'tile.married' : 'tile.partner', { other: name1(q) }) : s.dating && w.people[s.dating.pid] ? T('tile.dating', { other: name1(w.people[s.dating.pid]) }) : T('tile.single');
+        return { text: kids ? `${base} · ${T('tile.kids', { count: kids })}` : base, idea: !!(s.dating && s.dating.dates >= 3) };
+      }
+      case 'health': return { text: s.trip && s.trip.until > w.day ? T('trip.on', { trip: T(`trip.${s.trip.kind}`), date: U.fmtDate(s.trip.until) }) : T('tile.health', { health: Math.round(p.health), ex: T(`exercise.${s.exercise || 'none'}`) }), idea: p.stress > 70 || p.health < 60 };
+      case 'learn': return P.isAdult(w, p) ? { text: p.enrol ? T('life.status.study') : T('tile.courses', { count: Pl.courses ? Pl.courses(w, p).length : 0 }), idea: !p.enrol && !!Pl.courses && Pl.courses(w, p).some(c => c.chance > 0.6) }
+        : { text: `${T(`school.${Pl.currentTier ? Pl.currentTier(w, p) : 'public'}`)}${s.club ? ` · ${T(`club.${s.club.id}`)}` : ''}`, idea: !s.club && P.age(w, p) >= 4 };
+      case 'community': { const g = w.gov, el = g && LES.Gov && !LES.Gov.appointed(); return { text: el ? T('tile.election', { date: U.fmtDate(g.electionDay) }) : T('tile.volunteered', { count: s.volunteered || 0 }), idea: el && !s.stand && g.electionDay - w.day < 200 && P.age(w, p) >= 21 && g.president !== p.id }; }
+      case 'care': { const g = Pl.carerOf(w, p); return { text: g ? T('tile.carer', { carer: name1(g) }) : p.guardian === 'WELFARE' ? T('care.welfare') : '—', idea: false }; }
+      case 'friends': return { text: T('tile.friends', { count: (s.friends || []).length }), idea: !(s.friends || []).length };
+      default: return { text: '', idea: false };
+    }
+  }
+  const pageHtml = (w, p, k) => (k === 'work' ? workHtml(w, p) : k === 'care' ? careHtml(w, p) : k === 'learn' && !P.isAdult(w, p) ? learnHtml(w, p) : k === 'learn' ? adultLearnHtml(w, p)
+    : k === 'money' ? moneyHtml(w, p) : k === 'love' ? loveHtml(w, p) : k === 'community' ? communityHtml(w, p) : k === 'health' ? healthHtml(w, p) : k === 'friends' ? friendsHtml(w, p) : '');
+  function areasHtml(w, p, cats) {
+    if (UI.lifePage && cats.includes(UI.lifePage)) {
+      const k = UI.lifePage;
+      return `<div class="card life-page"><div class="life-pagehead"><button class="ghost small" data-back="1">← ${esc(T('life.back'))}</button><b>${ICON[k]} ${esc(T(`cat.${k}`))}</b></div><div class="life-cat-body">${pageHtml(w, p, k)}</div></div>`;
+    }
+    UI.lifePage = null;
+    return `<div class="life-tiles">${cats.map(k => { const t = tileInfo(w, p, k); return `<button class="life-tile" data-page="${k}">${t.idea ? '<span class="life-dot" title=""></span>' : ''}<span class="ic">${ICON[k]}</span><b>${esc(T(`cat.${k}`))}</b><small>${esc(t.text)}</small></button>`; }).join('')}</div>`;
+  }
+
+  function latestHtml(w) {
+    const j = w.player.journal.slice(-3).reverse();
+    return `<div class="card"><h3>${esc(T('life.latest'))}</h3>${j.length ? `<ul class="list-plain life-journal">${j.map(e => `<li class="${e.imp >= 2 ? 'big' : ''}"><small class="muted">${U.fmtDate(e.day)}</small> ${esc(LES.I18n.render(e))}</li>`).join('')}</ul>` : `<p class="muted">${esc(T('journal.empty'))}</p>`}
+      <details class="life-more" ${keep('journal')}><summary>${esc(T('life.story'))}</summary>${journalHtml(w)}</details></div>`;
   }
   function journalHtml(w) {
-    const j = w.player.journal.slice(-40).reverse();
+    const j = w.player.journal.slice(-60).reverse();
     if (!j.length) return `<p class="muted">${esc(T('journal.empty'))}</p>`;
     return `<ul class="list-plain life-journal">${j.map(e => `<li class="${e.imp >= 2 ? 'big' : ''}"><small class="muted">${U.fmtDate(e.day)}</small> ${esc(LES.I18n.render(e))}</li>`).join('')}</ul>`;
+  }
+  UI.lifeView = pref('les-life-view', 'A');
+  const VIEWS = [['A', '▦', 'view.hub'], ['B', '▤', 'view.planner'], ['C', '📖', 'view.story']];
+  const viewsHtml = () => `<div class="life-views" role="group" aria-label="${esc(T('view.label'))}">${VIEWS.map(([k, ic, key]) => `<button data-view="${k}" class="${UI.lifeView === k ? 'on' : ''}" aria-pressed="${UI.lifeView === k}" ${k === 'A' ? '' : `disabled title="${esc(T('view.soon'))}"`}>${ic} ${esc(T(key))}</button>`).join('')}</div>`;
+  function settingsHtml(w) {
+    const s = w.player;
+    return `<details class="card life-settings" ${keep('settings')}><summary>${esc(T('life.settings'))}</summary>
+        <label>${esc(T('freq.label'))} <select id="life-freq">${['important', 'balanced', 'detailed'].map(k => `<option value="${k}" ${(s.freq || 'balanced') === k ? 'selected' : ''}>${esc(T(`freq.${k}`))}</option>`).join('')}</select></label>
+        <label>${esc(T('set.auto'))} <select id="life-auto"><option value="1" ${pref('les-life-auto', '1') === '1' ? 'selected' : ''}>${esc(T('set.autoYes', { name: name1(Pl.person(w)) }))}</option><option value="0" ${pref('les-life-auto', '1') === '0' ? 'selected' : ''}>${esc(T('set.autoNo'))}</option></select></label>
+        <label><input type="checkbox" id="life-lotto" ${s.noLottery ? '' : 'checked'}> ${esc(T('life.lotto'))}</label>
+        <label><input type="checkbox" id="life-sensitive" ${s.noSensitive ? '' : 'checked'}> ${esc(T('life.sensitive'))}</label>
+        <label><input type="checkbox" id="life-mature" ${s.mature ? 'checked' : ''}> ${esc(T('life.mature'))}</label>
+        <p class="note">${esc(T('set.note'))}</p></details>`;
   }
 
   // A control the player is using right now (a list that is open, a box being typed in): redrawing would throw it away.
@@ -207,110 +334,45 @@
     if (busyWith(el)) return; // try again at the next redraw
     for (const d of el.querySelectorAll('details[data-keep]')) { if (d.open) UI._lifeOpen.add(d.dataset.keep); else UI._lifeOpen.delete(d.dataset.keep); } // as the player left them
     const w = where();
-    if (!w) { el.innerHTML = `<div class="card"><p>${esc(T('life.none'))}</p></div>`; return; }
-    if (w.player.waiting) { el.innerHTML = `<div class="card life-head"><div><div class="life-name">👶 ${esc(T('play.waiting'))}</div><p>${esc(T('life.waiting'))}</p></div></div>`; return; }
-    const p = Pl.person(w), sm = Pl.summary(w), s = w.player;
-    const mine = catsFor(sm.stage);
-    if (!mine.includes(UI.lifeCat)) UI.lifeCat = mine[0];
-    const cats = mine.map(k => `<button class="${UI.lifeCat === k ? 'on' : ''}" data-cat="${k}" aria-pressed="${UI.lifeCat === k}">${esc(T(`cat.${k}`))}</button>`).join('');
-    const html = `
-      <div class="card life-head">
-        <canvas class="portrait" id="life-portrait" width="64" height="88" aria-hidden="true"></canvas>
-        <div><div class="life-name">${esc(sm.name)}</div>
-          <div class="muted">${esc(T('life.ageStage', { age: sm.age, stage: T(`life.${sm.stage}`) }))}${UI.app.region ? ` · ${esc(LES.townName(w))}` : ''}</div>
-          <div>${esc(status(w, p))}</div>
-          ${p.adult || p.nw > 0 ? `<div class="life-money">${esc(T('life.cash'))} <b>${U.fmtMoney(p.cash)}</b> · ${esc(T('life.worth'))} <b>${U.fmtMoney(p.nw)}</b></div>` : ''}</div>
-      </div>
-      ${s.ended ? successionHtml(w) : !p.alive ? `<div class="card"><p>${esc(T('life.dead', { name: sm.name }))}</p></div>` : `
-      <div class="card">${bar(T('life.health'), p.health)}${bar(T('life.happy'), p.happy)}${bar(T('life.stress'), p.stress, 'bad')}</div>
-      <div class="card"><h3>${esc(T('life.decisions'))}${(s.inbox || []).length ? ` <small class="life-count">${s.inbox.length}</small>` : ''}</h3>${decisionsHtml(w)}</div>
-      ${queueHtml(w)}
-      <div class="card"><h3>${esc(T('life.actions'))}</h3><div class="life-cats" role="group">${cats}</div>
-        <div class="life-cat-body">${UI.lifeCat === 'work' ? workHtml(w, p) : UI.lifeCat === 'care' ? careHtml(w, p) : UI.lifeCat === 'learn' && !P.isAdult(w, p) ? learnHtml(w, p) : UI.lifeCat === 'learn' ? adultLearnHtml(w, p) : UI.lifeCat === 'money' ? moneyHtml(w, p) : UI.lifeCat === 'love' ? loveHtml(w, p) : UI.lifeCat === 'community' ? communityHtml(w, p) : UI.lifeCat === 'health' ? healthHtml(w, p) : UI.lifeCat === 'friends' ? friendsHtml(w, p) : `<p class="muted">${esc(T('cat.soon'))}</p>`}</div></div>`}
-      <div class="card"><h3>${esc(T('journal.title'))}</h3>${journalHtml(w)}</div>
-      <details class="card life-settings" ${keep('settings')}><summary>${esc(T('life.settings'))}</summary>
-        <label>${esc(T('freq.label'))} <select id="life-freq">${['important', 'balanced', 'detailed'].map(k => `<option value="${k}" ${(s.freq || 'balanced') === k ? 'selected' : ''}>${esc(T(`freq.${k}`))}</option>`).join('')}</select></label>
-        <label><input type="checkbox" id="life-lotto" ${s.noLottery ? '' : 'checked'}> ${esc(T('life.lotto'))}</label>
-        <label><input type="checkbox" id="life-sensitive" ${s.noSensitive ? '' : 'checked'}> ${esc(T('life.sensitive'))}</label>
-        <label><input type="checkbox" id="life-mature" ${s.mature ? 'checked' : ''}> ${esc(T('life.mature'))}</label>
-        <label><input type="checkbox" id="life-pause" ${pref('les-play-pause', '1') === '1' ? 'checked' : ''}> ${esc(T('life.pauseOn'))}</label>
-        <p class="note">${esc(T('life.storyTip'))}</p></details>`;
+    if (!w) { el.innerHTML = `<div class="card"><p>${esc(T('life.none'))}</p></div>`; UI._lifeHtml = null; return; }
+    if (w.player.waiting) { el.innerHTML = `<div class="card life-head"><div><div class="life-name">👶 ${esc(T('play.waiting'))}</div><p>${esc(T('life.waiting'))}</p></div></div>`; UI._lifeHtml = null; return; }
+    const p = Pl.person(w), sm = Pl.summary(w), s = w.player, cats = catsFor(sm.stage);
+    const html = `${viewsHtml()}${headHtml(w, p, sm)}
+      ${s.ended ? successionHtml(w) : !p.alive ? `<div class="card"><p>${esc(T('life.dead', { name: sm.name }))}</p></div>` : `${decisionsHtml(w, p)}${tomorrowHtml(w, p)}${areasHtml(w, p, cats)}`}
+      ${latestHtml(w)}${settingsHtml(w)}`;
     if (html === UI._lifeHtml && el.firstElementChild) return; // nothing changed: leave the page alone
     el.innerHTML = html; UI._lifeHtml = html;
-    const c = $('life-portrait');
-    if (c && p) {
-      const g = c.getContext('2d'), age = P.age(w, p);
-      g.imageSmoothingEnabled = false;
-      const spr = LES.Sprites.person(LES.Sprites.lookOf(p, age), age < 3 ? 'baby' : !p.adult ? 'child' : age >= 65 ? 'elder' : 'adult', 0);
-      const k = Math.floor(Math.min(60 / spr.width, 80 / spr.height));
-      g.drawImage(spr, Math.round((64 - spr.width * k) / 2), Math.round((88 - spr.height * k) / 2), spr.width * k, spr.height * k);
-    }
+    portrait($('life-portrait'), w, p);
+    if (p && p.alive && !s.ended) markAvailability(el, w);
   };
 
   // Clicks in the tab (one listener; the tab is redrawn often).
   UI.initLife = function () {
     const el = $('tab-life');
     if (!el) return;
-    const say = r => { if (r && r.error) UI.toast(esc(T(`cmd.error.${r.error}`))); else if (r && r.command) UI.toast(esc(T('jobs.queued'))); UI.update(true); };
+    const say = r => { if (r && r.error) UI.toast(esc(r.why ? LES.I18n.render(r.why) : T(`cmd.error.${r.error}`))); else if (r && r.command) UI.toast(esc(T('jobs.queued'))); UI._lifeHtml = null; UI.update(true); };
     el.addEventListener('click', e => {
       const b = e.target.closest('button');
       const w = where();
       if (!b || !w) return;
-      if (b.dataset.cat) { UI.lifeCat = b.dataset.cat; UI.update(true); }
-      else if (b.dataset.apply) say(Pl.request(w, 'APPLY_JOB', { vac: Number(b.dataset.apply) }));
-      else if (b.dataset.care) say(Pl.request(w, 'ASK_CARE', {}));
-      else if (b.dataset.effort) say(Pl.request(w, 'SET_EFFORT', { level: b.dataset.effort }));
-      else if (b.dataset.club) say(Pl.request(w, 'ASK_CLUB', { club: b.dataset.club }));
-      else if (b.dataset.quitclub) say(Pl.request(w, 'QUIT_CLUB', {}));
-      else if (b.dataset.allow) say(Pl.request(w, 'ASK_ALLOWANCE', { chores: b.dataset.allow === '1' }));
-      else if (b.dataset.friend) say(Pl.request(w, 'MAKE_FRIEND', { pid: Number(b.dataset.friend) }));
-      else if (b.dataset.school) say(Pl.request(w, 'ASK_SCHOOL', { tier: b.dataset.school }));
-      else if (b.dataset.plan) say(Pl.request(w, 'SET_PLAN', { plan: b.dataset.plan }));
-      else if (b.dataset.raise) say(Pl.request(w, 'ASK_RAISE', {}));
-      else if (b.dataset.quit) say(Pl.request(w, 'QUIT_JOB', {}));
-      else if (b.dataset.enroll) say(Pl.request(w, 'ENROLL', { course: b.dataset.enroll }));
-      else if (b.dataset.dropout) say(Pl.request(w, 'DROP_OUT', {}));
-      else if (b.dataset.invest) say(Pl.request(w, 'INVEST', { share: Number(b.dataset.invest) }));
-      else if (b.dataset.sell) say(Pl.request(w, 'SELL', { share: Number(b.dataset.sell) }));
-      else if (b.dataset.home) say(Pl.request(w, 'MOVE_HOME', { tier: Number(b.dataset.home) }));
-      else if (b.dataset.cancel) { Pl.cancel(w, b.dataset.cancel); UI.update(true); }
-      else if (b.dataset.buystock || b.dataset.sellstock) {
-        const tk = b.dataset.buystock || b.dataset.sellstock, n = Math.floor(Number(($(`stk-${tk}`) || {}).value));
-        if (!(n >= 1)) UI.toast(esc(T('money.qtyBad')));
-        else say(Pl.request(w, b.dataset.buystock ? 'BUY_STOCK' : 'SELL_STOCK', { tk, shares: n }));
-      }
-      else if (b.dataset.sellall) { const p = Pl.person(w); say(Pl.request(w, 'SELL_STOCK', { tk: b.dataset.sellall, shares: Pl.held(p, b.dataset.sellall) })); }
-      else if (b.dataset.retire) { if (confirm(T('work.retireSure'))) say(Pl.request(w, 'RETIRE', {})); }
-      else if (b.dataset.keep) say(Pl.request(w, 'KEEP_WORKING', {}));
-      else if (b.dataset.succ) { const err = Pl.succeed(w, Number(b.dataset.succ), b.dataset.how); if (err) UI.toast(esc(T(`succ.err.${err}`))); else { UI._lifeSearch = ''; UI.app.focusPlayer(); } UI.update(true); }
-      else if (b.dataset.succrandom) { const q = Pl.randomHeir(w); if (q && !Pl.succeed(w, q.id, 'random')) UI.app.focusPlayer(); UI.update(true); }
-      else if (b.dataset.spectate) { Pl.spectate(w); UI.update(true); }
-      else if (b.dataset.doctor) say(Pl.request(w, 'SEE_DOCTOR', {}));
-      else if (b.dataset.counselling) say(Pl.request(w, 'COUNSELLING', {}));
-      else if (b.dataset.rest) say(Pl.request(w, 'REST', {}));
-      else if (b.dataset.exercise) say(Pl.request(w, 'SET_EXERCISE', { level: b.dataset.exercise }));
-      else if (b.dataset.travel) say(Pl.request(w, 'TRAVEL', { kind: b.dataset.travel }));
-      else if (b.dataset.startbiz) say(Pl.request(w, 'START_BIZ', { type: b.dataset.startbiz }));
-      else if (b.dataset.inject) say(Pl.request(w, 'INJECT', { share: Number(b.dataset.inject) }));
-      else if (b.dataset.sellbiz) { if (confirm(T('biz.sure'))) say(Pl.request(w, 'SELL_BIZ', {})); }
-      else if (b.dataset.closebiz) { if (confirm(T('biz.sure'))) say(Pl.request(w, 'CLOSE_BIZ', {})); }
-      else if (b.dataset.ticket) say(Pl.request(w, 'BUY_TICKET', {}));
-      else if (b.dataset.donate) say(Pl.request(w, 'DONATE', { amt: Number(b.dataset.donate) }));
-      else if (b.dataset.volunteer) say(Pl.request(w, 'VOLUNTEER', {}));
-      else if (b.dataset.stand) say(Pl.request(w, 'STAND', {}));
-      else if (b.dataset.welcome) say(Pl.request(w, 'WELCOME', { pid: Number(b.dataset.welcome) }));
-      else if (b.dataset.date) say(Pl.request(w, 'ASK_DATE', { pid: Number(b.dataset.date) }));
-      else if (b.dataset.partner) say(Pl.request(w, 'ASK_PARTNER', { pid: Number(b.dataset.partner) }));
-      else if (b.dataset.propose) say(Pl.request(w, 'PROPOSE', { kind: b.dataset.propose }));
-      else if (b.dataset.counsel) say(Pl.request(w, 'COUNSEL', {}));
-      else if (b.dataset.separate) { if (confirm(T('love.sure'))) say(Pl.request(w, 'SEPARATE', {})); }
-      else if (b.dataset.baby) say(Pl.request(w, 'BABY_WISH', { wish: b.dataset.baby }));
-      else if (b.dataset.endaffair) say(Pl.request(w, 'END_AFFAIR', {}));
-      else if (b.dataset.carekid) say(Pl.request(w, 'CARE_CHILD', { pid: Number(b.dataset.carekid) }));
-      else if (b.dataset.visit) say(Pl.request(w, 'VISIT', { pid: Number(b.dataset.visit) }));
-      else if (b.dataset.gift) say(Pl.request(w, 'GIFT', { pid: Number(b.dataset.gift), share: 0.1 }));
-      else if (b.dataset.choice) say(Pl.choose(w, b.dataset.uid, b.dataset.choice));
-      else if (b.dataset.pass) { Pl.pass(w, b.dataset.pass); UI.update(true); }
+      const redraw = () => { UI._lifeHtml = null; UI.update(true); };
+      if (b.dataset.view) { UI.lifeView = b.dataset.view; setPref('les-life-view', UI.lifeView); redraw(); return; }
+      if (b.dataset.page) { UI.lifePage = b.dataset.page; redraw(); el.scrollTop = 0; return; }
+      if (b.dataset.back) { UI.lifePage = null; redraw(); return; }
+      if (b.dataset.cancel) { Pl.cancel(w, b.dataset.cancel); redraw(); return; }
+      if (b.dataset.choice) { say(Pl.choose(w, b.dataset.uid, b.dataset.choice)); return; }
+      if (b.dataset.auto) { Pl.autoDecide(w, b.dataset.auto); redraw(); return; }
+      if (b.dataset.succ) { const err = Pl.succeed(w, Number(b.dataset.succ), b.dataset.how); if (err) UI.toast(esc(T(`succ.err.${err}`))); else { UI._lifeSearch = ''; UI.app.focusPlayer(); } redraw(); return; }
+      if (b.dataset.succrandom) { const q = Pl.randomHeir(w); if (q && !Pl.succeed(w, q.id, 'random')) UI.app.focusPlayer(); redraw(); return; }
+      if (b.dataset.spectate) { Pl.spectate(w); redraw(); return; }
+      const a = actionOf(b);
+      if (!a) return;
+      const [k, [kind, argsOf, sure]] = a;
+      if ((k === 'buystock' || k === 'sellstock') && !(Math.floor(Number(($(`stk-${b.dataset[k]}`) || {}).value)) >= 1)) { UI.toast(esc(T('money.qtyBad'))); return; }
+      const args = argsOf(b.dataset[k], w), r = Pl.check(w, kind, args);
+      if (!r.ok) { UI.toast(esc(whyText(w, kind, args, r))); return; }
+      if (sure && !confirm(T(sure))) return;
+      say(Pl.plan(w, kind, args));
     });
     el.addEventListener('toggle', e => { const d = e.target; if (d.dataset && d.dataset.keep) { if (d.open) UI._lifeOpen.add(d.dataset.keep); else UI._lifeOpen.delete(d.dataset.keep); } }, true); // (toggle does not bubble)
     el.addEventListener('input', e => { // the search box: redraw only the results (keeps typing smooth)
@@ -325,42 +387,107 @@
       const w = where();
       if (e.target.tagName === 'SELECT') e.target.blur(); // chosen: the page may redraw again
       if (e.target.id === 'life-freq' && w) w.player.freq = e.target.value;
+      if (e.target.id === 'life-auto') setPref('les-life-auto', e.target.value);
       if (e.target.id === 'life-lotto' && w) { w.player.noLottery = !e.target.checked; UI.update(true); }
       if (e.target.id === 'life-sensitive' && w) w.player.noSensitive = !e.target.checked;
       if (e.target.id === 'life-mature' && w) w.player.mature = e.target.checked;
-      if (e.target.dataset && e.target.dataset.kidschool && e.target.value && w) say(Pl.request(w, 'CHOOSE_SCHOOL', { pid: Number(e.target.dataset.kidschool), tier: e.target.value }));
-      if (e.target.id === 'life-pause') setPref('les-play-pause', e.target.checked ? '1' : '0');
+      if (e.target.dataset && e.target.dataset.kidschool && e.target.value && w) say(Pl.plan(w, 'CHOOSE_SCHOOL', { pid: Number(e.target.dataset.kidschool), tier: e.target.value }));
     });
   };
 
-  // New decisions: a toast that opens the tab, and (by default) a pause so nothing slips by unseen.
+  // ---- The clock: important decisions hold it; everyday ones are left to the character at fast speeds ----
+  // An important decision is waiting: the clock stays stopped, and the decision is shown.
+  UI.lifeBlocked = function () {
+    const w = where(), item = w && !w.player.ended ? Pl.urgent(w) : null;
+    if (!item) return false;
+    UI.toast(`★ ${esc(T('life.decideFirst', { title: T(`ev.${item.ev}.title`, item.params || {}) }))}`, '', -1, true);
+    UI.lifePage = null; UI.setTab('life'); UI._lifeHtml = null; UI.update(true);
+    const card = document.querySelector('#tab-life .life-event.imp');
+    if (card) { card.classList.remove('flash'); void card.offsetWidth; card.classList.add('flash'); card.scrollIntoView({ block: 'nearest' }); }
+    return true;
+  };
+
+  // ---- Big moments: slow to 1x, a card, then back to the previous speed after 10 s unless you act ----
+  const MOMENT_ICON = { born: '👶', school: '🎒', schoolDone: '🎓', graduated: '🎓', firstJob: '💼', together: '🏠', married: '💍', child: '👶', grandchild: '👶', business: '🏪', elected: '🏛️', retired: '🌅', lost: '🕯️', jackpot: '🎉' };
+  let card = null, cardTimer = null, momentQ = [];
+  function closeMoment(resume) {
+    const app = UI.app;
+    if (cardTimer) { clearInterval(cardTimer); cardTimer = null; }
+    const m = card && card.m;
+    if (card) { card.el.remove(); card = null; }
+    if (resume && m && m.resumeIdx !== null && !UI.lifeBlocked()) app.setSpeed(m.resumeIdx);
+    if (momentQ.length) showMoment(momentQ.shift());
+  }
+  function showMoment(m) {
+    const app = UI.app, w = where(), p = w && Pl.person(w);
+    if (!w || !p) return;
+    if (card) { momentQ.push(m); return; }
+    const el = document.createElement('div');
+    el.className = `life-moment ${m.kind === 'lost' ? 'sad' : ''}`;
+    el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', T(`moment.${m.kind}`, m.params));
+    el.innerHTML = `<canvas width="72" height="96" aria-hidden="true"></canvas><div class="life-moment-body"><div class="life-moment-ic">${MOMENT_ICON[m.kind] || '✨'}</div>
+      <div class="life-moment-title">${esc(T(`moment.${m.kind}`, m.params))}</div><div class="muted">${esc(P.name(p))} · ${esc(T('life.ageStage', { age: Math.floor(P.age(w, p)), stage: T(`life.${Pl.stageOf(Math.floor(P.age(w, p)))}`) }))} · ${esc(U.fmtDate(m.day))}</div>
+      <div class="life-moment-foot"><button class="primary" data-go="1">${esc(T('moment.continue'))}</button><span class="life-moment-count"></span></div></div>`;
+    document.body.appendChild(el);
+    portrait(el.querySelector('canvas'), w, p);
+    card = { el, m };
+    if (m.sound && LES.Audio && LES.Audio.play) LES.Audio.play(m.sound);
+    let left = 10;
+    const count = el.querySelector('.life-moment-count');
+    const tick = () => { count.textContent = m.resumeIdx !== null ? T('moment.resume', { count: left }) : ''; };
+    tick();
+    if (m.resumeIdx !== null) cardTimer = setInterval(() => { left--; if (left <= 0) closeMoment(true); else tick(); }, 1000);
+    el.querySelector('[data-go]').onclick = () => closeMoment(true);
+    el.addEventListener('pointerdown', ev => { if (!ev.target.closest('[data-go]') && cardTimer) { clearInterval(cardTimer); cardTimer = null; count.textContent = T('moment.held'); } });
+  }
+  // Any other action by the player stops the countdown (they are busy; Continue restores the speed).
+  document.addEventListener('keydown', () => { if (card && cardTimer) { clearInterval(cardTimer); cardTimer = null; const c = card.el.querySelector('.life-moment-count'); if (c) c.textContent = T('moment.held'); } }, true);
+
+  // Every few hundred ms: what the clock should do for this life, new decisions, new moments, the end of a life.
   const seen = new Set();
   UI.watchLife = function () {
     const app = UI.app, w = where(), tab = document.querySelector('#tabs button[data-tab="life"]');
     if (tab) tab.classList.toggle('hidden', !w);
     if (!w) return;
-    if (UI._lifeWaiting && !w.player.waiting) { // Start at Birth: you have just been born
+    const s = w.player;
+    s.autoMinor = pref('les-life-auto', '1') === '1' && app.speedDps && app.speedDps() >= 1;
+    s.stopOn = { important: true, minor: true, moments: true };
+    if (w.pauseRequested && app.region && w !== app.world) { app.pauseReason = w.pauseRequested; w.pauseRequested = null; if (!app.paused) app.togglePause(); } // (another town of the region)
+    if (UI._lifeWaiting && !s.waiting) { // Start at Birth: you have just been born
       UI._lifeWaiting = false; // first: focusPlayer redraws the panels, which comes back here
-      const born = w.player.journal.find(e => e.key === 'life.born');
-      if (born) UI.toast(`👶 ${esc(LES.I18n.render(born))}`, U.fmtDate(w.day), w.player.id, true);
       if (!app.paused) app.togglePause();
       app.focusPlayer();
     }
-    UI._lifeWaiting = !!w.player.waiting;
-    const end = w.player.ended;
+    UI._lifeWaiting = !!s.waiting;
+    const end = s.ended;
     if (end && UI._lifeEnded !== `${end.id}-${end.day}`) { // the life just ended: say so, and pause to choose
       UI._lifeEnded = `${end.id}-${end.day}`;
       if (w.day - end.day <= 1) { const t = UI.toast(`🕯️ ${esc(T(end.why === 'died' ? 'succ.died' : 'succ.left', { name: P.name(w.people[end.id]), age: end.age }))}`, U.fmtDate(w.day), -1, true); if (t) t.onclick = () => UI.setTab('life'); if (!app.paused) app.togglePause(); UI.setTab('life'); }
     }
-    const inbox = w.player.inbox || [];
+    const inbox = s.inbox || [];
     if (tab) tab.dataset.count = inbox.length || '';
     for (const item of inbox) {
       if (seen.has(item.uid)) continue;
       seen.add(item.uid);
       if (w.day - item.day > 1) continue; // already there (a loaded save)
-      const t = UI.toast(`📩 ${esc(T('life.newDecision', { title: T(`ev.${item.ev}.title`, item.params || {}) }))}`, U.fmtDate(w.day), -1, true);
+      const imp = Pl.isImportant(item), t = UI.toast(`${imp ? '★' : '📩'} ${esc(T('life.newDecision', { title: T(`ev.${item.ev}.title`, item.params || {}) }))}`, U.fmtDate(w.day), -1, true);
       if (t) t.onclick = () => UI.setTab('life');
-      if (pref('les-play-pause', '1') === '1' && !app.paused) app.togglePause();
+      if (imp || !s.autoMinor) { UI.lifePage = null; UI.setTab('life'); }
+    }
+    // Moments: small ones as a toast; big ones slow the clock to 1x with a card (unless a decision holds it).
+    const ms = s.moments || [];
+    if (UI._momentSeq === undefined) UI._momentSeq = ms.length ? ms[ms.length - 1].seq : 0; // (a loaded game: old moments are not replayed)
+    for (const m of ms) {
+      if (m.seq <= UI._momentSeq) continue;
+      UI._momentSeq = m.seq;
+      if (w.day - m.day > 2) continue;
+      if (!m.big) { UI.toast(`✨ ${esc(T(`moment.${m.kind}`, m.params))}`, U.fmtDate(m.day), s.id, false); continue; }
+      const was = app.pauseReason === 'moment' || !app.paused ? app.speedIdx : null;
+      app.pauseReason = null;
+      const blocked = !!Pl.urgent(w);
+      const m2 = Object.assign({}, m, { resumeIdx: blocked || was === null || was === 0 ? null : was });
+      if (!blocked && was !== null) app.setSpeed(0); // 1x: the town keeps moving while you take it in
+      showMoment(m2);
     }
   };
 })(globalThis.LES = globalThis.LES || {});

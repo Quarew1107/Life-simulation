@@ -402,6 +402,27 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
       - **Life goals:** `SET_GOAL` picks from the engine's own goals (`Player.goals`).
       - **Mood:** `Player.mood(w, p)` gives a line from the person's real state and recent moments.
       - Tests: `playFlowTests` (10).
+    - **Step 2 done (view A, the default; `js/ui/player-ui.js`, `js/main.js`):**
+      - **Layout:** a Hub / Planner / Story switcher (B and C disabled until built; remembered as
+        `les-life-view`); a character card (portrait, mood line, health/happiness/stress rings, cash) and a
+        life goal you can change; decisions with important ones first (★, gold, "Let {name} decide" =
+        `Player.autoDecide`). Each choice that cannot happen tomorrow is greyed with its reason.
+      - **Tomorrow:** an 8-hour bar coloured by area, with chips that cancel (✕) and the total cost.
+      - **Six area tiles** (status, plus a dot when something is worth doing) open their own page with Back.
+        Then the latest 3 journal lines with the full story folded, then settings.
+      - **Buttons:** every one goes through one map (`ACTIONS`): `Player.check` greys out what cannot
+        happen (title = reason; a click explains it); clicks use `Player.plan`.
+      - **Clock:**
+        - The UI sets `w.player.autoMinor` (setting `les-life-auto`, on by default, at 1 day/s and
+          faster) and `w.player.stopOn`.
+        - The engine raises `w.pauseRequested` ('life' for decisions, 'moment' for big moments; any town of
+          a region; `app.pauseReason`).
+        - `app.setSpeed` / `togglePause` / "+1 day" refuse while an important decision waits
+          (`UI.lifeBlocked` shows it and flashes the card).
+        - Big moments: speed 1×, a card with the portrait and the bell sound, "Back to your speed in 10 s"
+          unless the player clicks or types (Continue restores it). Small moments are toasts. Several
+          moments queue.
+      - The old "Pause on new decisions" setting is replaced.
   - Sources for the plan: ONS LTIM YE Dec 2024 (+345k revised) and long-term assumption +340k/yr; Census Vintage
     2024 (+2.8M) and projections (~0.9M/yr); DOSM CPE 2024/2026; NBS 2024 communique.
 

@@ -2671,6 +2671,14 @@
     check('You can choose a life goal from those open to the character; it becomes their goal', goals.length > 3 && !!gc.command && gp.goal.id === pick && bad === 'not_possible');
     gp.stress = 90; const m1 = I.render(Pl.mood(g, gp)); gp.stress = 10; gp.happy = 90; const m2 = I.render(Pl.mood(g, gp));
     check('The mood line follows their state', /stress/i.test(m1) && /good/.test(m2), `${m1} / ${m2}`);
+    // The clock: with the UI's stop rules on, an important decision holds the game every day until answered; a big moment asks for the slow-down.
+    const k = make('plf-k'); k.player.stopOn = { important: true, minor: true, moments: true };
+    k.player.inbox.push({ uid: 'k1', ev: 'AD-035', day: k.day, expires: k.day + 20, params: { other: 'X' } });
+    k.step(); const r1 = k.pauseRequested; k.pauseRequested = null; k.step(); const r2 = k.pauseRequested; k.pauseRequested = null;
+    k.player.inbox = []; const kp = Pl.person(k), kq = k.living.find(q => q.alive && q.partnerId === null && q.sex !== kp.sex && P.isAdult(k, q) && !LES.Family.related(k, kp, q));
+    if (kp.partnerId !== null) LES.Family.separate(k, kp, k.people[kp.partnerId], 'breakup');
+    k.step(); k.pauseRequested = null; LES.Family.formCouple(k, kp, kq); k.step();
+    check('The clock: an important decision stops the game every day until answered; a big moment asks for the slow-down', r1 === 'life' && r2 === 'life' && k.pauseRequested === 'moment', `${r1} ${r2} ${k.pauseRequested}`);
     // Years with everything answered (the character for everyday, "let them decide" for important ones): lines read in both languages.
     const v = make('plf-v'); v.player.autoMinor = true;
     v.ledger.pay('GENESIS', Pl.person(v), 'cash', v.px(30000));

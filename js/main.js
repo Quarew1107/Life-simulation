@@ -275,13 +275,17 @@
   };
   // byDirector = true when Director mode slows down for a shot; a speed the user picks
   // themselves always wins and cancels the Director's planned resume.
+  app.speedDps = () => SPEEDS[app.speedIdx].dps;
+  // Play a Life: an important decision waiting keeps the clock stopped (UI.lifeBlocked says why and shows it).
+  const lifeBlocked = () => !!(UI.lifeBlocked && UI.lifeBlocked());
   app.setSpeed = function (i, byDirector) {
+    if (lifeBlocked()) return;
     if (!byDirector) UI.director.resumeSpeed = null;
     app.speedIdx = i; app.paused = false; renderSpeed();
   };
-  app.togglePause = function () { if (app.world && app.world.ended) return; app.paused = !app.paused; renderSpeed(); };
+  app.togglePause = function () { if (app.world && app.world.ended) return; if (app.paused && lifeBlocked()) return; app.paused = !app.paused; renderSpeed(); };
   function stepDay() {
-    if (!app.world || app.world.ended) return;
+    if (!app.world || app.world.ended || lifeBlocked()) return;
     app.paused = true;
     safeStep();
     app.dayFrac = 0.25;
@@ -318,9 +322,11 @@
     safeStep();
     stepMs = stepMs * 0.8 + (performance.now() - t) * 0.2;
   };
+  // A town asked to stop (a goal reached; Play a Life: a decision or a big moment), in any town of a region.
+  const pauseReq = () => { const w = app.world; if (!w) return null; if (w.pauseRequested) return w.pauseRequested; if (app.region) for (const t of app.region.towns) if (t.pauseRequested) return t.pauseRequested; return null; };
   const pumpWanted = () => {
     const w = app.world;
-    return !!w && !app.paused && !w.ended && !w.pauseRequested && SPEEDS[app.speedIdx].dps >= 10 && !document.hidden;
+    return !!w && !app.paused && !w.ended && !pauseReq() && SPEEDS[app.speedIdx].dps >= 10 && !document.hidden;
   };
   function kickPump() {
     if (pumpOn || !pumpWanted()) return;
@@ -332,12 +338,12 @@
     const w = app.world, sp = SPEEDS[app.speedIdx], t0 = performance.now();
     if (w.lastDay < 0) safeStep();
     if (sp.dps === Infinity) {
-      while (performance.now() - t0 < PUMP_MS && !app.paused && !w.ended && !w.pauseRequested) timedStep();
+      while (performance.now() - t0 < PUMP_MS && !app.paused && !w.ended && !pauseReq()) timedStep();
       app.dayFrac = 0.3;
       pumpNext();
     } else {
       app.dayFrac += Math.min(0.25, (t0 - pumpLast) / 1000) * sp.dps;
-      while (app.dayFrac >= 1 && !app.paused && !w.ended && !w.pauseRequested && performance.now() - t0 < PUMP_MS) { timedStep(); app.dayFrac -= 1; }
+      while (app.dayFrac >= 1 && !app.paused && !w.ended && !pauseReq() && performance.now() - t0 < PUMP_MS) { timedStep(); app.dayFrac -= 1; }
       if (app.dayFrac >= 1) {
         app.dayFrac = Math.min(app.dayFrac, 2); // can't keep up: run flat out, keep only a small backlog
         pumpNext();
@@ -369,8 +375,9 @@
         while (app.dayFrac >= 1 && n < 40 && !app.paused && !w.ended) { safeStep(); app.dayFrac -= 1; n++; }
         if (app.dayFrac >= 1) app.dayFrac = 0;
       }
-      if (w.pauseRequested) {
-        w.pauseRequested = null;
+      if (pauseReq()) {
+        app.pauseReason = pauseReq();
+        for (const t of app.region ? app.region.towns : [w]) t.pauseRequested = null;
         app.paused = true;
         renderSpeed();
       }

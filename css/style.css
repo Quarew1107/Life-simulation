@@ -505,4 +505,55 @@ button.small { padding: 3px 10px; font-size: 12px; }
 .life-stock-row { display: flex; gap: 6px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 3px; }
 .life-stock-row input { width: 70px; margin-right: 4px; }
 .life-stocks .link { background: none; border: none; color: var(--muted); text-decoration: underline; cursor: pointer; padding: 2px 4px; }
-.life-stocks .up { color: var(--teal); } .life-stocks .down { color: var(--red); }
+.life-stocks .up { color: var(--teal); }
+/* My life, view A (hub). */
+.life-views { display: flex; gap: 4px; margin-bottom: 8px; }
+.life-views button { flex: 1; background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); border-radius: 8px; padding: 4px 6px; font-size: 11px; }
+.life-views button.on { color: var(--gold); border-color: var(--gold); background: rgba(242,193,78,.08); }
+.life-views button:disabled { opacity: .45; cursor: default; }
+.life-head { flex-wrap: wrap; }
+.life-who { flex: 1; min-width: 150px; }
+.life-mood { font-style: italic; color: #cfd8e3; margin-top: 2px; }
+.life-rings { display: flex; gap: 10px; margin-left: auto; padding-bottom: 12px; }
+.life-ring { --v: 50; --c: var(--teal); width: 46px; height: 46px; border-radius: 50%; position: relative; display: grid; place-items: center;
+  background: radial-gradient(closest-side, var(--panel) 76%, transparent 78% 100%), conic-gradient(var(--c) calc(var(--v) * 1%), #26303b 0); }
+.life-ring b { font-size: 13px; } .life-ring small { position: absolute; bottom: -14px; font-size: 10px; color: var(--muted); white-space: nowrap; }
+.life-goal summary { cursor: pointer; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.life-goalbar { display: inline-block; width: 90px; height: 6px; background: #26303b; border-radius: 3px; overflow: hidden; }
+.life-goalbar i { display: block; height: 100%; background: var(--gold); }
+.life-goal .life-cats { margin-top: 8px; }
+.life-event.imp { border-width: 2px; background: rgba(242,193,78,.1); }
+.life-event.flash { animation: life-flash .9s ease 2; }
+@keyframes life-flash { 50% { box-shadow: 0 0 0 4px rgba(242,193,78,.55); } }
+.life-choices button small { display: block; font-size: 10.5px; color: var(--red); font-weight: 500; }
+button.off { opacity: .5; filter: grayscale(.6); cursor: help; }
+.life-qhead { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.life-qhead h3 { margin: 0; }
+.life-day { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; margin: 8px 0 6px; }
+.life-day i { height: 12px; border-radius: 3px; background: #26303b; }
+.g-work { background: var(--gold) !important; } .g-money { background: var(--teal) !important; } .g-love { background: #ff8fb1 !important; }
+.g-health { background: var(--green) !important; } .g-learn { background: var(--blue) !important; } .g-community { background: #a98bff !important; }
+.life-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.life-chip { display: inline-flex; align-items: center; gap: 5px; background: var(--panel-2) !important; border: 1px solid var(--line); border-left: 4px solid var(--line); border-radius: 12px; padding: 2px 4px 2px 8px; font-size: 12px; }
+.life-chip.g-work { border-left-color: var(--gold); } .life-chip.g-money { border-left-color: var(--teal); } .life-chip.g-love { border-left-color: #ff8fb1; }
+.life-chip.g-health { border-left-color: var(--green); } .life-chip.g-learn { border-left-color: var(--blue); } .life-chip.g-community { border-left-color: #a98bff; }
+.life-chip small { color: var(--muted); }
+.life-chip .x { background: none; border: none; color: var(--muted); padding: 0 4px; font-weight: 700; }
+.life-chip .x:hover { color: var(--red); }
+.life-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.life-tile { position: relative; text-align: left; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px; min-height: 76px; color: var(--text); }
+.life-tile:hover { border-color: var(--gold); }
+.life-tile .ic { display: block; font-size: 18px; } .life-tile b { display: block; margin: 2px 0; } .life-tile small { color: var(--muted); font-size: 11px; }
+.life-dot { position: absolute; right: 8px; top: 8px; width: 9px; height: 9px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 0 3px rgba(62,199,181,.25); }
+.life-pagehead { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.life-page { border-color: var(--gold); }
+.life-moment { position: fixed; left: 50%; top: 96px; transform: translateX(-50%); z-index: 60; display: flex; gap: 14px; align-items: center; min-width: 360px; max-width: 560px;
+  background: linear-gradient(180deg, #2a2412, var(--panel)); border: 2px solid var(--gold); border-radius: 14px; padding: 14px 18px; box-shadow: 0 12px 40px rgba(0,0,0,.6); animation: life-pop .35s ease; }
+.life-moment.sad { background: linear-gradient(180deg, #1d2430, var(--panel)); border-color: #7d8b9c; }
+.life-moment canvas { image-rendering: pixelated; background: #1b232c; border-radius: 8px; border: 1px solid var(--line); }
+.life-moment-ic { font-size: 22px; } .life-moment-title { font: 700 17px var(--ui); color: var(--gold); margin: 2px 0; } .life-moment.sad .life-moment-title { color: var(--text); }
+.life-moment-foot { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.life-moment-foot .primary { background: var(--gold); color: #111; border: none; border-radius: 8px; padding: 6px 14px; font-weight: 700; }
+.life-moment-count { color: var(--muted); font-size: 12px; }
+@keyframes life-pop { from { transform: translateX(-50%) scale(.9); opacity: 0; } }
+@media (max-width: 640px) { .life-moment { min-width: 0; width: calc(100% - 32px); top: 70px; } } .life-stocks .down { color: var(--red); }

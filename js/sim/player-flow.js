@@ -131,6 +131,18 @@
     for (const item of s.inbox.slice()) if (!Pl.isImportant(item)) Pl.autoDecide(w, item.uid);
   });
 
+  // The clock: what should stop the game (the UI sets w.player.stopOn; the engine only raises the flag that the
+  // game loop already listens to). Important decisions hold the clock every day until answered; an everyday one
+  // stops it once when it arrives (unless the character is deciding those); a big moment asks for the slow-down.
+  Pl.AFTER.push(function (w) {
+    const s = st(w), o = s.stopOn;
+    if (!o || s.ended) return;
+    const inbox = s.inbox || [];
+    if (o.important && inbox.some(Pl.isImportant)) { w.pauseRequested = w.pauseRequested || 'life'; return; }
+    if (o.minor && !s.autoMinor && inbox.some(x => !Pl.isImportant(x) && x.day === w.day)) { w.pauseRequested = w.pauseRequested || 'life'; return; }
+    if (o.moments && (s.moments || []).some(m => m.big && m.day === w.day)) w.pauseRequested = w.pauseRequested || 'moment';
+  });
+
   // ---- 3. Life moments ----
   // big: the UI slows to 1x and shows a card; small: a toast. Sounds: the town's bells.
   Pl.MOMENTS = {
