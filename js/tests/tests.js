@@ -2021,6 +2021,64 @@
     LES.Countries.ensure(D);
   }
 
+  // PL-05: the baby stage. Start at Birth with a real newborn; the baby asks, the carer decides.
+  async function playBabyTests() {
+    print('--- Play a Life: baby (PL-05) ---', 'info');
+    const Pl = LES.Player, D = LES.DEFAULTS, P = LES.P, I = LES.I18n;
+    LES.Countries.ensure(D);
+    const make = (seed, extra) => { const w = new LES.World(Object.assign({}, D, { seed, founders: 150, play: 'random', playStage: 'newborn' }, extra || {})); Pl.begin(w); return w; };
+    const w = make('pl5-t'), off = new LES.World(Object.assign({}, D, { seed: 'pl5-t', founders: 150 }));
+    check('Start at Birth: nobody is played yet; the badge says you are waiting', w.player.waiting === 'birth' && Pl.person(w) === null && Pl.summary(w).waiting);
+    let d = 0;
+    for (; d < 900 && w.player.waiting; d++) { w.step(); off.step(); }
+    const mid = LES.Save.fromJSON(LES.Save.toJSON(w));
+    const p = Pl.person(w);
+    check('Waiting changes nothing in the town', !w.player.played && w.stableHash() === off.stableHash());
+    check('You become the first real baby born in town after play began, with real parents caring for you', !!p && p.alive && !p.migrant && P.age(w, p) < 0.02 && p.parents.length === 2 && (p.caregivers.length > 0 || p.guardian === 'WELFARE') && w.player.chain.length === 1 && w.player.journal.some(e => e.key === 'life.born'), p ? I.render(w.player.journal.find(e => e.key === 'life.born')) : `none after ${d} days`);
+    const w2 = make('pl5-t'), sv = LES.Save.fromJSON(LES.Save.toJSON(w2));
+    for (let k = 0; k < d; k++) sv.step();
+    check('A save made while waiting picks the same baby after loading', sv.player.id === w.player.id && !sv.player.waiting);
+    // Reaching for the carer: the carer decides; a "yes" is one real care session, a "no" changes nothing.
+    let ok = 0, busy = 0, right = true;
+    for (let k = 0; k < 120 && (ok < 2 || busy < 1); k++) {
+      const g = Pl.carerOf(w, p);
+      if (!g) break;
+      const r = Pl.request(w, 'ASK_CARE', {});
+      if (r.command) {
+        const cs = p.careSessions, en = g.energy;
+        w.player.hoursDay = -1; Pl.tick(w); // carry it out on its own (actions later in the day add care too)
+        if (r.command.code === 'ok') { ok++; right = right && p.careSessions === cs + 1 && g.energy === en - 6; }
+        else if (r.command.code === 'busy') { busy++; right = right && p.careSessions === cs && g.energy === en; }
+        else right = false;
+      }
+      w.step();
+    }
+    check('Reaching for your carer: they come (one real care session, a little of their energy) or they are busy (nothing changes)', right && ok >= 2 && busy >= 1, `${ok} came, ${busy} busy`);
+    check('The world is marked as played and no money moved', w.player.played && w.checkInvariants().length === 0);
+    // Two years as a baby, answering every event.
+    const b = make('pl5-b');
+    while (b.player.waiting) b.step();
+    const days = [];
+    for (let k = 0; k < 730; k++) {
+      for (const it of (b.player.inbox || []).slice()) { const e = Pl.eventById(it.ev), c = e.choices.find(x => x.cmd) || e.choices[0]; Pl.choose(b, it.uid, c.id); }
+      b.step();
+    }
+    const offered = b.player.journal.filter(e => e.kind === 'event');
+    const perMonth = offered.every((e, i) => i === 0 || e.day - offered[i - 1].day >= 30);
+    check('A baby meets several different moments, at most one new one a month', new Set(offered.map(e => e.ev)).size >= 4 && perMonth && offered.every(e => e.ev.startsWith('BA-')), offered.map(e => e.ev).join(' '));
+    const texts = lang => b.player.journal.map(e => I.render(e));
+    const en = texts('en');
+    await new Promise(r => I.set('zh-Hans', r));
+    const zh = texts('zh-Hans');
+    const evTexts = Pl.EVENTS.filter(e => e.id.startsWith('BA-')).flatMap(e => ['title', 'body', ...e.choices.map(c => c.id)].map(k => I.t(`ev.${e.id}.${k}`, { carer: 'A', sibling: 'B', other: 'C', name: 'D' })));
+    await new Promise(r => I.set('en', r));
+    check('Every baby line reads properly with real names, in English and Chinese', ![...en, ...zh, ...evTexts].some(t => /\{\w+\}|ev\.BA/.test(t)) && I.validate('zh-Hans').length === 0, [...en, ...zh].find(t => /\{\w+\}/.test(t)) || '');
+    const adult = new LES.World(Object.assign({}, D, { seed: 'pl5-a', founders: 120, play: 'random', playStage: 'adult' })); Pl.begin(adult);
+    const ra = Pl.request(adult, 'ASK_CARE', {}); adult.step();
+    check('Adults cannot reach for a carer', ra.command.code === 'too_old');
+    LES.Countries.ensure(D);
+  }
+
   // PL-01: interface language. Words only: the same seed gives the same town and the same save in any language.
   async function i18nTests() {
     print('--- Interface language (PL-01) ---', 'info');
@@ -2133,6 +2191,7 @@
       await playerTests();
       await playCommandTests();
       await playUiTests();
+      await playBabyTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -2144,6 +2203,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

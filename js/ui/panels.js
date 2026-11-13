@@ -149,7 +149,7 @@
     const pt = LES.Player.town(app.region || w), ps = pt && LES.Player.summary(pt), pb = $('play-badge');
     pb.classList.toggle('hidden', !ps);
     if (ps) {
-      const T = LES.I18n.t, txt = !ps.alive ? T('play.died', { name: ps.name }) : ps.away ? T('play.away', { name: ps.name }) : T('play.badge', { name: ps.name, age: ps.age, stage: T(`life.${ps.stage}`) });
+      const T = LES.I18n.t, txt = ps.waiting ? T('play.waiting') : !ps.alive ? T('play.died', { name: ps.name }) : ps.away ? T('play.away', { name: ps.name }) : T('play.badge', { name: ps.name, age: ps.age, stage: T(`life.${ps.stage}`) });
       const key = `${txt}|${LES.I18n.lang()}`;
       if (pb.dataset.key !== key) { pb.dataset.key = key; pb.textContent = `🎮 ${txt}`; pb.title = T('play.badgeTip', { name: ps.name }); pb.classList.toggle('gone', !ps.alive); }
     }

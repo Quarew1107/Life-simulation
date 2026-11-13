@@ -250,6 +250,18 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
     toast + pause (`UI.watchLife`). A new played world opens on this tab. Speed "Story" = 5 days/s (between 1d/s
     and 10d/s; keys 1-8). Measured in the full app (headless Edge): Story holds 5.0 days/s with 100 and with 2,500
     people (China), worst UI gap 177 ms. Checked in Chinese and at phone width. Tests: `playUiTests` (4).
+  - PL-05 done (baby 0-2): Start at Birth = setup stage "Newborn (wait for the next birth in town)"
+    (`cfg.playStage: 'newborn'`): `w.player.id = -1, waiting: 'birth'` until the first baby born in town after play
+    began (not newcomers); journal `life.born`; the game pauses and follows the baby. In a 150-person town the wait
+    can be ~1 year (Story speed suggested). New command `ASK_CARE` (age <= 11, 1 h, 1-day cooldown): the first
+    present caregiver decides (yes chance 0.35 + 0.5*resp + 0.25*energy - 0.3 if stressed > 70, +0.1 if crying;
+    player stream); yes = `careSessions + 1` (feeds `Family.childMonth` upbringing, so abilities/character at coming
+    of age) and carer energy -6 (+3 stress if crying); no = `busy`, nothing changes; welfare children get `welfare`.
+    Nine baby events (BA-002/004/006/008/010/012/023/032/044) tied to real situations (carer present, new sibling,
+    carers changed, carer stressed / working / short of money, baby unwell, age 1+, another toddler in town) with
+    real names (`Player.PARAMS`); quiet choices are story-only. At most one new event a month (most important
+    first). My life tab: baby/child show a "Family" section (carers, "Reach for ..."); money hidden for children
+    with nothing. Tests: `playBabyTests` (9).
   - Sources for the plan: ONS LTIM YE Dec 2024 (+345k revised) and long-term assumption +340k/yr; Census Vintage
     2024 (+2.8M) and projections (~0.9M/yr); DOSM CPE 2024/2026; NBS 2024 communique.
 

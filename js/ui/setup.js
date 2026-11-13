@@ -61,7 +61,7 @@
   // Play a Life: the switch (off by default) and who to play.
   function playCard(base) {
     const on = LES.Player.on(base), cast = base.play === 'cast', roster = LES.UI.castRoster ? LES.UI.castRoster() : [];
-    const stages = ['any', 'baby', 'child', 'teen', 'adult', 'senior'];
+    const stages = ['any', 'newborn', 'baby', 'child', 'teen', 'adult', 'senior'];
     return `<div class="play-card${on ? ' on' : ''}" id="play-card">
       <label class="play-toggle"><input type="checkbox" id="set-play" ${on ? 'checked' : ''}>
         <span class="play-switch" aria-hidden="true"></span>

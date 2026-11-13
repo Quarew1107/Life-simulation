@@ -59,6 +59,7 @@
   // Show and follow the person you are playing (in whichever town they live).
   app.focusPlayer = function () {
     const t = LES.Player.town(app.region || app.world);
+    if (t && t.player.waiting) { UI.setTab('life'); return; } // Start at Birth: nobody to follow yet
     if (!t || !t.people[t.player.id].alive) return;
     if (app.region && t !== app.world) app.selectTown(app.region.towns.indexOf(t));
     app.select(t.player.id, true);
