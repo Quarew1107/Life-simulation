@@ -2467,6 +2467,57 @@
     LES.Countries.ensure(D);
   }
 
+  // PL-11: health, rest, exercise, trips and difficult stories (with content settings).
+  async function playWellbeingTests() {
+    print('--- Play a Life: wellbeing, travel and content settings (PL-11) ---', 'info');
+    const Pl = LES.Player, D = LES.DEFAULTS, P = LES.P, I = LES.I18n;
+    LES.Countries.ensure(D);
+    const adult = (seed, test, stage) => { for (let k = 0; k < 40; k++) { const w = new LES.World(Object.assign({}, D, { seed: `${seed}-${k}`, founders: 200, play: 'random', playStage: stage || 'adult' })); Pl.begin(w); const p = Pl.person(w); if (!test || test(w, p)) return w; } return null; };
+    const req = (w, kind, args) => { w.player.cool = {}; w.player.hoursDay = -1; const r = Pl.request(w, kind, args); Pl.tick(w); return r.command ? r.command.code : r.error; };
+    // The doctor: real treatment when unwell (the engine's clinic visit), nothing invented when healthy.
+    const hw = adult('pl11h'), hp = Pl.person(hw);
+    hw.ledger.pay('GENESIS', hp, 'cash', hw.px(5000));
+    hp.health = 100; const well = req(hw, 'SEE_DOCTOR', {}), h1 = hp.health;
+    hp.health = 60; const cash = hp.cash, ill = req(hw, 'SEE_DOCTOR', {});
+    check('Seeing a doctor treats real illness (and is paid for); a healthy check-up changes nothing', well === 'ok_well' && h1 === 100 && ill === 'ok' && hp.health === 72 && hp.cash <= cash && hw.checkInvariants().length === 0);
+    hp.stress = 60; const hs = hw.ledger.sec.HEALTH.bal, cc = req(hw, 'COUNSELLING', {});
+    check('Counselling is paid to the health sector and eases stress', cc === 'ok' && hp.stress === 45 && hw.ledger.sec.HEALTH.bal > hs);
+    // Exercise: a small monthly gain, capped (no fountain of youth).
+    req(hw, 'SET_EXERCISE', { level: 'regular' });
+    hp.health = 80; for (const f of Pl.MONTHLY) f(hw, hp); const e1 = hp.health;
+    hp.health = 95; for (const f of Pl.MONTHLY) f(hw, hp);
+    check('Regular exercise: +1 health a month while below 95, never above', e1 === 81 && hp.health === 95);
+    // Trips: paid, take days, nothing else can be done meanwhile, and they refresh you on return.
+    const tw = adult('pl11t'), tp = Pl.person(tw);
+    tw.ledger.pay('GENESIS', tp, 'cash', tw.px(20000));
+    const tc = tp.cash, go = req(tw, 'TRAVEL', { kind: 'abroad' }), paid = tc - tp.cash;
+    const busy = req(tw, 'REST', {});
+    let back = false; for (let d = 0; d < 12 && !back; d++) { tw.step(); back = tw.player.journal.some(e => e.key === 'trip.back'); }
+    tw.ledger.spend(tp, 'cash', 'MERCHANT', tp.cash);
+    check('A trip abroad costs money and ten days; you cannot do other things meanwhile; you come back refreshed', go === 'ok' && paid === Pl.tripCost(tw, 'abroad') && busy === 'travelling' && back && req(tw, 'TRAVEL', { kind: 'domestic' }) === 'cant_afford' && tw.checkInvariants().length === 0);
+    // Content settings: a difficult story is offered only when allowed; hiding it never changes the town.
+    const pair = [true, false].map(hide => { const w = adult('pl11c'); w.player.noSensitive = hide; return w; });
+    const saved = Pl.EVENTS.slice(), e58 = Pl.eventById('AD-058');
+    try {
+      Pl.EVENTS.splice(0, Pl.EVENTS.length, Object.assign({}, e58, { chance: 1 }));
+      for (const w of pair) { do w.step(); while (w.day % 30 !== 0); const p = Pl.person(w); p.happy = 10; w.player.lowMonths = 5; Pl.tick(w); }
+    } finally { Pl.EVENTS.splice(0, Pl.EVENTS.length, ...saved); }
+    check('Difficult stories: offered only when shown in the settings', !pair[0].player.inbox.some(i => i.ev === 'AD-058') && pair[1].player.inbox.some(i => i.ev === 'AD-058'));
+    const twins = [true, false].map(hide => { const w = adult('pl11d'); w.player.noSensitive = hide; w.player.mature = !hide; for (let d = 0; d < 400; d++) w.step(); return w.hash(); });
+    check('Hiding content changes only what the player is offered, never the town (same world either way)', twins[0] === twins[1]);
+    // Years of adult and senior life answering every decision: lines complete in both languages; books balance.
+    for (const stage of ['adult', 'senior']) {
+      const ev = adult(`pl11v${stage}`, (x, p) => stage === 'senior' || P.age(x, p) < 40, stage);
+      ev.ledger.pay('GENESIS', Pl.person(ev), 'cash', ev.px(60000));
+      for (let d = 0; d < 365 * 5; d++) { for (const it of (ev.player.inbox || []).slice()) { const e = Pl.eventById(it.ev), ch = e.choices.find(y => y.cmd) || e.choices[0]; Pl.choose(ev, it.uid, ch.id); } ev.step(); }
+      const lines = ev.player.journal.map(e => I.render(e));
+      await new Promise(r => I.set('zh-Hans', r)); const zh = ev.player.journal.map(e => I.render(e)); await new Promise(r => I.set('en', r));
+      const evs = [...new Set(ev.player.journal.filter(e => e.kind === 'event').map(e => e.ev))];
+      check(`Five years as ${stage === 'adult' ? 'an adult' : 'a senior'} answering every decision: every line complete in English and Chinese, books balance`, evs.length >= 2 && ![...lines, ...zh].some(t => /\{\w+\}|cmd\.|ev\.(AD|SE)|trip\.|health\./.test(t)) && ev.checkInvariants().length === 0, evs.join(' '));
+    }
+    LES.Countries.ensure(D);
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -2520,6 +2571,7 @@
       await playAdultTests();
       await playFamilyTests();
       await playSocietyTests();
+      await playWellbeingTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -2531,6 +2583,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

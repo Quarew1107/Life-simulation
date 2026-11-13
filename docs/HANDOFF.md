@@ -330,6 +330,17 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
     the result is journaled), `WELCOME` (a recent arrival: happier, less stressed). Events AD-011/014/024/072/077/
     079/080/091. Work tab: your business or start one; Money: lottery with odds and your record; Community tab.
     Tests: `playSocietyTests` (8).
+  - PL-11 done (adults and seniors; `js/sim/player-wellbeing.js`): `SEE_DOCTOR` (the engine's clinic visit and
+    bill; +12 health only when below 90, a healthy check-up finds nothing), `COUNSELLING` (0.05 x pay to HEALTH,
+    stress -15), `REST` (a whole day: stress -8, energy +20), `SET_EXERCISE` light/regular (monthly stress -2/-4,
+    health +0.5/+1 only below 95), `TRAVEL` domestic (0.4 x pay, 4 days, to MERCHANT) / abroad (2 x pay, 10 days,
+    to ABROAD): an abstract trip (the map has nowhere to go; the person's routine is not moved), other requests
+    answer `travelling` meanwhile (`Player.DAILY` hooks end the trip; stress -15/-25 and happiness on return, half
+    for a partner). Content settings in My life: difficult stories (grief, feeling overwhelmed; non-graphic,
+    support-seeking choices only, with a real-life helpline line) can be hidden (`w.player.noSensitive`); mature
+    stories (PL-09). Hidden events are skipped before the player's own roll, so hiding never changes the town
+    (tested: identical world hash). Events AD-051/052/053/058/063/064/094/097. Health tab. Tests:
+    `playWellbeingTests` (8).
   - Sources for the plan: ONS LTIM YE Dec 2024 (+345k revised) and long-term assumption +340k/yr; Census Vintage
     2024 (+2.8M) and projections (~0.9M/yr); DOSM CPE 2024/2026; NBS 2024 communique.
 

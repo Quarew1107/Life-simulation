@@ -71,10 +71,11 @@
   // applicants and the employer decides at closing time, exactly as for anyone else).
   // A world becomes "played" (w.player.played) with the first command that changes it.
   Pl.MONTHLY = []; // (w, p) => void, run every 30 days for the player (js/sim/player-child.js ...)
+  Pl.DAILY = [];   // (w, p) => void, run every day (a trip ending, PL-11)
   Pl.DAY_HOURS = 8;   // time a player's requests may take per day
   Pl.STALE = 7;       // a request older than this many days is dropped, not carried out
   Pl.JOURNAL = 400;   // journal entries kept
-  const GENERIC = new Set(['dead', 'away', 'held', 'stale', 'too_young', 'too_old', 'cooldown', 'no_time']); // messages shared by every kind (cmd.error.*)
+  const GENERIC = new Set(['dead', 'away', 'held', 'stale', 'too_young', 'too_old', 'cooldown', 'no_time', 'travelling']); // messages shared by every kind (cmd.error.*)
   const st = w => w.player;
   const journal = (w, e) => { const j = st(w).journal; j.push(Object.assign({ day: w.day }, e)); if (j.length > Pl.JOURNAL) j.shift(); };
   Pl.journal = journal;
@@ -146,6 +147,7 @@
     if (s.waiting) { awaitBirth(w); if (s.waiting) return; }
     s.apps = s.apps || []; s.inbox = s.inbox || [];
     if (s.pending.length) runCommands(w);
+    for (const f of Pl.DAILY) f(w, Pl.person(w));
     if (s.apps.length) outcomes(w);
     if (w.day % 30 === 0 && w.day > s.since) { for (const f of Pl.MONTHLY) f(w, Pl.person(w)); offerEvents(w); } // stage files add monthly effects (clubs, allowance, effort)
     expireInbox(w);
@@ -171,7 +173,7 @@
     s.cool = s.cool || {};
     for (const c of todo) {
       const h = Pl.HANDLERS[c.kind];
-      let code = !p || !p.alive ? 'dead' : p.away ? 'away' : p.inst ? 'held' : w.day - c.requestedDay > Pl.STALE ? 'stale'
+      let code = !p || !p.alive ? 'dead' : p.away ? 'away' : p.inst ? 'held' : w.day - c.requestedDay > Pl.STALE ? 'stale' : s.trip && s.trip.until > w.day && c.kind !== 'TRAVEL' ? 'travelling'
         : (h.adult && !isAdult(w, p)) || (h.minAge !== undefined && P.age(w, p) < h.minAge) ? 'too_young' : h.maxAge !== undefined && P.age(w, p) >= h.maxAge + 1 ? 'too_old' : (s.cool[c.kind] || 0) > w.day ? 'cooldown' : s.hours + h.hours > Pl.DAY_HOURS ? 'no_time' : h.check(w, p, c.args);
       let params = code && h.params ? h.params(w, p, c.args) : {};
       if (!code) { const r = h.run(w, p, c.args); code = r.code; params = r.params || {}; s.hours += h.hours; if (h.cooldown) s.cool[c.kind] = w.day + h.cooldown; }
@@ -263,6 +265,7 @@
     const cands = [];
     for (const e of Pl.EVENTS) {
       if (!e.stages.includes(stage) || age < e.minAge || age > e.maxAge || (s.evCool[e.id] || 0) > w.day || s.inbox.some(x => x.ev === e.id)) continue;
+      if ((e.mature && !s.mature) || (e.sensitive && s.noSensitive)) continue; // content settings (the player's own dice only)
       const cond = Pl.CONDITIONS[e.when];
       if (cond && !cond(w, p)) continue;
       const f = Pl.FREQ[s.freq || 'balanced'] || Pl.FREQ.balanced;

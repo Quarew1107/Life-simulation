@@ -248,6 +248,7 @@
     if (p.partnerId === null && s.coupled) {
       const q = w.people[s.coupled.pid];
       Pl.journal(w, { kind: 'life', key: q && !q.alive ? 'love.widowed' : 'love.ended', params: { other: q ? P.name(q) : '' }, imp: 2 });
+      s.lastPartner = s.coupled.pid;
       s.coupled = null; s.married = null; s.babyWish = null; s.affair = null;
     }
     if (s.dating) { const q = w.people[s.dating.pid]; if (!here(q) || q.partnerId !== null || p.partnerId !== null) s.dating = null; }

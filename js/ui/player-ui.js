@@ -84,6 +84,14 @@
     if (fam.length) h += `<h4>${esc(T('love.family'))}</h4><ul class="list-plain">${fam.map(x => `<li><span>${UI.plink(w, x.id)} <small class="muted">${Math.floor(P.age(w, x))}</small></span><span>${btn(`data-visit="${x.id}"`, T('love.visit'), busy('VISIT', x.id))}${btn(`data-gift="${x.id}"`, T('love.gift'), busy('GIFT', x.id))}</span></li>`).join('')}</ul>`;
     return `${h}<p class="note">${esc(T('love.note'))}</p>`;
   }
+  // Adults and seniors: health, rest, exercise and trips.
+  function healthHtml(w, p) {
+    const s = w.player, busy = k => s.pending.some(c => c.kind === k), ex = s.exercise || 'none', away = s.trip && s.trip.until > w.day;
+    return `${away ? `<p><b>${esc(T('trip.on', { trip: T(`trip.${s.trip.kind}`), date: U.fmtDate(s.trip.until) }))}</b></p>` : ''}<div class="life-cats"><button data-doctor="1" ${busy('SEE_DOCTOR') ? 'disabled' : ''}>${esc(T('health.doctor'))}</button><button data-counselling="1" ${busy('COUNSELLING') ? 'disabled' : ''}>${esc(T('health.counselling', { cost: U.fmtMoney(Math.round(0.05 * Pl.typicalPay(w))) }))}</button><button data-rest="1" ${busy('REST') ? 'disabled' : ''}>${esc(T('health.rest'))}</button></div>
+      <h4>${esc(T('health.exercise'))}</h4><div class="life-cats" role="group">${['none', 'light', 'regular'].map(k => `<button class="${ex === k ? 'on' : ''}" data-exercise="${k}" aria-pressed="${ex === k}">${esc(T(`exercise.${k}`))}</button>`).join('')}</div>
+      <h4>${esc(T('health.trips'))}</h4><div class="life-cats">${Object.keys(Pl.TRIPS).map(k => `<button data-travel="${k}" ${busy('TRAVEL') || away ? 'disabled' : ''}>${esc(T(`trip.${k}`))} · ${U.fmtMoney(Pl.tripCost(w, k))} · ${esc(T('health.days', { count: Pl.TRIPS[k].days }))}</button>`).join('')}</div>
+      <p class="note">${esc(T('health.note'))}</p>`;
+  }
   function friendsHtml(w, p) {
     const s = w.player, mine = (s.friends || []).map(f => [w.people[f.id], f.since]).filter(x => x[0]);
     const near = w.living.filter(q => q.alive && q !== p && !q.away && !P.isAdult(w, q) && Math.abs(P.age(w, q) - P.age(w, p)) <= 2 && !mine.some(x => x[0] === q)).slice(0, 5);
@@ -176,11 +184,12 @@
       <div class="card">${bar(T('life.health'), p.health)}${bar(T('life.happy'), p.happy)}${bar(T('life.stress'), p.stress, 'bad')}</div>
       <div class="card"><h3>${esc(T('life.decisions'))}${(s.inbox || []).length ? ` <small class="life-count">${s.inbox.length}</small>` : ''}</h3>${decisionsHtml(w)}</div>
       <div class="card"><h3>${esc(T('life.actions'))}</h3><div class="life-cats" role="group">${cats}</div>
-        <div class="life-cat-body">${UI.lifeCat === 'work' ? workHtml(w, p) : UI.lifeCat === 'care' ? careHtml(w, p) : UI.lifeCat === 'learn' && !P.isAdult(w, p) ? learnHtml(w, p) : UI.lifeCat === 'learn' ? adultLearnHtml(w, p) : UI.lifeCat === 'money' ? moneyHtml(w, p) : UI.lifeCat === 'love' ? loveHtml(w, p) : UI.lifeCat === 'community' ? communityHtml(w, p) : UI.lifeCat === 'friends' ? friendsHtml(w, p) : `<p class="muted">${esc(T('cat.soon'))}</p>`}</div></div>`}
+        <div class="life-cat-body">${UI.lifeCat === 'work' ? workHtml(w, p) : UI.lifeCat === 'care' ? careHtml(w, p) : UI.lifeCat === 'learn' && !P.isAdult(w, p) ? learnHtml(w, p) : UI.lifeCat === 'learn' ? adultLearnHtml(w, p) : UI.lifeCat === 'money' ? moneyHtml(w, p) : UI.lifeCat === 'love' ? loveHtml(w, p) : UI.lifeCat === 'community' ? communityHtml(w, p) : UI.lifeCat === 'health' ? healthHtml(w, p) : UI.lifeCat === 'friends' ? friendsHtml(w, p) : `<p class="muted">${esc(T('cat.soon'))}</p>`}</div></div>`}
       <div class="card"><h3>${esc(T('journal.title'))}</h3>${journalHtml(w)}</div>
       <details class="card life-settings"><summary>${esc(T('life.settings'))}</summary>
         <label>${esc(T('freq.label'))} <select id="life-freq">${['important', 'balanced', 'detailed'].map(k => `<option value="${k}" ${(s.freq || 'balanced') === k ? 'selected' : ''}>${esc(T(`freq.${k}`))}</option>`).join('')}</select></label>
         <label><input type="checkbox" id="life-lotto" ${s.noLottery ? '' : 'checked'}> ${esc(T('life.lotto'))}</label>
+        <label><input type="checkbox" id="life-sensitive" ${s.noSensitive ? '' : 'checked'}> ${esc(T('life.sensitive'))}</label>
         <label><input type="checkbox" id="life-mature" ${s.mature ? 'checked' : ''}> ${esc(T('life.mature'))}</label>
         <label><input type="checkbox" id="life-pause" ${pref('les-play-pause', '1') === '1' ? 'checked' : ''}> ${esc(T('life.pauseOn'))}</label>
         <p class="note">${esc(T('life.storyTip'))}</p></details>`;
@@ -220,6 +229,11 @@
       else if (b.dataset.invest) say(Pl.request(w, 'INVEST', { share: Number(b.dataset.invest) }));
       else if (b.dataset.sell) say(Pl.request(w, 'SELL', { share: Number(b.dataset.sell) }));
       else if (b.dataset.home) say(Pl.request(w, 'MOVE_HOME', { tier: Number(b.dataset.home) }));
+      else if (b.dataset.doctor) say(Pl.request(w, 'SEE_DOCTOR', {}));
+      else if (b.dataset.counselling) say(Pl.request(w, 'COUNSELLING', {}));
+      else if (b.dataset.rest) say(Pl.request(w, 'REST', {}));
+      else if (b.dataset.exercise) say(Pl.request(w, 'SET_EXERCISE', { level: b.dataset.exercise }));
+      else if (b.dataset.travel) say(Pl.request(w, 'TRAVEL', { kind: b.dataset.travel }));
       else if (b.dataset.startbiz) say(Pl.request(w, 'START_BIZ', { type: b.dataset.startbiz }));
       else if (b.dataset.inject) say(Pl.request(w, 'INJECT', { share: Number(b.dataset.inject) }));
       else if (b.dataset.sellbiz) { if (confirm(T('biz.sure'))) say(Pl.request(w, 'SELL_BIZ', {})); }
@@ -246,6 +260,7 @@
       const w = where();
       if (e.target.id === 'life-freq' && w) w.player.freq = e.target.value;
       if (e.target.id === 'life-lotto' && w) { w.player.noLottery = !e.target.checked; UI.update(true); }
+      if (e.target.id === 'life-sensitive' && w) w.player.noSensitive = !e.target.checked;
       if (e.target.id === 'life-mature' && w) w.player.mature = e.target.checked;
       if (e.target.dataset && e.target.dataset.kidschool && e.target.value && w) say(Pl.request(w, 'CHOOSE_SCHOOL', { pid: Number(e.target.dataset.kidschool), tier: e.target.value }));
       if (e.target.id === 'life-pause') setPref('les-play-pause', e.target.checked ? '1' : '0');
