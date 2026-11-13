@@ -10,6 +10,7 @@
     seed: 'rezeki-1',
     townName: '', // optional display name of the (first) town; '' = the country's default (C08)
     founders: 100,
+    founderAges: 'mixed',     // rules revision 10: 'mixed' households of all ages (the country's age mix) | 'young' strangers 18-35
     startAgeMin: 18,
     startAgeMax: 35,
     wealthDist: 'moderate',   // equal | moderate | unequal
@@ -70,7 +71,7 @@
     catCap: 0.02,
     shiftsPerMonth: 20,
     vacancyRate: 2.2,
-    rulesRev: 9, // rule corrections from the 2026-11 blueprint (2: catastrophe cap after the risk multiplier, C03; 3: estates in equal value, C04b; 4: founders' credentials by age and limited study places, C06; 5: Expansion 1 jobs, degrees, specialisations, goals and the research centre; 6: a lower pay ceiling for jobs that need no qualification, Labour.offerSpread; 7: more first and family names, C.namesFor; 8: crime outside Malaysia, police case capacity per country and pack crimeTuningRev8, Crime.casesPerOfficer; 9: spending from usable wealth only, EPF's three accounts, one monthly cut-back line, milestones in local money, Finance.WEALTH_REV); Classic and older saves: 1
+    rulesRev: 10, // rule corrections from the 2026-11 blueprint (2: catastrophe cap after the risk multiplier, C03; 3: estates in equal value, C04b; 4: founders' credentials by age and limited study places, C06; 5: Expansion 1 jobs, degrees, specialisations, goals and the research centre; 6: a lower pay ceiling for jobs that need no qualification, Labour.offerSpread; 7: more first and family names, C.namesFor; 8: crime outside Malaysia, police case capacity per country and pack crimeTuningRev8, Crime.casesPerOfficer; 9: spending from usable wealth only, EPF's three accounts, one monthly cut-back line, milestones in local money, Finance.WEALTH_REV; 10: founders are households of all ages, World.FOUNDER_REV); Classic and older saves: 1
     econModel: 'calibrated', // calibrated: firms share a market the size of the town, wider pay spread, some jobs go to outsiders; original: the first engine
     vacancyDaysMin: 3,
     vacancyDaysMax: 30,
@@ -84,7 +85,7 @@
   // Presets fill the setup form. Classic reproduces the original engine (harsher, more
   // children, longer lives); Malaysia is calibrated to DOSM figures (tools/calibration.html).
   LES.PRESETS = {
-    national: { name: "Today's rules", values: { safetyNet: 'on', fertility: 'national', mortMult: 1.9, layout: 'varied', society: 'on', ethnicMix: 'national', crime: 'lively', government: 'on', vacancyRate: 2.2, econModel: 'calibrated', rulesRev: 9 } },
+    national: { name: "Today's rules", values: { safetyNet: 'on', fertility: 'national', mortMult: 1.9, layout: 'varied', society: 'on', ethnicMix: 'national', crime: 'lively', government: 'on', vacancyRate: 2.2, econModel: 'calibrated', rulesRev: 10 } },
     classic: { name: 'Classic (original rules)', values: { safetyNet: 'off', fertility: 'normal', mortMult: 1, layout: 'grid', society: 'off', ethnicMix: 'classic', crime: 'off', government: 'off', vacancyRate: 2.5, econModel: 'original', rulesRev: 1 } },
   };
   // Older saves and stored settings called the national option 'malaysia'.
@@ -149,6 +150,7 @@
     { group: 'Economy & prices', key: 'education', label: 'University fees', type: 'select', options: [['free', 'Free'], ['subsidised', 'Subsidised'], ['expensive', 'Expensive (x2.5)']], help: 'With a government this is the starting law.' },
     { group: 'Economy & prices', key: 'marketOutsideRM', label: 'Outside stock market size ({cur})', type: 'int', min: 1000000, max: 1e13, help: 'Town influence = town holdings / (town + this). Smaller = residents move prices more.' },
     { group: 'Economy & prices', key: 'marketInfluenceCap', label: 'Max town influence on prices (%)', type: 'int', min: 0, max: 100 },
+    { group: 'People & families', key: 'founderAges', sinceRev: 10, label: "Founders' ages", type: 'select', options: [['mixed', 'Households of all ages (national age mix)'], ['young', 'Young adults only (18-35, as before)']], help: 'All ages: the founders are singles, couples and families with children, with as many children and elderly people as in the country today. Under rules revision 10 or later (today’s rules).' },
     { group: 'People & families', key: 'safetyNet', label: 'Social safety net', type: 'select', options: [['off', 'Off - original harsh rules'], ['on', 'On - welfare food & child guardians']] },
     { group: 'People & families', key: 'fertility', label: 'Birth rate', type: 'select', options: [['national', 'National rate today'], ['low', 'Low'], ['normal', 'Normal (original, ~2.5)'], ['high', 'High']] },
     { group: 'People & families', key: 'mortMult', label: 'Old-age mortality multiplier', type: 'num', min: 0, max: 5, step: 0.1, help: '1 = original engine (~80-year lives). 0 = nobody dies of old age.' },
@@ -197,7 +199,7 @@
   LES.derive = function (cfg) {
     return {
       eduMult: { free: 0, subsidised: 1, expensive: 2.5 }[cfg.education],
-      fertMult: { national: LES.Countries.pack.demography.fertMult, low: 0.6, normal: 1, high: 1.6 }[cfg.fertility],
+      fertMult: { national: (cfg.rulesRev >= 10 && LES.Countries.pack.demography.fertMultRev10) || LES.Countries.pack.demography.fertMult, low: 0.6, normal: 1, high: 1.6 }[cfg.fertility], // rev 10: tuned to the official TFR with founders of all ages
       goal: Math.round(cfg.goalRM * 100 / LES.Countries.scale()), // the goal is typed in real money
       horizonDays: cfg.horizonYears * 365,
       welfare: cfg.safetyNet === 'on',

@@ -420,6 +420,8 @@
           const n = Math.max(2, Math.round(founders.length / 10)), pool = founders.slice();
           for (let i = 0; i < n && pool.length; i++) pool.splice(Math.floor(r.next() * pool.length), 1)[0].noble = true;
           const nobles = founders.filter(p => p.noble), commons = founders.filter(p => !p.noble);
+          // Founders' own children (founders of all ages, rules revision 10) share their parent's title.
+          for (const c of w.people) if (!c.adult && c.parents.some(id => w.people[id].noble)) c.noble = true;
           let take = 0;
           for (const p of commons) { const t = Math.round(Math.max(0, p.cash) * 0.6); if (t > 0 && L.move(p, 'cash', nobles[take % nobles.length], 'cash', t)) take++; }
           for (const p of nobles) P.log(w, p, `Head of the noble House of ${p.last}`, 'family', 2);

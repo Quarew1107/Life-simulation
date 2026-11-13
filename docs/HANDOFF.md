@@ -129,7 +129,7 @@ town no slower to draw (`docs/PERFORMANCE.md`); tick the item here when done.
   - Tests: `crimeRevTests` (4: default is rev 8; capacity factor and tuning per revision; a rev-7 world ignores
     rev-8 settings; one quick 400-founder x 8-year crime band per country, +-40%). Full suite 376/376.
 
-**Second review (Nov 2026), owner's priorities in order:** (1) goal and wealth — done below; (2) founder ages:
+**Second review (Nov 2026), owner's priorities in order:** (1) goal and wealth — done below; (2) founder ages - done below (rules revision 10):
 every founder is a young adult (about 18-35), so for 20-30 years there are no elderly, life expectancy shows
 artifacts (98.6 in a 15-year UK town), and unemployment starts very high (UK 31% in year 1, 6% by year 14) — next
 to plan; then smaller items: China's crime falls to ~45% of target over 40 years (rev 8 was tuned on years 6-10);
@@ -165,6 +165,43 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
     unemployment MY 4.7 -> 5.2%, UK 5.0 -> 6.4%, US 6.0 -> 3.1%, CN 3.3 -> 4.0%; median wage MY RM2,980 -> 2,820,
     UK 3,150 -> 2,810. Malaysia's public revenue per person stays low (~RM500 vs 815; unchanged by this work).
   - Tests: `wealthRevTests` (14). The rev-8 crime test now checks `>= 8`.
+
+- [x] **Founders of all ages and population balance (Nov 13 2026): rules revision 10, the new default.** Owner
+  approved both plans "as recommended" and chose "more crime, normal deaths" for Lively crime.
+  - Founders: households drawn from each pack's `ages` (5-year bands; DOSM 2024, ONS mid-2023, Census V2024,
+    NBS 2024): `World.initHouseholds`, `World.ageFounder`, `World.mixedFounders`; Advanced setting `founderAges`
+    'mixed' (default) | 'young' (the old 18-35 strangers). Year-1 unemployment 6-16% (was 25-36%). Life
+    expectancy is NaN without >= 30 deaths and >= 100 person-years at 65+ (`calibration.js`).
+  - Population balance, pack `demography`: `fertMultRev10` (fertility via `params.derive`), `mortRev10` (factor on
+    old-age mortality, `World.mortRev10()`), `netMigration` per 1,000 a year (extra newcomer households of ~1.7 in
+    `Migration.monthly`). Final values: MY 0.54 / 0.8 / 0; UK 0.635 / 0.96 / 5.0; US 0.95 / 0.88 / 2.7;
+    CN 0.47 / 1.2 / 0.
+  - Found while calibrating: default towns shrank because of Lively crime, not births. (a) Prisoners died: stress 100
+    drained ~18 health a year and unpaid housing bills 2 a month, so multi-year sentences killed (32 "poor health"
+    deaths in 40 years vs 2 under Realistic). Rev 10: `World.heldCare` - inmates of prison/rehab are fed and housed
+    (no stress, cheapest-food or unpaid-bill health loss); prisoners are not in the labour force in
+    `Migration.indicators` (they made lively towns look jobless and halved newcomers). (b) `Crime.harm(w)` = 1/10
+    under Lively (rev >= 10): ten times the crimes and stories, but killings, victim injuries, gang-fight harm and
+    drug health loss/overdoses each a tenth as likely or severe. Malaysia Lively e0 68.0 -> 75.7 (Realistic 75.7).
+  - Measured (default rules, 6 towns x 300 founders x 40 years, pooled): TFR / e0 - MY 1.64 / 75.4 (target 1.6 /
+    75.3), UK 1.47 / 81.5 (1.41 / 81), US 1.73 / 79.5 (1.6 / 79), CN 0.93 / 77.3 (1.0 / 79); net migration UK 5.2,
+    US 2.5 per 1,000. 100-founder towns after 120 years: MY 113-183, UK 135-238, US 46-101, CN 8-28 (a TFR of ~1
+    without migration halves each generation; the UN projects a similar fall for China). Single 100-person towns
+    vary a lot; small samples (3 towns x 80 years) were too noisy to tune on (+-0.25 TFR).
+  - Tests: `founderTests` (9), `populationTests` (5: Lively harm factor per revision; a prisoner stays healthy over two
+    years under rev 10, not rev 9; 50-year Malaysian and British towns keep/grow their size; UK net migration
+    2.5-8.5 per 1,000; life expectancy in band). The "young == revision 9" founder check compares the founding day.
+  - Also: a chosen founder age range (startAgeMin/Max other than 18-35, e.g. Eternal Life, the pension tests) keeps
+    its founders (`World.mixedFounders`); aristocrats' founder children are noble too; the life-expectancy NaN rule
+    and the report's "Founders' ages" row (`sinceRev: 10` in SETTINGS_META) apply only from revision 10, so older
+    revisions' stored report fingerprints are unchanged. Tests of the original engine (TC-001, the UK degree table)
+    pin `founderAges: 'young'`; the private-school test waits for a first payroll (fewer jobless people to hire).
+  - Later: founders' degree shares come out at ~0.8 of each pack's `education.founders` table in every age band
+    (the ability weighting's /1.35 normaliser assumes a mean intelligence of 5; founders average ~4.7). Older
+    than revision 10; with all ages it shows more (UK 25-64: ~37% vs the table's ~47%).
+  - Full suite 403/403.
+  - Sources for the plan: ONS LTIM YE Dec 2024 (+345k revised) and long-term assumption +340k/yr; Census Vintage
+    2024 (+2.8M) and projections (~0.9M/yr); DOSM CPE 2024/2026; NBS 2024 communique.
 
 - [ ] C09c optional small gift (sandbox, blueprint 10.4): deferred by the owner; build only if asked.
 - [ ] Optional extras from 4.2: tax competition between towns, real map thumbnails for the region view.

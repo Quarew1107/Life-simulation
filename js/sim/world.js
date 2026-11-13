@@ -115,6 +115,7 @@
 
     initFounders() {
       const R = this.rng.init, cfg = this.cfg, n = cfg.founders;
+      if (World.mixedFounders(this)) { this.initHouseholds(R, n); if (cfg.cast && cfg.cast.length) LES.Cast.founders(this); return; }
       const sexes = [];
       for (let i = 0; i < n; i++) sexes.push(i < n / 2 ? 'M' : 'F');
       for (let i = n - 1; i > 0; i--) { const j = Math.floor(R.next() * (i + 1)); [sexes[i], sexes[j]] = [sexes[j], sexes[i]]; }
@@ -124,6 +125,79 @@
         p.mcost = F.monthlyCost(this, p);
       }
       if (cfg.cast && cfg.cast.length) LES.Cast.founders(this); // your cast, chosen on the setup screen
+    }
+
+    // Rules revision 10: the founders are households of all ages drawn from the country's age mix (pack ages:
+    // shares in 5-year bands from 0-4 to 85-89): singles, couples and couples with children, still strangers
+    // to each other. The founding population counts everyone, children included. Working-age founders start in
+    // work at about the usual rate, those past retirement age start retired, and starting wealth rises with age
+    // (the town's average stays the same).
+    initHouseholds(R, n) {
+      const bands = LES.Countries.pack.ages, cfg = this.cfg;
+      const childW = bands.map((s, b) => (b < 3 ? s : b === 3 ? s * 0.6 : 0)), adultW = bands.map((s, b) => (b < 3 ? 0 : b === 3 ? s * 0.4 : s));
+      const childTarget = Math.round(n * U.sum(childW) / U.sum(bands)), adultTarget = n - childTarget;
+      const ageIn = (b, lo) => Math.max(lo, b * 5 + R.int(0, 4));
+      // Heads are drawn so that people (heads plus partners) follow the age mix: ages that more often live as a
+      // couple are drawn as heads correspondingly less often.
+      const pPartner = age => (age < 25 ? 0.15 : age < 35 ? 0.55 : age < 65 ? 0.7 : age < 75 ? 0.6 : 0.4);
+      const headW = adultW.map((x, b) => x / (1 + pPartner(Math.max(18, b * 5 + 2))));
+      const adultAge = () => ageIn(R.weighted(headW), 18);
+      const childAge = max => { for (let k = 0; k < 12; k++) { const b = R.weighted(childW), a = Math.min(17, b * 5 + R.int(0, 4)); if (a <= max) return a; } return R.int(0, Math.max(0, max)); };
+      // Wealth by age (relative; normalised so the adult average is 1).
+      const WF = a => (a < 25 ? 0.35 : a < 35 ? 0.75 : a < 45 ? 1.1 : a < 55 ? 1.45 : a < 65 ? 1.75 : 1.6);
+      const meanWF = adultW.reduce((s, x, b) => s + x * WF(Math.max(18, b * 5 + 2)), 0) / U.sum(adultW);
+      const jobChance = a => (a < 22 ? 0.7 : a < 25 ? 0.88 : 0.95);
+      const make = (age, sex, eth) => {
+        const retireAt = 60, p = this.makeAdult(R, { age, sex, eth, jobChance: age >= retireAt ? 0 : jobChance(age), wealthMult: WF(age) / meanWF });
+        const ra = LES.China && LES.China.on() ? LES.China.retireAge(this, p) : retireAt; // China: by sex and job (the 2025 reform)
+        if (age >= ra) { if (p.job) { p.job = null; p.incomeEMA = this.px(800); } p.retired = true; }
+        World.ageFounder(p, age);
+        return p;
+      };
+      const households = [];
+      let adults = 0, children = 0;
+      while (adults < adultTarget) {
+        const age = adultAge(), sex = R.next() < 0.5 ? 'M' : 'F';
+        const a = make(age, sex);
+        const hh = [a];
+        adults++;
+        if (adults < adultTarget && R.next() < pPartner(age)) {
+          const b = make(U.clamp(age + R.int(-5, 5), 18, 89), sex === 'M' ? 'F' : 'M', R.next() < 0.8 ? a.eth : null);
+          adults++;
+          b.last = R.next() < 0.5 ? b.last : a.last;
+          a.partnerId = b.id; b.partnerId = a.id;
+          hh.push(b);
+          const mother = a.sex === 'F' ? a : b, father = mother === a ? b : a, mAge = Math.floor(P.age(this, mother));
+          if (mAge >= 22 && mAge < 55 && children < childTarget) {
+            const k = Math.min(childTarget - children, [1, 2, 3][R.weighted([0.4, 0.4, 0.2])]);
+            for (let i = 0; i < k; i++) { const c = this.makeChild(R, father, mother, childAge(Math.min(17, mAge - 20))); Fa.addCare(this, father, c); Fa.addCare(this, mother, c); hh.push(c); children++; }
+          }
+        }
+        households.push(hh);
+      }
+      // Children still owed (few young couples drawn): they join couples with a mother of the right age.
+      for (const hh of households) {
+        if (children >= childTarget) break;
+        const ad = hh.filter(p => p.adult);
+        if (ad.length < 2) continue;
+        const mother = ad.find(p => p.sex === 'F'), father = ad.find(p => p.sex === 'M'), mAge = mother && Math.floor(P.age(this, mother));
+        if (!mother || !father || mAge < 22 || mAge >= 50) continue;
+        const c = this.makeChild(R, father, mother, childAge(Math.min(17, mAge - 20)));
+        Fa.addCare(this, father, c); Fa.addCare(this, mother, c); hh.push(c); children++;
+      }
+      // Homes: the head (more money) chooses, the household moves in together.
+      for (const hh of households) {
+        const ad = hh.filter(p => p.adult);
+        const head = ad.length > 1 && ad[1].nw > ad[0].nw ? ad[1] : ad[0];
+        for (const p of ad) p.isHead = p === head;
+        F.reviewTiers(this, head);
+        for (const m of hh) {
+          if (m === head) continue;
+          if (m.adult) { m.tiers.housing = head.tiers.housing; F.setHome(this, m, head.homeId); F.reviewTiers(this, m); }
+          else F.setHome(this, m, head.homeId);
+        }
+        for (const m of ad) m.mcost = F.monthlyCost(this, m);
+      }
     }
 
     // A random adult drawn from the founder distributions (founders and newcomers).
@@ -179,6 +253,7 @@
       if (LES.China && LES.China.on()) { p.hukou = LES.China.assign(this, p); if (cfg.groupWealth !== 'equal' && cfg.wealthDist !== 'equal') rm *= LES.China.wealthGap(p); } // China: by hukou
       const gap = C.START_WEALTH; // history: some groups start with less (country pack; the average stays the same)
       if (gap && cfg.groupWealth !== 'equal' && cfg.wealthDist !== 'equal' && gap[p.eth]) rm *= gap[p.eth] / mix.keys.reduce((s, k, i) => s + mix.w[i] * (gap[k] || 1), 0) * U.sum(mix.w);
+      if (o.wealthMult) rm *= o.wealthMult; // rev 10: founders' wealth rises with age
       const source = p.migrant ? 'ABROAD' : 'GENESIS';
       this.ledger.pay(source, p, 'cash', this.px(U.clamp(Math.round(rm), 0, 20000000)));
 
@@ -289,7 +364,7 @@
           Fa.comeOfAge(this, p);
         }
         // Poor health raises mortality; long unhappiness a little too.
-        const pYear = Math.min(0.95, mortalityYear(age, this.cfg.mortMult * (this.mortAdj || 1)) * (1 + Math.max(0, 60 - p.health) / 15) * (p.adult ? 1 + Math.max(0, 40 - p.happy) / 80 : 1));
+        const pYear = Math.min(0.95, mortalityYear(age, this.cfg.mortMult * (this.mortAdj || 1) * this.mortRev10()) * (1 + Math.max(0, 60 - p.health) / 15) * (p.adult ? 1 + Math.max(0, 40 - p.happy) / 80 : 1));
         if (R.next() < 1 - Math.pow(1 - pYear, 1 / 365)) {
           this.die(p, age >= 60 ? 'old age' : age < 1 ? 'infant illness' : 'illness');
         }
@@ -327,7 +402,10 @@
           if (p.plan) for (const s of p.plan) if (s.act !== 'REST' && s.act !== 'CHILDCARE') { wentOut = true; break; }
           p.energy += 38 + (tf.energy || 0) + (th.energy || 0) + (wentOut ? (tt.energy || 0) : 0);
           p.stress += -2 + (tf.stress || 0) + (th.stress || 0) + (tt.stress || 0) + (tl.stress || 0);
-          p.health += (tf.health || 0) + (p.health < 80 ? 0.03 : 0) - (p.stress > 75 ? 0.08 : 0)
+          // Rules revision 10: prison and rehab feed and house their inmates, so stress and the cheapest food do not
+          // wear their health down (before, a few years inside at stress 100 killed most prisoners).
+          const held = World.heldCare(this, p);
+          p.health += (held ? 0 : tf.health || 0) + (p.health < 80 ? 0.03 : 0) - (p.stress > 75 && !held ? 0.08 : 0)
             - (p.hunger > 50 ? 0.6 : 0) - 0.00015 * Math.pow(Math.max(0, age - 45), 1.5);
           const home = this.town.buildings[p.homeId];
           if (home && home.cap && (this.occupancy[p.homeId] || 0) > home.cap) p.stress += 0.4; // overcrowded home
@@ -343,6 +421,13 @@
         if (p.nw > p.peakNw) p.peakNw = p.nw;
         if (p.adult) this.checkMilestones(p);
       }
+    }
+
+    // Rules revision 10: the country's old-age mortality is fine-tuned towards its official life expectancy
+    // (pack demography.mortRev10; a factor on top of the mortality setting, so older revisions keep theirs).
+    mortRev10() {
+      if (this._mr10 === undefined) this._mr10 = this.cfg.rulesRev >= World.FOUNDER_REV ? ((LES.Countries.pack.demography || {}).mortRev10 || 1) : 1;
+      return this._mr10;
     }
 
     checkMilestones(p) {
@@ -692,6 +777,24 @@
     if (LES.growTown(t, 'r')) w.townVersion++;
   };
   // Where a job is done in this town: its workplace, else the first alternative that exists.
+  // Rules revision 10: founders are households of all ages (cfg.founderAges 'mixed', the default) unless the
+  // setting asks for the original young strangers ('young').
+  World.FOUNDER_REV = 10;
+  // Rules revision 10: someone held in prison or rehab is fed and housed by the institution.
+  World.heldCare = (w, p) => !!p.inst && w.cfg.rulesRev >= World.FOUNDER_REV;
+  // A chosen founder age range (a scenario such as Eternal Life, or startAgeMin/Max set by hand) keeps its founders.
+  World.mixedFounders = w => w.cfg.rulesRev >= World.FOUNDER_REV && w.cfg.founderAges !== 'young' && !!(LES.Countries.pack.ages)
+    && (w.cfg.startAgeMin === undefined || w.cfg.startAgeMin === 18) && (w.cfg.startAgeMax === undefined || w.cfg.startAgeMax === 35);
+  // An older founder arrives with the ageing of the years already lived (yearly ageing starts at their age now)
+  // and somewhat lower health.
+  World.ageFounder = function (p, age) {
+    const g = p.ageing;
+    if (!g) return;
+    const yb = Math.max(0, age - g.bOnset), ym = Math.max(0, age - g.mOnset);
+    for (const a of C.BODY_ATTRS) if (yb) p.att[a] = Math.max(g.bFloor * p.peak[a], p.att[a] - g.bRate * p.peak[a] * yb);
+    for (const a of C.MIND_ATTRS) if (ym) p.att[a] = Math.max(g.mFloor * p.peak[a], p.att[a] - g.mRate * p.peak[a] * ym);
+    if (age > 50) p.health = U.clamp(p.health - 0.5 * (age - 50), 30, 100);
+  };
   World.sitesFor = function (w, j) {
     const k = w.town.kinds;
     if (!j.exp || (k[j.place] && k[j.place].length)) return k[j.place]; // older jobs exactly as before
