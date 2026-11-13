@@ -181,8 +181,10 @@
     // (before Nov 2026 heads whose level matched the default never got one).
     if (p.isHead && (t.housing !== p.tiers.housing || p.homeId < 0)) {
       const cantAfford = p.cash < F.tierCost(w, 'housing', p.tiers.housing) && t.housing < p.tiers.housing;
+      const chosen = w.player && w.player.id === p.id && w.player.homeTier === p.tiers.housing && p.homeId >= 0; // Play a Life: the player picked this home
       p.housingWantMonths++;
-      if (p.housingWantMonths >= 3 || cantAfford || p.homeId < 0) F.moveHome(w, p, t.housing, false);
+      if (chosen && !cantAfford) p.housingWantMonths = 0;
+      else if (p.housingWantMonths >= 3 || cantAfford || p.homeId < 0) F.moveHome(w, p, t.housing, false);
     } else {
       p.housingWantMonths = 0;
     }

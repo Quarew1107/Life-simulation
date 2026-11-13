@@ -1999,7 +1999,7 @@
     const make = (seed, extra) => { const w = new LES.World(Object.assign({}, D, { seed, founders: 120, play: 'random', playStage: 'adult' }, extra || {})); Pl.begin(w); return w; };
     // A test event that always comes (removed afterwards).
     const TEST = { id: 'ZZ-TEST', stages: ['baby', 'child', 'teen', 'adult', 'senior'], minAge: 0, maxAge: 200, chance: 1, cooldown: 9999, expires: 20, imp: 1, choices: [{ id: 'ok', story: true }] };
-    Pl.EVENTS.push(TEST);
+    const saved = Pl.EVENTS.splice(0, Pl.EVENTS.length, TEST); // only the test event (one event a month, most important first)
     try {
       const a = make('pl4-a');
       for (let d = 0; d < 31; d++) a.step();
@@ -2010,7 +2010,7 @@
       for (let d = 0; d < 31; d++) b.step();
       check('"Important only" leaves out small moments; balanced shows them', !!item && !b.player.inbox.some(x => x.ev === 'ZZ-TEST'));
       check('Journal lines read as sentences: a new decision and what you chose', I.render(a.player.journal.find(e => e.kind === 'event')).includes('New decision') && I.t('evt.chose', { choice: { key: 'ev.AD-001.ambitious' } }) === 'You chose: Go for the best-paid opening');
-    } finally { Pl.EVENTS.splice(Pl.EVENTS.indexOf(TEST), 1); }
+    } finally { Pl.EVENTS.splice(0, Pl.EVENTS.length, ...saved); }
     // Already applied by your character's own routine: the reply names the job and when it is decided.
     const c = make('pl4-c'), p = Pl.person(c);
     let v = null;
@@ -2199,6 +2199,73 @@
     LES.Countries.ensure(D);
   }
 
+  // PL-08: adult career, study, home and money, all through the engine's own systems.
+  async function playAdultTests() {
+    print('--- Play a Life: adult career, study, home, money (PL-08) ---', 'info');
+    const Pl = LES.Player, D = LES.DEFAULTS, P = LES.P, C = LES.C, I = LES.I18n, L = LES.Labour;
+    LES.Countries.ensure(D);
+    const adult = (seed, test) => { for (let k = 0; k < 30; k++) { const w = new LES.World(Object.assign({}, D, { seed: `${seed}-${k}`, founders: 200, play: 'random', playStage: 'adult' })); Pl.begin(w); const p = Pl.person(w); if (!test || test(w, p)) return w; } return null; };
+    const req = (w, kind, args) => { w.player.cool = {}; w.player.hoursDay = -1; const r = Pl.request(w, kind, args); Pl.tick(w); return r.command ? r.command.code : r.error; };
+    // Asking for a raise: the employer decides with the engine's promotion chance.
+    let ok = 0, no = 0, right = true;
+    for (let k = 0; k < 12; k++) {
+      const w = adult(`pl8r${k}`, (x, p) => p.job && !p.job.fixedTitle && p.job.level < 5);
+      if (!w) continue;
+      const p = Pl.person(w);
+      if (k === 0) { const sd = p.job.startDay; p.job.startDay = w.day - 30; right = right && req(w, 'ASK_RAISE', {}) === 'too_soon'; p.job.startDay = sd; } // a new hire must wait six months
+      p.job.startDay = w.day - 400;
+      const lv = p.job.level, pay = p.job.salary, stress = p.stress, code = req(w, 'ASK_RAISE', {});
+      if (code === 'ok') { ok++; right = right && p.job.level === lv + 1 && p.job.salary > pay; }
+      else if (code === 'refused') { no++; right = right && p.job.level === lv && p.job.salary === pay && p.stress >= stress; }
+    }
+    check('Asking for a raise: sometimes yes (one promotion), often not yet (a little stress); never automatic', right && ok + no >= 8 && no >= 1, `${ok} yes, ${no} no`);
+    // Quitting ends the job, and is not mistaken for being laid off.
+    const q = adult('pl8q', (x, p) => p.job && !p.job.fixedTitle), qp = Pl.person(q);
+    const qc = req(q, 'QUIT_JOB', {});
+    for (let d = 0; d < 40; d++) q.step();
+    check('Resigning ends the job (Labour.endJob) and does not count as losing it', qc === 'ok' && !qp.job === !qp.job && !q.player.journal.some(e => e.ev === 'AD-004'));
+    // Laid off: the "You lost your job" decision comes.
+    const lo = adult('pl8l', (x, p) => p.job && !p.job.fixedTitle && P.age(x, p) < 55), lp = Pl.person(lo);
+    for (let d = 0; d < 31; d++) lo.step();
+    if (lp.job) L.endJob(lo, lp, 'laid off');
+    let lost = null;
+    for (let d = 0; d < 70 && !lost; d++) { lo.step(); lost = (lo.player.inbox || []).find(i => i.ev === 'AD-004'); }
+    check('Laid off: "You lost your job" comes with real choices (search vacancies, retrain)', !!lost);
+    // Studying: real admission; places can run out; dropping out works.
+    const sw = adult('pl8s', (x, p) => !p.enrol && Pl.courses(x, p).some(c => c.chance > 0.5)), sp = Pl.person(sw);
+    const course = Pl.courses(sw, sp).find(c => c.chance > 0.5), sc = req(sw, 'ENROLL', { course: course.id });
+    check('Applying for a course goes through real admission (accepted, rejected, or no place this year)', ['ok', 'ok_scholar', 'rejected', 'no_place'].includes(sc) && (sc.startsWith('ok') ? sp.enrol && sp.enrol.course === course.id : !sp.enrol), sc);
+    if (sp.enrol) { const dc = req(sw, 'DROP_OUT', {}); check('Dropping out ends the course', dc === 'ok' && !sp.enrol); }
+    else check('Dropping out needs a course', req(sw, 'DROP_OUT', {}) === 'not_studying');
+    // Home: only the head decides; a bigger home must be affordable; the chosen home is kept.
+    const nh = adult('pl8n', (x, p) => !p.isHead);
+    check('Only the head of a household chooses where it lives', !nh || req(nh, 'MOVE_HOME', { tier: 3 }) === 'not_head');
+    const hw = adult('pl8h', (x, p) => p.isHead && p.tiers.housing < 3 && p.partnerId === null), hp = Pl.person(hw);
+    hw.ledger.pay('GENESIS', hp, 'cash', Pl.rentOf(hw, hp.tiers.housing + 1) * 40);
+    const up = hp.tiers.housing + 1, hc = req(hw, 'MOVE_HOME', { tier: up });
+    for (let d = 0; d < 200; d++) hw.step();
+    check('A head who can afford it moves the household up, and the monthly review keeps the chosen home', hc === 'ok' && hp.tiers.housing === up && hw.checkInvariants().length === 0, `${hc}, now level ${hp.tiers.housing}`);
+    const broke = adult('pl8b', (x, p) => p.isHead && p.tiers.housing < 3), bp = Pl.person(broke);
+    broke.ledger.spend(bp, 'cash', 'MERCHANT', bp.cash); for (const x of [bp].concat(bp.partnerId !== null ? [broke.people[bp.partnerId]] : [])) x.incomeEMA = 0;
+    check('A home the household cannot afford is refused', req(broke, 'MOVE_HOME', { tier: 4 }) === 'cant_afford');
+    // Money: the real index fund; two months of costs stay in cash.
+    const mw = adult('pl8m'), mp = Pl.person(mw);
+    mw.ledger.pay('GENESIS', mp, 'cash', mw.px(100000));
+    const idx0 = mp.inv.idx, cash0 = mp.cash, ic = req(mw, 'INVEST', { share: 0.5 });
+    check('Investing buys the real index fund and keeps two months of costs in cash', ic === 'ok' && mp.inv.idx > idx0 && mp.cash >= 2 * mp.mcost && mp.cash < cash0 && mw.checkInvariants().length === 0);
+    const sold = req(mw, 'SELL', { share: 1 });
+    check('Selling turns investments back into cash', sold === 'ok' && P.invValue(mw, mp) < 1 && mw.checkInvariants().length === 0);
+    mw.ledger.spend(mp, 'cash', 'MERCHANT', mp.cash);
+    check('Nothing to invest when cash is short; nothing to sell when nothing is held', req(mw, 'INVEST', { share: 0.5 }) === 'too_little' && req(mw, 'SELL', { share: 0.5 }) === 'nothing');
+    // Five years of adult life answering every decision: texts read properly, books balance.
+    const ev = adult('pl8v', (x, p) => P.age(x, p) < 30);
+    for (let d = 0; d < 365 * 5; d++) { for (const it of (ev.player.inbox || []).slice()) { const e = Pl.eventById(it.ev), ch = e.choices.find(y => y.cmd) || e.choices[0]; Pl.choose(ev, it.uid, ch.id); } ev.step(); }
+    const lines = ev.player.journal.map(e => I.render(e));
+    await new Promise(r => I.set('zh-Hans', r)); const zh = ev.player.journal.map(e => I.render(e)); await new Promise(r => I.set('en', r));
+    check('Years of adult decisions: several different moments, every line complete in English and Chinese, books balance', new Set(ev.player.journal.filter(e => e.kind === 'event').map(e => e.ev)).size >= 3 && ![...lines, ...zh].some(t => /\{\w+\}|cmd\.|ev\.AD/.test(t)) && ev.checkInvariants().length === 0, [...new Set(ev.player.journal.filter(e => e.kind === 'event').map(e => e.ev))].join(' '));
+    LES.Countries.ensure(D);
+  }
+
   // PL-01: interface language. Words only: the same seed gives the same town and the same save in any language.
   async function i18nTests() {
     print('--- Interface language (PL-01) ---', 'info');
@@ -2314,6 +2381,7 @@
       await playBabyTests();
       await playChildTests();
       await playTeenTests();
+      await playAdultTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -2325,6 +2393,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

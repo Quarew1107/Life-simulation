@@ -290,6 +290,19 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
     029, 038, 050. Learn tab shows schools with fees and why unavailable. Measured (80 families who could afford
     a paid school): asked international -> granted ~1 in 4; asked prestige -> exam stops most. Tests:
     `playTeenTests` (8).
+  - PL-08 done (adults; `js/sim/player-adult.js`), all through engine paths: `ASK_RAISE` (6+ months in the job;
+    the employer decides with `Labour.yearClose`'s promotion chance x1.5 for asking; yes = level +1 and the usual
+    raise, no = stress +3; cooldown 180 days), `QUIT_JOB` (`Labour.endJob` 'resigned'), `ENROLL` / `DROP_OUT`
+    (`Labour.enroll`: real admission, yearly places, monthly fees or study loans; `Player.courses` lists what
+    residents themselves could apply for, with fee and admission chance; results ok / ok_scholar / rejected /
+    no_place / next_year), `MOVE_HOME` (heads only; up only if rent <= 40% of household income or 6 months of it
+    in cash; a partner may refuse; `Finance.moveHome`; `w.player.homeTier` makes `Finance.reviewTiers` keep the
+    chosen home unless the rent cannot be paid), `INVEST` / `SELL` (the index fund via `Finance.buy` /
+    `sellFraction`, keeping 2 months of costs in cash). Monthly: job loss (not resignation) and the index peak are
+    noticed for events. Ten adult events AD-003/004/007/008/021/022/025/026/061/101. My life tab for adults: Work
+    (job, raise, resign, applications, job board), Learn (courses), Money (cash, invest/sell, home levels with
+    rent and Move). Love, Health and Community still say "Coming in a later update" (PL-09..11). Tests:
+    `playAdultTests` (13).
   - Sources for the plan: ONS LTIM YE Dec 2024 (+345k revised) and long-term assumption +340k/yr; Census Vintage
     2024 (+2.8M) and projections (~0.9M/yr); DOSM CPE 2024/2026; NBS 2024 communique.
 

@@ -45,6 +45,22 @@
     const plan = P.age(w, p) >= 14 ? `<h4>${esc(T('learn.plan'))}</h4><p class="muted">${s.plan ? esc(T('learn.planNow', { plan: T(`plan.${s.plan}`) })) : esc(T('learn.planNone'))}</p><div class="life-cats">${['degree', 'vocational', 'work'].map(k => `<button class="${s.plan === k ? 'on' : ''}" data-plan="${k}">${esc(T(`plan.${k}`))}</button>`).join('')}</div>` : '';
     return `${school}<h4>${esc(T('learn.effort'))}</h4><div class="life-cats" role="group">${effBtns}</div><h4>${esc(T('learn.club'))}</h4>${club}<h4>${esc(T('learn.allowance'))}</h4>${allow}${plan}<p class="note">${esc(T('learn.note'))}</p>`;
   }
+  // Adults: courses (real admission and places), current studies.
+  function adultLearnHtml(w, p) {
+    const s = w.player;
+    if (p.enrol) { const c = LES.C.COURSE_BY_ID[p.enrol.course]; return `<p>${esc(T('learn.studying', { course: c ? c.name : p.enrol.course }))}</p><button class="ghost small" data-dropout="1">${esc(T('learn.drop'))}</button><p class="note">${esc(T('learn.adultNote'))}</p>`; }
+    const list = Pl.courses ? Pl.courses(w, p).slice(0, 8) : [];
+    return `<h4>${esc(T('learn.courses'))}</h4>${list.length ? `<ul class="list-plain life-jobs">${list.map(c => `<li><span><b>${esc(c.name)}</b><br><small class="muted">${esc(T('learn.months', { months: c.months }))} · ${esc(T('learn.schoolFee', { fee: U.fmtMoney(c.fee) }))} · ${esc(T('learn.chance', { pct: Math.round(c.chance * 100) }))}</small></span><button class="ghost small" data-enroll="${c.id}" ${s.pending.some(x => x.kind === 'ENROLL') ? 'disabled' : ''}>${esc(T('learn.apply'))}</button></li>`).join('')}</ul>` : `<p class="muted">—</p>`}<p class="note">${esc(T('learn.adultNote'))}</p>`;
+  }
+  // Adults: cash, the index fund, and the home.
+  function moneyHtml(w, p) {
+    const s = w.player, C = LES.C, busy = k => s.pending.some(c => c.kind === k), cur = p.tiers.housing;
+    const homes = [0, 1, 2, 3, 4].filter(t => t !== cur && w.town.homesByTier[t] && w.town.homesByTier[t].length);
+    return `<p>${esc(T('money.cash', { cash: U.fmtMoney(p.cash), inv: U.fmtMoney(P.invValue(w, p)), mc: U.fmtMoney(p.mcost) }))}</p>
+      <div class="life-cats">${[0.1, 0.25, 0.5].map(x => `<button data-invest="${x}" ${busy('INVEST') ? 'disabled' : ''}>${esc(T('money.invest'))} ${x * 100}%</button>`).join('')}${[0.25, 0.5, 1].map(x => `<button data-sell="${x}" ${busy('SELL') ? 'disabled' : ''}>${esc(T('money.sell'))} ${x * 100}%</button>`).join('')}</div>
+      <p class="note">${esc(T('money.note'))}</p><h4>${esc(T('money.home'))}</h4><p>${esc(T('money.homeNow', { home: C.TIERS.housing[cur].name, rent: U.fmtMoney(Pl.rentOf(w, cur)) }))}</p>
+      ${p.isHead ? `<ul class="list-plain life-jobs">${homes.map(t => `<li><span>${esc(C.TIERS.housing[t].name)} <small class="muted">${U.fmtMoney(Pl.rentOf(w, t))}</small></span><button class="ghost small" data-home="${t}" ${busy('MOVE_HOME') ? 'disabled' : ''}>${esc(T('money.move'))}</button></li>`).join('')}</ul>` : `<p class="muted">${esc(T('money.notHead'))}</p>`}`;
+  }
   function friendsHtml(w, p) {
     const s = w.player, mine = (s.friends || []).map(f => [w.people[f.id], f.since]).filter(x => x[0]);
     const near = w.living.filter(q => q.alive && q !== p && !q.away && !P.isAdult(w, q) && Math.abs(P.age(w, q) - P.age(w, p)) <= 2 && !mine.some(x => x[0] === q)).slice(0, 5);
@@ -64,9 +80,10 @@
   function workHtml(w, p) {
     if (!p.adult) return `<p class="muted">${esc(T('cat.youngWork'))}</p>`;
     const s = w.player, apps = s.apps || [], waiting = s.pending.filter(c => c.kind === 'APPLY_JOB').map(c => c.args.vac);
-    const list = Pl.openings(w, p, true).slice(0, 8);
+    const list = Pl.openings(w, p, true).slice(0, 8), busy = k => s.pending.some(c => c.kind === k);
+    const now = p.job ? `<p>${esc(T('work.now', { job: p.job.title, pay: U.fmtMoney(p.job.salary), date: U.fmtDate(p.job.startDay) }))}</p>${Pl.HANDLERS.ASK_RAISE && !p.job.fixedTitle ? `<button class="ghost small" data-raise="1" ${busy('ASK_RAISE') ? 'disabled' : ''}>${esc(T('work.raise'))}</button> <button class="ghost small" data-quit="1" ${busy('QUIT_JOB') ? 'disabled' : ''}>${esc(T('work.quit'))}</button>` : ''}` : '';
     const when = v => { const d = v.closeDay - w.day; return d > 0 ? T('time.inDays', { count: d }) : T('time.today'); };
-    return `${apps.length ? `<h4>${esc(T('jobs.yourApps'))}</h4><ul class="list-plain">${apps.map(a => `<li><span>📄 ${esc(a.title)} · ${U.fmtMoney(a.salary)}</span><span class="muted">${esc(T('jobs.decides', { when: a.closeDay > w.day ? T('time.inDays', { count: a.closeDay - w.day }) : T('time.today') }))}</span></li>`).join('')}</ul>` : ''}
+    return `${now}${apps.length ? `<h4>${esc(T('jobs.yourApps'))}</h4><ul class="list-plain">${apps.map(a => `<li><span>📄 ${esc(a.title)} · ${U.fmtMoney(a.salary)}</span><span class="muted">${esc(T('jobs.decides', { when: a.closeDay > w.day ? T('time.inDays', { count: a.closeDay - w.day }) : T('time.today') }))}</span></li>`).join('')}</ul>` : ''}
       <h4>${esc(T('jobs.openings'))}</h4>
       ${list.length ? `<ul class="list-plain life-jobs">${list.map(v => {
         const applied = v.appSet.has(p.id), queued = waiting.includes(v.id);
@@ -118,7 +135,7 @@
       <div class="card">${bar(T('life.health'), p.health)}${bar(T('life.happy'), p.happy)}${bar(T('life.stress'), p.stress, 'bad')}</div>
       <div class="card"><h3>${esc(T('life.decisions'))}${(s.inbox || []).length ? ` <small class="life-count">${s.inbox.length}</small>` : ''}</h3>${decisionsHtml(w)}</div>
       <div class="card"><h3>${esc(T('life.actions'))}</h3><div class="life-cats" role="group">${cats}</div>
-        <div class="life-cat-body">${UI.lifeCat === 'work' ? workHtml(w, p) : UI.lifeCat === 'care' ? careHtml(w, p) : UI.lifeCat === 'learn' && !P.isAdult(w, p) ? learnHtml(w, p) : UI.lifeCat === 'friends' ? friendsHtml(w, p) : `<p class="muted">${esc(T('cat.soon'))}</p>`}</div></div>`}
+        <div class="life-cat-body">${UI.lifeCat === 'work' ? workHtml(w, p) : UI.lifeCat === 'care' ? careHtml(w, p) : UI.lifeCat === 'learn' && !P.isAdult(w, p) ? learnHtml(w, p) : UI.lifeCat === 'learn' ? adultLearnHtml(w, p) : UI.lifeCat === 'money' ? moneyHtml(w, p) : UI.lifeCat === 'friends' ? friendsHtml(w, p) : `<p class="muted">${esc(T('cat.soon'))}</p>`}</div></div>`}
       <div class="card"><h3>${esc(T('journal.title'))}</h3>${journalHtml(w)}</div>
       <details class="card life-settings"><summary>${esc(T('life.settings'))}</summary>
         <label>${esc(T('freq.label'))} <select id="life-freq">${['important', 'balanced', 'detailed'].map(k => `<option value="${k}" ${(s.freq || 'balanced') === k ? 'selected' : ''}>${esc(T(`freq.${k}`))}</option>`).join('')}</select></label>
@@ -153,6 +170,13 @@
       else if (b.dataset.friend) say(Pl.request(w, 'MAKE_FRIEND', { pid: Number(b.dataset.friend) }));
       else if (b.dataset.school) say(Pl.request(w, 'ASK_SCHOOL', { tier: b.dataset.school }));
       else if (b.dataset.plan) say(Pl.request(w, 'SET_PLAN', { plan: b.dataset.plan }));
+      else if (b.dataset.raise) say(Pl.request(w, 'ASK_RAISE', {}));
+      else if (b.dataset.quit) say(Pl.request(w, 'QUIT_JOB', {}));
+      else if (b.dataset.enroll) say(Pl.request(w, 'ENROLL', { course: b.dataset.enroll }));
+      else if (b.dataset.dropout) say(Pl.request(w, 'DROP_OUT', {}));
+      else if (b.dataset.invest) say(Pl.request(w, 'INVEST', { share: Number(b.dataset.invest) }));
+      else if (b.dataset.sell) say(Pl.request(w, 'SELL', { share: Number(b.dataset.sell) }));
+      else if (b.dataset.home) say(Pl.request(w, 'MOVE_HOME', { tier: Number(b.dataset.home) }));
       else if (b.dataset.choice) say(Pl.choose(w, b.dataset.uid, b.dataset.choice));
       else if (b.dataset.pass) { Pl.pass(w, b.dataset.pass); UI.update(true); }
     });
