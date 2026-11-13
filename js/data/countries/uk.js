@@ -663,7 +663,7 @@
     ages: [5.4, 5.8, 6.1, 6.0, 6.1, 6.6, 6.9, 6.7, 6.4, 6.0, 6.6, 6.6, 5.8, 5.2, 4.9, 4.0, 2.6, 2.3],
     // Rules revision 10 (founders of all ages): fertility and old-age mortality re-tuned to the official TFR and life
     // expectancy; netMigration = newcomers per 1,000 residents a year on top of the town's own moves (ONS: net migration +345,000 in 2024 (revised Nov 2025) and +340,000 a year in the long-term projection assumption: ~5 per 1,000).
-    demography: { fertMultRev10: 0.667, mortRev10: 0.96, netMigration: 5.0, fertMult: 0.57, mortMult: 0.85 }, // Phase 6 markets: TFR 1.04 at 0.42 and life expectancy 77.3 at 1.1 (before: 1.52 and 80.1)
+    demography: { fertMultRev10: 0.635, mortRev10: 0.96, netMigration: 5.0, fertMult: 0.57, mortMult: 0.85 }, // Phase 6 markets: TFR 1.04 at 0.42 and life expectancy 77.3 at 1.1 (before: 1.52 and 80.1)
     typicalTop: 14000000, // about the richest fortune of a 300-founder town after 40 years under rules revision 9 (Year-1 money; two test seeds, Nov 2026): the setup hint
     defaults: { goalRM: 100000000, marketOutsideRM: 200000000, mortMult: 0.85, leaderTitle: 'mayor', termYears: 4, inflMin: 0, inflMax: 5 },
     // Police-recorded crime per 100k a year, England and Wales, year ending March 2026 (~61.8m people),

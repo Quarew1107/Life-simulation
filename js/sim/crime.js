@@ -56,6 +56,11 @@
   const GANG_COLOURS = ['#e63946', '#8338ec', '#ff8c42', '#06d6a0', '#3a86ff', '#ffbe0b', '#d62828', '#8d99ae'];
 
   const K = w => CR.INTENSITY[w.cfg.crime] || 10;
+  // Rules revision 10: Lively crime brings ten times the crimes and stories, but each one is less likely to
+  // kill or injure, so a town loses about as many lives and as much health to crime as under Realistic (the
+  // owner's choice: more crime, normal deaths). Before, Lively cut life expectancy by ~6 years and towns shrank.
+  CR.HARM_REV = 10;
+  CR.harm = w => (w.cfg.rulesRev >= CR.HARM_REV && w.cfg.crime === 'lively' ? 1 / K(w) : 1);
   CR.CASES_PER_OFFICER = 0.13; // index cases one officer can investigate a month (at the Realistic scale, Malaysian rates)
   const MY_INDEX = 170, MY_OFFICERS = 4;
   // Rules revision 8: a force staffed as in its own country can handle that country's usual case load, as
@@ -156,8 +161,8 @@
         case 'burglary': gain = take(w, v, p, Math.max(w.px(500), v.cash * R.range(0.05, 0.25)), 0.6); text = 'Home was broken into'; break;
         case 'vehicle': gain = take(w, v, p, w.px(R.range(2500, 25000)) * (v.tiers.transport >= 2 ? 2 : 1), 0.3); text = `${v.tiers.transport >= 2 ? 'Car' : 'Motorbike'} was stolen`; break;
         case 'scam': gain = take(w, v, p, v.cash * R.range(0.1, 0.4)); text = `Lost ${U.fmtMoney(gain)} to a scam by someone in town`; break;
-        case 'robbery': gain = take(w, v, p, w.px(R.range(200, 3000))); v.health = Math.max(1, v.health - R.range(8, 30)); text = 'Was robbed and hurt'; break;
-        case 'assault': v.health = Math.max(1, v.health - R.range(10, 35)); text = 'Was assaulted'; break;
+        case 'robbery': gain = take(w, v, p, w.px(R.range(200, 3000))); v.health = Math.max(1, v.health - R.range(8, 30) * CR.harm(w)); text = 'Was robbed and hurt'; break;
+        case 'assault': v.health = Math.max(1, v.health - R.range(10, 35) * CR.harm(w)); text = 'Was assaulted'; break;
         default: break;
       }
       v.stress = Math.min(100, v.stress + 18); v.happy = Math.max(0, v.happy - 6);
@@ -170,7 +175,7 @@
     count(w, type);
     // Robberies and fights sometimes end in a killing (about 2% of violent crimes).
     let killed = false;
-    if ((type === 'robbery' || type === 'assault') && roll.ok && R.next() < 0.022 * T(w).lethal * (p.pers.risk > 80 ? 1.6 : 1)) killed = murder(w, p, v, type === 'robbery' ? 'robbery' : 'a fight');
+    if ((type === 'robbery' || type === 'assault') && roll.ok && R.next() < 0.022 * T(w).lethal * CR.harm(w) * (p.pers.risk > 80 ? 1.6 : 1)) killed = murder(w, p, v, type === 'robbery' ? 'robbery' : 'a fight');
     if (!killed && roll.ok) {
       P.log(w, v, `${text}${def.violent ? '' : ''}`, 'crime', 1);
       P.log(w, p, `Committed ${def.name.toLowerCase()}${gain ? ` (${U.fmtMoney(gain)})` : ''}`, 'crime', 0);
@@ -304,8 +309,8 @@
       } else w.ledger.spend(p, 'cash', 'MERCHANT', paid); // bought from outside town
     }
     cr.addict = Math.min(100, cr.addict + R.range(2, 9) * (paid >= want ? 1 : 0.5));
-    p.health = Math.max(1, p.health - 1 - cr.addict / 30); p.stress = Math.max(0, p.stress - 4);
-    if (R.next() < 0.002 * cr.addict / 100) { w.die(p, 'drug overdose'); st.overdoses++; return; }
+    p.health = Math.max(1, p.health - (1 + cr.addict / 30) * CR.harm(w)); p.stress = Math.max(0, p.stress - 4);
+    if (R.next() < 0.002 * cr.addict / 100 * CR.harm(w)) { w.die(p, 'drug overdose'); st.overdoses++; return; }
     if (R.next() < 0.012 + 0.02 * p.pers.dis / 100) { cr.user = false; cr.clean = 0; P.log(w, p, 'Quit drugs', 'crime', 0); return; }
     if (R.next() < 0.015 * p.pers.resp / 100 * cr.addict / 100 + (policy === 'treatment' ? 0.01 : 0)) { CR.admit(w, p, 'rehab', 6, 'drug use'); st.voluntaryRehab++; return; }
     // Police: possession arrests (Malaysia arrests ~40% of users a year).
@@ -395,9 +400,9 @@
       if (!pa || !pb || !free(pa) || !free(pb)) continue;
       count(w, 'assault');
       st.gangFights++;
-      pb.health = Math.max(1, pb.health - R.range(10, 40));
+      pb.health = Math.max(1, pb.health - R.range(10, 40) * CR.harm(w));
       w.pushFeed({ day: w.day, pid: pa.id, text: `Turf fight between ${a.name} and ${b.name}`, cat: 'crime', imp: 1 });
-      if (R.next() < Math.min(0.9, 0.12 * T(w).lethal)) murder(w, pa, pb, 'a gang fight');
+      if (R.next() < Math.min(0.9, 0.12 * T(w).lethal) * CR.harm(w)) murder(w, pa, pb, 'a gang fight');
     }
   }
   const dist = (t, p, b) => { const h = t.buildings[p.homeId]; return h ? Math.abs(h.x - b.x) + Math.abs(h.y - b.y) : 1e9; };

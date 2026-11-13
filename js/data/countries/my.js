@@ -1000,7 +1000,7 @@
     ages: [7.0, 7.6, 7.6, 7.6, 8.2, 9.2, 9.3, 8.4, 7.2, 6.3, 5.6, 4.9, 3.4, 3.3, 2.2, 1.2, 0.6, 0.4],
     // Rules revision 10 (founders of all ages): fertility and old-age mortality re-tuned to the official TFR and life
     // expectancy; netMigration = newcomers per 1,000 residents a year on top of the town's own moves (DOSM: citizens grow by births; the non-citizen population is now falling (2025-26), so net migration ~0).
-    demography: { fertMultRev10: 0.475, mortRev10: 0.74, netMigration: 0, fertMult: 0.42, mortMult: 1.9 },
+    demography: { fertMultRev10: 0.54, mortRev10: 0.8, netMigration: 0, fertMult: 0.42, mortMult: 1.9 },
     // Settings a new world starts from in this country (applied when the country is picked in setup).
     typicalTop: 12000000, // about the richest fortune of a 300-founder town after 40 years under rules revision 9 (Year-1 money; two test seeds, Nov 2026): the setup hint
     defaults: { goalRM: 100000000, marketOutsideRM: 200000000, mortMult: 1.9, leaderTitle: 'president', termYears: 5, inflMin: -0.5, inflMax: 4.5 },

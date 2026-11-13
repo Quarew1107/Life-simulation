@@ -402,7 +402,10 @@
           if (p.plan) for (const s of p.plan) if (s.act !== 'REST' && s.act !== 'CHILDCARE') { wentOut = true; break; }
           p.energy += 38 + (tf.energy || 0) + (th.energy || 0) + (wentOut ? (tt.energy || 0) : 0);
           p.stress += -2 + (tf.stress || 0) + (th.stress || 0) + (tt.stress || 0) + (tl.stress || 0);
-          p.health += (tf.health || 0) + (p.health < 80 ? 0.03 : 0) - (p.stress > 75 ? 0.08 : 0)
+          // Rules revision 10: prison and rehab feed and house their inmates, so stress and the cheapest food do not
+          // wear their health down (before, a few years inside at stress 100 killed most prisoners).
+          const held = World.heldCare(this, p);
+          p.health += (held ? 0 : tf.health || 0) + (p.health < 80 ? 0.03 : 0) - (p.stress > 75 && !held ? 0.08 : 0)
             - (p.hunger > 50 ? 0.6 : 0) - 0.00015 * Math.pow(Math.max(0, age - 45), 1.5);
           const home = this.town.buildings[p.homeId];
           if (home && home.cap && (this.occupancy[p.homeId] || 0) > home.cap) p.stress += 0.4; // overcrowded home
@@ -777,7 +780,11 @@
   // Rules revision 10: founders are households of all ages (cfg.founderAges 'mixed', the default) unless the
   // setting asks for the original young strangers ('young').
   World.FOUNDER_REV = 10;
-  World.mixedFounders = w => w.cfg.rulesRev >= World.FOUNDER_REV && w.cfg.founderAges !== 'young' && !!(LES.Countries.pack.ages);
+  // Rules revision 10: someone held in prison or rehab is fed and housed by the institution.
+  World.heldCare = (w, p) => !!p.inst && w.cfg.rulesRev >= World.FOUNDER_REV;
+  // A chosen founder age range (a scenario such as Eternal Life, or startAgeMin/Max set by hand) keeps its founders.
+  World.mixedFounders = w => w.cfg.rulesRev >= World.FOUNDER_REV && w.cfg.founderAges !== 'young' && !!(LES.Countries.pack.ages)
+    && (w.cfg.startAgeMin === undefined || w.cfg.startAgeMin === 18) && (w.cfg.startAgeMax === undefined || w.cfg.startAgeMax === 35);
   // An older founder arrives with the ageing of the years already lived (yearly ageing starts at their age now)
   // and somewhat lower health.
   World.ageFounder = function (p, age) {

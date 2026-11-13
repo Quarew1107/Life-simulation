@@ -31,7 +31,7 @@
   async function unitTests() {
     print('--- Acceptance cases ---', 'info');
     // TC-001 / TC-021
-    const w = new LES.World({ seed: 'tc001' });
+    const w = new LES.World({ seed: 'tc001', founderAges: 'young' }); // the original acceptance case: 100 young adults
     check('TC-001 exactly 100 valid founders', w.people.length === 100 && w.people.every((p, i) => p.id === i && p.alive && p.adult));
     check('TC-001 50/50 sexes', w.people.filter(p => p.sex === 'M').length === 50);
     const bad = LES.validateConfig(Object.assign({}, LES.DEFAULTS, { founders: NaN, softmaxT: Infinity }));
@@ -351,7 +351,8 @@
 
     // Calibration measures are finite for a normal run.
     const m = LES.Calibration.measure(a);
-    check('Calibration measures are computed', ['e0', 'unemp', 'medWage', 'hhGini'].every(k => Number.isFinite(m[k])), JSON.stringify(m));
+    // (life expectancy needs 30 deaths and old people under revision 10: founderTests)
+    check('Calibration measures are computed', ['unemp', 'medWage', 'hhGini'].every(k => Number.isFinite(m[k])) && (Number.isFinite(m.e0) || a.cfg.rulesRev >= 10), JSON.stringify(m));
   }
 
   // Phase-2 society: class, religion, community funds, interfaith rule, festivals.
@@ -499,6 +500,7 @@
     const sch = ws.biz[ws.biz.length - 1];
     check('A private school is built on an empty lot', ws.town.buildings[sch.place].kind === 'privschool' && (ws.town.lots.filter(id => !ws.town.buildings[id].built).length === lots - 1 || hadSchool > 0)); // or it takes over an empty school building
     await runDays(ws, 75);
+    for (let d = 0; d < 125 && !sch.payrollLast; d++) ws.step(); // towns of all ages have few jobless people: hiring takes longer
     const staff = ws.living.filter(p => p.job && p.job.biz === sch.id);
     check('It hires its own teachers, who are paid by the school', staff.length > 0 && staff.every(p => p.job.jobId === 'teacher' && !SV.lineOf(p.job)) && (sch.payrollLast > 0 || sch.payrollNow > 0), `${staff.length} staff`);
     F.closeBiz(ws, sch, 'closed (test)', false);
@@ -1309,7 +1311,7 @@
     print('--- Founders\' credentials and study places (C06) ---', 'info');
     const D = LES.DEFAULTS, L = LES.Labour, Cal = LES.Calibration, P = LES.P, C = LES.C;
     check('Rules revision 4 for new worlds; Classic and older saves keep revision 1', D.rulesRev >= 4 && LES.PRESETS.classic.values.rulesRev === 1);
-    const uk = new LES.World(Object.assign({}, D, LES.Countries.get('uk').defaults, { country: 'uk', seed: 'c06-uk', founders: 300 }));
+    const uk = new LES.World(Object.assign({}, D, LES.Countries.get('uk').defaults, { country: 'uk', seed: 'c06-uk', founders: 300, founderAges: 'young' }));
     const ad = uk.living.filter(p => P.age(uk, p) >= 25 && P.age(uk, p) < 65), deg = ad.filter(p => Cal.eduLevel(p) >= 6), non = ad.filter(p => Cal.eduLevel(p) < 6);
     const avg = xs => xs.reduce((a, p) => a + p.att[C.INT], 0) / Math.max(1, xs.length);
     check('UK founders follow the age-group table (about half of 25-64s hold a degree)', deg.length / ad.length > 0.35 && deg.length / ad.length < 0.65, `${deg.length}/${ad.length}`);
@@ -1840,11 +1842,47 @@
     for (let d = 0; d < 90; d++) { w.step(); w2.step(); }
     check('Save and load continue a town of all ages identically', w2.stableHash() === w.stableHash());
     // Life expectancy needs deaths and years lived at older ages.
-    const y = new LES.World(cfgOf('my', 9, { seed: 'e0-young', founders: 150 }));
+    const y = new LES.World(cfgOf('my', 10, { seed: 'e0-young', founders: 150, founderAges: 'young' }));
     for (let d = 0; d < 365 * 12; d++) { y.step(); if (d % 1000 === 0) await yieldUI(); }
     check('A young town with no old people yet shows no life expectancy (it used to show figures like 98.6)', !Number.isFinite(LES.Calibration.measure(y).e0));
     K.ensure(D);
   }
+
+  // Rules revision 10, population balance: Lively crime without the extra deaths, prisoners fed and housed,
+  // and towns of all ages that keep roughly their size with each country's births, deaths and migration.
+  async function populationTests() {
+    print('--- Population balance (rules revision 10) ---', 'info');
+    const K = LES.Countries, D = LES.DEFAULTS, CR = LES.Crime, P = LES.P;
+    const cfgOf = (c, rev, extra) => { K.use(c); return Object.assign({}, D, LES.PRESETS.national.values, { country: c, scenario: 'none', preset: 'national', rulesRev: rev }, extra || {}); };
+    const at = (rev, crime) => CR.harm({ cfg: { rulesRev: rev, crime } });
+    check('Lively crime is ten times as frequent but each crime a tenth as harmful under revision 10 only', at(10, 'lively') === 0.1 && at(9, 'lively') === 1 && at(10, 'realistic') === 1 && at(10, 'lawless') === 1);
+    // A prisoner with no money, the cheapest food and stress 100: two years inside.
+    const jail = rev => {
+      const w = new LES.World(cfgOf('my', rev, { seed: 'held', founders: 60 }));
+      const p = w.people.find(q => q.adult && q.alive && P.age(w, q) < 40 && !q.careOf.length);
+      LES.Crime.admit(w, p, 'prison', 24, 'test');
+      const before = LES.Migration.indicators(w).unemp;
+      for (let d = 0; d < 700 && p.alive; d++) { p.cash = 0; p.stress = 100; p.tiers.food = 0; w.step(); }
+      return { alive: p.alive, health: p.health, labour: LES.Migration.indicators(w), before };
+    };
+    const r9 = jail(9), r10 = jail(10);
+    check('A prisoner is fed and housed: two years at stress 100 no longer wear their health down (revision 9 unchanged)', r10.alive && r10.health >= 60 && (!r9.alive || r9.health < r10.health - 20), `rev 10 health ${Math.round(r10.health)}, rev 9 ${r9.alive ? Math.round(r9.health) : 'died'}`);
+    // Default towns over 50 years: they keep roughly their size, live as long as the country does, and the UK
+    // gains its official net migration.
+    const res = {};
+    for (const c of ['my', 'uk']) {
+      const w = new LES.World(cfgOf(c, 10, { seed: `pop-${c}`, founders: 100 }));
+      let py = 0;
+      for (let d = 0; d < 50 * 365 && !w.ended; d++) { w.step(); py += w.counts.living / 365; if (d % 2000 === 0) await yieldUI(); }
+      res[c] = { pop: w.counts.living, e0: LES.Calibration.measure(w).e0, net: 1000 * (w.stats.immigrants - w.stats.emigrants) / py };
+    }
+    const txt = Object.entries(res).map(([c, r]) => `${c} ${r.pop} people, e0 ${r.e0.toFixed(1)}, net migration ${r.net.toFixed(1)}/1,000`).join('; ');
+    check('A Malaysian town of 100 founders keeps roughly its size over 50 years (it used to fall to a third)', res.my.pop >= POP_BAND.my[0] && res.my.pop <= POP_BAND.my[1], txt);
+    check('A British town of 100 founders grows a little over 50 years, with about the official net migration (~5 per 1,000)', res.uk.pop >= POP_BAND.uk[0] && res.uk.pop <= POP_BAND.uk[1] && res.uk.net > 2.5 && res.uk.net < 8.5, txt);
+    check('Default towns live about as long as their country (life expectancy 70-86; Lively crime used to cut ~6 years)', res.my.e0 > 70 && res.my.e0 < 82 && res.uk.e0 > 75 && res.uk.e0 < 86, txt);
+    K.ensure(D);
+  }
+  const POP_BAND = { my: [65, 170], uk: [90, 260] };
 
   // C07: sustained mobility from income averaged over years, ranked within birth cohorts (research only).
   async function mobilityTests() {
@@ -1921,6 +1959,7 @@
       await crimeRevTests();
       await wealthRevTests();
       await founderTests();
+      await populationTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -1932,6 +1971,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

@@ -143,7 +143,7 @@
       P.log(w, p, `Could not afford ${from}; downgraded`, 'money', rev9 ? 0 : 1);
     } else {
       p.stress = Math.min(100, p.stress + 8);
-      p.health = Math.max(0, p.health - 2);
+      if (!LES.World.heldCare(w, p)) p.health = Math.max(0, p.health - 2); // rev 10: not while fed and housed in prison or rehab
     }
   };
 

@@ -14,6 +14,7 @@
     let labour = 0, unemployed = 0;
     for (const p of w.living) {
       if (!p.alive || !p.adult || p.retired || p.enrol || P.age(w, p) >= 64) continue;
+      if (p.inst && w.cfg.rulesRev >= 10) continue; // rev 10: prisoners are not in the labour force
       labour++;
       if (!p.job && p.manages < 0) unemployed++;
     }

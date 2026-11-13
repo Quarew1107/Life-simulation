@@ -549,7 +549,7 @@
     ages: [5.6, 5.9, 6.2, 6.5, 6.6, 6.6, 7.0, 6.8, 6.5, 6.0, 6.2, 6.1, 6.0, 5.5, 4.8, 3.6, 2.2, 1.9],
     // Rules revision 10 (founders of all ages): fertility and old-age mortality re-tuned to the official TFR and life
     // expectancy; netMigration = newcomers per 1,000 residents a year on top of the town's own moves (Census Bureau: +2.8 million in 2024 (a record) and about 0.9 million a year in the long-term projections: ~2.7 per 1,000).
-    demography: { fertMultRev10: 0.885, mortRev10: 0.8, netMigration: 2.7, fertMult: 0.75, mortMult: 1.05 }, // Phase 6 markets: TFR 1.28 at 0.6, life expectancy 77.4 at 1.2; // 80-year runs: TFR 1.10 at 0.42 (US child costs are high) and life expectancy 77.1 at 1.3
+    demography: { fertMultRev10: 0.95, mortRev10: 0.88, netMigration: 2.7, fertMult: 0.75, mortMult: 1.05 }, // Phase 6 markets: TFR 1.28 at 0.6, life expectancy 77.4 at 1.2; // 80-year runs: TFR 1.10 at 0.42 (US child costs are high) and life expectancy 77.1 at 1.3
     typicalTop: 50000000, // about the richest fortune of a 300-founder town after 40 years under rules revision 9 (single towns ranged $36M-$242M) (Year-1 money; two test seeds, Nov 2026): the setup hint
     defaults: { goalRM: 200000000, marketOutsideRM: 350000000, mortMult: 1.05, leaderTitle: 'mayor', termYears: 4, inflMin: 0, inflMax: 6 },
     // Crime per 100k a year for the offences the engine models (FBI 2025): burglary ~160, vehicle theft ~147,

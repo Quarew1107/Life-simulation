@@ -59,7 +59,7 @@
     }
     // Too few deaths, or too few years lived at 65+ (a young town has no old people yet): no figure.
     const deaths = D.reduce((s, x) => s + x, 0), oldYears = E.slice(13).reduce((s, x) => s + x, 0);
-    if (deaths < DEFS.e0.minN || oldYears < 100) return NaN;
+    if (w.cfg.rulesRev >= 10 && (deaths < DEFS.e0.minN || oldYears < 100)) return NaN; // rev 10 (older revisions' reports unchanged)
     let alive = 1, e0 = 0;
     for (let b = 0; b < bands; b++) {
       const m = E[b] > 0 ? D[b] / E[b] : (b === bands - 1 ? 0.3 : 0);

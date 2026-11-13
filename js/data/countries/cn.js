@@ -594,7 +594,7 @@
     ages: [4.5, 5.9, 6.2, 5.6, 5.8, 6.2, 7.6, 7.3, 6.6, 6.6, 8.4, 8.0, 5.6, 6.0, 4.4, 2.8, 1.6, 0.9],
     // Rules revision 10 (founders of all ages): fertility and old-age mortality re-tuned to the official TFR and life
     // expectancy; netMigration = newcomers per 1,000 residents a year on top of the town's own moves (NBS: population change is births minus deaths; net migration ~0).
-    demography: { fertMultRev10: 0.47, mortRev10: 1.36, netMigration: 0, fertMult: 0.47, mortMult: 1 }, // Phase 6 markets: TFR 0.73 at 0.34; // 80-year runs: TFR 0.88 at 0.3 and life expectancy 76.9 at 1.15
+    demography: { fertMultRev10: 0.47, mortRev10: 1.2, netMigration: 0, fertMult: 0.47, mortMult: 1 }, // Phase 6 markets: TFR 0.73 at 0.34; // 80-year runs: TFR 0.88 at 0.3 and life expectancy 76.9 at 1.15
     typicalTop: 50000000, // about the richest fortune of a 300-founder town after 40 years under rules revision 9 (Year-1 money; two test seeds, Nov 2026): the setup hint
     defaults: { goalRM: 200000000, marketOutsideRM: 460000000, mortMult: 1, leaderTitle: 'president', termYears: 5, inflMin: -1, inflMax: 4 },
     // Crime per 100k a year for the offences the engine models (approximate: the MPS reports ~3.1m criminal

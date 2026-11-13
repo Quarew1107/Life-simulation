@@ -44,6 +44,7 @@ The improvement plan agreed in November 2026. Each phase is one tested push.
 | More names (Nov 2026) | Two to three times as many first names per group in every country, more family names (rules revision 7) | Done |
 | Review follow-up (Nov 2026) | Pop-ups and small screens, side panel, Report in-app and Compare without the other country's look, people and crowd art, building variety, yard stages and winter snow, crime outside Malaysia (rules revision 8: police case capacity per country; UK 2,000, US 590, China 150, Malaysia 170 within about 30%) | Done |
 | Goal and wealth (Nov 2026) | Rules revision 9: spending from usable wealth only, EPF's three accounts (Malaysia), one monthly cut-back line, milestones in local money with the town's first to 1M / 10M, the goal's real share, a setup hint when the goal is out of reach | Done |
+| Founders of all ages (Nov 2026) | Rules revision 10: founder households with each country's official age mix; births, old-age deaths and net migration tuned to official TFR, life expectancy and migration; Lively crime keeps its stories without the extra deaths; prisoners fed and housed | Done |
 | Country looks | Shop lots, eateries, pub/bar, town hall flags, rent signs, police, court, sports court, memorial, hills, lakes and forests drawn in each country's style | Done for UK, US, China |
 
 ## To do
