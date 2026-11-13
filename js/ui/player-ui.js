@@ -9,6 +9,10 @@
   const pref = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } };
   const setPref = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* private window */ } };
   UI.lifeCat = 'work';
+  UI._lifeOpen = new Set();   // folded sections the player has opened (kept open across redraws)
+  UI._lifeInputs = {};        // what the player typed in number boxes (kept across redraws)
+  const keep = k => `data-keep="${k}" ${UI._lifeOpen.has(k) ? 'open' : ''}`;
+  const typed = (id, d) => (UI._lifeInputs[id] !== undefined ? UI._lifeInputs[id] : d);
 
   const where = () => { const app = UI.app; return Pl.town(app.region || app.world); };
 
@@ -52,13 +56,24 @@
     const list = Pl.courses ? Pl.courses(w, p).slice(0, 8) : [];
     return `<h4>${esc(T('learn.courses'))}</h4>${list.length ? `<ul class="list-plain life-jobs">${list.map(c => `<li><span><b>${esc(c.name)}</b><br><small class="muted">${esc(T('learn.months', { months: c.months }))} · ${esc(T('learn.schoolFee', { fee: U.fmtMoney(c.fee) }))} · ${esc(T('learn.chance', { pct: Math.round(c.chance * 100) }))}</small></span><button class="ghost small" data-enroll="${c.id}" ${s.pending.some(x => x.kind === 'ENROLL') ? 'disabled' : ''}>${esc(T('learn.apply'))}</button></li>`).join('')}</ul>` : `<p class="muted">—</p>`}<p class="note">${esc(T('learn.adultNote'))}</p>`;
   }
+  // Shares: pick a company (or the index fund) and how many shares; bought or sold at tomorrow's price.
+  function sharesHtml(w, p) {
+    if (!Pl.market) return '';
+    const s = w.player, busy = (k, tk) => s.pending.some(c => c.kind === k && c.args.tk === tk), pct = r => `${r >= 0 ? '+' : ''}${(r * 100).toFixed(1)}%`;
+    const name = n => (typeof n === 'object' ? T(n.key) : n), own = x => (x >= 100 ? Math.round(x).toLocaleString() : (Math.round(x * 100) / 100).toString());
+    return `<details class="life-more" ${keep('shares')}><summary>${esc(T('money.shares'))}</summary><ul class="list-plain life-stocks">${Pl.market(w, p).map(m => `<li>
+        <div class="life-stock-head"><b>${esc(name(m.name))}</b> <small class="muted">${m.tk === 'idx' ? '' : esc(m.tk)}${m.sector ? ` · ${esc(m.sector)}` : ''}</small><span>${U.fmtPrice(m.price)} <small class="${m.ret >= 0 ? 'up' : 'down'}">${pct(m.ret)}</small></span></div>
+        <div class="life-stock-row"><small class="muted">${m.held > 0 ? esc(T('money.own', { shares: own(m.held), value: U.fmtMoney(m.held * m.price) })) : esc(T('money.ownNone'))}</small>
+          <span><input type="number" min="1" step="1" id="stk-${m.tk}" value="${esc(String(typed(`stk-${m.tk}`, m.tk === 'idx' ? 100 : 10)))}" aria-label="${esc(T('money.qty'))}"><button class="ghost small" data-buystock="${m.tk}" ${busy('BUY_STOCK', m.tk) ? 'disabled' : ''}>${esc(T('money.buy'))}</button><button class="ghost small" data-sellstock="${m.tk}" ${m.held > 0 && !busy('SELL_STOCK', m.tk) ? '' : 'disabled'}>${esc(T('money.sell'))}</button>${m.held > 0 ? `<button class="link" data-sellall="${m.tk}" ${busy('SELL_STOCK', m.tk) ? 'disabled' : ''}>${esc(T('money.sellAll'))}</button>` : ''}</span></div></li>`).join('')}</ul>
+      <p class="note">${esc(T('money.sharesNote'))}</p></details>`;
+  }
   // Adults: cash, the index fund, and the home.
   function moneyHtml(w, p) {
     const s = w.player, C = LES.C, busy = k => s.pending.some(c => c.kind === k), cur = p.tiers.housing;
     const homes = [0, 1, 2, 3, 4].filter(t => t !== cur && w.town.homesByTier[t] && w.town.homesByTier[t].length);
     return `<p>${esc(T('money.cash', { cash: U.fmtMoney(p.cash), inv: U.fmtMoney(P.invValue(w, p)), mc: U.fmtMoney(p.mcost) }))}</p>
       <div class="life-cats">${[0.1, 0.25, 0.5].map(x => `<button data-invest="${x}" ${busy('INVEST') ? 'disabled' : ''}>${esc(T('money.invest'))} ${x * 100}%</button>`).join('')}${[0.25, 0.5, 1].map(x => `<button data-sell="${x}" ${busy('SELL') ? 'disabled' : ''}>${esc(T('money.sell'))} ${x * 100}%</button>`).join('')}</div>
-      <p class="note">${esc(T('money.note'))}</p>${Pl.ticket && !s.noLottery ? `<h4>${esc(T('lotto.title'))}</h4><p class="muted">${esc(T('lotto.odds', { price: U.fmtMoney(Pl.ticket(w)), small: U.fmtMoney(Pl.ticket(w) * 2), medium: U.fmtMoney(Pl.ticket(w) * 10), jackpot: U.fmtMoney(Pl.ticket(w) * 10000) }))}</p>${s.lotto ? `<p class="muted">${esc(T('lotto.record', { tickets: s.lotto.tickets, spent: U.fmtMoney(s.lotto.spent), won: U.fmtMoney(s.lotto.won) }))}</p>` : ''}<button class="ghost small" data-ticket="1" ${busy('BUY_TICKET') ? 'disabled' : ''}>${esc(T('lotto.buy'))}</button>` : ''}<h4>${esc(T('money.home'))}</h4><p>${esc(T('money.homeNow', { home: C.TIERS.housing[cur].name, rent: U.fmtMoney(Pl.rentOf(w, cur)) }))}</p>
+      <p class="note">${esc(T('money.note'))}</p>${sharesHtml(w, p)}${Pl.ticket && !s.noLottery ? `<h4>${esc(T('lotto.title'))}</h4><p class="muted">${esc(T('lotto.odds', { price: U.fmtMoney(Pl.ticket(w)), small: U.fmtMoney(Pl.ticket(w) * 2), medium: U.fmtMoney(Pl.ticket(w) * 10), jackpot: U.fmtMoney(Pl.ticket(w) * 10000) }))}</p>${s.lotto ? `<p class="muted">${esc(T('lotto.record', { tickets: s.lotto.tickets, spent: U.fmtMoney(s.lotto.spent), won: U.fmtMoney(s.lotto.won) }))}</p>` : ''}<button class="ghost small" data-ticket="1" ${busy('BUY_TICKET') ? 'disabled' : ''}>${esc(T('lotto.buy'))}</button>` : ''}<h4>${esc(T('money.home'))}</h4><p>${esc(T('money.homeNow', { home: C.TIERS.housing[cur].name, rent: U.fmtMoney(Pl.rentOf(w, cur)) }))}</p>
       ${p.isHead ? `<ul class="list-plain life-jobs">${homes.map(t => `<li><span>${esc(C.TIERS.housing[t].name)} <small class="muted">${U.fmtMoney(Pl.rentOf(w, t))}</small></span><button class="ghost small" data-home="${t}" ${busy('MOVE_HOME') ? 'disabled' : ''}>${esc(T('money.move'))}</button></li>`).join('')}</ul>` : `<p class="muted">${esc(T('money.notHead'))}</p>`}`;
   }
   // Adults: partner or dating, marriage, children, parents (every other person decides for themself).
@@ -126,7 +141,7 @@
     const s = w.player, busy = k => s.pending.some(c => c.kind === k), b = p.manages >= 0 && w.biz[p.manages] && w.biz[p.manages].open ? w.biz[p.manages] : null;
     if (b) return `<h4>${esc(T('biz.yours'))}</h4><p>${esc(T('biz.now', { biz: b.name, cash: U.fmtMoney(b.cash), value: U.fmtMoney(b.equity), debt: U.fmtMoney(b.debt) }))}</p><div class="life-cats"><button data-inject="0.25" ${busy('INJECT') ? 'disabled' : ''}>${esc(T('biz.inject'))}</button><button data-sellbiz="1" ${busy('SELL_BIZ') ? 'disabled' : ''}>${esc(T('biz.sell'))}</button><button data-closebiz="1" ${busy('CLOSE_BIZ') ? 'disabled' : ''}>${esc(T('biz.close'))}</button></div>`;
     const ts = Pl.bizTypes(w, p).slice(0, 8);
-    return `<details class="life-more"><summary>${esc(T('biz.start'))}</summary><ul class="list-plain life-jobs">${ts.map(t => `<li><span><b>${esc(t.name)}</b><br><small class="muted">${esc(T('biz.capital', { capital: U.fmtMoney(t.capital) }))}${t.ok ? '' : ` · ${esc(T('learn.cost'))}`}</small></span><button class="ghost small" data-startbiz="${t.id}" ${!t.ok || busy('START_BIZ') ? 'disabled' : ''}>${esc(T('biz.go'))}</button></li>`).join('')}</ul><p class="note">${esc(T('biz.note'))}</p></details>`;
+    return `<details class="life-more" ${keep('startbiz')}><summary>${esc(T('biz.start'))}</summary><ul class="list-plain life-jobs">${ts.map(t => `<li><span><b>${esc(t.name)}</b><br><small class="muted">${esc(T('biz.capital', { capital: U.fmtMoney(t.capital) }))}${t.ok ? '' : ` · ${esc(T('learn.cost'))}`}</small></span><button class="ghost small" data-startbiz="${t.id}" ${!t.ok || busy('START_BIZ') ? 'disabled' : ''}>${esc(T('biz.go'))}</button></li>`).join('')}</ul><p class="note">${esc(T('biz.note'))}</p></details>`;
   }
   // Giving, volunteering, newcomers, elections.
   function communityHtml(w, p) {
@@ -169,15 +184,28 @@
     }).join('');
   }
 
+  // Requests waiting for tomorrow, each with a cancel button (nothing has happened yet).
+  function queueHtml(w) {
+    const s = w.player, list = s.pending || [];
+    if (!list.length) return '';
+    const hrs = list.reduce((t, c) => t + ((Pl.HANDLERS[c.kind] || {}).hours || 0), 0);
+    return `<div class="card life-queue"><h3>${esc(T('queue.title'))} <small class="life-count">${list.length}</small></h3>
+      <ul class="list-plain">${list.map(c => { const h = (Pl.HANDLERS[c.kind] || {}).hours || 0; return `<li><span>⏳ ${esc(LES.I18n.render(Pl.describe(w, c)))} <small class="muted">${esc(T('queue.hours', { count: h }))}</small></span><button class="ghost small" data-cancel="${esc(c.id)}" aria-label="${esc(T('queue.cancel'))}">✕ ${esc(T('queue.cancel'))}</button></li>`; }).join('')}</ul>
+      <p class="note">${esc(T(hrs > Pl.DAY_HOURS ? 'queue.over' : 'queue.note', { hours: hrs, max: Pl.DAY_HOURS }))}</p></div>`;
+  }
   function journalHtml(w) {
     const j = w.player.journal.slice(-40).reverse();
     if (!j.length) return `<p class="muted">${esc(T('journal.empty'))}</p>`;
     return `<ul class="list-plain life-journal">${j.map(e => `<li class="${e.imp >= 2 ? 'big' : ''}"><small class="muted">${U.fmtDate(e.day)}</small> ${esc(LES.I18n.render(e))}</li>`).join('')}</ul>`;
   }
 
+  // A control the player is using right now (a list that is open, a box being typed in): redrawing would throw it away.
+  const busyWith = el => { const a = document.activeElement; return !!a && el.contains(a) && (a.tagName === 'SELECT' || a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && /^(text|search|number)$/.test(a.type))); };
   UI.renderLife = function () {
     const el = $('tab-life');
     if (!el) return;
+    if (busyWith(el)) return; // try again at the next redraw
+    for (const d of el.querySelectorAll('details[data-keep]')) { if (d.open) UI._lifeOpen.add(d.dataset.keep); else UI._lifeOpen.delete(d.dataset.keep); } // as the player left them
     const w = where();
     if (!w) { el.innerHTML = `<div class="card"><p>${esc(T('life.none'))}</p></div>`; return; }
     if (w.player.waiting) { el.innerHTML = `<div class="card life-head"><div><div class="life-name">👶 ${esc(T('play.waiting'))}</div><p>${esc(T('life.waiting'))}</p></div></div>`; return; }
@@ -185,7 +213,7 @@
     const mine = catsFor(sm.stage);
     if (!mine.includes(UI.lifeCat)) UI.lifeCat = mine[0];
     const cats = mine.map(k => `<button class="${UI.lifeCat === k ? 'on' : ''}" data-cat="${k}" aria-pressed="${UI.lifeCat === k}">${esc(T(`cat.${k}`))}</button>`).join('');
-    el.innerHTML = `
+    const html = `
       <div class="card life-head">
         <canvas class="portrait" id="life-portrait" width="64" height="88" aria-hidden="true"></canvas>
         <div><div class="life-name">${esc(sm.name)}</div>
@@ -196,16 +224,19 @@
       ${s.ended ? successionHtml(w) : !p.alive ? `<div class="card"><p>${esc(T('life.dead', { name: sm.name }))}</p></div>` : `
       <div class="card">${bar(T('life.health'), p.health)}${bar(T('life.happy'), p.happy)}${bar(T('life.stress'), p.stress, 'bad')}</div>
       <div class="card"><h3>${esc(T('life.decisions'))}${(s.inbox || []).length ? ` <small class="life-count">${s.inbox.length}</small>` : ''}</h3>${decisionsHtml(w)}</div>
+      ${queueHtml(w)}
       <div class="card"><h3>${esc(T('life.actions'))}</h3><div class="life-cats" role="group">${cats}</div>
         <div class="life-cat-body">${UI.lifeCat === 'work' ? workHtml(w, p) : UI.lifeCat === 'care' ? careHtml(w, p) : UI.lifeCat === 'learn' && !P.isAdult(w, p) ? learnHtml(w, p) : UI.lifeCat === 'learn' ? adultLearnHtml(w, p) : UI.lifeCat === 'money' ? moneyHtml(w, p) : UI.lifeCat === 'love' ? loveHtml(w, p) : UI.lifeCat === 'community' ? communityHtml(w, p) : UI.lifeCat === 'health' ? healthHtml(w, p) : UI.lifeCat === 'friends' ? friendsHtml(w, p) : `<p class="muted">${esc(T('cat.soon'))}</p>`}</div></div>`}
       <div class="card"><h3>${esc(T('journal.title'))}</h3>${journalHtml(w)}</div>
-      <details class="card life-settings"><summary>${esc(T('life.settings'))}</summary>
+      <details class="card life-settings" ${keep('settings')}><summary>${esc(T('life.settings'))}</summary>
         <label>${esc(T('freq.label'))} <select id="life-freq">${['important', 'balanced', 'detailed'].map(k => `<option value="${k}" ${(s.freq || 'balanced') === k ? 'selected' : ''}>${esc(T(`freq.${k}`))}</option>`).join('')}</select></label>
         <label><input type="checkbox" id="life-lotto" ${s.noLottery ? '' : 'checked'}> ${esc(T('life.lotto'))}</label>
         <label><input type="checkbox" id="life-sensitive" ${s.noSensitive ? '' : 'checked'}> ${esc(T('life.sensitive'))}</label>
         <label><input type="checkbox" id="life-mature" ${s.mature ? 'checked' : ''}> ${esc(T('life.mature'))}</label>
         <label><input type="checkbox" id="life-pause" ${pref('les-play-pause', '1') === '1' ? 'checked' : ''}> ${esc(T('life.pauseOn'))}</label>
         <p class="note">${esc(T('life.storyTip'))}</p></details>`;
+    if (html === UI._lifeHtml && el.firstElementChild) return; // nothing changed: leave the page alone
+    el.innerHTML = html; UI._lifeHtml = html;
     const c = $('life-portrait');
     if (c && p) {
       const g = c.getContext('2d'), age = P.age(w, p);
@@ -242,6 +273,13 @@
       else if (b.dataset.invest) say(Pl.request(w, 'INVEST', { share: Number(b.dataset.invest) }));
       else if (b.dataset.sell) say(Pl.request(w, 'SELL', { share: Number(b.dataset.sell) }));
       else if (b.dataset.home) say(Pl.request(w, 'MOVE_HOME', { tier: Number(b.dataset.home) }));
+      else if (b.dataset.cancel) { Pl.cancel(w, b.dataset.cancel); UI.update(true); }
+      else if (b.dataset.buystock || b.dataset.sellstock) {
+        const tk = b.dataset.buystock || b.dataset.sellstock, n = Math.floor(Number(($(`stk-${tk}`) || {}).value));
+        if (!(n >= 1)) UI.toast(esc(T('money.qtyBad')));
+        else say(Pl.request(w, b.dataset.buystock ? 'BUY_STOCK' : 'SELL_STOCK', { tk, shares: n }));
+      }
+      else if (b.dataset.sellall) { const p = Pl.person(w); say(Pl.request(w, 'SELL_STOCK', { tk: b.dataset.sellall, shares: Pl.held(p, b.dataset.sellall) })); }
       else if (b.dataset.retire) { if (confirm(T('work.retireSure'))) say(Pl.request(w, 'RETIRE', {})); }
       else if (b.dataset.keep) say(Pl.request(w, 'KEEP_WORKING', {}));
       else if (b.dataset.succ) { const err = Pl.succeed(w, Number(b.dataset.succ), b.dataset.how); if (err) UI.toast(esc(T(`succ.err.${err}`))); else { UI._lifeSearch = ''; UI.app.focusPlayer(); } UI.update(true); }
@@ -274,7 +312,9 @@
       else if (b.dataset.choice) say(Pl.choose(w, b.dataset.uid, b.dataset.choice));
       else if (b.dataset.pass) { Pl.pass(w, b.dataset.pass); UI.update(true); }
     });
+    el.addEventListener('toggle', e => { const d = e.target; if (d.dataset && d.dataset.keep) { if (d.open) UI._lifeOpen.add(d.dataset.keep); else UI._lifeOpen.delete(d.dataset.keep); } }, true); // (toggle does not bubble)
     el.addEventListener('input', e => { // the search box: redraw only the results (keeps typing smooth)
+      if (e.target.id && e.target.id.startsWith('stk-')) UI._lifeInputs[e.target.id] = e.target.value;
       const w = where();
       if (e.target.id !== 'life-search' || !w) return;
       UI._lifeSearch = e.target.value;
@@ -283,6 +323,7 @@
     });
     el.addEventListener('change', e => {
       const w = where();
+      if (e.target.tagName === 'SELECT') e.target.blur(); // chosen: the page may redraw again
       if (e.target.id === 'life-freq' && w) w.player.freq = e.target.value;
       if (e.target.id === 'life-lotto' && w) { w.player.noLottery = !e.target.checked; UI.update(true); }
       if (e.target.id === 'life-sensitive' && w) w.player.noSensitive = !e.target.checked;

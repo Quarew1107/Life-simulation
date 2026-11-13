@@ -290,6 +290,31 @@
     s.inbox = s.inbox.filter(x => { if (x.expires > w.day) return true; journal(w, { kind: 'pass', ev: x.ev, key: 'evt.passed', params: { title: { key: `ev.${x.ev}.title`, params: x.params || {} } } }); return false; });
   }
 
+  // Requests wait until the next day starts; until then the player can take one back (nothing has happened yet).
+  Pl.cancel = function (w, id) {
+    const s = st(w), i = s ? s.pending.findIndex(c => c.id === id) : -1;
+    if (i < 0) return false;
+    const c = s.pending.splice(i, 1)[0];
+    c.status = 'cancelled'; c.code = 'cancelled'; c.day = w.day;
+    journal(w, { kind: 'cmd', cmd: c.kind, code: 'cancelled', key: 'cmd.cancelled', params: { what: Pl.describe(w, c) } });
+    return true;
+  };
+  // A request in words (act.<KIND>): the handler's own words for its target, plus the amounts asked for.
+  Pl.describe = function (w, c) {
+    const h = Pl.HANDLERS[c.kind], p = Pl.person(w), a = c.args || {};
+    let ps = {};
+    try { ps = h && h.params && p ? h.params(w, p, a) || {} : {}; } catch (e) { ps = {}; }
+    const x = {};
+    if (a.share !== undefined) x.pct = Math.round(a.share * 100);
+    if (a.amt !== undefined) x.amt = U.fmtMoney(a.amt);
+    if (a.shares !== undefined) x.shares = a.shares;
+    if (c.kind === 'SET_EFFORT') x.level = { key: `effort.${a.level}` };
+    if (c.kind === 'SET_EXERCISE') x.level = { key: `exercise.${a.level}` };
+    if (c.kind === 'BABY_WISH') x.wish = { key: `baby.${a.wish}` };
+    if (c.kind === 'SET_PLAN') x.plan = { key: `plan.${a.plan}` };
+    return { key: `act.${c.kind}`, params: Object.assign(x, ps) };
+  };
+
   // Let your character decide: the event closes now and their own routine carries on.
   Pl.pass = function (w, uid) {
     const s = st(w), item = s && (s.inbox || []).find(x => x.uid === uid);

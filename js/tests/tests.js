@@ -2583,6 +2583,43 @@
     LES.Countries.ensure(D);
   }
 
+  // Play a Life controls: cancelling a request before tomorrow; choosing which shares to buy or sell, and how many.
+  async function playControlsTests() {
+    print('--- Play a Life: planned requests and shares ---', 'info');
+    const Pl = LES.Player, D = LES.DEFAULTS, I = LES.I18n;
+    LES.Countries.ensure(D);
+    const make = seed => { const w = new LES.World(Object.assign({}, D, { seed, founders: 150, play: 'random', playStage: 'adult' })); Pl.begin(w); return w; };
+    // Cancelling: the request never happens, the journal says so, the other one still does.
+    const w = make('plc-q'), p = Pl.person(w);
+    w.ledger.pay('GENESIS', p, 'cash', w.px(50000));
+    const a = Pl.request(w, 'REST', {}).command, b = Pl.request(w, 'SEE_DOCTOR', {}).command;
+    const cash = p.cash, gone = Pl.cancel(w, b.id), again = Pl.cancel(w, b.id);
+    const words = I.render(Pl.describe(w, a));
+    w.player.hoursDay = -1; Pl.tick(w); // the requests only (the character's own day would also spend)
+    const j = w.player.journal;
+    check('A planned request can be cancelled before the day starts: it never happens, the journal says so, the rest still happen', gone && !again && j.some(e => e.key === 'cmd.cancelled' && I.render(e).includes('See a doctor')) && j.some(e => e.cmd === 'REST' && e.code === 'ok') && !j.some(e => e.cmd === 'SEE_DOCTOR' && e.code !== 'cancelled') && Math.abs(p.cash - cash) < 1 && words === 'Take a day off');
+    // Every kind of request has words in both languages (for the planned list).
+    const kinds = Object.keys(Pl.HANDLERS);
+    await new Promise(r => I.set('zh-Hans', r));
+    const missing = kinds.filter(k => !I.has(`act.${k}`, 'en') || !I.has(`act.${k}`, 'zh-Hans'));
+    await new Promise(r => I.set('en', r));
+    check('Every kind of request reads as a sentence in the planned list (English and Chinese)', !missing.length, missing.join(' '));
+    // Shares: the number asked for, at tomorrow's price, the fee included; selling some, then the rest.
+    const s = make('plc-s'), sp = Pl.person(s), st = s.mkt.stocks[0], tk = st.tk;
+    s.ledger.pay('GENESIS', sp, 'cash', s.px(200000));
+    const held0 = Pl.held(sp, tk), r1 = Pl.request(s, 'BUY_STOCK', { tk, shares: 10 }).command;
+    s.player.hoursDay = -1; Pl.tick(s);
+    check('Buying 10 shares of a chosen company gives exactly 10 more shares (fee included in the cost)', r1.code === 'ok' && Math.abs(Pl.held(sp, tk) - held0 - 10) < 0.01 && s.checkInvariants().length === 0, `${r1.code}, holds ${Pl.held(sp, tk)}`);
+    const r2 = Pl.request(s, 'SELL_STOCK', { tk, shares: 4 }).command; s.player.hoursDay = -1; Pl.tick(s);
+    const after = Pl.held(sp, tk), r3 = Pl.request(s, 'SELL_STOCK', { tk, shares: 1e6 }).command; s.player.hoursDay = -1; Pl.tick(s);
+    check('Selling 4 leaves 6 more than before; asking for more than you hold sells them all; books balance', r2.code === 'ok' && Math.abs(after - held0 - 6) < 0.01 && r3.code === 'ok' && Pl.held(sp, tk) === 0 && s.checkInvariants().length === 0);
+    const u0 = sp.inv.idx, r4 = Pl.request(s, 'BUY_STOCK', { tk: 'idx', shares: 100 }).command; s.player.hoursDay = -1; Pl.tick(s);
+    const r5 = Pl.request(s, 'BUY_STOCK', { tk, shares: 1e9 }).command, r6 = Pl.request(s, 'SELL_STOCK', { tk: 'NOPE', shares: 1 }).command, r7 = Pl.request(s, 'BUY_STOCK', { tk: s.mkt.stocks[1].tk, shares: -3 }).command; s.player.hoursDay = -1; Pl.tick(s);
+    check('Index-fund units work the same way; too many shares to afford, an unknown company or a bad number are refused', r4.code === 'ok' && Math.abs(sp.inv.idx - u0 - 100) < 0.01 && r5.code === 'cant_afford' && r6.code === 'no_stock' && r7.code === 'bad_args');
+    check('The market list shows the index fund and every listed company with its price and your holding', Pl.market(s, sp).length === s.mkt.stocks.length + 1 && Pl.market(s, sp).every(m => m.price > 0 && Number.isFinite(m.ret)));
+    LES.Countries.ensure(D);
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -2638,6 +2675,7 @@
       await playSocietyTests();
       await playWellbeingTests();
       await playSeniorTests();
+      await playControlsTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -2649,6 +2687,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

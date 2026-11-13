@@ -495,3 +495,14 @@ button.small { padding: 3px 10px; font-size: 12px; }
 .life-settings summary { cursor: pointer; color: var(--muted); }
 .life-settings label { display: block; margin: 6px 0; }
 .life-cats button { text-transform: capitalize; }
+/* Planned for tomorrow (cancellable), shares, folded sections. */
+.life-queue { border-color: var(--teal); }
+.life-queue li { align-items: center; gap: 6px; padding: 3px 0; border-bottom: 1px dashed var(--line); }
+.life-more summary { cursor: pointer; color: var(--gold); margin: 8px 0 4px; }
+.life-stocks li { display: block; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.life-stock-head { display: flex; gap: 6px; align-items: baseline; }
+.life-stock-head span { margin-left: auto; white-space: nowrap; }
+.life-stock-row { display: flex; gap: 6px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 3px; }
+.life-stock-row input { width: 70px; margin-right: 4px; }
+.life-stocks .link { background: none; border: none; color: var(--muted); text-decoration: underline; cursor: pointer; padding: 2px 4px; }
+.life-stocks .up { color: var(--teal); } .life-stocks .down { color: var(--red); }

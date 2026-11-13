@@ -31,7 +31,46 @@
     return out.sort((a, b) => b.chance - a.chance);
   };
 
+  // Shares on the town's exchange, and the index fund, priced per unit (sen). Buying keeps 2 months of costs.
+  Pl.unitPrice = (w, tk) => (tk === 'idx' ? w.mkt.idx : w.mkt.byTk[tk] ? w.mkt.byTk[tk].price : 0);
+  Pl.held = (p, tk) => (tk === 'idx' ? p.inv.idx : p.inv.st[tk] || 0);
+  Pl.buyCost = (w, tk, shares) => Math.ceil(shares * Pl.unitPrice(w, tk) / 0.995); // the 0.5% fee included
+  const stockName = (w, tk) => (tk === 'idx' ? { key: 'money.indexFund' } : w.mkt.byTk[tk] ? w.mkt.byTk[tk].def.name : tk);
+  // What the player can trade: the index fund and every listed company, with price, last month and holdings.
+  Pl.market = (w, p) => [{ tk: 'idx', name: stockName(w, 'idx'), price: w.mkt.idx, ret: LES.Market.retOver(w, 21), held: p.inv.idx }]
+    .concat(w.mkt.stocks.map(s => ({ tk: s.tk, name: s.def.name, sector: s.def.sector || '', price: s.price, ret: LES.Market.stockRet(s, 21), held: p.inv.st[s.tk] || 0 })));
+
   Object.assign(Pl.HANDLERS, {
+    // Buy a number of shares (or index-fund units) at tomorrow's price, through Finance.buy (fee 0.5%).
+    BUY_STOCK: {
+      hours: 1, cooldown: 0, adult: true, key: a => `buy:${a.tk}`,
+      check(w, p, a) {
+        if (!Pl.unitPrice(w, a.tk)) return 'no_stock';
+        if (!(a.shares > 0) || !Number.isFinite(a.shares)) return 'bad_args';
+        return Pl.buyCost(w, a.tk, a.shares) > p.cash - 2 * p.mcost ? 'cant_afford' : null;
+      },
+      params(w, p, a) { return { name: stockName(w, a.tk), shares: a.shares, cost: Pl.unitPrice(w, a.tk) ? U.fmtMoney(Pl.buyCost(w, a.tk, a.shares || 0)) : '' }; },
+      run(w, p, a) {
+        const cost = Pl.buyCost(w, a.tk, a.shares);
+        F.buy(w, p, a.tk, cost, 'your choice'); st(w).played = true;
+        return { code: 'ok', params: { name: stockName(w, a.tk), shares: a.shares, cost: U.fmtMoney(cost), price: U.fmtPrice(Pl.unitPrice(w, a.tk)) } };
+      },
+    },
+    // Sell a number of shares (all of them if you ask for more than you hold), through Finance.sell.
+    SELL_STOCK: {
+      hours: 1, cooldown: 0, adult: true, key: a => `sell:${a.tk}`,
+      check(w, p, a) {
+        if (!Pl.unitPrice(w, a.tk)) return 'no_stock';
+        if (!(a.shares > 0) || !Number.isFinite(a.shares)) return 'bad_args';
+        return Pl.held(p, a.tk) <= 0 ? 'nothing' : null;
+      },
+      params(w, p, a) { return { name: stockName(w, a.tk), shares: a.shares }; },
+      run(w, p, a) {
+        const n = Math.min(a.shares, Pl.held(p, a.tk)), got = F.sell(w, p, a.tk, n * Pl.unitPrice(w, a.tk), 'your choice');
+        st(w).played = true;
+        return { code: 'ok', params: { name: stockName(w, a.tk), shares: Math.round(n * 100) / 100, amt: U.fmtMoney(got) } };
+      },
+    },
     ASK_RAISE: {
       hours: 2, cooldown: 180, adult: true, key: () => 'raise',
       check(w, p) { if (!p.job) return 'no_job'; if (p.job.fixedTitle) return 'in_office'; if (w.day - p.job.startDay < 180) return 'too_soon'; return p.job.level >= 5 ? 'top' : null; },

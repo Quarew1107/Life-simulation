@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>My life redesign A: Life hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="mock.css">
+<style>
+.side { width:430px; background:var(--panel); border-left:1px solid var(--line); padding:12px; display:flex; flex-direction:column; gap:10px; }
+.tabs { display:flex; gap:4px; } .tabs span { flex:1; text-align:center; padding:6px 0; border-radius:8px; color:var(--muted); font-size:11px; border:1px solid transparent; }
+.tabs span.on { color:var(--gold); border-color:var(--gold); background:rgba(242,193,78,.08); }
+.who { display:flex; gap:12px; align-items:center; }
+.who .name { font:700 16px var(--ui); color:var(--gold); }
+.rings { display:flex; gap:14px; margin-left:auto; padding-bottom:14px; }
+.decision { border:1px solid var(--gold); background:rgba(242,193,78,.07); border-radius:10px; padding:10px 12px; }
+.decision .opts { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.day { display:flex; gap:3px; margin:6px 0; } .day i { flex:1; height:16px; border-radius:3px; background:#26303b; }
+.tiles { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.tile { background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:10px; position:relative; min-height:78px; }
+.tile .ic { font-size:20px; } .tile b { display:block; font-size:13px; margin:2px 0; }
+.tile .hint { position:absolute; right:8px; top:8px; background:var(--teal); color:#062; font-size:10px; font-weight:700; border-radius:9px; padding:1px 7px; color:#032; }
+.drill { position:absolute; left:270px; top:66px; width:430px; bottom:16px; background:var(--panel); border:2px solid var(--gold); border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:10px; box-shadow:0 10px 40px rgba(0,0,0,.6); }
+.stock { display:grid; grid-template-columns:1fr auto; gap:2px 8px; padding:7px 0; border-bottom:1px solid var(--line); }
+.stepper { display:inline-flex; border:1px solid var(--line); border-radius:7px; overflow:hidden; } .stepper span { padding:3px 9px; background:var(--panel-2); } .stepper span.n { background:#0f141a; min-width:40px; text-align:center; }
+.alloc { display:flex; height:12px; border-radius:6px; overflow:hidden; margin:6px 0 2px; }
+</style></head><body><div class="frame">
+<div class="top"><span class="logo">LES</span><span class="ttl">LIFE EVOLUTION SIMULATOR</span><span class="date">15 JAN Y1</span><span class="badge">🎮 Amir Salleh, 32 · Adult</span>
+<div class="speeds"><span>▶</span><span>1×</span><span>10×</span><span class="on">Story</span><span>10d/s</span><span>MAX</span></div></div>
+<div class="row" style="flex:1;align-items:stretch;gap:0">
+<div class="map" id="map"></div>
+<div class="side">
+  <div class="tabs"><span class="on">🧍 My life</span><span>Person</span><span>Leaders</span><span>Events</span><span>Stats</span><span>More ▾</span></div>
+  <div class="card who"><div class="portrait"></div><div><div class="name">Amir Salleh</div><div class="muted">32 · Adult · Bandar Rezeki</div><div>💼 Teacher · RM3,240/mo</div><div class="small muted">Cash <b class="gold">RM8,079</b> · worth RM112k</div></div>
+    <div class="rings"><div class="ring" style="background:conic-gradient(var(--green) 92%,#26303b 0)"><span style="background:var(--panel);border-radius:50%;width:42px;height:42px;display:grid;place-items:center">92</span><small>Health</small></div>
+    <div class="ring" style="background:conic-gradient(var(--teal) 66%,#26303b 0)"><span style="background:var(--panel);border-radius:50%;width:42px;height:42px;display:grid;place-items:center">66</span><small>Happy</small></div>
+    <div class="ring" style="background:conic-gradient(var(--red) 24%,#26303b 0)"><span style="background:var(--panel);border-radius:50%;width:42px;height:42px;display:grid;place-items:center">24</span><small>Stress</small></div></div></div>
+  <div class="decision"><div class="row between"><b>💍 Time to marry?</b><span class="small muted">18 days left</span></div>
+    <div class="small">You and Siew Lan have been together for a year.</div>
+    <div class="opts"><span class="btn primary sm">Propose: wedding · RM3,500</span><span class="btn sm">Civil ceremony · RM1,167</span><span class="btn sm">Talk first</span><span class="btn ghost sm muted">Let them decide</span></div></div>
+  <div class="card"><div class="row between"><h3 style="margin:0">Tomorrow · 6 of 8 hours</h3><span class="small muted">runs at 00:00</span></div>
+    <div class="day"><i style="background:var(--pink)"></i><i style="background:var(--pink)"></i><i style="background:var(--pink)"></i><i style="background:var(--pink)"></i><i style="background:var(--blue)"></i><i style="background:var(--blue)"></i><i></i><i></i></div>
+    <div class="row" style="flex-wrap:wrap;gap:6px"><span class="chip">❤ Visit Mum · 4h <b class="muted">✕</b></span><span class="chip">📈 Buy 25 Rezeki Bank · 1h <b class="muted">✕</b></span><span class="chip">💼 Ask for a raise · 2h <b class="muted">✕</b></span></div></div>
+  <div class="tiles">
+    <div class="tile"><span class="hint">1 idea</span><div class="ic">💼</div><b>Work</b><div class="small muted">Teacher · level 2 · 14 months</div></div>
+    <div class="tile"><div class="ic">💰</div><b>Money</b><div class="small muted">Cash RM8.1k · shares RM2.1k · rent RM900</div></div>
+    <div class="tile"><span class="hint">!</span><div class="ic">❤</div><b>Love &amp; family</b><div class="small muted">Siew Lan · 1 child (Balqis, 12)</div></div>
+    <div class="tile"><div class="ic">🩺</div><b>Health</b><div class="small muted">Feeling fine · light exercise</div></div>
+    <div class="tile"><div class="ic">🎓</div><b>Learn</b><div class="small muted">No course · 3 open to you</div></div>
+    <div class="tile"><div class="ic">🤝</div><b>Community</b><div class="small muted">Election 3 Mar · 2 newcomers</div></div>
+  </div>
+  <div class="card" style="flex:1"><h3>Latest</h3><div class="small"><span class="muted">14 Jan</span> You bought 25 Rezeki Bank at RM8.61</div><div class="small"><span class="muted">10 Jan</span> Your employer said not yet.</div><div class="small"><span class="muted">2 Jan</span> 📩 New decision: Time to marry?</div><div class="small gold" style="margin-top:6px">Full life story ▸</div></div>
+</div></div>
+<div class="drill">
+  <div class="row between"><span class="btn sm">← Back</span><b style="font-size:15px">💰 Money</b><span class="small muted">Cash RM8,079</span></div>
+  <div class="card"><h3>Where your money is</h3><div class="alloc"><i style="flex:8;background:var(--gold)"></i><i style="flex:2;background:var(--teal)"></i><i style="flex:46;background:var(--blue)"></i></div>
+    <div class="small"><span class="gold">■</span> Cash RM8.1k &nbsp; <span class="teal">■</span> Shares RM2.1k &nbsp; <span style="color:var(--blue)">■</span> Index fund RM45.6k</div>
+    <div class="small muted" style="margin-top:4px">Monthly: pay RM3,240 · costs RM2,180 · spare <b class="green">+RM1,060</b></div></div>
+  <div class="card" style="flex:1"><div class="row between"><h3 style="margin:0">Shares</h3><span class="chip on">All</span></div>
+    <div class="stock"><div><b>Rezeki Bank</b> <span class="small muted">RZBANK · Finance</span><div class="small muted">You own 25 (RM215)</div></div><div style="text-align:right">RM8.61 <span class="small green">+2.4%</span><div class="row" style="margin-top:4px"><span class="stepper"><span>−</span><span class="n">10</span><span>+</span></span><span class="btn sm primary">Buy</span><span class="btn sm">Sell</span></div></div></div>
+    <div class="stock"><div><b>Tani Plantations</b> <span class="small muted">TANI · Plantation</span><div class="small muted">≈ RM51 for 10</div></div><div style="text-align:right">RM5.12 <span class="small red">−1.1%</span><div class="row" style="margin-top:4px"><span class="stepper"><span>−</span><span class="n">10</span><span>+</span></span><span class="btn sm primary">Buy</span></div></div></div>
+    <div class="stock"><div><b>Kilat Tech</b> <span class="small muted">KILAT · Technology</span><div class="small muted">≈ RM24 for 10</div></div><div style="text-align:right">RM2.40 <span class="small green">+6.0%</span><div class="row" style="margin-top:4px"><span class="stepper"><span>−</span><span class="n">10</span><span>+</span></span><span class="btn sm primary">Buy</span></div></div></div>
+    <h4>Home</h4><div class="row between"><span>Flat · RM900/mo</span><span class="btn sm">Look at homes</span></div>
+    <h4>Lottery</h4><div class="row between"><span class="small muted">RM3 a ticket · 60% back on average</span><span class="btn sm">Buy a ticket</span></div></div>
+</div>
+<div class="note r" style="left:16px;top:110px">Tap a tile → its own page.<br><b>One topic at a time</b>, with a Back button.</div>
+<div class="note r" style="left:930px;top:300px;max-width:215px">Decisions on top, in plain sight</div>
+<div class="note r" style="left:930px;top:410px;max-width:215px"><b>Tomorrow</b>: an 8-hour bar; ✕ cancels</div>
+<div class="note r" style="left:930px;top:560px;max-width:215px">Each tile: status at a glance + a dot when something is worth doing</div>
+<div class="label">A · Life hub (in the side panel)<span>Home screen of tiles; tap one to open a focused page. Map stays visible.</span></div>
+</div>
+<script>
+const m=document.getElementById('map'), cols=['#5a6b4a','#6d5b46','#4d6a7a','#7a6a40','#5c4f6e','#466b5a','#80553f','#55606b'];
+let k=7; for(let y=8;y<820;y+=66) for(let x=8;x<1160;x+=86){ k=(k*1103515245+12345)%2147483648; const i=document.createElement('i'); i.style.left=x+'px'; i.style.top=y+'px'; i.style.background=cols[k%cols.length]; m.appendChild(i); }
+</script>
+</body></html>

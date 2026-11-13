@@ -1,0 +1,44 @@
+/* Shared look for the My life redesign mockups (pictures only; not used by the app). */
+:root { --bg:#0f141a; --panel:#161d25; --panel-2:#1c252f; --line:#2a3542; --text:#e8edf2; --muted:#8c9aab; --gold:#f2c14e; --teal:#3ec7b5; --red:#ff6b6b; --green:#57d38c; --blue:#5aa9e6; --pink:#ff8fb1; --violet:#a98bff;
+  --pixel:"Silkscreen",monospace; --ui:Inter,"Segoe UI",system-ui,sans-serif; }
+* { box-sizing:border-box; }
+html,body { margin:0; width:1600px; height:900px; background:var(--bg); color:var(--text); font:13px/1.45 var(--ui); overflow:hidden; }
+.frame { position:relative; width:1600px; height:900px; display:flex; flex-direction:column; }
+.top { height:52px; display:flex; align-items:center; gap:14px; padding:0 16px; background:var(--panel); border-bottom:1px solid var(--line); }
+.logo { font:700 13px var(--pixel); background:var(--gold); color:#000; padding:4px 7px; border-radius:6px; }
+.ttl { font:700 12px var(--pixel); letter-spacing:.5px; }
+.date { font:700 13px var(--pixel); color:var(--gold); }
+.badge { border:1px solid var(--gold); color:var(--gold); border-radius:16px; padding:3px 12px; font-weight:600; }
+.speeds { display:flex; gap:2px; margin-left:auto; }
+.speeds span { padding:4px 8px; border:1px solid var(--line); border-radius:6px; color:var(--muted); font-size:12px; }
+.speeds span.on { background:var(--gold); color:#000; border-color:var(--gold); }
+.map { position:relative; flex:1; background:#1f2b1f; overflow:hidden; }
+.map::before { content:""; position:absolute; inset:0; background:
+  repeating-linear-gradient(0deg, transparent 0 58px, #3a4048 58px 66px), repeating-linear-gradient(90deg, transparent 0 78px, #3a4048 78px 86px); }
+.map i { position:absolute; width:62px; height:42px; border-radius:3px; opacity:.85; }
+.card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px; }
+h3 { margin:0 0 8px; font:700 11px var(--pixel); letter-spacing:.6px; color:var(--muted); text-transform:uppercase; }
+h4 { margin:10px 0 6px; font-size:12px; color:var(--muted); font-weight:600; }
+.btn { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line); background:var(--panel-2); color:var(--text); border-radius:8px; padding:6px 11px; font-weight:600; font-size:12px; }
+.btn.primary { background:var(--gold); color:#111; border-color:var(--gold); }
+.btn.teal { border-color:var(--teal); color:var(--teal); }
+.btn.ghost { background:none; }
+.btn.sm { padding:3px 8px; font-size:11px; }
+.chip { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--line); border-radius:14px; padding:3px 10px; font-size:12px; background:var(--panel-2); }
+.chip.on { border-color:var(--gold); color:var(--gold); }
+.muted { color:var(--muted); } .gold { color:var(--gold); } .teal { color:var(--teal); } .red { color:var(--red); } .green { color:var(--green); }
+.small { font-size:11px; }
+.row { display:flex; align-items:center; gap:8px; }
+.between { justify-content:space-between; }
+.portrait { width:60px; height:76px; border-radius:8px; background:linear-gradient(#26313d,#1b232c); border:1px solid var(--line); position:relative; flex:none; }
+.portrait::before { content:""; position:absolute; left:20px; top:10px; width:20px; height:20px; background:#c98b5d; box-shadow:0 -6px 0 #2b1d14; }
+.portrait::after { content:""; position:absolute; left:14px; top:32px; width:32px; height:34px; background:#3e6fb0; border-radius:4px 4px 0 0; }
+.ring { width:54px; height:54px; border-radius:50%; display:grid; place-items:center; font-weight:700; font-size:13px; position:relative; }
+.ring small { position:absolute; bottom:-16px; font-size:10px; color:var(--muted); font-weight:500; white-space:nowrap; }
+.bar { height:8px; border-radius:4px; background:#26303b; overflow:hidden; } .bar i { display:block; height:100%; }
+.note { position:absolute; background:#fff8dc; color:#3a2f00; font:600 13px/1.35 var(--ui); padding:8px 11px; border-radius:8px; box-shadow:0 4px 14px rgba(0,0,0,.45); max-width:250px; z-index:5; }
+.note b { color:#7a4b00; }
+.note::after { content:""; position:absolute; width:10px; height:10px; background:#fff8dc; transform:rotate(45deg); }
+.note.l::after { left:-5px; top:14px; } .note.r::after { right:-5px; top:14px; } .note.t::after { top:-5px; left:20px; } .note.b::after { bottom:-5px; left:20px; }
+.label { position:absolute; left:16px; bottom:14px; z-index:6; background:rgba(0,0,0,.72); border:1px solid var(--gold); color:var(--gold); padding:8px 14px; border-radius:10px; font:700 15px var(--ui); }
+.label span { display:block; color:var(--text); font:500 12px var(--ui); margin-top:2px; }

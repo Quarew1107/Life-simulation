@@ -357,6 +357,26 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
     choose -> carries on. Visits now include grandchildren. Eight senior events SE-001/011/012/015/018/023/026/045.
     Texts that promised "a later update" are updated. Tests: `playSeniorTests` (11).
   - **Next: PL-13** (catalogue rollout in small tranches) - waiting for the owner's go-ahead. Full suite 516/516.
+  - Owner requests, Nov 14 2026 (after PL-12):
+    - **Planned for tomorrow:** a list of queued requests, each with Cancel (`Player.cancel`, journaled
+      `cmd.cancelled`). `Player.describe` words every kind (`act.<KIND>`, English and Chinese; a test checks all
+      kinds). It warns when the plan is over 8 hours.
+    - **Bug: folded sections and dropdowns closed at once.** The tab is redrawn every 0.2 s. It now:
+      - keeps `<details data-keep>` open (read from the page before each redraw);
+      - skips redrawing while a list or text box is in use;
+      - skips identical redraws;
+      - remembers typed numbers.
+    - **Choose shares:** `BUY_STOCK` / `SELL_STOCK` take `{ tk, shares }`, where `tk` is `'idx'` for the index
+      fund. Buying costs shares x price / 0.995 (the fee included) through `Finance.buy`; selling goes through
+      `Finance.sell`. Asking to sell more than you hold sells them all. Money tab: a "Shares and the index fund"
+      section with price, 1-month change, holding, a number box and Buy / Sell / sell all. Tests:
+      `playControlsTests` (6). Full suite 522/522.
+    - **My life redesign: three options, waiting for the owner's choice.** Pictures and mockups are in
+      `docs/design/`:
+      - A: Life hub (tiles in the side panel, drill-down pages);
+      - B: Day planner (a drawer under the map with an 8-hour timeline and an activity list);
+      - C: Life story view (a full-screen story with "Live on until something happens").
+      Build only after the owner picks one.
   - Sources for the plan: ONS LTIM YE Dec 2024 (+345k revised) and long-term assumption +340k/yr; Census Vintage
     2024 (+2.8M) and projections (~0.9M/yr); DOSM CPE 2024/2026; NBS 2024 communique.
 

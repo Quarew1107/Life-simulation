@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>My life redesign C: Life story view</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="mock.css">
+<style>
+.body { flex:1; display:grid; grid-template-columns:330px 1fr; gap:0; position:relative; }
+.left { background:var(--panel); border-right:1px solid var(--line); padding:16px; display:flex; flex-direction:column; gap:12px; }
+.big { width:96px; height:122px; } .big::before { left:32px; top:16px; width:32px; height:32px; box-shadow:0 -9px 0 #2b1d14; } .big::after { left:22px; top:52px; width:52px; height:56px; }
+.stat { display:grid; grid-template-columns:22px 1fr 30px; gap:6px; align-items:center; margin:5px 0; }
+.fam { display:flex; gap:8px; flex-wrap:wrap; }
+.fam .p { text-align:center; width:66px; font-size:11px; } .fam .p i { display:block; width:34px; height:34px; border-radius:50%; margin:0 auto 3px; background:#2b3642; border:2px solid var(--line); }
+.story { padding:16px 26px; overflow:hidden; position:relative; }
+.now { border:2px solid var(--gold); border-radius:12px; padding:14px 16px; background:rgba(242,193,78,.08); }
+.now .opts { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:10px; }
+.now .opts span { border:1px solid var(--line); background:var(--panel-2); border-radius:9px; padding:9px; font-weight:600; font-size:12.5px; }
+.now .opts span small { display:block; color:var(--muted); font-weight:500; margin-top:2px; }
+.year { margin:18px 0 6px; font:700 11px var(--pixel); color:var(--muted); letter-spacing:.6px; display:flex; align-items:center; gap:10px; } .year::after { content:""; flex:1; height:1px; background:var(--line); }
+.ev { display:grid; grid-template-columns:34px 1fr auto; gap:10px; padding:8px 10px; border-radius:9px; align-items:start; }
+.ev:nth-child(odd) { background:rgba(255,255,255,.02); }
+.ev .ic { width:30px; height:30px; border-radius:8px; display:grid; place-items:center; background:var(--panel-2); font-size:15px; }
+.dock { position:absolute; left:26px; right:26px; bottom:16px; display:flex; gap:10px; align-items:center; background:rgba(22,29,37,.96); border:1px solid var(--line); border-radius:14px; padding:10px 12px; box-shadow:0 -6px 30px rgba(0,0,0,.5); }
+.sheet { position:absolute; right:26px; bottom:84px; width:520px; background:var(--panel); border:2px solid var(--teal); border-radius:14px; padding:12px; box-shadow:0 10px 40px rgba(0,0,0,.65); }
+.sheet .grid { display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-top:8px; }
+.sheet .grid span { border:1px solid var(--line); background:var(--panel-2); border-radius:9px; padding:8px; font-size:12px; font-weight:600; }
+.sheet .grid small { display:block; color:var(--muted); font-weight:500; }
+.pip { position:absolute; right:26px; top:14px; width:250px; height:150px; border-radius:10px; overflow:hidden; border:2px solid var(--line); }
+.pip .map { position:absolute; inset:0; } .pip b { position:absolute; left:8px; bottom:6px; background:rgba(0,0,0,.6); padding:2px 8px; border-radius:6px; font-size:11px; z-index:2; }
+</style></head><body><div class="frame">
+<div class="top"><span class="logo">LES</span><span class="ttl">LIFE EVOLUTION SIMULATOR</span><span class="date">15 JAN Y1</span><span class="badge">🎮 Amir Salleh, 32 · Adult</span>
+<span class="btn sm" style="margin-left:18px">🗺 Town view</span><span class="btn sm primary">📖 My life</span>
+<div class="speeds"><span>▶</span><span>1×</span><span>10×</span><span class="on">Story</span><span>10d/s</span><span>MAX</span></div></div>
+<div class="body">
+<div class="left">
+  <div class="row" style="gap:14px"><div class="portrait big"></div><div><div class="gold" style="font:700 18px var(--ui)">Amir Salleh</div><div class="muted">32 · Adult</div><div>💼 Teacher</div><div class="small muted">RM3,240 a month</div><div class="small muted">Bandar Rezeki</div></div></div>
+  <div class="card"><div class="stat"><span>❤</span><div class="bar"><i style="width:92%;background:var(--green)"></i></div><b>92</b></div><div class="stat"><span>😊</span><div class="bar"><i style="width:66%;background:var(--teal)"></i></div><b>66</b></div><div class="stat"><span>😣</span><div class="bar"><i style="width:24%;background:var(--red)"></i></div><b>24</b></div><div class="stat"><span>⚡</span><div class="bar"><i style="width:71%;background:var(--blue)"></i></div><b>71</b></div></div>
+  <div class="card"><h3>Family</h3><div class="fam"><div class="p"><i style="border-color:var(--pink)"></i>Siew Lan<br><span class="muted">partner</span></div><div class="p"><i></i>Balqis<br><span class="muted">12</span></div><div class="p"><i></i>Mum<br><span class="muted">61</span></div><div class="p"><i style="border-style:dashed"></i><span class="muted">+ more</span></div></div></div>
+  <div class="card"><h3>Money</h3><div class="row between"><span>Cash</span><b class="gold">RM8,079</b></div><div class="row between"><span>Shares &amp; fund</span><b>RM47.7k</b></div><div class="row between"><span>Each month</span><b class="green">+RM1,060</b></div></div>
+  <div class="card"><h3>Goal</h3><div class="small">Own a home by 40</div><div class="bar" style="margin-top:6px"><i style="width:38%;background:var(--gold)"></i></div></div>
+</div>
+<div class="story">
+  <div class="pip"><div class="map" id="map"></div><b>🗺 Town · click to open</b></div>
+  <div style="margin-right:280px">
+    <div class="year" style="margin-top:0">NOW</div>
+    <div class="now"><div class="row between"><b style="font-size:16px">💍 Time to marry?</b><span class="small muted">answer within 18 days</span></div>
+      <div style="margin-top:4px">You and Siew Lan have been together for a year. She would have to say yes.</div>
+      <div class="opts"><span>Propose with a wedding<small>RM3,500 · she decides</small></span><span>A simple civil ceremony<small>RM1,167 · she decides</small></span><span>Talk about the future first<small>nothing changes yet</small></span></div>
+      <div class="small muted" style="margin-top:8px">or let Amir decide for himself ▸</div></div>
+    <div class="year">AGE 32 · YEAR 1</div>
+    <div class="ev"><span class="ic">📈</span><div><b>Bought 25 Rezeki Bank shares</b><div class="small muted">RM8.61 each · RM215 with the fee</div></div><span class="small muted">14 Jan</span></div>
+    <div class="ev"><span class="ic">💼</span><div><b>Asked for a raise: "not yet"</b><div class="small muted">Your record: 71% · ask again in 6 months</div></div><span class="small muted">10 Jan</span></div>
+    <div class="ev"><span class="ic">❤</span><div><b>Moved in with Siew Lan</b><div class="small muted">after 4 dates · new home: a flat in Taman Sentosa</div></div><span class="small muted">2 Jan</span></div>
+    <div class="year">AGE 31</div>
+    <div class="ev"><span class="ic">🎓</span><div><b>Finished a Diploma in Education</b><div class="small muted">promoted to Teacher II the next month</div></div><span class="small muted">Nov</span></div>
+  </div>
+  <div class="sheet"><div class="row between"><b>＋ Do something</b><span class="small muted">🔍 search · 33 things</span></div>
+    <div class="row" style="gap:5px;flex-wrap:wrap;margin-top:8px"><span class="chip on">⭐ Suggested</span><span class="chip">💼 Work</span><span class="chip">💰 Money</span><span class="chip">❤ Family</span><span class="chip">🩺 Health</span><span class="chip">🎓 Learn</span><span class="chip">🤝 Town</span></div>
+    <div class="grid"><span>👩 Visit Mum<small>4h · she's been unwell</small></span><span>💼 Ask for a raise<small>2h · ~20% chance</small></span><span>📈 Buy or sell shares<small>opens the market</small></span><span>🏖 Holiday<small>4 days · RM1,300</small></span></div></div>
+  <div class="dock"><span class="btn primary" style="font-size:14px;padding:9px 16px">▶ Live on until something happens</span><span class="btn teal" style="font-size:14px;padding:9px 16px">＋ Do something</span>
+    <span class="chip">⏳ Tomorrow: Visit Mum · Buy shares <b class="muted">✕</b></span><span class="small muted" style="margin-left:auto">Story speed · pauses at each decision</span></div>
+</div></div>
+<div class="note l" style="left:870px;top:260px;max-width:220px">Your life as a <b>story</b>, newest first, grouped by age.</div>
+<div class="note t" style="left:430px;top:770px;max-width:290px"><b>Live on</b> runs the town until your next decision, then stops.</div>
+<div class="note r" style="left:780px;top:520px;max-width:230px">Actions open as a sheet: <b>Suggested</b> first, the rest by topic.</div>
+<div class="label" style="left:16px;max-width:300px">C · Life story view (a full screen of its own)<span>Switch between Town view and My life; the map shrinks to a corner window.</span></div>
+</div>
+<script>
+const m=document.getElementById('map'), cols=['#5a6b4a','#6d5b46','#4d6a7a','#7a6a40','#5c4f6e','#466b5a','#80553f','#55606b'];
+let k=3; for(let y=4;y<150;y+=33) for(let x=4;x<250;x+=43){ k=(k*1103515245+12345)%2147483648; const i=document.createElement('i'); i.style.left=x+'px'; i.style.top=y+'px'; i.style.width='31px'; i.style.height='21px'; i.style.background=cols[k%cols.length]; m.appendChild(i); }
+</script>
+</body></html>

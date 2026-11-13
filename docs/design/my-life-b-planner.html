@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>My life redesign B: Day planner</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="mock.css">
+<style>
+.drawer { height:430px; background:var(--panel); border-top:2px solid var(--gold); display:grid; grid-template-columns:330px 1fr 470px; gap:12px; padding:10px 14px 14px; }
+.grip { position:absolute; left:50%; transform:translateX(-50%); top:-14px; background:var(--gold); color:#111; font:700 11px var(--ui); padding:2px 14px; border-radius:8px 8px 0 0; }
+.mini { display:flex; gap:10px; align-items:center; }
+.meter { display:grid; grid-template-columns:62px 1fr 26px; gap:6px; align-items:center; font-size:12px; margin:3px 0; }
+.dec { border:1px solid var(--gold); border-radius:9px; padding:8px 10px; background:rgba(242,193,78,.07); margin-top:8px; }
+.track { position:relative; height:66px; border:1px solid var(--line); border-radius:9px; background:repeating-linear-gradient(90deg,#1a222b 0 calc(12.5% - 1px),#2a3542 calc(12.5% - 1px) 12.5%); margin-top:6px; }
+.blk { position:absolute; top:8px; bottom:8px; border-radius:7px; padding:5px 8px; font-size:12px; font-weight:600; color:#111; overflow:hidden; }
+.blk small { display:block; font-weight:500; opacity:.8; }
+.blk .x { position:absolute; right:6px; top:4px; font-weight:800; }
+.hours { display:flex; justify-content:space-between; font-size:10px; color:var(--muted); margin-top:3px; }
+.sum { display:flex; gap:10px; margin-top:12px; }
+.sum .card { flex:1; padding:8px 10px; }
+.act { display:grid; grid-template-columns:30px 1fr auto; gap:4px 10px; align-items:center; padding:8px; border:1px solid var(--line); border-radius:9px; background:var(--panel-2); margin-bottom:6px; }
+.act .ic { font-size:18px; text-align:center; }
+.act .meta { display:flex; gap:6px; flex-wrap:wrap; margin-top:3px; }
+.tag { font-size:10.5px; border-radius:6px; padding:1px 6px; background:#0f141a; border:1px solid var(--line); color:var(--muted); }
+.tag.c { color:var(--gold); } .tag.o { color:var(--teal); }
+.search { border:1px solid var(--line); border-radius:8px; padding:6px 10px; color:var(--muted); background:#0f141a; margin:6px 0 8px; }
+.sideTabs { position:absolute; right:0; top:52px; width:300px; bottom:430px; background:var(--panel); border-left:1px solid var(--line); padding:10px; }
+</style></head><body><div class="frame">
+<div class="top"><span class="logo">LES</span><span class="ttl">LIFE EVOLUTION SIMULATOR</span><span class="date">15 JAN Y1</span><span class="badge">🎮 Amir Salleh, 32 · Adult</span>
+<div class="speeds"><span>▶</span><span>1×</span><span>10×</span><span class="on">Story</span><span>10d/s</span><span>MAX</span></div></div>
+<div class="map" id="map"></div>
+<div class="sideTabs"><h3>Person · Leaders · Events · Stats</h3><div class="small muted">The side panel keeps the town's other tabs. My life moves to the drawer below.</div></div>
+<div class="drawer" style="position:relative"><span class="grip">▾ My life</span>
+  <div>
+    <div class="mini"><div class="portrait"></div><div><b class="gold" style="font-size:15px">Amir Salleh</b><div class="muted small">32 · Teacher · RM3,240/mo</div><div class="small">Cash <b class="gold">RM8,079</b></div></div></div>
+    <div style="margin-top:8px"><div class="meter"><span>Health</span><div class="bar"><i style="width:92%;background:var(--green)"></i></div><b>92</b></div>
+    <div class="meter"><span>Happy</span><div class="bar"><i style="width:66%;background:var(--teal)"></i></div><b>66</b></div>
+    <div class="meter"><span>Stress</span><div class="bar"><i style="width:24%;background:var(--red)"></i></div><b>24</b></div>
+    <div class="meter"><span>Energy</span><div class="bar"><i style="width:71%;background:var(--blue)"></i></div><b>71</b></div></div>
+    <div class="dec"><div class="row between"><b>💍 Time to marry?</b><span class="small muted">18 days</span></div><div class="small muted">Siew Lan · together 1 year</div>
+      <div class="row" style="flex-wrap:wrap;gap:5px;margin-top:6px"><span class="btn sm primary">Wedding</span><span class="btn sm">Civil</span><span class="btn sm">Talk first</span></div></div>
+    <div class="small muted" style="margin-top:8px">+1 more decision ▸</div>
+  </div>
+  <div>
+    <div class="row between"><h3 style="margin:0">Tomorrow's plan · Fri 16 Jan</h3><span class="small"><b>7</b> of 8 hours · <b class="red">−RM290</b></span></div>
+    <div class="track">
+      <div class="blk" style="left:0;width:calc(50% - 4px);background:var(--pink)"><span class="x">✕</span>❤ Visit Mum<small>4h · she'll be pleased</small></div>
+      <div class="blk" style="left:50%;width:calc(25% - 4px);background:var(--gold)"><span class="x">✕</span>💼 Ask for a raise<small>2h · ~20% yes</small></div>
+      <div class="blk" style="left:75%;width:calc(12.5% - 4px);background:var(--teal)"><span class="x">✕</span>📈 Buy<small>1h</small></div>
+    </div>
+    <div class="hours"><span>0h</span><span>2h</span><span>4h</span><span>6h</span><span>8h</span></div>
+    <div class="sum"><div class="card"><div class="small muted">Money tomorrow</div><b class="red">−RM290</b><div class="small muted">shares RM215 · bus & gifts RM75</div></div>
+      <div class="card"><div class="small muted">Who decides</div><b>Your boss</b><div class="small muted">raise: performance 71%, 14 months in</div></div>
+      <div class="card"><div class="small muted">If you add nothing</div><b>Your routine</b><div class="small muted">work, lunch at Kedai Kopi, home</div></div></div>
+    <div class="row" style="margin-top:12px;gap:8px"><span class="btn primary">✓ Plan is ready</span><span class="btn">Clear plan</span><span class="btn ghost muted">Same as yesterday</span><span class="small muted" style="margin-left:auto">Runs when the day starts; change it until then</span></div>
+    <h4>This week</h4><div class="row" style="gap:6px"><span class="chip">Mon · work</span><span class="chip">Tue · work + gym</span><span class="chip on">Fri · 3 plans</span><span class="chip">Sat · free</span></div>
+  </div>
+  <div>
+    <div class="row between"><h3 style="margin:0">Add to the plan</h3><span class="small muted">33 things you can do</span></div>
+    <div class="row" style="gap:5px;flex-wrap:wrap;margin-top:6px"><span class="chip on">All</span><span class="chip">💼 Work</span><span class="chip">💰 Money</span><span class="chip">❤ Family</span><span class="chip">🩺 Health</span><span class="chip">🎓 Learn</span><span class="chip">🤝 Town</span></div>
+    <div class="search">🔍 Search: "date", "course", "shares"…</div>
+    <div class="act"><span class="ic">💡</span><div><b>Ask Siew Lan to see a counsellor</b><div class="meta"><span class="tag">⏱ 3h</span><span class="tag c">RM162</span><span class="tag o">she decides · likely</span></div></div><span class="btn sm teal">+ Add</span></div>
+    <div class="act"><span class="ic">🎓</span><div><b>Apply: Diploma in Education</b><div class="meta"><span class="tag">⏱ 4h</span><span class="tag c">RM410/mo</span><span class="tag o">admission ~65%</span></div></div><span class="btn sm teal">+ Add</span></div>
+    <div class="act"><span class="ic">🏖</span><div><b>Holiday in the country</b><div class="meta"><span class="tag">⏱ 4 days</span><span class="tag c">RM1,300</span><span class="tag o">stress −15</span></div></div><span class="btn sm teal">+ Add</span></div>
+    <div class="act"><span class="ic">🚀</span><div><b>Open a food stall</b><div class="meta"><span class="tag">⏱ 8h</span><span class="tag c">capital RM8,000</span><span class="tag o">loan up to 60%</span></div></div><span class="btn sm teal">+ Add</span></div>
+  </div>
+</div>
+<div class="note b" style="left:420px;top:330px">Your <b>day as a timeline</b>: 8 hours, blocks you can remove (✕). Shows money and who decides.</div>
+<div class="note b" style="left:1120px;top:312px">One <b>searchable list</b> of everything you can do, with time, cost and the odds up front.</div>
+<div class="note r" style="left:60px;top:250px">Map stays on top; the drawer folds down (▾).</div>
+<div class="label" style="top:66px;bottom:auto">B · Day planner (a drawer under the map)<span>Plan tomorrow on an 8-hour timeline; pick activities from one list with time, cost and odds shown.</span></div>
+</div>
+<script>
+const m=document.getElementById('map'), cols=['#5a6b4a','#6d5b46','#4d6a7a','#7a6a40','#5c4f6e','#466b5a','#80553f','#55606b'];
+let k=11; for(let y=8;y<420;y+=66) for(let x=8;x<1300;x+=86){ k=(k*1103515245+12345)%2147483648; const i=document.createElement('i'); i.style.left=x+'px'; i.style.top=y+'px'; i.style.background=cols[k%cols.length]; m.appendChild(i); }
+</script>
+</body></html>
