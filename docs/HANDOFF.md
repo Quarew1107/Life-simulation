@@ -226,6 +226,20 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
     default (random resident + life stage, or my character + "Create my character"). Top bar: "🎮 Name, age ·
     stage" badge (click follows them); a new played world opens on the player. Tests: `playerTests` (10).
     Note: the person panel still calls every minor "Child"; the player badge uses the five stages.
+  - PL-03 done (`js/sim/player.js`): command queue modelled on God Mode's Fate. `Player.request(w, kind, args)`
+    -> immutable command in `w.player.pending` (duplicate pending refused); `Player.tick` (called by `World.step`
+    right after `God.apply`, only when `w.player` exists) re-checks alive / away / held / stale (> 7 days) / age /
+    cooldown / time (8 player-hours a day) and the handler's own checks, runs it once, and journals
+    `{ kind, code, key: cmd.<KIND>.<code> | cmd.error.<code>, params }`. Handlers in `Player.HANDLERS`; first one
+    `APPLY_JOB` (4 h): joins the vacancy's real applicants (as the autonomous APPLY action); the employer's normal
+    `Labour.award` decides; `res.hired` / `res.notHired` is journaled when the vacancy closes. `w.player.played`
+    becomes true with the first applied command. Events: data records in `Player.EVENTS` with named
+    `CONDITIONS`/`TARGETS` (no code in content), checked every 30 days for the player only, own stream
+    `seed|play|events`; inbox items expire (journal `evt.passed`); `Player.choose(w, uid, choiceId)` -> a command or
+    `{ story: true }`. First event AD-001 "Your first full-time job" (typical-pay / best-paid / keep looking).
+    Note: a jobless resident's routine applies to most openings itself, so targets prefer jobs not yet applied
+    for and otherwise report `already_applied`. Message params may themselves be messages (`{ key, params }`).
+    Tests: `playCommandTests` (15). No UI yet (PL-04).
   - Sources for the plan: ONS LTIM YE Dec 2024 (+345k revised) and long-term assumption +340k/yr; Census Vintage
     2024 (+2.8M) and projections (~0.9M/yr); DOSM CPE 2024/2026; NBS 2024 communique.
 

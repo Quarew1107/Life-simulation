@@ -1918,6 +1918,79 @@
     K.ensure(D);
   }
 
+  // PL-03: the player's requests and life events. The player asks; the world decides.
+  async function playCommandTests() {
+    print('--- Play a Life: decisions (PL-03) ---', 'info');
+    const Pl = LES.Player, D = LES.DEFAULTS, P = LES.P, I = LES.I18n;
+    LES.Countries.ensure(D);
+    const make = extra => { const w = new LES.World(Object.assign({}, D, { seed: 'pl3-t', founders: 150, play: 'random', playStage: 'adult' }, extra || {})); Pl.begin(w); return w; };
+    const last = w => w.player.journal[w.player.journal.length - 1];
+    const jobless = (x, xp) => { if (xp.job) LES.Labour.endJob(x, xp, 'test', true); };
+    const young = seed => make({ seed, play: 'cast', playCast: 'pl3-y', cast: [Object.assign(LES.Cast.blank(), { id: 'pl3-y', first: 'Muda', last: 'Pencari', age: 22 })] });
+    const firstJob = x => { const xp = Pl.person(x); let it = null; for (let d = 0; d < 400 && !it; d++) { jobless(x, xp); x.step(); it = (x.player.inbox || []).find(y => y.ev === 'AD-001'); } return it; };
+    // Parity: a played world with nobody deciding (events offered and left to pass) stays the unplayed town.
+    const a = make(), b = new LES.World(Object.assign({}, D, { seed: 'pl3-t', founders: 150 }));
+    for (let d = 0; d < 400; d++) { a.step(); b.step(); }
+    check('Events offered but not answered change nothing in the town', a.stableHash() === b.stableHash() && a.hash() === b.hash() && !a.player.played);
+    // A real application.
+    const w = make(), p = Pl.person(w);
+    for (let d = 0; d < 10; d++) w.step();
+    jobless(w, p);
+    let o = Pl.openings(w, p);
+    for (let d = 0; d < 60 && !o.length; d++) { w.step(); o = Pl.openings(w, p); }
+    const v = o[0], r1 = Pl.request(w, 'APPLY_JOB', { vac: v.id }), r2 = Pl.request(w, 'APPLY_JOB', { vac: v.id });
+    check('A request waits for the next day; asking twice is refused', r1.command && r1.command.status === 'pending' && r2.error === 'duplicate' && !v.appSet.has(p.id));
+    w.step();
+    check("Next day the application joins the employer's real applicant list", r1.command.status === 'done' && v.appSet.has(p.id) && w.player.played && last(w).key === 'cmd.APPLY_JOB.ok' && w.player.apps.length === 1, I.render(last(w)));
+    Pl.request(w, 'APPLY_JOB', { vac: v.id }); w.step();
+    check('Applying again for the same job is refused with a reason', last(w).code === 'already_applied' || last(w).code === 'no_vacancy');
+    for (let d = 0; d < 40 && w.player.apps.length; d++) w.step();
+    const res = w.player.journal.filter(e => e.kind === 'result');
+    check('When the vacancy closes the outcome is reported once: hired, or it went to someone else', res.length === 1 && (res[0].key === 'res.hired' ? p.job && p.job.jobId === v.job.id : res[0].key === 'res.notHired'), res[0] ? I.render(res[0]) : 'none');
+    check('No money is created or lost by any of this', w.checkInvariants().length === 0, w.checkInvariants().join('; '));
+    // Refusals, each with its reason.
+    const codeOf = (x, kind, args) => { const r = Pl.request(x, kind, args); if (r.error) return r.error; x.step(); return r.command.code; };
+    const q = Pl.person(w), med = LES.C.JOBS.find(j => j.req === 'MED');
+    let qual = 'skip';
+    if (med && !P.hasCred(q, 'MED')) {
+      const fake = { id: 987654, job: med, salary: w.px(9000), openDay: w.day, closeDay: w.day + 5, applicants: [], appSet: new Set(), place: v.place };
+      w.vacancies.push(fake); const r = Pl.request(w, 'APPLY_JOB', { vac: fake.id }); Pl.tick(w); qual = r.command.code; w.vacancies = w.vacancies.filter(x => x !== fake);
+    }
+    check('Refused with a reason: closed vacancy, missing qualification, unknown action', codeOf(w, 'APPLY_JOB', { vac: 123456 }) === 'no_vacancy' && (qual === 'skip' || qual === 'not_qualified') && Pl.request(w, 'FLY', {}).error === 'unknown_kind', qual);
+    const stale = Pl.request(w, 'APPLY_JOB', { vac: 1 }); stale.command.requestedDay -= 10; w.step();
+    check('A request that waited too long is dropped', stale.command.code === 'stale' && w.player.journal.some(e => e.key === 'cmd.error.stale'));
+    let many = Pl.openings(w, q);
+    for (let d = 0; d < 120 && many.length < 3; d++) { w.step(); many = Pl.openings(w, q); }
+    many = many.slice(0, 3);
+    if (many.length === 3) { for (const x of many) Pl.request(w, 'APPLY_JOB', { vac: x.id }); w.step(); }
+    const codes = w.player.journal.filter(e => e.kind === 'cmd').slice(-3).map(e => e.code).join();
+    check('A day has limited time: a third application the same day waits for tomorrow', many.length < 3 || codes === 'ok,ok,no_time', `${many.length} openings; ${codes}`);
+    const kid = make({ playStage: 'child', seed: 'pl3-kid' });
+    check('A child cannot apply for jobs', codeOf(kid, 'APPLY_JOB', { vac: (kid.vacancies[0] || { id: 1 }).id }) === 'too_young');
+    const dead = make({ seed: 'pl3-dead' }); for (let d = 0; d < 20; d++) dead.step();
+    const dv = dead.vacancies[0], dp = Pl.person(dead), cmd = Pl.request(dead, 'APPLY_JOB', { vac: dv ? dv.id : 1 }).command;
+    dead.die(dp, 'test'); dead.step();
+    check('A request from someone who has died is cancelled at no cost', cmd.code === 'dead' && (!dv || !dv.appSet.has(dp.id)) && dead.checkInvariants().length === 0);
+    // A life event: offered, answered with a real application; another one left to pass.
+    const ev = young('pl3-ev'), item = firstJob(ev), pick = item && Pl.choose(ev, item.uid, 'ambitious');
+    if (pick && pick.command) ev.step();
+    check('"Your first full-time job" comes to a jobless young adult; "best-paid opening" really applies', !!item && !!pick.command && ['ok', 'already_applied'].includes(pick.command.code) && ev.player.journal.some(e => e.kind === 'choice' && e.choice === 'ambitious'), item ? I.render(last(ev)) : 'no event');
+    const ev2 = young('pl3-ev'), it2 = firstJob(ev2);
+    for (let d = 0; d < 25; d++) ev2.step();
+    const passed = ev2.player.journal.find(e => e.key === 'evt.passed' && e.ev === 'AD-001');
+    check("An unanswered event passes after its deadline; your character's own routine carries on", !!it2 && !ev2.player.inbox.some(x => x.uid === it2.uid) && !!passed && /pass/.test(I.render(passed)), passed ? I.render(passed) : '');
+    const ev3 = young('pl3-ev'), it3 = firstJob(ev3), r3 = it3 && Pl.choose(ev3, it3.uid, 'training');
+    check('Story-only answers do nothing to the world', !!r3 && r3.story && !ev3.player.pending.length);
+    // Save and load with a request waiting.
+    const s1 = make({ seed: 'pl3-sv' }); for (let d = 0; d < 15; d++) s1.step();
+    const so = Pl.openings(s1, Pl.person(s1));
+    if (so.length) Pl.request(s1, 'APPLY_JOB', { vac: so[0].id });
+    const s2 = LES.Save.fromJSON(LES.Save.toJSON(s1));
+    for (let d = 0; d < 40; d++) { s1.step(); s2.step(); }
+    check('Save and load with a request waiting: carried out once, both continue identically', s1.stableHash() === s2.stableHash() && s1.player.journal.length === s2.player.journal.length && s2.player.journal.filter(e => e.kind === 'cmd').length === (so.length ? 1 : 0));
+    LES.Countries.ensure(D);
+  }
+
   // PL-01: interface language. Words only: the same seed gives the same town and the same save in any language.
   async function i18nTests() {
     print('--- Interface language (PL-01) ---', 'info');
@@ -2028,6 +2101,7 @@
       await populationTests();
       await i18nTests();
       await playerTests();
+      await playCommandTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -2039,6 +2113,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

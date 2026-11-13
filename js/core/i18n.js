@@ -25,7 +25,9 @@
   I.has = (key, code) => Object.prototype.hasOwnProperty.call(dict[code || lang] || {}, key);
   I.loaded = code => !!dict[code] && Object.keys(dict[code]).length > 0;
 
-  const fill = (s, params) => s.replace(/\{(\w+)\}/g, (m, k) => (params && params[k] !== undefined ? String(params[k]) : m));
+  // A parameter may itself be a message ({ key, params }), e.g. an event title inside "... passed".
+  const val = v => (v && typeof v === 'object' && v.key ? I.t(v.key, v.params) : String(v));
+  const fill = (s, params) => s.replace(/\{(\w+)\}/g, (m, k) => (params && params[k] !== undefined ? val(params[k]) : m));
   function pick(v, params, code) {
     if (typeof v === 'string') return v;
     if (!v || typeof v !== 'object') return null;

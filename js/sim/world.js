@@ -316,6 +316,7 @@
       if ((this.region ? this.region.base : this.cfg).castArrivals) LES.Cast.due(this); // replays: cast added on this day
       this.date = U.dayToDate(this.day);
       if (this.intervention && this.intervention.pending.length) LES.God.apply(this); // sandbox commands at a safe boundary (C09b)
+      if (this.player) LES.Player.tick(this); // Play a Life: the player's requests, results and life events (only in played worlds)
       this.refreshLiving();
       this.startOfDay();
       for (const p of this.living) if (p.alive && p.adult) F.dailyFood(this, p);
