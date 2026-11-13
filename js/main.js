@@ -9,7 +9,7 @@
   const SPEEDS = [
     { label: '1×', dps: 1 / 1440, tip: '1 minute per second' }, { label: '10×', dps: 10 / 1440, tip: '10 minutes per second' },
     { label: '60×', dps: 60 / 1440, tip: '1 hour per second' }, { label: '1d/s', dps: 1, tip: '1 day per second' },
-    { label: '10d/s', dps: 10, tip: '10 days per second' }, { label: '100d/s', dps: 100, tip: '100 days per second' },
+    { label: 'Story', dps: 5, tip: 'Story pace for Play a Life: 5 days per second, an 80-year life in about 2 hours' }, { label: '10d/s', dps: 10, tip: '10 days per second' }, { label: '100d/s', dps: 100, tip: '100 days per second' },
     { label: 'MAX', dps: Infinity, tip: 'As fast as your laptop can go' },
   ];
   const NIGHT_FF = 30; // nights run this much faster at slow speeds
@@ -63,6 +63,7 @@
     if (app.region && t !== app.world) app.selectTown(app.region.towns.indexOf(t));
     app.select(t.player.id, true);
     app.renderer.follow = true;
+    UI.setTab('life');
   };
   // Switch which town the map and panels show (a region keeps running all of them).
   app.selectTown = function (i) {
@@ -552,7 +553,7 @@
     window.addEventListener('keydown', e => {
       if (LES.Setup.isOpen() || /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;
       if (e.code === 'Space') { e.preventDefault(); app.togglePause(); }
-      else if (e.key >= '1' && e.key <= '7') app.setSpeed(Number(e.key) - 1);
+      else if (e.key >= '1' && e.key <= '8') app.setSpeed(Number(e.key) - 1);
       else if (e.key === 's' || e.key === 'S') stepDay();
       else if (e.key === 'f' || e.key === 'F') app.action('follow');
       else if (e.key === 't' || e.key === 'T') app.setTurbo(!app.turbo);

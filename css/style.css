@@ -468,3 +468,29 @@ button.primary { border-radius: 6px; box-shadow: 3px 3px 0 #7d5f17; }
 .play-badge { background: rgba(242,193,78,.14); color: var(--gold); border: 1px solid #6b5a2a; border-radius: 14px; padding: 4px 10px; font: 600 12px var(--ui); white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 .play-badge.gone { color: var(--muted); border-color: var(--line); background: none; }
 @media (max-width: 640px) { .play-tag, .play-opts { margin-left: 0; } .play-badge { max-width: 150px; } }
+/* Play a Life: the "My life" tab (js/ui/player-ui.js). */
+#tabs button[data-tab="life"] { color: var(--gold); position: relative; }
+#tabs button[data-tab="life"][data-count]:not([data-count=""])::after { content: attr(data-count); position: absolute; top: 2px; right: 2px; background: var(--red); color: #fff; font: 700 9px var(--ui); border-radius: 8px; padding: 1px 4px; }
+.life-head { display: flex; gap: 12px; align-items: center; border-color: #6b5a2a; }
+.life-name { font: 700 15px var(--ui); color: var(--gold); }
+.life-money { margin-top: 4px; }
+.life-stat { display: grid; grid-template-columns: 80px 1fr 30px; align-items: center; gap: 8px; margin: 3px 0; }
+.life-bar { height: 8px; background: #26303b; border-radius: 4px; overflow: hidden; }
+.life-bar i { display: block; height: 100%; background: var(--teal); }
+.life-bar.bad i { background: var(--red); }
+.life-count { background: var(--red); color: #fff; border-radius: 8px; padding: 0 6px; }
+.life-event { border: 1px solid var(--gold); border-radius: 8px; padding: 10px; margin: 6px 0; background: rgba(242,193,78,.06); }
+.life-event-head { display: flex; justify-content: space-between; gap: 8px; }
+.life-event p { margin: 6px 0; }
+.life-choices { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.life-choices .link { background: none; border: none; color: var(--muted); text-decoration: underline; cursor: pointer; padding: 4px; }
+.life-cats { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.life-cats button { background: var(--panel-2); border: 1px solid var(--line); color: var(--text); border-radius: 14px; padding: 3px 10px; cursor: pointer; }
+.life-cats button.on { border-color: var(--gold); color: var(--gold); }
+.life-cat-body h4 { margin: 8px 0 4px; font-size: 12px; color: var(--muted); }
+.life-jobs li { align-items: center; padding: 4px 0; border-bottom: 1px solid var(--line); }
+button.small { padding: 3px 10px; font-size: 12px; }
+.life-journal li { display: block; padding: 3px 0; border-bottom: 1px dashed var(--line); }
+.life-journal li.big { color: var(--gold); }
+.life-settings summary { cursor: pointer; color: var(--muted); }
+.life-settings label { display: block; margin: 6px 0; }

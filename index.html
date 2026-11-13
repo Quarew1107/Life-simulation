@@ -61,6 +61,7 @@
     </section>
     <aside id="side">
       <nav id="tabs">
+        <button data-tab="life" data-icon="human" title="Play a Life: your character" class="hidden"><span data-i18n="life.tab">My life</span></button>
         <button data-tab="person" data-icon="user" title="The selected person" class="active"><span>Person</span></button>
         <button data-tab="leaders" data-icon="trophy" title="Leaderboards and search"><span>Leaders</span></button>
         <button data-tab="feed" data-icon="notes" title="What is happening in town"><span>Events</span></button>
@@ -70,6 +71,7 @@
         <button data-tab="crime" data-icon="shield" title="Crime, police and justice"><span>Crime</span></button>
         <button data-tab="gov" data-icon="flag" title="Government, council and treasury"><span>Gov't</span></button>
       </nav>
+      <div id="tab-life" class="tab"></div>
       <div id="tab-person" class="tab active"></div>
       <div id="tab-leaders" class="tab">
         <div class="tab-tools">
@@ -154,6 +156,7 @@
 <script src="js/ui/gov-ui.js"></script>
 <script src="js/ui/audio.js"></script>
 <script src="js/ui/cast-ui.js"></script>
+<script src="js/ui/player-ui.js"></script>
 <script src="js/ui/setup.js"></script>
 <script src="js/main.js"></script>
 </body>

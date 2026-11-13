@@ -240,6 +240,16 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
     Note: a jobless resident's routine applies to most openings itself, so targets prefer jobs not yet applied
     for and otherwise report `already_applied`. Message params may themselves be messages (`{ key, params }`).
     Tests: `playCommandTests` (15). No UI yet (PL-04).
+  - PL-04 done: `js/ui/player-ui.js` - a gold "My life" tab (first tab, shown only when playing; red count of open
+    decisions): portrait, age · stage, status (job/studying/seeking...), cash and net worth, health/happiness/stress
+    bars; Decisions (event cards with choices and "Let them decide" = `Player.pass`); What to do (Work, Learn,
+    Money, Love & family, Health, Community - only Work works so far: your applications and a job board with
+    Apply; the others say "Coming in a later update"); Life journal (newest 40, from `{ key, params }`); Play
+    settings: life-event frequency (`w.player.freq` important|balanced|detailed = `Player.FREQ`, events carry
+    `imp`) and "Pause when a decision arrives" (browser preference `les-play-pause`, on). New decision ->
+    toast + pause (`UI.watchLife`). A new played world opens on this tab. Speed "Story" = 5 days/s (between 1d/s
+    and 10d/s; keys 1-8). Measured in the full app (headless Edge): Story holds 5.0 days/s with 100 and with 2,500
+    people (China), worst UI gap 177 ms. Checked in Chinese and at phone width. Tests: `playUiTests` (4).
   - Sources for the plan: ONS LTIM YE Dec 2024 (+345k revised) and long-term assumption +340k/yr; Census Vintage
     2024 (+2.8M) and projections (~0.9M/yr); DOSM CPE 2024/2026; NBS 2024 communique.
 

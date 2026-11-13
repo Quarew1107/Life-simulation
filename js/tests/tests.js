@@ -1991,6 +1991,36 @@
     LES.Countries.ensure(D);
   }
 
+  // PL-04: what the "My life" tab relies on: letting your character decide, how often events come, clear wording.
+  async function playUiTests() {
+    print('--- Play a Life: decisions panel (PL-04) ---', 'info');
+    const Pl = LES.Player, D = LES.DEFAULTS, I = LES.I18n;
+    LES.Countries.ensure(D);
+    const make = (seed, extra) => { const w = new LES.World(Object.assign({}, D, { seed, founders: 120, play: 'random', playStage: 'adult' }, extra || {})); Pl.begin(w); return w; };
+    // A test event that always comes (removed afterwards).
+    const TEST = { id: 'ZZ-TEST', stages: ['baby', 'child', 'teen', 'adult', 'senior'], minAge: 0, maxAge: 200, chance: 1, cooldown: 9999, expires: 20, imp: 1, choices: [{ id: 'ok', story: true }] };
+    Pl.EVENTS.push(TEST);
+    try {
+      const a = make('pl4-a');
+      for (let d = 0; d < 31; d++) a.step();
+      const item = a.player.inbox.find(x => x.ev === 'ZZ-TEST');
+      const before = a.stableHash(), ok = item && Pl.pass(a, item.uid);
+      check('"Let them decide" closes the decision now, records it, and changes nothing in the town', ok && !a.player.inbox.some(x => x.ev === 'ZZ-TEST') && a.player.journal.some(e => e.key === 'evt.delegated') && !a.player.pending.length && a.stableHash() === before);
+      const b = make('pl4-a'); b.player.freq = 'important';
+      for (let d = 0; d < 31; d++) b.step();
+      check('"Important only" leaves out small moments; balanced shows them', !!item && !b.player.inbox.some(x => x.ev === 'ZZ-TEST'));
+      check('Journal lines read as sentences: a new decision and what you chose', I.render(a.player.journal.find(e => e.kind === 'event')).includes('New decision') && I.t('evt.chose', { choice: { key: 'ev.AD-001.ambitious' } }) === 'You chose: Go for the best-paid opening');
+    } finally { Pl.EVENTS.splice(Pl.EVENTS.indexOf(TEST), 1); }
+    // Already applied by your character's own routine: the reply names the job and when it is decided.
+    const c = make('pl4-c'), p = Pl.person(c);
+    let v = null;
+    for (let d = 0; d < 200 && !v; d++) { if (p.job) LES.Labour.endJob(c, p, 'test', true); c.step(); v = c.vacancies.find(x => x.appSet.has(p.id)); }
+    if (v) { Pl.request(c, 'APPLY_JOB', { vac: v.id }); c.step(); }
+    const msg = v ? I.render(c.player.journal[c.player.journal.length - 1]) : '';
+    check('"Already applied" says which job and when the employer decides', !v || (msg.includes(v.job.title) && /decides (today|in \d+ days?)/.test(msg)), msg);
+    LES.Countries.ensure(D);
+  }
+
   // PL-01: interface language. Words only: the same seed gives the same town and the same save in any language.
   async function i18nTests() {
     print('--- Interface language (PL-01) ---', 'info');
@@ -2102,6 +2132,7 @@
       await i18nTests();
       await playerTests();
       await playCommandTests();
+      await playUiTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -2113,6 +2144,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

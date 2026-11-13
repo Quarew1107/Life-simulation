@@ -66,6 +66,7 @@
       }
     }, true);
     UI.initResize(app);
+    UI.initLife();
   };
 
   UI.setTab = function (tab) {
@@ -111,6 +112,8 @@
     const due = (k, ms) => { if (force || !UI.last[k] || now - UI.last[k] > ms) { UI.last[k] = now; return true; } return false; };
     if (due('top', 200)) UI.renderTop();
     const fastRun = !app.paused;
+    if (UI.tab === 'life' && due('life', fastRun ? 500 : 200)) UI.renderLife();
+    if (due('lifeWatch', 300)) UI.watchLife();
     if (UI.tab === 'person' && due('person', fastRun ? 400 : 150)) UI.renderPerson();
     if (UI.tab === 'leaders' && due('leaders', 600)) UI.renderLeaders();
     if (UI.tab === 'feed' && due('feed', 500)) UI.renderFeed();

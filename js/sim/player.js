@@ -72,6 +72,7 @@
   const journal = (w, e) => { const j = st(w).journal; j.push(Object.assign({ day: w.day }, e)); if (j.length > Pl.JOURNAL) j.shift(); };
   Pl.journal = journal;
   const isAdult = (w, p) => P.isAdult(w, p);
+  const whenOf = (w, v) => { const d = Math.max(0, v.closeDay - w.day); return d ? { key: 'time.inDays', params: { count: d } } : { key: 'time.today' }; };
 
   // Handlers: check(w, p, args) -> null when allowed, else a result code; run(w, p, args) -> { code, params }.
   Pl.HANDLERS = {
@@ -87,13 +88,14 @@
         if (p.job && p.job.fixedTitle) return 'in_office';
         return null;
       },
+      // Words for a refusal (e.g. your character's own routine had already applied: which job, when it is decided).
+      params(w, p, a) { const v = w.vacancies.find(x => x.id === a.vac); return v ? { job: v.job.title, when: whenOf(w, v) } : {}; },
       run(w, p, a) {
         const v = w.vacancies.find(x => x.id === a.vac);
         v.applicants.push(p.id); v.appSet.add(p.id); p.energy -= 8; // as the autonomous APPLY action
         st(w).apps.push({ vac: v.id, jobId: v.job.id, title: v.job.title, salary: v.salary, day: w.day, closeDay: v.closeDay });
         st(w).played = true;
-        const days = Math.max(0, v.closeDay - w.day);
-        return { code: 'ok', params: { job: v.job.title, pay: LES.U.fmtMoney(v.salary), when: days ? { key: 'time.inDays', params: { count: days } } : { key: 'time.today' } } };
+        return { code: 'ok', params: { job: v.job.title, pay: LES.U.fmtMoney(v.salary), when: whenOf(w, v) } };
       },
     },
   };
@@ -129,7 +131,7 @@
       const h = Pl.HANDLERS[c.kind];
       let code = !p || !p.alive ? 'dead' : p.away ? 'away' : p.inst ? 'held' : w.day - c.requestedDay > Pl.STALE ? 'stale'
         : h.adult && !isAdult(w, p) ? 'too_young' : (s.cool[c.kind] || 0) > w.day ? 'cooldown' : s.hours + h.hours > Pl.DAY_HOURS ? 'no_time' : h.check(w, p, c.args);
-      let params = {};
+      let params = code && h.params ? h.params(w, p, c.args) : {};
       if (!code) { const r = h.run(w, p, c.args); code = r.code; params = r.params || {}; s.hours += h.hours; if (h.cooldown) s.cool[c.kind] = w.day + h.cooldown; }
       c.status = code === 'ok' ? 'done' : 'rejected'; c.code = code; c.day = w.day;
       journal(w, { kind: 'cmd', cmd: c.kind, code, key: GENERIC.has(code) ? `cmd.error.${code}` : `cmd.${c.kind}.${code}`, params });
@@ -162,10 +164,13 @@
     typicalPay: (w, p) => { const o = pref(w, p); return o.length ? { vac: o[Math.floor(o.length / 2)].id } : null; },
   };
   Pl.EVENTS = [
-    { id: 'AD-001', stages: ['adult'], minAge: 18, maxAge: 35, when: 'seekingWork', chance: 0.6, cooldown: 120, expires: 20,
+    { id: 'AD-001', stages: ['adult'], minAge: 18, maxAge: 35, when: 'seekingWork', chance: 0.6, cooldown: 120, expires: 20, imp: 2,
       choices: [{ id: 'stable', cmd: 'APPLY_JOB', target: 'typicalPay' }, { id: 'ambitious', cmd: 'APPLY_JOB', target: 'bestPaid' }, { id: 'training', story: true }] },
   ];
   Pl.eventById = id => Pl.EVENTS.find(e => e.id === id);
+  // How often life events come (the player's choice; it only changes which events are offered): important ones
+  // only (imp 2: work, family, money turning points), balanced, or detailed (more small moments).
+  Pl.FREQ = { important: { mult: 1, minImp: 2 }, balanced: { mult: 1, minImp: 1 }, detailed: { mult: 1.5, minImp: 1 } };
 
   // Vacancies this person could apply for, best paid first (all: including ones they already applied for).
   Pl.openings = (w, p, all) => w.vacancies.filter(v => (all || !v.appSet.has(p.id)) && P.hasCred(p, v.job.req) && !(p.job && p.job.salary >= v.salary)).sort((a, b) => (b.salary - a.salary) || (a.id - b.id));
@@ -181,10 +186,12 @@
       if (!e.stages.includes(stage) || age < e.minAge || age > e.maxAge || (s.evCool[e.id] || 0) > w.day || s.inbox.some(x => x.ev === e.id)) continue;
       const cond = Pl.CONDITIONS[e.when];
       if (cond && !cond(w, p)) continue;
-      if (R.next() >= e.chance) continue;
+      const f = Pl.FREQ[s.freq || 'balanced'] || Pl.FREQ.balanced;
+      if ((e.imp || 1) < f.minImp) continue;
+      if (R.next() >= e.chance * f.mult) continue;
       s.inbox.push({ uid: `${w.day}-${e.id}`, ev: e.id, day: w.day, expires: w.day + e.expires });
       s.evCool[e.id] = w.day + e.cooldown;
-      journal(w, { kind: 'event', ev: e.id, key: `ev.${e.id}.title`, params: {} });
+      journal(w, { kind: 'event', ev: e.id, key: 'evt.offered', params: { title: { key: `ev.${e.id}.title` } }, imp: e.imp || 1 });
     }
   }
   // Unanswered events pass: nothing is done for you (your character's own routine carries on).
@@ -194,12 +201,20 @@
     s.inbox = s.inbox.filter(x => { if (x.expires > w.day) return true; journal(w, { kind: 'pass', ev: x.ev, key: 'evt.passed', params: { title: { key: `ev.${x.ev}.title` } } }); return false; });
   }
 
+  // Let your character decide: the event closes now and their own routine carries on.
+  Pl.pass = function (w, uid) {
+    const s = st(w), item = s && (s.inbox || []).find(x => x.uid === uid);
+    if (!item) return false;
+    s.inbox = s.inbox.filter(x => x !== item);
+    journal(w, { kind: 'pass', ev: item.ev, key: 'evt.delegated', params: { title: { key: `ev.${item.ev}.title` } } });
+    return true;
+  };
   // Answer an event. Returns { command } | { story: true } | { error }.
   Pl.choose = function (w, uid, choiceId) {
     const s = st(w), item = s && (s.inbox || []).find(x => x.uid === uid), e = item && Pl.eventById(item.ev), ch = e && e.choices.find(c => c.id === choiceId);
     if (!ch) return { error: 'no_choice' };
     s.inbox = s.inbox.filter(x => x !== item);
-    journal(w, { kind: 'choice', ev: e.id, choice: ch.id, key: `ev.${e.id}.${ch.id}`, params: {} });
+    journal(w, { kind: 'choice', ev: e.id, choice: ch.id, key: 'evt.chose', params: { choice: { key: `ev.${e.id}.${ch.id}` } } });
     if (ch.story) return { story: true };
     const p = Pl.person(w), args = ch.target ? Pl.TARGETS[ch.target](w, p) : {};
     if (!args) { journal(w, { kind: 'cmd', code: 'no_target', key: 'cmd.error.no_target', params: {} }); return { error: 'no_target' }; }
