@@ -423,6 +423,33 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
           unless the player clicks or types (Continue restores it). Small moments are toasts. Several
           moments queue.
       - The old "Pause on new decisions" setting is replaced.
+    - **Step 3 done (view C, the life story; `js/ui/life-story.js`):**
+      - **Where it shows:** it covers the map area when the player picks Story (the side panel keeps the hub
+        and the town's other tabs). "Town view" (or the town plan in the left column) goes back to the map;
+        a gold "Back to {name}'s story" button returns.
+      - **Left column:** a big portrait, mood, four rings (energy too), the people who matter (partner,
+        children, parents, grandchildren with real portraits; click to select them), money, life goal, and
+        the town plan (`RegionMap.drawTown`).
+      - **Middle:** decisions now, tomorrow's plan, then the story of this life grouped by age (journal lines
+        with icons; moments in gold).
+      - **Dock:** "Live on until something happens" (Story speed; the clock stops by itself at the next
+        important decision or big moment) and "+ Do something": a sheet with Suggested first (real requests
+        that pass `Player.check`, from the person's situation), then each area's page.
+      - **Shared parts:** the same pieces and click handler as the hub (`UI._life`); share buttons read the
+        number box in their own row.
+      - **A life remembered:** a card at the top of the succession view in every view: dates, cause, partner,
+        children and grandchildren, highest qualification, worth on the last day (`w.player.ended.nw`), and
+        the life's big moments.
+    - **Step 4 done (view B, the day planner; `js/ui/life-planner.js`):**
+      - **Where it shows:** a drawer over the bottom of the map (fold it with the gold tab).
+      - **Left:** a small portrait, mood, four bars, and the decisions.
+      - **Middle:** tomorrow as an 8-hour track. One block per request, sized by its hours, coloured by area,
+        with ✕ and who decides; the money tomorrow and the cash after; the hours left; "Clear the plan".
+      - **Right:** everything the person can do now (`catalogue`: work, money, love, health, learn,
+        community; children: care, effort, clubs, schools, friends), filtered by area and by a search box
+        (filters in place). Each item shows its time, cost, note (pay, capital, rent), admission chance and
+        who decides; what cannot happen tomorrow is greyed with the reason.
+      - **Narrow screens:** the left column hides below 1100 px wide; a single column below 700 px.
   - Sources for the plan: ONS LTIM YE Dec 2024 (+345k revised) and long-term assumption +340k/yr; Census Vintage
     2024 (+2.8M) and projections (~0.9M/yr); DOSM CPE 2024/2026; NBS 2024 communique.
 

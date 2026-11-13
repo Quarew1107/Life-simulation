@@ -108,10 +108,22 @@
       <p class="note">${esc(T('health.note'))}</p>`;
   }
   // The life has ended: who comes next (a child or grandchild, someone random, someone you pick) or just watch.
+  // "A life remembered": the life that just ended, in a few lines (from the engine's own records).
+  function rememberHtml(w) {
+    const s = w.player, e = s.ended, p = w.people[e.id];
+    const kids = p.children.length, grand = p.children.reduce((t, id) => t + w.people[id].children.length, 0);
+    const qual = p.quals.length ? (LES.C.COURSE_BY_ID[p.quals[p.quals.length - 1]] || { name: p.quals[p.quals.length - 1] }).name : '';
+    const big = (s.moments || []).filter(m => m.big && m.day >= (e.since || 0) && m.day <= e.day).slice(-6);
+    const partner = s.married ? w.people[s.married.pid] : p.partnerId !== null ? w.people[p.partnerId] : null;
+    return `<div class="card life-remember"><canvas id="life-remember-pic" width="72" height="96" aria-hidden="true"></canvas><div><h3>${esc(T('remember.title'))}</h3><div class="life-name">${esc(P.name(p))}</div>
+      <div class="muted">${esc(T('remember.years', { from: U.fmtDate(p.birthDay), to: U.fmtDate(e.day), age: e.age }))}${e.why === 'died' && p.causeOfDeath ? ` · ${esc(p.causeOfDeath)}` : ''}</div>
+      <ul class="list-plain small">${partner ? `<li>❤️ ${esc(T('remember.partner', { other: P.name(partner) }))}</li>` : ''}<li>👪 ${esc(T('remember.family', { kids, grand }))}</li>${qual ? `<li>🎓 ${esc(qual)}</li>` : ''}<li>💰 ${esc(T('remember.worth', { worth: U.fmtMoney(e.nw || 0) }))}</li></ul>
+      ${big.length ? `<div class="life-chips">${big.map(m => `<span class="life-chip">${esc(T(`moment.${m.kind}`, m.params))}</span>`).join('')}</div>` : ''}</div></div>`;
+  }
   function successionHtml(w) {
     const s = w.player, e = s.ended, who = w.people[e.id], heirs = Pl.heirs(w);
     const res = Pl.search(w, UI._lifeSearch || '', 10);
-    return `<div class="card"><h3>${esc(T(e.why === 'died' ? 'succ.died' : 'succ.left', { name: P.name(who), age: e.age }))}</h3>${s.spectator ? `<p class="muted">${esc(T('succ.watching'))}</p>` : `<p>${esc(T('succ.intro'))}</p>`}
+    return `${rememberHtml(w)}<div class="card"><h3>${esc(T(e.why === 'died' ? 'succ.died' : 'succ.left', { name: P.name(who), age: e.age }))}</h3>${s.spectator ? `<p class="muted">${esc(T('succ.watching'))}</p>` : `<p>${esc(T('succ.intro'))}</p>`}
       <h4>${esc(T('succ.heirs'))}</h4>${heirs.length ? `<ul class="list-plain">${heirs.map(q => `<li><span>${UI.plink(w, q.id)} <small class="muted">${Math.floor(P.age(w, q))}</small></span><button class="ghost small" data-succ="${q.id}" data-how="heir">${esc(T('succ.take'))}</button></li>`).join('')}</ul>` : `<p class="muted">${esc(T('succ.noHeirs'))}</p>`}
       <h4>${esc(T('succ.other'))}</h4><button class="ghost" data-succrandom="1">🎲 ${esc(T('succ.random'))}</button>
       <label class="life-search">${esc(T('succ.search'))} <input id="life-search" type="search" value="${esc(UI._lifeSearch || '')}" placeholder="${esc(T('succ.searchPh'))}" autocomplete="off"></label>
@@ -187,12 +199,14 @@
 
   // Every button that asks for something: its request kind and arguments (clicks, and greying out what cannot happen).
   const num = v => Number(v);
+  // The number typed next to a share button (the box in the same row; the story view can show the same list).
+  const qty = (tk, b) => { const box = (b && b.closest('li') && b.closest('li').querySelector('input[type=number]')) || $(`stk-${tk}`); return Math.floor(num(box ? box.value : 0)); };
   const ACTIONS = {
     apply: ['APPLY_JOB', v => ({ vac: num(v) })], care: ['ASK_CARE', () => ({})], effort: ['SET_EFFORT', v => ({ level: v })], club: ['ASK_CLUB', v => ({ club: v })],
     quitclub: ['QUIT_CLUB', () => ({})], allow: ['ASK_ALLOWANCE', v => ({ chores: v === '1' })], friend: ['MAKE_FRIEND', v => ({ pid: num(v) })], school: ['ASK_SCHOOL', v => ({ tier: v })],
     plan: ['SET_PLAN', v => ({ plan: v })], raise: ['ASK_RAISE', () => ({})], quit: ['QUIT_JOB', () => ({})], enroll: ['ENROLL', v => ({ course: v })], dropout: ['DROP_OUT', () => ({})],
     invest: ['INVEST', v => ({ share: num(v) })], sell: ['SELL', v => ({ share: num(v) })], home: ['MOVE_HOME', v => ({ tier: num(v) })],
-    buystock: ['BUY_STOCK', v => ({ tk: v, shares: Math.floor(num(($(`stk-${v}`) || {}).value)) || 1 })], sellstock: ['SELL_STOCK', v => ({ tk: v, shares: Math.floor(num(($(`stk-${v}`) || {}).value)) || 1 })],
+    buystock: ['BUY_STOCK', (v, w, b) => ({ tk: v, shares: qty(v, b) || 1 })], sellstock: ['SELL_STOCK', (v, w, b) => ({ tk: v, shares: qty(v, b) || 1 })],
     sellall: ['SELL_STOCK', (v, w) => ({ tk: v, shares: Pl.held(Pl.person(w), v) || 1 })], retire: ['RETIRE', () => ({}), 'work.retireSure'], keep: ['KEEP_WORKING', () => ({})],
     doctor: ['SEE_DOCTOR', () => ({})], counselling: ['COUNSELLING', () => ({})], rest: ['REST', () => ({})], exercise: ['SET_EXERCISE', v => ({ level: v })], travel: ['TRAVEL', v => ({ kind: v })],
     startbiz: ['START_BIZ', v => ({ type: v })], inject: ['INJECT', v => ({ share: num(v) })], sellbiz: ['SELL_BIZ', () => ({}), 'biz.sure'], closebiz: ['CLOSE_BIZ', () => ({}), 'biz.sure'],
@@ -209,7 +223,7 @@
       if (b.disabled || b.dataset.choice) continue;
       const a = actionOf(b);
       if (!a) continue;
-      const [, [kind, argsOf]] = a, args = argsOf(a[0] === 'buystock' || a[0] === 'sellstock' ? b.dataset[a[0]] : b.dataset[a[0]], w), r = Pl.check(w, kind, args);
+      const [, [kind, argsOf]] = a, args = argsOf(b.dataset[a[0]], w, b), r = Pl.check(w, kind, args);
       if (!r.ok) { b.classList.add('off'); b.setAttribute('aria-disabled', 'true'); b.title = whyText(w, kind, args, r); }
     }
   }
@@ -314,7 +328,7 @@
   }
   UI.lifeView = pref('les-life-view', 'A');
   const VIEWS = [['A', '▦', 'view.hub'], ['B', '▤', 'view.planner'], ['C', '📖', 'view.story']];
-  const viewsHtml = () => `<div class="life-views" role="group" aria-label="${esc(T('view.label'))}">${VIEWS.map(([k, ic, key]) => `<button data-view="${k}" class="${UI.lifeView === k ? 'on' : ''}" aria-pressed="${UI.lifeView === k}" ${k === 'A' ? '' : `disabled title="${esc(T('view.soon'))}"`}>${ic} ${esc(T(key))}</button>`).join('')}</div>`;
+  const viewsHtml = () => `<div class="life-views" role="group" aria-label="${esc(T('view.label'))}">${VIEWS.map(([k, ic, key]) => `<button data-view="${k}" class="${UI.lifeView === k ? 'on' : ''}" aria-pressed="${UI.lifeView === k}" >${ic} ${esc(T(key))}</button>`).join('')}</div>`;
   function settingsHtml(w) {
     const s = w.player;
     return `<details class="card life-settings" ${keep('settings')}><summary>${esc(T('life.settings'))}</summary>
@@ -343,20 +357,19 @@
     if (html === UI._lifeHtml && el.firstElementChild) return; // nothing changed: leave the page alone
     el.innerHTML = html; UI._lifeHtml = html;
     portrait($('life-portrait'), w, p);
+    if (s.ended) portrait($('life-remember-pic'), w, w.people[s.ended.id]);
     if (p && p.alive && !s.ended) markAvailability(el, w);
   };
 
   // Clicks in the tab (one listener; the tab is redrawn often).
-  UI.initLife = function () {
-    const el = $('tab-life');
-    if (!el) return;
-    const say = r => { if (r && r.error) UI.toast(esc(r.why ? LES.I18n.render(r.why) : T(`cmd.error.${r.error}`))); else if (r && r.command) UI.toast(esc(T('jobs.queued'))); UI._lifeHtml = null; UI.update(true); };
-    el.addEventListener('click', e => {
+  const say = r => { if (r && r.error) UI.toast(esc(r.why ? LES.I18n.render(r.why) : T(`cmd.error.${r.error}`))); else if (r && r.command) UI.toast(esc(T('jobs.queued'))); UI._lifeHtml = null; UI._storyHtml = null; UI._planHtml = null; UI.update(true); };
+  // One handler for every My life button, in the side panel and in the story view.
+  function onLifeClick(e, el) {
       const b = e.target.closest('button');
       const w = where();
       if (!b || !w) return;
-      const redraw = () => { UI._lifeHtml = null; UI.update(true); };
-      if (b.dataset.view) { UI.lifeView = b.dataset.view; setPref('les-life-view', UI.lifeView); redraw(); return; }
+      const redraw = () => { UI._lifeHtml = null; UI._storyHtml = null; UI._planHtml = null; UI.update(true); };
+      if (b.dataset.view) { UI.lifeView = b.dataset.view; UI.storyHidden = false; UI.planOpen = true; setPref('les-life-view', UI.lifeView); redraw(); if (UI.renderStory) UI.renderStory(); if (UI.renderPlanner) UI.renderPlanner(); return; }
       if (b.dataset.page) { UI.lifePage = b.dataset.page; redraw(); el.scrollTop = 0; return; }
       if (b.dataset.back) { UI.lifePage = null; redraw(); return; }
       if (b.dataset.cancel) { Pl.cancel(w, b.dataset.cancel); redraw(); return; }
@@ -368,12 +381,16 @@
       const a = actionOf(b);
       if (!a) return;
       const [k, [kind, argsOf, sure]] = a;
-      if ((k === 'buystock' || k === 'sellstock') && !(Math.floor(Number(($(`stk-${b.dataset[k]}`) || {}).value)) >= 1)) { UI.toast(esc(T('money.qtyBad'))); return; }
-      const args = argsOf(b.dataset[k], w), r = Pl.check(w, kind, args);
+      if ((k === 'buystock' || k === 'sellstock') && !(qty(b.dataset[k], b) >= 1)) { UI.toast(esc(T('money.qtyBad'))); return; }
+      const args = argsOf(b.dataset[k], w, b), r = Pl.check(w, kind, args);
       if (!r.ok) { UI.toast(esc(whyText(w, kind, args, r))); return; }
       if (sure && !confirm(T(sure))) return;
       say(Pl.plan(w, kind, args));
-    });
+  }
+  UI.initLife = function () {
+    const el = $('tab-life');
+    if (!el) return;
+    el.addEventListener('click', e => onLifeClick(e, el));
     el.addEventListener('toggle', e => { const d = e.target; if (d.dataset && d.dataset.keep) { if (d.open) UI._lifeOpen.add(d.dataset.keep); else UI._lifeOpen.delete(d.dataset.keep); } }, true); // (toggle does not bubble)
     el.addEventListener('input', e => { // the search box: redraw only the results (keeps typing smooth)
       if (e.target.id && e.target.id.startsWith('stk-')) UI._lifeInputs[e.target.id] = e.target.value;
@@ -394,6 +411,9 @@
       if (e.target.dataset && e.target.dataset.kidschool && e.target.value && w) say(Pl.plan(w, 'CHOOSE_SCHOOL', { pid: Number(e.target.dataset.kidschool), tier: e.target.value }));
     });
   };
+
+  // For the story and planner views (js/ui/life-story.js, life-planner.js): the same pieces and the same buttons.
+  UI._life = { where, T, decisionsHtml, tomorrowHtml, pageHtml, successionHtml, portrait, ring, status, catsFor, ICON, groupOf, name1, tileInfo, markAvailability, onLifeClick, keep, busyWith: el => busyWith(el) };
 
   // ---- The clock: important decisions hold it; everyday ones are left to the character at fast speeds ----
   // An important decision is waiting: the clock stays stopped, and the decision is shown.
@@ -448,6 +468,8 @@
   UI.watchLife = function () {
     const app = UI.app, w = where(), tab = document.querySelector('#tabs button[data-tab="life"]');
     if (tab) tab.classList.toggle('hidden', !w);
+    if (UI.renderStory) UI.renderStory(); // view C (life story), when chosen
+    if (UI.renderPlanner) UI.renderPlanner(); // view B (day planner), when chosen
     if (!w) return;
     const s = w.player;
     s.autoMinor = pref('les-life-auto', '1') === '1' && app.speedDps && app.speedDps() >= 1;

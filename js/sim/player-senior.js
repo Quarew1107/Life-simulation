@@ -44,7 +44,8 @@
     'trip', 'exercise', 'snap', 'yearStart', 'lowMonths', 'stressMonths', 'keepWorking', 'evCool', 'cool', 'hours', 'hoursDay'];
   Pl.endLife = function (w, p) {
     const s = st(w);
-    s.ended = { day: w.day, id: p.id, why: p.alive ? 'away' : 'died', age: Math.floor(P.age(w, p)) };
+    const life = s.chain.length ? s.chain[s.chain.length - 1] : { day: s.since };
+    s.ended = { day: w.day, id: p.id, why: p.alive ? 'away' : 'died', age: Math.floor(P.age(w, p)), since: life.day, nw: s.snap ? s.snap.nw : p.nw }; // worth on the last day (before the estate)
     for (const c of s.pending.splice(0)) { // one receipt each, nothing carried out or paid
       c.status = 'rejected'; c.code = p.alive ? 'away' : 'dead'; c.day = w.day;
       Pl.journal(w, { kind: 'cmd', cmd: c.kind, code: c.code, key: `cmd.error.${c.code}`, params: {} });

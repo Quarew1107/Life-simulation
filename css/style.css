@@ -557,3 +557,76 @@ button.off { opacity: .5; filter: grayscale(.6); cursor: help; }
 .life-moment-count { color: var(--muted); font-size: 12px; }
 @keyframes life-pop { from { transform: translateX(-50%) scale(.9); opacity: 0; } }
 @media (max-width: 640px) { .life-moment { min-width: 0; width: calc(100% - 32px); top: 70px; } } .life-stocks .down { color: var(--red); }
+
+/* My life, view C (life story, over the map: js/ui/life-story.js). */
+.life-story { position: absolute; inset: 0; z-index: 30; background: var(--bg); display: flex; flex-direction: column; overflow: hidden; }
+.story-top { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.story-top b { font-size: 14px; color: var(--gold); flex: 1; }
+.story-body { flex: 1; display: grid; grid-template-columns: minmax(230px, 300px) 1fr; min-height: 0; }
+.story-left { overflow-y: auto; padding: 12px; border-right: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; gap: 10px; }
+.story-me { display: flex; gap: 12px; align-items: center; }
+.story-me canvas { image-rendering: pixelated; background: #1b232c; border: 1px solid var(--line); border-radius: 10px; flex: none; }
+.story-rings { margin: 0; padding-bottom: 14px; justify-content: space-between; }
+.story-family { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.story-kin { background: none; border: 1px solid transparent; border-radius: 8px; padding: 4px; display: flex; flex-direction: column; align-items: center; color: var(--text); font-size: 11px; }
+.story-kin:hover { border-color: var(--line); background: var(--panel-2); }
+.story-kin canvas { image-rendering: pixelated; } .story-kin small { color: var(--muted); font-size: 10px; }
+.story-kv { display: flex; justify-content: space-between; }
+.life-goalbar.wide { display: block; width: 100%; margin-top: 6px; }
+.story-main { overflow-y: auto; padding: 12px 18px 90px; }
+.story-now { max-width: 760px; }
+.story-title { margin: 16px 0 6px; }
+.story-lines { max-width: 760px; }
+.story-year { margin: 14px 0 4px; font: 700 11px var(--pixel); color: var(--muted); letter-spacing: .6px; display: flex; gap: 10px; align-items: center; }
+.story-year::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.story-line { display: grid; grid-template-columns: 26px 1fr auto; gap: 8px; padding: 5px 8px; border-radius: 8px; align-items: baseline; }
+.story-line:nth-child(even) { background: rgba(255,255,255,.02); }
+.story-line.big { color: var(--gold); font-weight: 600; }
+.story-line small { color: var(--muted); font-weight: 400; }
+.story-townbtn { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 6px; color: var(--text); display: flex; flex-direction: column; gap: 4px; align-items: center; }
+.story-townbtn:hover { border-color: var(--gold); }
+.story-pip { width: 100%; height: auto; border-radius: 6px; image-rendering: pixelated; background: #2b3a2b; }
+.story-dock { position: absolute; left: 50%; transform: translateX(-50%); bottom: 14px; display: flex; gap: 10px; align-items: center; background: rgba(22,29,37,.97); border: 1px solid var(--line); border-radius: 14px; padding: 8px 12px; box-shadow: 0 -6px 30px rgba(0,0,0,.5); max-width: calc(100% - 24px); flex-wrap: nowrap; z-index: 2; }
+.story-dock .big { white-space: nowrap; }
+.story-dock .big { font-size: 14px; padding: 8px 16px; border-radius: 10px; font-weight: 700; }
+.story-dock .primary { background: var(--gold); color: #111; border: none; }
+.story-dock .teal { border: 1px solid var(--teal); color: var(--teal); background: none; }
+.story-sheet { position: absolute; right: 16px; bottom: 76px; width: min(560px, calc(100% - 32px)); max-height: calc(100% - 150px); overflow-y: auto; background: var(--panel); border: 2px solid var(--teal); border-radius: 14px; padding: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.65); z-index: 3; }
+.story-sheet-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.story-sugs { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.story-sug { text-align: left; background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; padding: 9px; color: var(--text); font-weight: 600; }
+.story-sug:hover { border-color: var(--teal); }
+.life-story-back { position: absolute; left: 12px; bottom: 44px; z-index: 25; background: var(--gold); color: #111; border: none; border-radius: 10px; padding: 7px 14px; font-weight: 700; box-shadow: 0 4px 14px rgba(0,0,0,.45); }
+.life-remember { display: flex; gap: 12px; border-color: var(--gold); background: linear-gradient(180deg, #221e12, var(--panel)); }
+.life-remember canvas { image-rendering: pixelated; background: #1b232c; border-radius: 8px; flex: none; }
+@media (max-width: 760px) { .story-body { grid-template-columns: 1fr; } .story-left { border-right: 0; } .story-sugs { grid-template-columns: 1fr; } }
+
+/* My life, view B (day planner drawer over the bottom of the map: js/ui/life-planner.js). */
+.life-planner { position: absolute; left: 0; right: 0; bottom: 0; height: min(46%, 440px); min-height: 280px; z-index: 28; background: var(--panel); border-top: 2px solid var(--gold); box-shadow: 0 -8px 30px rgba(0,0,0,.45); }
+.life-planner.folded { height: auto; min-height: 0; }
+.plan-grip { position: absolute; left: 50%; transform: translateX(-50%); top: -26px; background: var(--gold); color: #111; border: none; border-radius: 10px 10px 0 0; padding: 4px 16px; font-weight: 700; font-size: 12px; }
+.life-planner.folded .plan-grip { position: static; transform: none; display: block; margin: 0 auto; border-radius: 0 0 10px 10px; }
+.plan-cols { display: grid; grid-template-columns: minmax(220px, 300px) 1fr minmax(260px, 420px); gap: 12px; height: 100%; padding: 10px 12px; }
+.plan-cols > div { overflow-y: auto; min-height: 0; }
+.row-me { display: flex; gap: 10px; align-items: center; margin-bottom: 6px; }
+.row-me canvas { image-rendering: pixelated; background: #1b232c; border-radius: 8px; border: 1px solid var(--line); flex: none; }
+.plan-bars .life-stat { grid-template-columns: 70px 1fr 26px; }
+.plan-track { position: relative; height: 72px; border: 1px solid var(--line); border-radius: 9px; margin-top: 6px; background: repeating-linear-gradient(90deg, #1a222b 0 calc(12.5% - 1px), #2a3542 calc(12.5% - 1px) 12.5%); }
+.plan-blk { position: absolute; top: 6px; bottom: 6px; border-radius: 7px; padding: 4px 22px 4px 8px; color: #111; overflow: hidden; font-size: 12px; }
+.plan-blk b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .plan-blk small { opacity: .8; }
+.plan-blk .x { position: absolute; right: 3px; top: 2px; background: none; border: none; font-weight: 800; color: #111; }
+.plan-empty { padding: 24px 12px; font-size: 12px; }
+.plan-ticks { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-top: 3px; }
+.plan-sum { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
+.plan-sum .card { padding: 8px 10px; display: flex; flex-direction: column; }
+.plan-search { width: 100%; margin: 4px 0 8px; background: #0f141a; border: 1px solid var(--line); border-radius: 8px; color: var(--text); padding: 6px 10px; }
+.plan-act { display: grid; grid-template-columns: 24px 1fr auto; gap: 8px; align-items: center; padding: 7px 8px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel-2); margin-bottom: 6px; }
+.plan-act.off { opacity: .55; }
+.plan-act .ic { text-align: center; }
+.plan-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 3px; }
+.plan-tags span { font-size: 10.5px; border-radius: 6px; padding: 0 6px; background: #0f141a; border: 1px solid var(--line); color: var(--muted); }
+.plan-tags .c { color: var(--gold); } .plan-tags .o { color: var(--teal); }
+.plan-act small.neg { display: block; font-size: 10.5px; }
+button.teal { border-color: var(--teal); color: var(--teal); }
+@media (max-width: 1100px) { .plan-cols { grid-template-columns: 1fr 1fr; } .plan-left { display: none; } }
+@media (max-width: 700px) { .plan-cols { grid-template-columns: 1fr; } .life-planner { height: 60%; } }
