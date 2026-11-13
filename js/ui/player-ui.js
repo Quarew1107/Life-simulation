@@ -36,7 +36,14 @@
     const al = s.allowance, payer = al && w.people[al.payer];
     const allow = al ? `<p>${esc(T('learn.allowYes', { amt: U.fmtMoney(al.amt), carer: payer ? P.name(payer) : '' }))}</p>`
       : `<p class="muted">${esc(T('learn.allowNo'))}</p>${g && P.age(w, p) >= 6 ? `<button class="ghost small" data-allow="0" ${waiting('ASK_ALLOWANCE') ? 'disabled' : ''}>${esc(T('learn.askAllow'))}</button> <button class="ghost small" data-allow="1" ${waiting('ASK_ALLOWANCE') ? 'disabled' : ''}>${esc(T('learn.askChores'))}</button>` : ''}`;
-    return `<h4>${esc(T('learn.effort'))}</h4><div class="life-cats" role="group">${effBtns}</div><h4>${esc(T('learn.club'))}</h4>${club}<h4>${esc(T('learn.allowance'))}</h4>${allow}<p class="note">${esc(T('learn.note'))}</p>`;
+    // School (from 7): what you attend now, and the four kinds you can ask for (the carers decide).
+    let school = '';
+    if (P.age(w, p) >= 7 && Pl.schoolOffers) {
+      const cur = Pl.currentTier(w, p), asked = waiting('ASK_SCHOOL');
+      school = `<h4>${esc(T('learn.school'))}</h4><p>${esc(T('learn.schoolNow', { school: T(`school.${cur}`) }))}</p><ul class="list-plain life-jobs">${Pl.schoolOffers(w, p).map(o => `<li><span><b>${esc(T(`ev.TE-001.${o.tier}`))}</b><br><small class="muted">${o.why === 'none' ? esc(T('learn.none')) : o.fee ? esc(T('learn.schoolFee', { fee: U.fmtMoney(o.fee) })) : esc(T('learn.free'))}${o.why === 'cost' ? ` · ${esc(T('learn.cost'))}` : ''}</small></span>${o.tier === cur ? '<span class="muted">✓</span>' : o.why === 'none' ? '' : `<button class="ghost small" data-school="${o.tier}" ${asked || p.guardian === 'WELFARE' ? 'disabled' : ''}>${esc(T('learn.askSchool'))}</button>`}</li>`).join('')}</ul><p class="note">${esc(T('learn.schoolNote'))}</p>`;
+    }
+    const plan = P.age(w, p) >= 14 ? `<h4>${esc(T('learn.plan'))}</h4><p class="muted">${s.plan ? esc(T('learn.planNow', { plan: T(`plan.${s.plan}`) })) : esc(T('learn.planNone'))}</p><div class="life-cats">${['degree', 'vocational', 'work'].map(k => `<button class="${s.plan === k ? 'on' : ''}" data-plan="${k}">${esc(T(`plan.${k}`))}</button>`).join('')}</div>` : '';
+    return `${school}<h4>${esc(T('learn.effort'))}</h4><div class="life-cats" role="group">${effBtns}</div><h4>${esc(T('learn.club'))}</h4>${club}<h4>${esc(T('learn.allowance'))}</h4>${allow}${plan}<p class="note">${esc(T('learn.note'))}</p>`;
   }
   function friendsHtml(w, p) {
     const s = w.player, mine = (s.friends || []).map(f => [w.people[f.id], f.since]).filter(x => x[0]);
@@ -144,6 +151,8 @@
       else if (b.dataset.quitclub) say(Pl.request(w, 'QUIT_CLUB', {}));
       else if (b.dataset.allow) say(Pl.request(w, 'ASK_ALLOWANCE', { chores: b.dataset.allow === '1' }));
       else if (b.dataset.friend) say(Pl.request(w, 'MAKE_FRIEND', { pid: Number(b.dataset.friend) }));
+      else if (b.dataset.school) say(Pl.request(w, 'ASK_SCHOOL', { tier: b.dataset.school }));
+      else if (b.dataset.plan) say(Pl.request(w, 'SET_PLAN', { plan: b.dataset.plan }));
       else if (b.dataset.choice) say(Pl.choose(w, b.dataset.uid, b.dataset.choice));
       else if (b.dataset.pass) { Pl.pass(w, b.dataset.pass); UI.update(true); }
     });

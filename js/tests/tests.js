@@ -2144,6 +2144,61 @@
     LES.Countries.ensure(D);
   }
 
+  // PL-07: teens and the four-tier school choice. The teen asks; carers decide among what they can afford.
+  async function playTeenTests() {
+    print('--- Play a Life: teens and school choice (PL-07) ---', 'info');
+    const Pl = LES.Player, D = LES.DEFAULTS, P = LES.P, C = LES.C, I = LES.I18n;
+    LES.Countries.ensure(D);
+    const teen = (seed, test) => { for (let k = 0; k < 30; k++) { const w = new LES.World(Object.assign({}, D, { seed: `${seed}-${k}`, founders: 200, play: 'random', playStage: 'teen' })); Pl.begin(w); const p = Pl.person(w); if (Pl.carerOf(w, p) && p.guardian !== 'WELFARE' && P.age(w, p) < 16 && (!test || test(w, p))) return w; } return null; };
+    const rich = w => { const p = Pl.person(w); for (const g of p.caregivers.map(id => w.people[id])) w.ledger.pay('GENESIS', g, 'cash', Pl.typicalPay(w) * 200); return w; };
+    const ask = (w, tier) => { w.player.cool = {}; const r = Pl.request(w, 'ASK_SCHOOL', { tier }); w.step(); return r.command || r; };
+    // A poor family: paid schools are not offered and nothing is ever charged.
+    const poor = teen('pl7p'), pp = Pl.person(poor);
+    for (const g of pp.caregivers.map(id => poor.people[id])) { poor.ledger.spend(g, 'cash', 'MERCHANT', g.cash); g.incomeEMA = g.mcost; }
+    const po = Pl.schoolOffers(poor, pp), m0 = poor.ledger.sec.MERCHANT.bal;
+    const rp = ask(poor, 'international');
+    check('A family that cannot afford it: paid schools are marked unaffordable, the teen stays at the free school', po.filter(o => o.fee).every(o => !o.ok) && Pl.currentTier(poor, pp) === 'public' && rp.code === 'ok_stay', JSON.stringify(po.map(o => [o.tier, o.ok, o.why])));
+    // No private school in town: the option says so.
+    const np = teen('pl7n', w => !w.biz.some(b => b.open && b.type === 'privschool'));
+    check('No private school in town: unavailable, with the reason', !!np && Pl.schoolOffers(np, Pl.person(np)).find(o => o.tier === 'private').why === 'none' && ask(np, 'private').code === 'unavailable');
+    // Wealthy families: options open, but carers do not always pick the dearest school; the teen's wish counts.
+    let granted = 0, other = 0, withWish = 0, withoutWish = 0;
+    for (let k = 0; k < 14; k++) {
+      const a = teen(`pl7r${k}`), b = teen(`pl7r${k}`);
+      if (!a) continue;
+      rich(a); rich(b);
+      const ra = ask(a, 'international'), rb = ask(b, 'public');
+      if (Pl.currentTier(a, Pl.person(a)) === 'international') { granted++; withWish++; } else other++;
+      if (Pl.currentTier(b, Pl.person(b)) === 'international') withoutWish++;
+    }
+    check('Wealthy families can choose dear schools but are not bound to; the teen\'s wish raises the chance', granted >= 1 && other >= 1 && withWish >= withoutWish, `asked international: ${granted} got it, ${other} did not; without asking: ${withoutWish}`);
+    // Fees: real monthly payments by the carer; when they stop, back to the government school.
+    let w = null;
+    for (let k = 0; k < 20 && !w; k++) { const x = rich(teen(`pl7f${k}`)); for (let t = 0; t < 4 && Pl.currentTier(x, Pl.person(x)) !== 'international'; t++) ask(x, 'international'); if (Pl.currentTier(x, Pl.person(x)) === 'international') w = x; }
+    const g = w && w.people[w.player.school.payer], fee = w && w.player.school.fee;
+    let paid = false;
+    if (w) { const c0 = g.cash; for (const f of Pl.MONTHLY) f(w, Pl.person(w)); paid = c0 - g.cash === fee && w.checkInvariants().length === 0; } // one month's payments on their own
+    check('An out-of-town school is paid every month by the carer, through the ledger', !!w && paid);
+    if (w) { while (w.day % 30 !== 0) w.step(); for (const q of Pl.person(w).caregivers.map(id => w.people[id])) w.ledger.spend(q, 'cash', 'MERCHANT', q.cash); w.step(); } // the money runs out just before fee day
+    check('When the fees can no longer be paid the teen returns to the government school', !!w && Pl.currentTier(w, Pl.person(w)) === 'public' && w.player.journal.some(e => e.key === 'school.backPublic'));
+    // Entrance exam: low aptitude does not get into the aristocratic school.
+    const ex = rich(teen('pl7e', (x, p) => p.pot[C.INT] < 4.5));
+    if (ex) ask(ex, 'prestige');
+    check('The aristocratic school needs a passed entrance exam', !!ex && Pl.currentTier(ex, Pl.person(ex)) !== 'prestige' && ex.player.journal.some(e => e.key === 'school.examFailed'));
+    // The secondary-school decision comes at 12, with every option on one card, in English and Chinese.
+    let evw = null;
+    for (let k = 0; k < 30 && !evw; k++) { const x = new LES.World(Object.assign({}, D, { seed: `pl7v-${k}`, founders: 200, play: 'random', playStage: 'child' })); Pl.begin(x); const p = Pl.person(x); if (P.age(x, p) > 11.2 && Pl.carerOf(x, p) && p.guardian !== 'WELFARE') evw = x; }
+    let item = null;
+    for (let d = 0; d < 400 && evw && !item; d++) { evw.step(); item = (evw.player.inbox || []).find(i => i.ev === 'TE-001'); }
+    const body = item ? I.t('ev.TE-001.body', item.params) : '';
+    await new Promise(r => I.set('zh-Hans', r)); const zh = item ? I.t('ev.TE-001.body', item.params) : ''; await new Promise(r => I.set('en', r));
+    check('At 12: "Choosing a secondary school" with four options and their fees', !!item && Pl.eventById('TE-001').choices.length === 4 && !/\{\w+\}/.test(body + zh), body);
+    // Grown up: school arrangements end.
+    if (w) { Pl.person(w).birthDay -= 365 * 8; for (let d = 0; d < 31; d++) w.step(); }
+    check('At 18 the school arrangement ends', !!w && !w.player.school);
+    LES.Countries.ensure(D);
+  }
+
   // PL-01: interface language. Words only: the same seed gives the same town and the same save in any language.
   async function i18nTests() {
     print('--- Interface language (PL-01) ---', 'info');
@@ -2258,6 +2313,7 @@
       await playUiTests();
       await playBabyTests();
       await playChildTests();
+      await playTeenTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -2269,6 +2325,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

@@ -157,7 +157,7 @@
         const payer = payers.find(q => q.cash >= fee + q.mcost);
         if (!fee || !payer || fee > inc * SV.PRIVATE_FEE_SHARE * 1.6) { c.school = -1; if (payers[0]) P.log(w, payers[0], `Moved ${c.first} back to the public school`, 'family', 0); }
         else { w.ledger.move(payer, 'cash', b, 'cash', fee); b.townRev = (b.townRev || 0) + fee; }
-      } else if (schools.length && (jan || c._schoolAsk === undefined)) {
+      } else if (schools.length && (jan || c._schoolAsk === undefined) && !(w.player && w.player.id === c.id && w.player.school)) { // Play a Life: the player's carers already chose
         c._schoolAsk = w.day;
         const b = schools.find(s => seats.get(s.id) > 0);
         if (!b) continue;

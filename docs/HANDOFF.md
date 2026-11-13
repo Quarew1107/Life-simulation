@@ -275,6 +275,21 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
     6, `w.player.friends`). `Player.MONTHLY` hooks run these every 30 days; all end at 18. Handlers may set
     `minAge`. Eleven events CH-001/002/004/006/009/011/015/016/021/031/032 with real classmates/newcomers.
     My life tab for children/teens: Family, Learn (pace, club, pocket money), Friends. Tests: `playChildTests` (10).
+  - PL-07 done (teens 12-17; `js/sim/player-teen.js`): four-tier school choice. `Player.schoolOffers(w, p)`: public
+    (free, quality `w.gov.eduQ`), private (only a real `privschool` business with a free seat; otherwise
+    `why: 'none'`; the engine charges its fee), international / prestige (out-of-town, fees 1.10x / 2.20x the town's
+    median wage `Player.typicalPay`, paid monthly by the carer to merchants). Feasible only if spare income >= 1.25
+    fees or usable savings >= 12 fees + 3 months' costs. `ASK_SCHOOL` (age 7-17, cooldown 300 days): prestige needs
+    an entrance exam (potential INT x 0.85-1.15 >= 6.5); carers choose among feasible schools with the design 2.2
+    score (fit, values, status, welfare, child voice 0.25 at 12+, savings, fee vs capacity = spare income + savings
+    / 36; softmax 0.8, player stream): `ok` / `ok_other` / `ok_stay`. Out-of-town schools: +0.006 x (Q-1) x (0.5 +
+    fit) INT potential a month and a little CHA (capped +0.5 for life, separate from clubs); prestige with a poor fit
+    costs happiness; unpaid fees -> back to public (journal). `Services.schoolMonth` no longer auto-enrols the
+    player's child once their carers have chosen. `SET_PLAN` degree|vocational|work (14+). Club `tuition`. Nine
+    teen events TE-001 (at 12, four schools with fees), 003, 006, 008, 011, 024 (crush -> friendship only),
+    029, 038, 050. Learn tab shows schools with fees and why unavailable. Measured (80 families who could afford
+    a paid school): asked international -> granted ~1 in 4; asked prestige -> exam stops most. Tests:
+    `playTeenTests` (8).
   - Sources for the plan: ONS LTIM YE Dec 2024 (+345k revised) and long-term assumption +340k/yr; Census Vintage
     2024 (+2.8M) and projections (~0.9M/yr); DOSM CPE 2024/2026; NBS 2024 communique.
 
