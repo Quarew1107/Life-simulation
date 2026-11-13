@@ -20,6 +20,7 @@
   Pl.TIERS = ['public', 'private', 'international', 'prestige'];
   const TIER = { public: { level: 0.5, peer: 0.2, welfare: 1 }, private: { level: 0.6, peer: 0.5, welfare: 0.85, Q: 1.25 }, international: { level: 0.7, peer: 0.7, welfare: 0.75, Q: 1.3, fee: 1.1 }, prestige: { level: 0.85, peer: 1, welfare: 0.55, Q: 1.4, fee: 2.2 } };
   Pl.CLUBS.tuition = [C.INT]; // exam tuition (TE-003, TE-038)
+  Pl.TARGETS.club_tuition = () => ({ club: 'tuition' }); // (the other clubs' targets were made in player-child.js)
   // The town's typical monthly pay: the median wage of residents in work.
   Pl.typicalPay = function (w) {
     const s = w.living.filter(q => q.alive && q.job).map(q => q.job.salary).sort((a, b) => a - b);

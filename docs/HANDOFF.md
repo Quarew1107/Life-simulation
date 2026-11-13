@@ -450,6 +450,14 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
         (filters in place). Each item shows its time, cost, note (pay, capital, rent), admission chance and
         who decides; what cannot happen tomorrow is greyed with the reason.
       - **Narrow screens:** the left column hides below 1100 px wide; a single column below 700 px.
+    - **Step 5 done (measured):** six 20-year lives at Story speed with the stop rules on (every decision
+      answered at once):
+      - important decisions: about 2 a year for adults, 1.8 to 2.2 from birth or childhood, 1.1 for seniors;
+      - big moments: about 0.2 a year;
+      - at Story speed (73 s a year) that is a stop about every 35 to 40 s; left as is.
+      - Bug found by the measurement and fixed: the exam-tuition choices (TE-003, TE-038) pointed to a target
+        that did not exist (`club_tuition`; tuition was added to the clubs after their targets were made). A
+        test now checks that every choice has a real target.
   - Sources for the plan: ONS LTIM YE Dec 2024 (+345k revised) and long-term assumption +340k/yr; Census Vintage
     2024 (+2.8M) and projections (~0.9M/yr); DOSM CPE 2024/2026; NBS 2024 communique.
 

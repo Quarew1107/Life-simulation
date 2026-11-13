@@ -2637,6 +2637,8 @@
     check('Money: an unaffordable trip is refused with its cost; a cheap visit still fits', t.error && t.error !== 'no_time' && !!d1.command, `${t.error}`);
     const d2 = Pl.check(w, 'ASK_DATE', { pid: p.id });
     check('Access: the request\'s own rules apply before queuing (you cannot ask yourself out)', !d2.ok && d2.code === 'not_possible' && !!Pl.request(w, 'ASK_DATE', { pid: p.id }).command);
+    const missingT = Pl.EVENTS.flatMap(e => e.choices.filter(c => c.target && typeof Pl.TARGETS[c.target] !== 'function').map(c => `${e.id}:${c.id}`));
+    check('Every choice of every event points to a real target', !missingT.length, missingT.join(' '));
     // Importance: every event is important (2) or everyday (1); most turning points are important.
     const imp = Pl.EVENTS.filter(e => e.imp === 2).length;
     check('Decisions come in two kinds; important ones are the majority (turning points)', Pl.EVENTS.every(e => e.imp === 1 || e.imp === 2) && imp >= 45 && imp < Pl.EVENTS.length, `${imp} of ${Pl.EVENTS.length}`);
