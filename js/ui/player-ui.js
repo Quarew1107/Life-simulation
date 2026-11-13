@@ -26,7 +26,25 @@
 
   // Categories by life stage: only Work does something so far; the others say so honestly.
   const CATS = ['work', 'learn', 'money', 'love', 'health', 'community'];
-  const catsFor = stage => (stage === 'baby' ? ['care'] : stage === 'child' || stage === 'teen' ? ['care', 'learn'] : CATS);
+  const catsFor = stage => (stage === 'baby' ? ['care'] : stage === 'child' || stage === 'teen' ? ['care', 'learn', 'friends'] : CATS);
+  // Children and teens: study pace, a club, pocket money (carers decide and pay).
+  function learnHtml(w, p) {
+    const s = w.player, eff = s.effort || 'steady', g = Pl.carerOf(w, p), waiting = k => s.pending.some(c => c.kind === k);
+    const effBtns = ['relaxed', 'steady', 'hard'].map(k => `<button class="${eff === k ? 'on' : ''}" data-effort="${k}" aria-pressed="${eff === k}" ${P.age(w, p) < 6 ? 'disabled' : ''}>${esc(T(`effort.${k}`))}</button>`).join('');
+    const club = s.club ? `<p>${esc(T('learn.inClub', { club: T(`club.${s.club.id}`) }))} <button class="link" data-quitclub="1">${esc(T('learn.quit'))}</button></p>`
+      : `<p class="muted">${esc(T('learn.noClub', { fee: U.fmtMoney(Pl.clubFee(w)) }))}</p><div class="life-cats">${Object.keys(Pl.CLUBS).map(k => `<button data-club="${k}" ${waiting('ASK_CLUB') ? 'disabled' : ''}>${esc(T(`club.${k}`))}</button>`).join('')}</div>`;
+    const al = s.allowance, payer = al && w.people[al.payer];
+    const allow = al ? `<p>${esc(T('learn.allowYes', { amt: U.fmtMoney(al.amt), carer: payer ? P.name(payer) : '' }))}</p>`
+      : `<p class="muted">${esc(T('learn.allowNo'))}</p>${g && P.age(w, p) >= 6 ? `<button class="ghost small" data-allow="0" ${waiting('ASK_ALLOWANCE') ? 'disabled' : ''}>${esc(T('learn.askAllow'))}</button> <button class="ghost small" data-allow="1" ${waiting('ASK_ALLOWANCE') ? 'disabled' : ''}>${esc(T('learn.askChores'))}</button>` : ''}`;
+    return `<h4>${esc(T('learn.effort'))}</h4><div class="life-cats" role="group">${effBtns}</div><h4>${esc(T('learn.club'))}</h4>${club}<h4>${esc(T('learn.allowance'))}</h4>${allow}<p class="note">${esc(T('learn.note'))}</p>`;
+  }
+  function friendsHtml(w, p) {
+    const s = w.player, mine = (s.friends || []).map(f => [w.people[f.id], f.since]).filter(x => x[0]);
+    const near = w.living.filter(q => q.alive && q !== p && !q.away && !P.isAdult(w, q) && Math.abs(P.age(w, q) - P.age(w, p)) <= 2 && !mine.some(x => x[0] === q)).slice(0, 5);
+    return `${mine.length ? `<ul class="list-plain">${mine.map(([q, d]) => `<li><span>${UI.plink(w, q.id)}</span><small class="muted">${esc(T('friends.since', { date: U.fmtDate(d) }))}</small></li>`).join('')}</ul>` : `<p class="muted">${esc(T('friends.none'))}</p>`}
+      ${near.length ? `<h4>${esc(T('friends.suggest'))}</h4><ul class="list-plain">${near.map(q => `<li><span>${UI.plink(w, q.id)} <small class="muted">${Math.floor(P.age(w, q))}</small></span><button class="ghost small" data-friend="${q.id}" ${s.pending.some(c => c.kind === 'MAKE_FRIEND' && c.args.pid === q.id) ? 'disabled' : ''}>${esc(T('friends.ask'))}</button></li>`).join('')}</ul>` : ''}
+      <p class="note">${esc(T('friends.note'))}</p>`;
+  }
   // Babies and children: who looks after them, and reaching for them (the carer decides).
   function careHtml(w, p) {
     if (p.guardian === 'WELFARE') return `<p>${esc(T('care.welfare'))}</p><p class="note">${esc(T('care.note'))}</p>`;
@@ -93,7 +111,7 @@
       <div class="card">${bar(T('life.health'), p.health)}${bar(T('life.happy'), p.happy)}${bar(T('life.stress'), p.stress, 'bad')}</div>
       <div class="card"><h3>${esc(T('life.decisions'))}${(s.inbox || []).length ? ` <small class="life-count">${s.inbox.length}</small>` : ''}</h3>${decisionsHtml(w)}</div>
       <div class="card"><h3>${esc(T('life.actions'))}</h3><div class="life-cats" role="group">${cats}</div>
-        <div class="life-cat-body">${UI.lifeCat === 'work' ? workHtml(w, p) : UI.lifeCat === 'care' ? careHtml(w, p) : `<p class="muted">${esc(T('cat.soon'))}</p>`}</div></div>`}
+        <div class="life-cat-body">${UI.lifeCat === 'work' ? workHtml(w, p) : UI.lifeCat === 'care' ? careHtml(w, p) : UI.lifeCat === 'learn' && !P.isAdult(w, p) ? learnHtml(w, p) : UI.lifeCat === 'friends' ? friendsHtml(w, p) : `<p class="muted">${esc(T('cat.soon'))}</p>`}</div></div>`}
       <div class="card"><h3>${esc(T('journal.title'))}</h3>${journalHtml(w)}</div>
       <details class="card life-settings"><summary>${esc(T('life.settings'))}</summary>
         <label>${esc(T('freq.label'))} <select id="life-freq">${['important', 'balanced', 'detailed'].map(k => `<option value="${k}" ${(s.freq || 'balanced') === k ? 'selected' : ''}>${esc(T(`freq.${k}`))}</option>`).join('')}</select></label>
@@ -121,6 +139,11 @@
       if (b.dataset.cat) { UI.lifeCat = b.dataset.cat; UI.update(true); }
       else if (b.dataset.apply) say(Pl.request(w, 'APPLY_JOB', { vac: Number(b.dataset.apply) }));
       else if (b.dataset.care) say(Pl.request(w, 'ASK_CARE', {}));
+      else if (b.dataset.effort) say(Pl.request(w, 'SET_EFFORT', { level: b.dataset.effort }));
+      else if (b.dataset.club) say(Pl.request(w, 'ASK_CLUB', { club: b.dataset.club }));
+      else if (b.dataset.quitclub) say(Pl.request(w, 'QUIT_CLUB', {}));
+      else if (b.dataset.allow) say(Pl.request(w, 'ASK_ALLOWANCE', { chores: b.dataset.allow === '1' }));
+      else if (b.dataset.friend) say(Pl.request(w, 'MAKE_FRIEND', { pid: Number(b.dataset.friend) }));
       else if (b.dataset.choice) say(Pl.choose(w, b.dataset.uid, b.dataset.choice));
       else if (b.dataset.pass) { Pl.pass(w, b.dataset.pass); UI.update(true); }
     });

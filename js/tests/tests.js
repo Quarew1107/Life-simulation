@@ -2079,6 +2079,71 @@
     LES.Countries.ensure(D);
   }
 
+  // PL-06: childhood. The child asks; carers decide and pay; other children decide for themselves.
+  async function playChildTests() {
+    print('--- Play a Life: childhood (PL-06) ---', 'info');
+    const Pl = LES.Player, D = LES.DEFAULTS, P = LES.P, C = LES.C, I = LES.I18n;
+    LES.Countries.ensure(D);
+    // A 7-year-old with a carer.
+    const kid = seed => { for (let k = 0; k < 20; k++) { const w = new LES.World(Object.assign({}, D, { seed: `${seed}-${k}`, founders: 200, play: 'random', playStage: 'child' })); Pl.begin(w); const p = Pl.person(w); if (P.age(w, p) >= 6 && P.age(w, p) < 9 && Pl.carerOf(w, p)) return w; } return null; };
+    const w = kid('pl6'), p = Pl.person(w), g = Pl.carerOf(w, p);
+    const run = (kind, args) => { const r = Pl.request(w, kind, args); w.step(); return r.command || r; };
+    // Clubs: the carer decides, can refuse, and pays a real fee each month.
+    g.cash += 0; // (the carer's own money)
+    let club = null;
+    for (const c of ['chess', 'football', 'music', 'art', 'dance', 'maths', 'science', 'swimming', 'athletics']) { w.player.cool = {}; const r = run('ASK_CLUB', { club: c }); if (r.code === 'ok') { club = c; break; } }
+    check('Asking for a club: the carer may say no; once one says yes you are in that club', !!club && w.player.club && w.player.club.payer === g.id, w.player.journal.filter(e => e.kind === 'cmd').map(e => e.code).join(','));
+    const gc = g.cash, merch = w.ledger.sec.MERCHANT.bal;
+    while (w.day % 30 !== 0) w.step();
+    w.step();
+    check('The carer pays the club fee each month through the ledger (nothing is created)', w.checkInvariants().length === 0 && (g.cash <= gc - Pl.clubFee(w) + g.incomeEMA * 2) && w.ledger.sec.MERCHANT.bal !== merch);
+    const potBefore = p.pot.slice(), boost0 = (w.player.boost || [0, 0, 0, 0, 0, 0]).slice();
+    for (let d = 0; d < 365 * 8 && w.player.club; d++) w.step();
+    const b = w.player.boost || [];
+    check('Clubs and effort move potential only a little, within the lifetime cap', b.every(x => x <= 0.6 + 1e-9 && x >= -0.3 - 1e-9) && Pl.CLUBS[club].some(a => b[a] > boost0[a]));
+    // A family that cannot afford it: refused before anyone decides, and no fee is charged.
+    const poor = kid('pl6p'), pp = Pl.person(poor), pg = Pl.carerOf(poor, pp);
+    poor.ledger.spend(pg, 'cash', 'MERCHANT', pg.cash); pg.incomeEMA = 0;
+    const rp = Pl.request(poor, 'ASK_CLUB', { club: 'chess' }); Pl.tick(poor);
+    check('A family that cannot afford a club: refused with the reason, nothing paid', rp.command.code === 'cant_afford' && !poor.player.club && /cannot afford/.test(I.render(poor.player.journal.slice(-1)[0])));
+    // Pocket money: a real transfer from the carer, which stops when money is short.
+    const al = kid('pl6a'), ap = Pl.person(al), ag = Pl.carerOf(al, ap);
+    al.ledger.pay('GENESIS', ag, 'cash', al.px(50000)); // (a gift to the carer, through the ledger)
+    let ok = null;
+    for (let k = 0; k < 15 && !ok; k++) { al.player.cool = {}; const r = Pl.request(al, 'ASK_ALLOWANCE', { chores: true }); al.step(); if (r.command && r.command.code.startsWith('ok')) ok = r.command; }
+    const c0 = ap.cash;
+    while (al.day % 30 !== 0) al.step();
+    al.step();
+    check('Pocket money is a real monthly transfer from the carer', !!ok && ap.cash === c0 + al.player.allowance.amt && al.checkInvariants().length === 0, JSON.stringify({ ok: ok && ok.code, c0, now: ap.cash, al: al.player.allowance, day: al.day }));
+    while (al.day % 30 !== 0) al.step();
+    al.ledger.spend(ag, 'cash', 'MERCHANT', ag.cash); // the carer's money runs out just before pocket-money day
+    al.step();
+    check('It stops when the carer runs short', !al.player.allowance && al.player.journal.some(e => e.key === 'allow.stopped'));
+    // Friends: real children of about the same age, who may say no.
+    const f = kid('pl6f'), fp = Pl.person(f), mates = f.living.filter(q => q !== fp && !P.isAdult(f, q) && Math.abs(P.age(f, q) - P.age(f, fp)) <= 2);
+    let yes = 0, no = 0;
+    for (const q of mates.slice(0, 8)) { f.player.cool = {}; const r = Pl.request(f, 'MAKE_FRIEND', { pid: q.id }); f.step(); if (r.command.code === 'ok') yes++; else if (r.command.code === 'refused') no++; }
+    const adult = f.living.find(q => P.isAdult(f, q));
+    f.player.cool = {}; const ra = Pl.request(f, 'MAKE_FRIEND', { pid: adult.id }); f.step();
+    check('Making friends: some say yes, some say no; adults are not "friends" here', yes >= 1 && no >= 1 && ra.command.code === 'not_found' && (f.player.friends || []).every(x => !P.isAdult(f, f.people[x.id])), `${yes} yes, ${no} no`);
+    // Effort is the child's own choice, free; too young for it at 4.
+    const e = kid('pl6e'); const re = Pl.request(e, 'SET_EFFORT', { level: 'hard' }); e.step();
+    check('Study pace is the child\'s own choice (no money, no one else asked)', re.command.code === 'ok' && e.player.effort === 'hard');
+    // Childhood events over years: text complete in English and Chinese.
+    const ev = kid('pl6v');
+    for (let d = 0; d < 365 * 4; d++) { for (const it of (ev.player.inbox || []).slice()) { const x = Pl.eventById(it.ev), ch = x.choices.find(y => y.cmd) || x.choices[0]; Pl.choose(ev, it.uid, ch.id); } ev.step(); }
+    const offered = ev.player.journal.filter(x => x.kind === 'event');
+    const zhOk = await new Promise(r => I.set('zh-Hans', r)).then(() => ev.player.journal.every(x => !/\{\w+\}/.test(I.render(x))));
+    await new Promise(r => I.set('en', r));
+    check('A child meets several different moments; every line reads properly in English and Chinese', new Set(offered.map(x => x.ev)).size >= 4 && ev.player.journal.every(x => !/\{\w+\}|cmd\.|ev\.CH/.test(I.render(x))) && zhOk && ev.checkInvariants().length === 0, offered.map(x => x.ev).join(' '));
+    // Turning 18 ends the child's arrangements.
+    const grown = kid('pl6g'), gp = Pl.person(grown); grown.player.club = { id: 'art', payer: Pl.carerOf(grown, gp).id, since: 0 };
+    gp.birthDay -= 365 * 12; // (as if 18 now)
+    for (let d = 0; d < 31; d++) grown.step();
+    check('Grown up: clubs and pocket money paid by carers end', !grown.player.club);
+    LES.Countries.ensure(D);
+  }
+
   // PL-01: interface language. Words only: the same seed gives the same town and the same save in any language.
   async function i18nTests() {
     print('--- Interface language (PL-01) ---', 'info');
@@ -2192,6 +2257,7 @@
       await playCommandTests();
       await playUiTests();
       await playBabyTests();
+      await playChildTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -2203,6 +2269,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

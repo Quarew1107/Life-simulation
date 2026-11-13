@@ -262,6 +262,19 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
     real names (`Player.PARAMS`); quiet choices are story-only. At most one new event a month (most important
     first). My life tab: baby/child show a "Family" section (carers, "Reach for ..."); money hidden for children
     with nothing. Tests: `playBabyTests` (9).
+  - PL-06 done (childhood 3-11; `js/sim/player-child.js`): a child's abilities are recomputed yearly from potential
+    (`World.yearClose`) and at 18 from potential + upbringing, so lasting choices move only those, capped (w.player
+    .boost per ability +0.6 / -0.3 for life). Commands: `SET_EFFORT` relaxed|steady|hard (own choice, free; hard
+    +0.003 INT potential a month, happiness -1; relaxed -0.0015, +1); `ASK_CLUB` (9 clubs, `Player.CLUBS`; refused
+    if the household cannot afford it (cash >= 6 fees or spare income >= 2 fees); else the carer decides: 0.25 +
+    0.45 resp + 0.15 charm (+0.15 for learning clubs if the carer's strategy is EDU); the carer pays a real fee
+    (a quarter of the pack's monthly child cost) to merchants each month; +0.004 a month to the club's abilities,
+    happiness +2; stops when unpaid); `QUIT_CLUB`; `ASK_ALLOWANCE` (a tenth of the child cost a month, a real
+    carer-to-child transfer; chores +0.2 yes; stops when the carer has < 3 months of it); `STOP_SPENDING`;
+    `MAKE_FRIEND` (a real non-adult within 2.5 years; yes 0.2 + 0.4 personality similarity + 0.25 charm; up to
+    6, `w.player.friends`). `Player.MONTHLY` hooks run these every 30 days; all end at 18. Handlers may set
+    `minAge`. Eleven events CH-001/002/004/006/009/011/015/016/021/031/032 with real classmates/newcomers.
+    My life tab for children/teens: Family, Learn (pace, club, pocket money), Friends. Tests: `playChildTests` (10).
   - Sources for the plan: ONS LTIM YE Dec 2024 (+345k revised) and long-term assumption +340k/yr; Census Vintage
     2024 (+2.8M) and projections (~0.9M/yr); DOSM CPE 2024/2026; NBS 2024 communique.
 

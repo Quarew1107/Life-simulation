@@ -70,6 +70,7 @@
   // money or skills: each handler goes through the engine's own paths (a job application joins the vacancy's
   // applicants and the employer decides at closing time, exactly as for anyone else).
   // A world becomes "played" (w.player.played) with the first command that changes it.
+  Pl.MONTHLY = []; // (w, p) => void, run every 30 days for the player (js/sim/player-child.js ...)
   Pl.DAY_HOURS = 8;   // time a player's requests may take per day
   Pl.STALE = 7;       // a request older than this many days is dropped, not carried out
   Pl.JOURNAL = 400;   // journal entries kept
@@ -146,7 +147,7 @@
     s.apps = s.apps || []; s.inbox = s.inbox || [];
     if (s.pending.length) runCommands(w);
     if (s.apps.length) outcomes(w);
-    if (w.day % 30 === 0 && w.day > s.since) offerEvents(w);
+    if (w.day % 30 === 0 && w.day > s.since) { for (const f of Pl.MONTHLY) f(w, Pl.person(w)); offerEvents(w); } // stage files add monthly effects (clubs, allowance, effort)
     expireInbox(w);
   };
 
@@ -171,10 +172,10 @@
     for (const c of todo) {
       const h = Pl.HANDLERS[c.kind];
       let code = !p || !p.alive ? 'dead' : p.away ? 'away' : p.inst ? 'held' : w.day - c.requestedDay > Pl.STALE ? 'stale'
-        : h.adult && !isAdult(w, p) ? 'too_young' : h.maxAge !== undefined && P.age(w, p) >= h.maxAge + 1 ? 'too_old' : (s.cool[c.kind] || 0) > w.day ? 'cooldown' : s.hours + h.hours > Pl.DAY_HOURS ? 'no_time' : h.check(w, p, c.args);
+        : (h.adult && !isAdult(w, p)) || (h.minAge !== undefined && P.age(w, p) < h.minAge) ? 'too_young' : h.maxAge !== undefined && P.age(w, p) >= h.maxAge + 1 ? 'too_old' : (s.cool[c.kind] || 0) > w.day ? 'cooldown' : s.hours + h.hours > Pl.DAY_HOURS ? 'no_time' : h.check(w, p, c.args);
       let params = code && h.params ? h.params(w, p, c.args) : {};
       if (!code) { const r = h.run(w, p, c.args); code = r.code; params = r.params || {}; s.hours += h.hours; if (h.cooldown) s.cool[c.kind] = w.day + h.cooldown; }
-      c.status = code === 'ok' ? 'done' : code === 'busy' ? 'declined' : 'rejected'; c.code = code; c.day = w.day;
+      c.status = code.startsWith('ok') ? 'done' : code === 'busy' || code === 'refused' ? 'declined' : 'rejected'; c.code = code; c.day = w.day;
       journal(w, { kind: 'cmd', cmd: c.kind, code, key: GENERIC.has(code) ? `cmd.error.${code}` : `cmd.${c.kind}.${code}`, params });
       s.done = s.done || []; s.done.push(c); if (s.done.length > 200) s.done.shift();
     }
@@ -253,6 +254,7 @@
   const pref = (w, p) => { const o = Pl.openings(w, p); return o.length ? o : Pl.openings(w, p, true); };
 
   const rng = w => (st(w).rng = st(w).rng || new LES.RNG(`${w.cfg.seed}|play|events`)); // never the world's dice
+  Pl.rng = rng;
   function offerEvents(w) {
     const s = st(w), p = Pl.person(w);
     if (!p || !p.alive || p.away) return;
@@ -297,7 +299,7 @@
     s.inbox = s.inbox.filter(x => x !== item);
     journal(w, { kind: 'choice', ev: e.id, choice: ch.id, key: 'evt.chose', params: { choice: { key: `ev.${e.id}.${ch.id}`, params: item.params || {} } } });
     if (ch.story) return { story: true };
-    const p = Pl.person(w), args = ch.target ? Pl.TARGETS[ch.target](w, p) : {};
+    const p = Pl.person(w), args = ch.target ? Pl.TARGETS[ch.target](w, p, item) : {};
     if (!args) { journal(w, { kind: 'cmd', code: 'no_target', key: 'cmd.error.no_target', params: {} }); return { error: 'no_target' }; }
     return Pl.request(w, ch.cmd, args);
   };
