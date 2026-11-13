@@ -2409,6 +2409,64 @@
     LES.Countries.ensure(D);
   }
 
+  // PL-10: your own business, the lottery, giving, volunteering and elections, all through the engine.
+  async function playSocietyTests() {
+    print('--- Play a Life: business, lottery and community (PL-10) ---', 'info');
+    const Pl = LES.Player, D = LES.DEFAULTS, P = LES.P, I = LES.I18n;
+    LES.Countries.ensure(D);
+    const adult = (seed, test) => { for (let k = 0; k < 40; k++) { const w = new LES.World(Object.assign({}, D, { seed: `${seed}-${k}`, founders: 200, play: 'random', playStage: 'adult' })); Pl.begin(w); const p = Pl.person(w); if (!test || test(w, p)) return w; } return null; };
+    const req = (w, kind, args) => { w.player.cool = {}; w.player.hoursDay = -1; const r = Pl.request(w, kind, args); Pl.tick(w); return r.command ? r.command.code : r.error; };
+    // A business of your own: the engine's capital rules; a real firm with a place, shares and a loan.
+    const bw = adult('pl10b', (x, p) => p.manages < 0 && P.age(x, p) < 50 && P.invValue(x, p) < 1), bp = Pl.person(bw);
+    bw.ledger.spend(bp, 'cash', 'MERCHANT', bp.cash);
+    const t0 = Pl.bizTypes(bw, bp)[0], poor = req(bw, 'START_BIZ', { type: t0.id });
+    bw.ledger.pay('GENESIS', bp, 'cash', t0.capital * 2);
+    const n = bw.biz.length, sc = req(bw, 'START_BIZ', { type: t0.id }), b = bw.biz[n];
+    check('Starting a business: not without 40% of the capital; then a real firm (place, ownership, any loan)', (poor === 'cant_afford' && sc === 'ok' && b && bp.manages === b.id && b.shares[bp.id] === 1 && b.place >= 0 && bw.checkInvariants().length === 0), `${poor}, ${sc}`);
+    const again = req(bw, 'START_BIZ', { type: t0.id }), bc = b.cash, cc = req(bw, 'INJECT', { share: 0.25 });
+    for (let d = 0; d < 65; d++) bw.step();
+    const open = b.open, cash1 = bp.cash, sold = open ? req(bw, 'SELL_BIZ', {}) : 'closed';
+    check('One business at a time; putting money in is a transfer; selling pays the owner and ends it', again === 'have_biz' && cc === 'ok' && (!open || ((sold === 'ok' && !b.open && bp.cash > cash1) || sold === 'worthless')) && bw.checkInvariants().length === 0, `${cc}, ${sold}`);
+    // The lottery: disclosed odds, about 60% back on average, prizes from the outside world (no money made up).
+    const lw = adult('pl10l'), lp = Pl.person(lw);
+    lw.ledger.pay('GENESIS', lp, 'cash', Pl.ticket(lw) * 30000 + lp.mcost * 4);
+    let small = 0, mid = 0, jack = 0;
+    const N = 20000, price = Pl.ticket(lw);
+    for (let i = 0; i < N; i++) { const c = req(lw, 'BUY_TICKET', {}); if (c === 'won') { const last = lw.player.journal[lw.player.journal.length - 1]; if (last.params.prize === U.fmtMoney(price * 2)) small++; else mid++; } else if (c === 'jackpot') jack++; }
+    const back = (lw.player.lotto.won / lw.player.lotto.spent);
+    check('Lottery: about 15% small prizes, 2% medium, a rare jackpot; roughly 60% of stakes return', Math.abs(small / N - 0.15) < 0.015 && Math.abs(mid / N - 0.02) < 0.005 && back > 0.4 && back < 0.85 && lw.checkInvariants().length === 0, `small ${(small / N * 100).toFixed(1)}%, medium ${(mid / N * 100).toFixed(2)}%, jackpots ${jack}, ${(back * 100).toFixed(0)}% back`);
+    lw.player.cool = {};
+    const r1 = Pl.request(lw, 'BUY_TICKET', {}); Pl.tick(lw); lw.player.hoursDay = -1; const r2 = Pl.request(lw, 'BUY_TICKET', {}); Pl.tick(lw);
+    lw.player.noLottery = true;
+    check('One ticket a month; hidden lottery means no tickets', r1.command.code !== 'cooldown' && r2.command.code === 'cooldown' && req(lw, 'BUY_TICKET', {}) === 'hidden');
+    // Giving and volunteering: real money to the welfare home; real care for the children there.
+    const gw = adult('pl10g'), gp = Pl.person(gw);
+    gw.ledger.pay('GENESIS', gp, 'cash', gw.px(20000));
+    const wel = gw.ledger.sec.WELFARE.bal, don = gp.donated, dc = req(gw, 'DONATE', { amt: gw.px(500) });
+    check('Donating moves real money to the welfare home and counts as the person\'s giving', dc === 'ok' && gw.ledger.sec.WELFARE.bal === wel + gw.px(500) && gp.donated === don + gw.px(500) && gw.checkInvariants().length === 0);
+    const kid = gw.living.find(c => c.alive && !P.isAdult(gw, c));
+    if (kid) { kid.guardian = 'WELFARE'; kid.upbringing = 0.4; }
+    const vc = req(gw, 'VOLUNTEER', {});
+    check('Volunteering at the welfare home gives its children more care', !kid || (vc === 'ok' && kid.upbringing > 0.4), vc);
+    // Standing for election: on the ballot; the voters decide; the result comes back.
+    const ew = adult('pl10e', (x, p) => P.age(x, p) >= 30 && !(p.cr && p.cr.rec) && x.gov && x.gov.president !== p.id), ep = Pl.person(ew);
+    ew.gov.electionDay = ew.day + 75;
+    const st = req(ew, 'STAND', {});
+    let res = null;
+    for (let d = 0; d < 120 && !res; d++) { ew.step(); res = ew.player.journal.find(e => e.key === 'civic.won' || e.key === 'civic.lost'); }
+    const last = ew.gov.elections[ew.gov.elections.length - 1];
+    check('Standing for election: on the ballot, the voters decide, the result comes back', st === 'ok' && !!res && last.cands.some(c => c.id === ep.id) && (res.key === 'civic.won') === (ew.gov.president === ep.id), res ? I.render(res) : 'no result');
+    // Years of adult life answering every decision (lottery and community included): texts complete; books balance.
+    const ev = adult('pl10v', (x, p) => P.age(x, p) < 45);
+    ev.ledger.pay('GENESIS', Pl.person(ev), 'cash', ev.px(50000));
+    for (let d = 0; d < 365 * 6; d++) { for (const it of (ev.player.inbox || []).slice()) { const e = Pl.eventById(it.ev), ch = e.choices.find(y => y.cmd) || e.choices[0]; Pl.choose(ev, it.uid, ch.id); } ev.step(); }
+    const lines = ev.player.journal.map(e => I.render(e));
+    await new Promise(r => I.set('zh-Hans', r)); const zh = ev.player.journal.map(e => I.render(e)); await new Promise(r => I.set('en', r));
+    const evs = [...new Set(ev.player.journal.filter(e => e.kind === 'event').map(e => e.ev))];
+    check('Years of business and community decisions: every line complete in English and Chinese, books balance', evs.some(id => ['AD-011', 'AD-024', 'AD-072', 'AD-077', 'AD-079', 'AD-080', 'AD-091'].includes(id)) && ![...lines, ...zh].some(t => /\{\w+\}|cmd\.|ev\.AD|civic\./.test(t)) && ev.checkInvariants().length === 0, evs.join(' '));
+    LES.Countries.ensure(D);
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -2461,6 +2519,7 @@
       await playTeenTests();
       await playAdultTests();
       await playFamilyTests();
+      await playSocietyTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -2472,6 +2531,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

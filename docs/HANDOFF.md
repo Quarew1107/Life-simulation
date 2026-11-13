@@ -317,6 +317,19 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
     ledger transfer). Mature stories (off by default, My life settings): `AFFAIR` / `END_AFFAIR` (the other person
     must agree; found out 12% a month; the partner then leaves with 45-75% by responsibility). Ten events
     AD-031/032/035/036/037(mature)/040/041/044/045/047. Love & family panel. Tests: `playFamilyTests` (10).
+  - PL-10 done (adults; `js/sim/player-society.js`): `START_BIZ` (any type `Player.bizTypes` lists: the engine's
+    gates - credential, 40% of capital in savings/investments, room in town; `Finance.startBusiness` does the rest:
+    own money, bank loan up to 60%, setup costs, a place; a job is kept unless the person is an entrepreneur at
+    heart), `INJECT` (own cash into the business), `SELL_BIZ` (`Finance.sellBiz`, 70% of value), `CLOSE_BIZ`
+    (`Finance.closeBiz`). Lottery `BUY_TICKET` (owner: on but hideable, `w.player.noLottery`): one ticket a month,
+    adults, price 0.001 x typical pay, prizes 2x (15%) / 10x (2%) / 10,000x (0.001%) = 60% back, odds shown;
+    tickets to and prizes from the ledger's LUCK sector (the outside world, as the engine's own windfalls);
+    measured over 20,000 tickets ~15% / ~2% / ~50-60% back. `DONATE` (to WELFARE; counts as `p.donated`),
+    `VOLUNTEER` (welfare-home children +0.004 upbringing each; otherwise the community hall), `STAND` (21+, no
+    record: `Government.pickCandidates` adds the player to the next campaign, replacing the 4th; the voters decide;
+    the result is journaled), `WELCOME` (a recent arrival: happier, less stressed). Events AD-011/014/024/072/077/
+    079/080/091. Work tab: your business or start one; Money: lottery with odds and your record; Community tab.
+    Tests: `playSocietyTests` (8).
   - Sources for the plan: ONS LTIM YE Dec 2024 (+345k revised) and long-term assumption +340k/yr; Census Vintage
     2024 (+2.8M) and projections (~0.9M/yr); DOSM CPE 2024/2026; NBS 2024 communique.
 

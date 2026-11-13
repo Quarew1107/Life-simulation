@@ -202,6 +202,7 @@
     const score = p => 0.5 * (p.att[C.CHA] - 5) + 1.2 * n01(p.pers.risk) + 0.8 * Math.log10(Math.max(1, P.realWorth(w, p) / 100) / 1e5) + (p.job && p.job.salary > w.px(6000) ? 0.6 : 0) + (p.manages >= 0 ? 0.5 : 0) + (p.relig > 80 ? 0.3 : 0) + R.normal(0, 0.8);
     pool.sort((a, b) => score(b) - score(a));
     for (const p of pool) { if (out.length >= 3 + (R.next() < 0.4 ? 1 : 0)) break; out.push(p); }
+    if (w.player && LES.Player.standing) LES.Player.standing(w, out); // Play a Life: the player put their name forward
     return out;
   }
   // A candidate's platform: the few laws they most want to change (leanings + self-interest).
