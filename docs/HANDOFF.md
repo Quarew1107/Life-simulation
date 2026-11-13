@@ -377,6 +377,31 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
       - B: Day planner (a drawer under the map with an 8-hour timeline and an activity list);
       - C: Life story view (a full-screen story with "Live on until something happens").
       Build only after the owner picks one.
+  - **Owner's plan (approved Nov 14):** view A (hub) is the default; B (planner) and C (story) are switchable
+    views. Work is done one step at a time.
+    - **Step 1 done** (`js/sim/player-flow.js`, rules only):
+      - **Plans that can happen:** `Player.check(w, kind, args)` uses the next day's rules (alive, here, age,
+        waiting period, away on a trip, already planned, the handler's own check) plus time (8 h minus what
+        is planned) and money (cash minus the cost of the other plans; `Player.costOf`).
+        `Player.plan` queues only what passes; `Player.whyNot` gives the reason in words (`plan.*`).
+        `Player.choose` refuses an impossible choice and keeps the decision open. `Player.request` itself stays
+        permissive: the API and tests still work, and everything is re-checked when it runs.
+      - **Two kinds of decisions:** `Player.IMPORTANT` (51 of 74 events, imp 2) and everyday (imp 1).
+        `Player.urgent(w)` gives the important decision waiting.
+      - **At fast speeds the character decides:** when `w.player.autoMinor` is set (by the UI), everyday
+        decisions are settled by the character through `Player.AFTER` hooks at the end of each day.
+        - `Player.autoChoice` scores each choice from personality, charisma, wish for family, stress, health
+          and money, and picks softly on the player's dice. It never chooses an affair, a separation,
+          resigning, closing or selling a business, retiring or dropping out.
+        - The journal records it: `evt.auto` "{name} decided: ... (careful with money)".
+        - `Player.autoDecide` is also what "Let them decide" will use.
+      - **Life moments:** `Player.DAILY` compares a snapshot of the life each day and records moments
+        (`w.player.moments`, journal kind 'moment'). Big: born, school, school done, graduated, first job,
+        together, married, child, grandchild, business, elected, retired, lost, jackpot. Small: new job,
+        promoted, home, birthday (a year in review).
+      - **Life goals:** `SET_GOAL` picks from the engine's own goals (`Player.goals`).
+      - **Mood:** `Player.mood(w, p)` gives a line from the person's real state and recent moments.
+      - Tests: `playFlowTests` (10).
   - Sources for the plan: ONS LTIM YE Dec 2024 (+345k revised) and long-term assumption +340k/yr; Census Vintage
     2024 (+2.8M) and projections (~0.9M/yr); DOSM CPE 2024/2026; NBS 2024 communique.
 

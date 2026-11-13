@@ -1974,7 +1974,7 @@
     // A life event: offered, answered with a real application; another one left to pass.
     const ev = young('pl3-ev'), item = firstJob(ev), pick = item && Pl.choose(ev, item.uid, 'ambitious');
     if (pick && pick.command) ev.step();
-    check('"Your first full-time job" comes to a jobless young adult; "best-paid opening" really applies', !!item && !!pick.command && ['ok', 'already_applied'].includes(pick.command.code) && ev.player.journal.some(e => e.kind === 'choice' && e.choice === 'ambitious'), item ? I.render(last(ev)) : 'no event');
+    check('"Your first full-time job" comes to a jobless young adult; "best-paid opening" really applies (or is refused up front when the routine already applied, the decision staying open)', !!item && ((!!pick.command && ['ok', 'already_applied'].includes(pick.command.code) && ev.player.journal.some(e => e.kind === 'choice' && e.choice === 'ambitious')) || (pick.error === 'already_applied' && ev.player.inbox.includes(item))), item ? I.render(last(ev)) : 'no event');
     const ev2 = young('pl3-ev'), it2 = firstJob(ev2);
     for (let d = 0; d < 25; d++) ev2.step();
     const passed = ev2.player.journal.find(e => e.key === 'evt.passed' && e.ev === 'AD-001');
@@ -2620,6 +2620,67 @@
     LES.Countries.ensure(D);
   }
 
+  // Play a Life flow: plans that can happen, important vs everyday decisions, the character's own choices, moments, goals, mood.
+  async function playFlowTests() {
+    print('--- Play a Life: plans, decisions and life moments ---', 'info');
+    const Pl = LES.Player, D = LES.DEFAULTS, P = LES.P, I = LES.I18n;
+    LES.Countries.ensure(D);
+    const make = (seed, stage) => { const w = new LES.World(Object.assign({}, D, { seed, founders: 180, play: 'random', playStage: stage || 'adult' })); Pl.begin(w); return w; };
+    // Plans: time, money and access are checked before anything is queued.
+    const w = make('plf-p'), p = Pl.person(w);
+    w.ledger.pay('GENESIS', p, 'cash', w.px(3000));
+    const a = Pl.plan(w, 'REST', {}), b = Pl.plan(w, 'SEE_DOCTOR', {}), c = Pl.plan(w, 'REST', {});
+    check('A day has 8 hours: a full day planned leaves no room; the same plan twice is refused', !!a.command && b.error === 'no_time' && I.render(b.why).includes('only 0 h left') && c.error === 'duplicate');
+    Pl.cancel(w, a.command.id);
+    w.ledger.spend(p, 'cash', 'MERCHANT', Math.max(0, p.cash - Pl.tripCost(w, 'abroad') + 100));
+    const t = Pl.plan(w, 'TRAVEL', { kind: 'abroad' }), d1 = Pl.plan(w, 'SEE_DOCTOR', {});
+    check('Money: an unaffordable trip is refused with its cost; a cheap visit still fits', t.error && t.error !== 'no_time' && !!d1.command, `${t.error}`);
+    const d2 = Pl.check(w, 'ASK_DATE', { pid: p.id });
+    check('Access: the request\'s own rules apply before queuing (you cannot ask yourself out)', !d2.ok && d2.code === 'not_possible' && !!Pl.request(w, 'ASK_DATE', { pid: p.id }).command);
+    // Importance: every event is important (2) or everyday (1); most turning points are important.
+    const imp = Pl.EVENTS.filter(e => e.imp === 2).length;
+    check('Decisions come in two kinds; important ones are the majority (turning points)', Pl.EVENTS.every(e => e.imp === 1 || e.imp === 2) && imp >= 45 && imp < Pl.EVENTS.length, `${imp} of ${Pl.EVENTS.length}`);
+    // At fast speeds the character settles everyday decisions; important ones wait for the player.
+    const f = make('plf-a'); f.player.autoMinor = true;
+    f.ledger.pay('GENESIS', Pl.person(f), 'cash', f.px(40000));
+    let leftOver = false;
+    for (let d = 0; d < 365 * 4; d++) { f.step(); if ((f.player.inbox || []).some(x => !Pl.isImportant(x))) leftOver = true; }
+    const autos = f.player.journal.filter(e => e.kind === 'auto');
+    check('Fast speed: everyday decisions are taken by the character (with a reason); important ones wait', !leftOver && autos.length > 0 && autos.every(e => !Pl.IMPORTANT.has(e.ev)) && f.checkInvariants().length === 0, `${autos.length} decided by the character`);
+    // The character's choice follows who they are: a risk-taker buys lottery tickets far more than a careful person.
+    const lw = make('plf-l'), lp = Pl.person(lw), item = { uid: 'x', ev: 'AD-024', params: {} };
+    lw.ledger.pay('GENESIS', lp, 'cash', lw.px(20000));
+    const buys = risk => { lp.pers.risk = risk; let n = 0; for (let i = 0; i < 400; i++) { const r = Pl.autoChoice(lw, item); if (r && r.ch.id === 'buy') n++; } return n; };
+    const bold = buys(95), careful = buys(5);
+    check('The character\'s own choice follows their personality (lottery: risk-taker vs careful)', bold > careful * 1.5, `bold ${bold}/400, careful ${careful}/400`);
+    // Moments: moving in, a wedding, a birthday, a death in the family.
+    const m = make('plf-m'), mp = Pl.person(m);
+    for (let d = 0; d < 3; d++) m.step();
+    const other = m.living.find(q => q.alive && q.partnerId === null && q.sex !== mp.sex && P.isAdult(m, q) && !LES.Family.related(m, mp, q));
+    if (mp.partnerId !== null) LES.Family.separate(m, mp, m.people[mp.partnerId], 'breakup');
+    m.step(); LES.Family.formCouple(m, mp, other); m.step();
+    m.player.married = { pid: other.id, day: m.day }; m.step();
+    const par = mp.parents.map(id => m.people[id]).find(q => q.alive);
+    if (par) { m.die(par, 'test'); m.step(); }
+    for (let d = 0; d < 370; d++) m.step();
+    const kinds = new Set((m.player.moments || []).map(x => x.kind));
+    check('Life moments are noticed: moving in, the wedding, a birthday (and a death in the family)', kinds.has('together') && kinds.has('married') && kinds.has('birthday') && (!par || kinds.has('lost')), [...kinds].join(' '));
+    // A life goal of their own choosing (the engine's goals), and a mood from their real state.
+    const g = make('plf-g'), gp = Pl.person(g), goals = Pl.goals(g, gp), pick = goals.find(id => !gp.goal || id !== gp.goal.id);
+    const bad = Pl.check(g, 'SET_GOAL', { goal: 'NOPE' }).code, gc = Pl.plan(g, 'SET_GOAL', { goal: pick }); g.step();
+    check('You can choose a life goal from those open to the character; it becomes their goal', goals.length > 3 && !!gc.command && gp.goal.id === pick && bad === 'not_possible');
+    gp.stress = 90; const m1 = I.render(Pl.mood(g, gp)); gp.stress = 10; gp.happy = 90; const m2 = I.render(Pl.mood(g, gp));
+    check('The mood line follows their state', /stress/i.test(m1) && /good/.test(m2), `${m1} / ${m2}`);
+    // Years with everything answered (the character for everyday, "let them decide" for important ones): lines read in both languages.
+    const v = make('plf-v'); v.player.autoMinor = true;
+    v.ledger.pay('GENESIS', Pl.person(v), 'cash', v.px(30000));
+    for (let d = 0; d < 365 * 5; d++) { for (const it of (v.player.inbox || []).slice()) Pl.autoDecide(v, it.uid); v.step(); }
+    const lines = v.player.journal.map(e => I.render(e));
+    await new Promise(r => I.set('zh-Hans', r)); const zh = v.player.journal.map(e => I.render(e)); await new Promise(r => I.set('en', r));
+    check('Five years decided by the character: every line complete in English and Chinese (moments too), books balance', v.player.journal.some(e => e.kind === 'moment') && ![...lines, ...zh].some(t => /\{\w+\}|cmd\.|ev\.|moment\.|why\.|plan\./.test(t)) && v.checkInvariants().length === 0);
+    LES.Countries.ensure(D);
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -2676,6 +2737,7 @@
       await playWellbeingTests();
       await playSeniorTests();
       await playControlsTests();
+      await playFlowTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -2687,6 +2749,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, playFlowTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

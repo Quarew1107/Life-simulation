@@ -71,7 +71,8 @@
   // applicants and the employer decides at closing time, exactly as for anyone else).
   // A world becomes "played" (w.player.played) with the first command that changes it.
   Pl.MONTHLY = []; // (w, p) => void, run every 30 days for the player (js/sim/player-child.js ...)
-  Pl.DAILY = [];   // (w, p) => void, run every day (a trip ending, PL-11)
+  Pl.DAILY = [];
+  Pl.AFTER = [];   // (w, p) => void, run at the end of each day's player work   // (w, p) => void, run every day (a trip ending, PL-11)
   Pl.DAY_HOURS = 8;   // time a player's requests may take per day
   Pl.STALE = 7;       // a request older than this many days is dropped, not carried out
   Pl.JOURNAL = 400;   // journal entries kept
@@ -153,6 +154,7 @@
     for (const f of Pl.DAILY) f(w, Pl.person(w));
     if (s.apps.length) outcomes(w);
     if (w.day % 30 === 0 && w.day > s.since) { for (const f of Pl.MONTHLY) f(w, Pl.person(w)); offerEvents(w); } // stage files add monthly effects (clubs, allowance, effort)
+    for (const f of Pl.AFTER) f(w, Pl.person(w)); // after new decisions arrive (PL flow: the character settles everyday ones at fast speed)
     expireInbox(w);
   };
 
@@ -165,6 +167,7 @@
       const mum = w.people[c.parents.find(id => w.people[id].sex === 'F')] || w.people[c.parents[0]], dad = w.people[c.parents.find(id => id !== (mum && mum.id))];
       s.id = c.id; s.waiting = null; s.since = w.day; s.chain.push({ id: c.id, day: w.day, how: 'birth' });
       journal(w, { kind: 'life', key: 'life.born', params: { name: P.name(c), mother: mum ? P.name(mum) : '?', father: dad ? P.name(dad) : '?' }, imp: 2 });
+      if (Pl.moment) Pl.moment(w, 'born', { name: c.first });
       return;
     }
     s.scan = w.people.length;
@@ -324,13 +327,16 @@
     return true;
   };
   // Answer an event. Returns { command } | { story: true } | { error }.
-  Pl.choose = function (w, uid, choiceId) {
+  // A choice that cannot happen tomorrow (time, money, access) is refused and the decision stays open.
+  // auto: the character chose (journaled by Player.autoDecide).
+  Pl.choose = function (w, uid, choiceId, auto) {
     const s = st(w), item = s && (s.inbox || []).find(x => x.uid === uid), e = item && Pl.eventById(item.ev), ch = e && e.choices.find(c => c.id === choiceId);
     if (!ch) return { error: 'no_choice' };
+    const p = Pl.person(w), args = !ch.story && ch.target ? Pl.TARGETS[ch.target](w, p, item) : {};
+    if (!ch.story && args && Pl.check) { const r = Pl.check(w, ch.cmd, args); if (!r.ok) return { error: r.code, why: Pl.whyNot(w, ch.cmd, args, r) }; }
     s.inbox = s.inbox.filter(x => x !== item);
-    journal(w, { kind: 'choice', ev: e.id, choice: ch.id, key: 'evt.chose', params: { choice: { key: `ev.${e.id}.${ch.id}`, params: item.params || {} } } });
+    if (!auto) journal(w, { kind: 'choice', ev: e.id, choice: ch.id, key: 'evt.chose', params: { choice: { key: `ev.${e.id}.${ch.id}`, params: item.params || {} } } });
     if (ch.story) return { story: true };
-    const p = Pl.person(w), args = ch.target ? Pl.TARGETS[ch.target](w, p, item) : {};
     if (!args) { journal(w, { kind: 'cmd', code: 'no_target', key: 'cmd.error.no_target', params: {} }); return { error: 'no_target' }; }
     return Pl.request(w, ch.cmd, args);
   };

@@ -41,7 +41,7 @@
   // ---- The end of a life, and who comes next ----
   const LIFE_KEYS = ['dating', 'married', 'coupled', 'lastPartner', 'babyWish', 'affair', 'school', 'schoolBoost', 'boost', 'club', 'allowance', 'friends', 'effort',
     'plan', 'homeTier', 'stand', 'ran', 'hadJob', 'jobLost', 'quitDay', 'noJobSince', 'idxPeak', 'kidSchools', 'kidBoost', 'askedSchool', 'carers', 'volunteered',
-    'trip', 'exercise', 'lowMonths', 'stressMonths', 'keepWorking', 'evCool', 'cool', 'hours', 'hoursDay'];
+    'trip', 'exercise', 'snap', 'yearStart', 'lowMonths', 'stressMonths', 'keepWorking', 'evCool', 'cool', 'hours', 'hoursDay'];
   Pl.endLife = function (w, p) {
     const s = st(w);
     s.ended = { day: w.day, id: p.id, why: p.alive ? 'away' : 'died', age: Math.floor(P.age(w, p)) };
