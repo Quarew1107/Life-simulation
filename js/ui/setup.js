@@ -9,6 +9,7 @@
 (function (LES) {
   'use strict';
   const U = LES.U, C = LES.C, esc = U.esc;
+  const T = (k, p) => LES.I18n.t(k, p);
   const $ = id => document.getElementById(id);
 
   // The cards: two base worlds, then the scenarios (built on Malaysia today).
@@ -84,29 +85,30 @@
       let chosen = base.scenario && base.scenario !== 'none' ? base.scenario : (LES.presetOf(base) === 'classic' ? 'classic' : 'national');
       const adv = META.filter(m => !m.essential && m.group !== 'Scenario');
       card.innerHTML = `
-        <h1>${first ? 'Life Evolution Simulator' : 'Create a new world'}</h1>
+        <h1>${esc(first ? T('app.title') : T('setup.newWorld'))}</h1>
         <p class="lead">${first
           ? F('A town of strangers, each born different, each chasing {goal}. Pick a world, set up your town, then watch who makes it, and why.')
-          : 'Pick a world and set up the town. The current world will be replaced.'}</p>
-        <h2 class="set-step"><span>1</span> Choose a world</h2>
+          : esc(T('setup.replace'))}</p>
+        <h2 class="set-step"><span>1</span> ${esc(T('setup.chooseWorld'))}</h2>
         <div class="scn-grid" role="radiogroup" aria-label="World">${CARDS.map(c => `<button type="button" class="scn-card${c.key === 'classic' ? ' mini' : ''}" role="radio" data-card="${c.key}">${LES.icon(c.icon, 22)}<b>${esc(c.name)}</b><small>${esc(c.short)}</small></button>`).join('')}</div>
         <div class="scn-detail" id="scn-detail"></div>
         ${META.filter(m => m.hidden).map(m => field(m, base[m.key])).join('')}
-        <h2 class="set-step"><span>2</span> Your town</h2>
+        <h2 class="set-step"><span>2</span> ${esc(T('setup.yourTown'))}</h2>
         <div class="form-grid">${META.filter(m => m.essential).map(m => field(m, base[m.key])).join('')}</div>
         ${castPicker(base)}
-        <details class="set-adv"><summary>${LES.icon('sliders', 16)} Advanced settings <span class="muted">· ${adv.length} more: map, goal, prices, families, society, justice, government</span></summary>
+        <details class="set-adv"><summary>${LES.icon('sliders', 16)} ${esc(T('setup.advanced'))} <span class="muted">· ${esc(T('setup.advancedMore', { count: adv.length }))}</span></summary>
           ${LES.SETTINGS_GROUPS.map(g => { const ms = adv.filter(m => m.group === g); return ms.length ? `<h3 class="set-group">${esc(g)}</h3><div class="form-grid">${ms.map(m => field(m, base[m.key])).join('')}</div>` : ''; }).join('')}
           <p class="note">The engine's deeper constants (decision randomness, success curves, hiring weights) stay at the values from the design documents.</p>
         </details>
         <div class="msgs" id="set-msgs"></div>
         <div class="modal-actions">
-          <button class="ghost" id="set-load" title="Open a world saved with 💾 Save">📂 Load saved world</button>
+          <button class="ghost" id="set-load" title="Open a world saved with 💾 Save">${esc(T('setup.load'))}</button>
           <input type="file" id="set-load-file" accept=".json,.gz,application/json,application/gzip" hidden>
           <button class="ghost" id="btn-sound-setup" title="Music &amp; sound effects">${LES.Audio.on ? '🔊 Sound on' : '🔇 Sound off'}</button>
+          <label class="set-lang" title="${esc(T('setup.langNote'))}">🌐 <select id="set-lang" aria-label="${esc(T('common.language'))}">${LES.I18n.LANGS.map(([k, l]) => `<option value="${k}"${k === LES.I18n.lang() ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
           <span class="spacer"></span>
-          ${first ? '' : '<button class="ghost" id="set-cancel">Cancel</button>'}
-          <button class="primary" id="set-start">Start simulation</button>
+          ${first ? '' : `<button class="ghost" id="set-cancel">${esc(T('setup.cancel'))}</button>`}
+          <button class="primary" id="set-start">${esc(T('setup.start'))}</button>
         </div>`;
       $('modal').classList.remove('hidden');
       LES.Audio.setScene('setup');
@@ -126,6 +128,8 @@
         for (const id in keep) if ($(id)) $(id).value = keep[id];
       };
       // A new country: its own defaults (life expectancy, leader title, term), then the form again in its words.
+      // Interface language: words only; the form keeps what was typed (the world is not touched).
+      $('set-lang').onchange = e => LES.I18n.set(e.target.value, () => LES.Setup.open(app, first, readForm(base)));
       const reopen = (code, extra) => {
         const cfg = Object.assign(readForm(base), LES.Countries.get(code).defaults || {}, { country: code });
         LES.Countries.use(code);

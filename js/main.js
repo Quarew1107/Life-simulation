@@ -559,6 +559,7 @@
     renderSpeed();
     if (LES.Audio.wasOn()) { LES.Audio.setOn(true); showSound(true); } // starts at the first click (browser rule)
     LES.Setup.open(app, true);
+    if (LES.I18n.saved() !== LES.I18n.lang()) LES.I18n.set(LES.I18n.saved(), () => { if (!$('modal').classList.contains('hidden')) LES.Setup.open(app, true); }); // the reader's language from last time
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (app.renderer.tiles) app.renderer.tiles.reset(); UI.update(true); });
     requestAnimationFrame(frame);
   }

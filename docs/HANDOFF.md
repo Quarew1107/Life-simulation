@@ -199,7 +199,24 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
   - Later: founders' degree shares come out at ~0.8 of each pack's `education.founders` table in every age band
     (the ability weighting's /1.35 normaliser assumes a mean intelligence of 5; founders average ~4.7). Older
     than revision 10; with all ages it shows more (UK 25-64: ~37% vs the table's ~47%).
-  - Full suite 403/403.
+  - Full suite 403/403.
+
+- [ ] **Playable Life Mode (Play a Life), branch `feature/playable-life`, started Nov 13 2026.** Design package
+  (local, git-ignored): `Idea/Life simulation expansion/` (master report, task cards PL-00..PL-17, numeric rules,
+  test matrix, 320-scenario catalogue; several referenced files are missing, so work from these five). One task
+  card at a time; commit and push the feature branch after each; never merge into main without the owner.
+  Owner decisions (PL-00): a ~5 days/s "Story" speed (10x = 10 sim minutes/s cannot give a 2-hour life); lottery
+  on but hideable; casual partners/infidelity behind an adult-content switch, off by default; suicide only as
+  non-graphic crisis/support stories, never an action; emigrating abroad ends control and offers succession.
+  - PL-00 (baseline): `Idea/Life simulation expansion/PL-00_BASELINE_REPORT.md` (engine map, feature status,
+    smallest path: `js/sim/player.js`, `js/ui/player-ui.js`, hooks guarded by `w.player` beside `God.apply`, in
+    `Actions.choose` and `Services.schoolMonth`).
+  - PL-01 done: `js/core/i18n.js` (`LES.I18n.t/ev/render/num/set/apply/validate/coverage`), dictionaries as scripts
+    `js/i18n/en.js` (always loaded) and `js/i18n/zh-Hans.js` (loaded on first use; file:// cannot fetch JSON).
+    Keys `<namespace>.<name>`; event content `ev.<EVENT_ID>.<title|body|CHOICE_ID|...>`; saved records keep
+    `{ key, params }`. Language is a browser preference (`les-lang`), never in cfg/saves. Setup screen: title, steps,
+    buttons translated and a 🌐 picker; CJK font fallback in CSS. Old text stays English until PL-17.
+    Tests: `i18nTests` (8; incl. the same town in Chinese and English: same hash, fingerprint and save).
   - Sources for the plan: ONS LTIM YE Dec 2024 (+345k revised) and long-term assumption +340k/yr; Census Vintage
     2024 (+2.8M) and projections (~0.9M/yr); DOSM CPE 2024/2026; NBS 2024 communique.
 

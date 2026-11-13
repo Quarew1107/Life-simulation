@@ -1884,6 +1884,38 @@
   }
   const POP_BAND = { my: [65, 170], uk: [90, 260] };
 
+  // PL-01: interface language. Words only: the same seed gives the same town and the same save in any language.
+  async function i18nTests() {
+    print('--- Interface language (PL-01) ---', 'info');
+    const I = LES.I18n, keep = (() => { try { return localStorage.getItem('les-lang'); } catch (e) { return null; } })();
+    try {
+      await new Promise(r => I.set('en', r));
+      I.add('en', { 'test.enOnly': 'Only in English' });
+      check('Placeholders and plural forms (English)', I.t('setup.advancedMore', { count: 7 }).startsWith('7 more') && I.ev('TE-EDU-001', 'result', { count: 1 }).endsWith('1 day.') && I.ev('TE-EDU-001', 'result', { count: 3 }).endsWith('3 days.'));
+      check('A missing key shows the key itself and is recorded, never an error', I.t('nope.missing') === 'nope.missing' && I.missing().includes('en:nope.missing'));
+      await new Promise(r => I.set('zh-Hans', r));
+      check('Simplified Chinese loads on first use and translates', I.lang() === 'zh-Hans' && I.t('setup.start') === '开始模拟' && I.ev('TE-EDU-001', 'body', { name: '阿明' }).startsWith('阿明') && document.documentElement.lang === 'zh-Hans');
+      check('A key not yet translated falls back to English', I.t('test.enOnly') === 'Only in English');
+      check('Every Chinese key exists in English with the same placeholders', I.validate('zh-Hans').length === 0, I.validate('zh-Hans').join('; '));
+      const cov = I.coverage('zh-Hans');
+      check('Translation coverage is reported per namespace', cov.setup && cov.setup.done === cov.setup.total && cov.test.done === 0, JSON.stringify(cov));
+      check('A saved text record reads in the current language; old plain English text stays as it was', I.render({ key: 'setup.start' }) === '开始模拟' && I.render('Hired as Clerk') === 'Hired as Clerk');
+      // The gate: one town run in Chinese, then in English.
+      const cfg = Object.assign({}, LES.DEFAULTS, { seed: 'lang-1', founders: 60 });
+      const a = new LES.World(cfg);
+      for (let d = 0; d < 300; d++) a.step();
+      await new Promise(r => I.set('en', r));
+      const b = new LES.World(cfg);
+      for (let d = 0; d < 300; d++) b.step();
+      const sa = LES.Save.toJSON(a), sb = LES.Save.toJSON(b), strip = x => x.replace(/"saved":"[^"]*"/, '');
+      check('Changing the language changes nothing in the simulation (hash, stable fingerprint, save)', a.hash() === b.hash() && a.stableHash() === b.stableHash() && strip(sa) === strip(sb) && !/zh-Hans/.test(sa));
+    } finally {
+      await new Promise(r => I.set('en', r));
+      try { if (keep === null) localStorage.removeItem('les-lang'); else localStorage.setItem('les-lang', keep); } catch (e) { /* ignore */ }
+    }
+  }
+
+
   // C07: sustained mobility from income averaged over years, ranked within birth cohorts (research only).
   async function mobilityTests() {
     print('--- Sustained mobility (C07) ---', 'info');
@@ -1960,6 +1992,7 @@
       await wealthRevTests();
       await founderTests();
       await populationTests();
+      await i18nTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -1971,6 +2004,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

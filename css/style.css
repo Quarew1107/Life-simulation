@@ -241,6 +241,11 @@ canvas.chart.tall { height: 190px; }
 .msg.warn { background: #3a3119; border: 1px solid #7a6526; color: #ffe2a0; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; align-items: center; }
 .modal-actions .spacer { flex: 1; }
+.set-lang { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); }
+.set-lang select { width: auto; }
+/* Interface languages (js/core/i18n.js): the pixel font has no CJK glyphs, so Chinese text uses system fonts. */
+html:lang(zh-Hans) { --ui: Inter, "Microsoft YaHei", "PingFang SC", "Noto Sans SC", system-ui, sans-serif; --pixel: "Silkscreen", "Microsoft YaHei", "PingFang SC", "Noto Sans SC", monospace; }
+html:lang(zh-Hans) .card h3 { letter-spacing: 0; }
 
 #error-banner { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); background: #3a1d1f; border: 1px solid #a33; color: #ffd0d0; padding: 10px 14px; border-radius: 10px; z-index: 30; max-width: 80vw; }
 
