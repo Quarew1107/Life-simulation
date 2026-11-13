@@ -2331,6 +2331,84 @@
     check('After 50 years the report shows sustained mobility or says why it is not measurable yet, and names the four wealth origins', !LES.Report || (/Sustained mobility/.test(html) && /four different things/.test(html)), JSON.stringify(S.sustainedMobility(w).status));
   }
 
+  // PL-09: love, partnership, marriage, children and family; every other person decides for themself.
+  async function playFamilyTests() {
+    print('--- Play a Life: relationships and family (PL-09) ---', 'info');
+    const Pl = LES.Player, D = LES.DEFAULTS, P = LES.P, I = LES.I18n, Fa = LES.Family;
+    LES.Countries.ensure(D);
+    const adult = (seed, test) => { for (let k = 0; k < 40; k++) { const w = new LES.World(Object.assign({}, D, { seed: `${seed}-${k}`, founders: 200, play: 'random', playStage: 'adult' })); Pl.begin(w); const p = Pl.person(w); if (!test || test(w, p)) return w; } return null; };
+    const req = (w, kind, args) => { w.player.cool = {}; w.player.hoursDay = -1; const r = Pl.request(w, kind, args); Pl.tick(w); return r.command ? r.command.code : r.error; };
+    const rich = (w, p) => w.ledger.pay('GENESIS', p, 'cash', w.px(200000));
+    // Dating: the other person decides; a yes costs a date; a no costs nothing.
+    const dw = adult('pl9d', (x, p) => p.partnerId === null && P.age(x, p) < 35 && Pl.singles(x, p, 3).length >= 2), dp = Pl.person(dw);
+    rich(dw, dp);
+    let yes = 0, no = 0, money = true, target = null;
+    for (let r = 0; r < 3; r++) for (const q of Pl.singles(dw, dp, 6)) { const cash = dp.cash, code = req(dw, 'ASK_DATE', { pid: q.id }); if (code === 'ok') { yes++; money = money && dp.cash < cash; } else if (code === 'refused') { no++; money = money && dp.cash === cash; } dw.player.dating = null; }
+    for (const q of Pl.singles(dw, dp, 3)) {
+      for (let t = 0; t < 12 && !(dw.player.dating && dw.player.dating.dates >= 3); t++) {
+        const cash = dp.cash, code = req(dw, 'ASK_DATE', { pid: q.id });
+        if (code === 'ok') { yes++; target = q; money = money && dp.cash < cash; } else if (code === 'refused') { no++; money = money && dp.cash === cash; }
+        if (dw.player.dating && dw.player.dating.pid !== q.id) break;
+      }
+      if (dw.player.dating && dw.player.dating.dates >= 3) break;
+    }
+    check('Asking someone out: they can say no (free) or yes (a real date, paid)', yes >= 1 && no >= 1 && money && dw.checkInvariants().length === 0, `${yes} yes, ${no} no`);
+    const same = dw.living.find(q => q.alive && q.sex === dp.sex && q.partnerId === null && P.isAdult(dw, q) && q !== dp), taken = dw.living.find(q => q.alive && q.partnerId !== null && q.sex !== dp.sex && P.isAdult(dw, q));
+    check('Nobody can be asked who is a child, related, or already with someone', (!same || req(dw, 'ASK_DATE', { pid: same.id }) === 'not_possible') && (!taken || ['taken', 'not_possible'].includes(req(dw, 'ASK_DATE', { pid: taken.id }))));
+    // Moving in: after three dates; the partner decides; a real couple (Family.formCouple).
+    let moved = false, asks = 0;
+    if (target && dw.player.dating && dw.player.dating.dates >= 3) for (let t = 0; t < 15 && !moved; t++) { asks++; moved = req(dw, 'ASK_PARTNER', { pid: target.id }) === 'ok'; }
+    check('Moving in together is the engine\'s own partnership: both linked, one household', moved && dp.partnerId === target.id && target.partnerId === dp.id && dp.homeId === target.homeId, `${asks} asks`);
+    // Marriage: the partner decides; it is paid; married couples are a little steadier.
+    const mw = adult('pl9m', (x, p) => p.partnerId !== null && x.people[p.partnerId].alive), mp = Pl.person(mw), mq = mw.people[mp.partnerId];
+    mw.ledger.spend(mp, 'cash', 'MERCHANT', mp.cash);
+    const poor = req(mw, 'PROPOSE', { kind: 'wedding' });
+    rich(mw, mp);
+    let wed = null, tries = 0;
+    for (; tries < 20 && !(wed && wed.startsWith('ok')); tries++) wed = req(mw, 'PROPOSE', { kind: tries % 2 ? 'civil' : 'wedding' });
+    check('Proposing: not without the money; the partner decides; married is recorded', poor === 'cant_afford' && wed.startsWith('ok') && mw.player.married.pid === mq.id && Pl.marriedPair(mw, mq, mp) && mw.checkInvariants().length === 0, `${tries} proposals`);
+    // Wishes about children: the player's side of the decision; the partner's stays their own.
+    const other = mq, base = Fa.desire(mw, other);
+    req(mw, 'BABY_WISH', { wish: 'no' }); const d0 = Fa.desire(mw, mp);
+    req(mw, 'BABY_WISH', { wish: 'yes' }); const d1 = Fa.desire(mw, mp);
+    check('A wish about children sets only the player\'s side; the partner still decides', d0 === 0 && d1 > 0.9 && Fa.desire(mw, other) === base);
+    // Separating: a real breakup; marriage and wishes end with it.
+    const sc = req(mw, 'SEPARATE', {});
+    check('Separating is the engine\'s breakup (one moves out; former partners)', sc === 'ok' && mp.partnerId === null && mq.partnerId === null && mp.exPartners.includes(mq.id) && !mw.player.married && !mw.player.babyWish && mw.checkInvariants().length === 0);
+    // Children: time with them is real care; their school is chosen with the same affordability rules.
+    const kw = adult('pl9k', (x, p) => p.careOf.some(id => { const c = x.people[id]; return c.alive && P.age(x, c) >= 8 && P.age(x, c) < 16; })), kp = Pl.person(kw);
+    const kid = kp.careOf.map(id => kw.people[id]).find(c => c.alive && P.age(kw, c) >= 8 && P.age(kw, c) < 16);
+    const cs = kid.careSessions || 0, cc = req(kw, 'CARE_CHILD', { pid: kid.id });
+    const stranger = kw.living.find(c => c.alive && !P.isAdult(kw, c) && !kp.careOf.includes(c.id));
+    check('Time with your child is a real care session; not with other people\'s children', cc === 'ok' && kid.careSessions === cs + 2 && (!stranger || req(kw, 'CARE_CHILD', { pid: stranger.id }) === 'not_your_child'));
+    for (const q of kid.caregivers.map(id => kw.people[id])) { kw.ledger.spend(q, 'cash', 'MERCHANT', q.cash); q.incomeEMA = 0; }
+    const broke = req(kw, 'CHOOSE_SCHOOL', { pid: kid.id, tier: 'international' });
+    for (const q of kid.caregivers.map(id => kw.people[id])) kw.ledger.pay('GENESIS', q, 'cash', kw.px(400000));
+    let pickd = null;
+    for (let t = 0; t < 12 && pickd !== 'ok'; t++) pickd = req(kw, 'CHOOSE_SCHOOL', { pid: kid.id, tier: 'international' });
+    const cash0 = kp.cash;
+    for (let d = 0; d < 62; d++) kw.step();
+    check('Your child\'s school: an unaffordable school is refused; a chosen one is paid monthly from your money', broke === 'cant_afford' && pickd === 'ok' && Pl.kidTier(kw, kid) === 'international' && kp.cash < cash0 && kw.checkInvariants().length === 0, `${broke}, ${pickd}`);
+    // Mature stories: off by default; with them on, an affair needs the other person's yes and can come out.
+    const aw = adult('pl9a', (x, p) => p.partnerId !== null && x.people[p.partnerId].alive && Pl.singles(x, p, 3).length > 0), ap = Pl.person(aw);
+    const off = req(aw, 'AFFAIR', { pid: Pl.singles(aw, ap, 1)[0].id });
+    aw.player.mature = true;
+    let aff = null;
+    for (let t = 0; t < 40 && aff !== 'ok'; t++) { const q = Pl.singles(aw, ap, 3)[t % 3] || Pl.singles(aw, ap, 1)[0]; aff = req(aw, 'AFFAIR', { pid: q.id }); }
+    let out = false;
+    for (let d = 0; d < 365 * 3 && !out; d++) { aw.step(); out = aw.player.journal.some(e => e.key === 'love.foundLeft' || e.key === 'love.foundStayed'); if (!aw.player.affair && !out) break; }
+    check('Affairs: hidden unless mature stories are on; the other person decides; it can come to light', off === 'mature_off' && aff === 'ok' && (out || !aw.player.affair) && aw.checkInvariants().length === 0, `${aff}, found ${out}`);
+    // Years of adult life answering every decision: texts read properly in both languages, books balance.
+    const ev = adult('pl9v', (x, p) => P.age(x, p) < 30 && p.partnerId === null);
+    ev.player.mature = true;
+    for (let d = 0; d < 365 * 6; d++) { for (const it of (ev.player.inbox || []).slice()) { const e = Pl.eventById(it.ev), ch = e.choices.find(y => y.cmd) || e.choices[0]; Pl.choose(ev, it.uid, ch.id); } ev.step(); }
+    const lines = ev.player.journal.map(e => I.render(e));
+    await new Promise(r => I.set('zh-Hans', r)); const zh = ev.player.journal.map(e => I.render(e)); await new Promise(r => I.set('en', r));
+    const evs = [...new Set(ev.player.journal.filter(e => e.kind === 'event').map(e => e.ev))];
+    check('Years of love and family decisions: every line complete in English and Chinese, books balance', evs.some(id => ['AD-031', 'AD-032', 'AD-035', 'AD-040', 'AD-045'].includes(id)) && ![...lines, ...zh].some(t => /\{\w+\}|cmd\.|ev\.AD|love\./.test(t)) && ev.checkInvariants().length === 0, evs.join(' '));
+    LES.Countries.ensure(D);
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -2382,6 +2460,7 @@
       await playChildTests();
       await playTeenTests();
       await playAdultTests();
+      await playFamilyTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -2393,6 +2472,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

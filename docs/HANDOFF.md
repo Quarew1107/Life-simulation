@@ -301,8 +301,22 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
     `sellFraction`, keeping 2 months of costs in cash). Monthly: job loss (not resignation) and the index peak are
     noticed for events. Ten adult events AD-003/004/007/008/021/022/025/026/061/101. My life tab for adults: Work
     (job, raise, resign, applications, job board), Learn (courses), Money (cash, invest/sell, home levels with
-    rent and Move). Love, Health and Community still say "Coming in a later update" (PL-09..11). Tests:
+    rent and Move). Love, Health and Community came in PL-09..11. Tests:
     `playAdultTests` (13).
+  - PL-09 done (adults; `js/sim/player-family.js`): every other person decides for themself, with the engine's
+    own compatibility (`Player.compat` = `Family.matchSocial`'s formula x both family wishes). `ASK_DATE` (single
+    adult of the other sex, not related, age gap <= 15; yes chance 0.05 + 0.3 x compat (+0.08 per earlier date),
+    x0.6 for an ex, capped 0.8; a yes costs 0.05 x typical monthly pay to merchants), `ASK_PARTNER` (after 3 dates;
+    `Family.formCouple`), `PROPOSE` civil 0.5 x pay / wedding 1.5 x pay (partner decides; `w.player.married`,
+    a small addition since the engine has partners only; the player's marriage x0.6 on the monthly breakup chance
+    in `Family.monthCouples`), `SEPARATE` (`Family.separate`), `COUNSEL` (both agree: stress -12), `BABY_WISH`
+    (yes/later/no/auto replaces only the player's side of `Family.desire`; the partner still decides),
+    `CARE_CHILD` (+2 care sessions), `CHOOSE_SCHOOL` for your own child (PL-07 offers and affordability; another
+    carer may refuse fees; prestige exam; `w.player.kidSchools`, fees monthly, back to public when unpaid;
+    `Services.schoolMonth` skips those children), `VISIT` and `GIFT` (parents, grown children, grandchildren; a
+    ledger transfer). Mature stories (off by default, My life settings): `AFFAIR` / `END_AFFAIR` (the other person
+    must agree; found out 12% a month; the partner then leaves with 45-75% by responsibility). Ten events
+    AD-031/032/035/036/037(mature)/040/041/044/045/047. Love & family panel. Tests: `playFamilyTests` (10).
   - Sources for the plan: ONS LTIM YE Dec 2024 (+345k revised) and long-term assumption +340k/yr; Census Vintage
     2024 (+2.8M) and projections (~0.9M/yr); DOSM CPE 2024/2026; NBS 2024 communique.
 

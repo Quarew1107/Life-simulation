@@ -96,7 +96,7 @@
       const q = w.people[p.partnerId];
       // Breakups
       const avgStress = (p.stress + q.stress) / 200;
-      if (R.next() < (0.0012 + 0.008 * avgStress * avgStress) * w.sysMul('breakupWeight', p, q)) { Fa.separate(w, p, q, 'breakup'); continue; }
+      if (R.next() < (0.0012 + 0.008 * avgStress * avgStress) * w.sysMul('breakupWeight', p, q) * (w.player && LES.Player.marriedPair && LES.Player.marriedPair(w, p, q) ? 0.6 : 1)) { Fa.separate(w, p, q, 'breakup'); continue; } // (x0.6: the Play a Life player's own marriage)
       // Conception
       if (p.pregnancy || p.inst || q.inst || w.day - p.lastBirthDay < w.cfg.birthSpacingDays || P.age(w, q) > 65) continue;
       const fert = fertility(P.age(w, p));

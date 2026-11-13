@@ -61,6 +61,29 @@
       <p class="note">${esc(T('money.note'))}</p><h4>${esc(T('money.home'))}</h4><p>${esc(T('money.homeNow', { home: C.TIERS.housing[cur].name, rent: U.fmtMoney(Pl.rentOf(w, cur)) }))}</p>
       ${p.isHead ? `<ul class="list-plain life-jobs">${homes.map(t => `<li><span>${esc(C.TIERS.housing[t].name)} <small class="muted">${U.fmtMoney(Pl.rentOf(w, t))}</small></span><button class="ghost small" data-home="${t}" ${busy('MOVE_HOME') ? 'disabled' : ''}>${esc(T('money.move'))}</button></li>`).join('')}</ul>` : `<p class="muted">${esc(T('money.notHead'))}</p>`}`;
   }
+  // Adults: partner or dating, marriage, children, parents (every other person decides for themself).
+  function loveHtml(w, p) {
+    const s = w.player, busy = (k, pid) => s.pending.some(c => c.kind === k && (pid === undefined || c.args.pid === pid)), q = p.partnerId !== null ? w.people[p.partnerId] : null, M = Pl.typicalPay(w);
+    const btn = (attr, label, dis) => `<button class="ghost small" ${attr} ${dis ? 'disabled' : ''}>${esc(label)}</button>`;
+    let h = '';
+    if (q && q.alive) {
+      const married = s.married && s.married.pid === q.id;
+      h += `<p>${esc(T(married ? 'love.married' : 'love.partner', { other: P.name(q) }))} ${UI.plink(w, q.id)}</p><div class="life-cats">${married ? '' : btn('data-propose="wedding"', T('love.wedding', { cost: U.fmtMoney(Math.round(1.5 * M)) }), busy('PROPOSE')) + btn('data-propose="civil"', T('love.civil', { cost: U.fmtMoney(Math.round(0.5 * M)) }), busy('PROPOSE'))}${btn('data-counsel="1"', T('love.counsel'), busy('COUNSEL'))}${btn('data-separate="1"', T('love.separate'), busy('SEPARATE'))}</div>`;
+      h += `<h4>${esc(T('love.babyTitle'))}</h4><div class="life-cats" role="group">${['auto', 'yes', 'later', 'no'].map(k => `<button class="${(s.babyWish || 'auto') === k ? 'on' : ''}" data-baby="${k}" aria-pressed="${(s.babyWish || 'auto') === k}">${esc(T(`baby.${k}`))}</button>`).join('')}</div>`;
+      if (s.affair) { const a = w.people[s.affair.pid]; h += `<p class="muted">${esc(T('love.affair', { other: a ? P.name(a) : '' }))}</p>${btn('data-endaffair="1"', T('love.endAffair'), busy('END_AFFAIR'))}`; }
+    } else {
+      const d = s.dating && w.people[s.dating.pid];
+      h += `<p>${esc(T('love.single'))}</p>`;
+      if (d) h += `<p>${esc(T('love.dating', { other: P.name(d), count: s.dating.dates }))}</p>${btn(`data-partner="${d.id}"`, T('love.moveIn'), busy('ASK_PARTNER') || s.dating.dates < 3)}`;
+      const list = Pl.singles(w, p, 5);
+      h += `<h4>${esc(T('love.meet'))}</h4>${list.length ? `<ul class="list-plain">${list.map(x => `<li><span>${UI.plink(w, x.id)} <small class="muted">${Math.floor(P.age(w, x))}</small></span>${btn(`data-date="${x.id}"`, T('love.ask', { cost: U.fmtMoney(Math.round(0.05 * M)) }), busy('ASK_DATE', x.id))}</li>`).join('')}</ul>` : `<p class="muted">—</p>`}`;
+    }
+    const kids = p.careOf.map(id => w.people[id]).filter(c => c && c.alive && !P.isAdult(w, c));
+    if (kids.length) h += `<h4>${esc(T('love.kids'))}</h4><ul class="list-plain life-jobs">${kids.map(c => { const age = Math.floor(P.age(w, c)), tier = Pl.kidTier(w, c); return `<li><span>${UI.plink(w, c.id)} <small class="muted">${age}${age >= 7 ? ` · ${esc(T(`school.${tier}`))}` : ''}</small></span><span>${btn(`data-carekid="${c.id}"`, T('love.time'), busy('CARE_CHILD', c.id))}${age >= 7 ? `<select data-kidschool="${c.id}" aria-label="${esc(T('learn.school'))}"><option value="">${esc(T('love.school'))}</option>${Pl.schoolOffers(w, c).filter(o => o.why !== 'none' && o.tier !== tier).map(o => `<option value="${o.tier}" ${o.ok ? '' : 'disabled'}>${esc(T(`school.${o.tier}`))}${o.fee ? ` · ${U.fmtMoney(o.fee)}` : ''}</option>`).join('')}</select>` : ''}</span></li>`; }).join('')}</ul>`;
+    const fam = p.parents.concat(p.children).map(id => w.people[id]).filter(x => x && x.alive && !x.away && P.isAdult(w, x));
+    if (fam.length) h += `<h4>${esc(T('love.family'))}</h4><ul class="list-plain">${fam.map(x => `<li><span>${UI.plink(w, x.id)} <small class="muted">${Math.floor(P.age(w, x))}</small></span><span>${btn(`data-visit="${x.id}"`, T('love.visit'), busy('VISIT', x.id))}${btn(`data-gift="${x.id}"`, T('love.gift'), busy('GIFT', x.id))}</span></li>`).join('')}</ul>`;
+    return `${h}<p class="note">${esc(T('love.note'))}</p>`;
+  }
   function friendsHtml(w, p) {
     const s = w.player, mine = (s.friends || []).map(f => [w.people[f.id], f.since]).filter(x => x[0]);
     const near = w.living.filter(q => q.alive && q !== p && !q.away && !P.isAdult(w, q) && Math.abs(P.age(w, q) - P.age(w, p)) <= 2 && !mine.some(x => x[0] === q)).slice(0, 5);
@@ -135,10 +158,11 @@
       <div class="card">${bar(T('life.health'), p.health)}${bar(T('life.happy'), p.happy)}${bar(T('life.stress'), p.stress, 'bad')}</div>
       <div class="card"><h3>${esc(T('life.decisions'))}${(s.inbox || []).length ? ` <small class="life-count">${s.inbox.length}</small>` : ''}</h3>${decisionsHtml(w)}</div>
       <div class="card"><h3>${esc(T('life.actions'))}</h3><div class="life-cats" role="group">${cats}</div>
-        <div class="life-cat-body">${UI.lifeCat === 'work' ? workHtml(w, p) : UI.lifeCat === 'care' ? careHtml(w, p) : UI.lifeCat === 'learn' && !P.isAdult(w, p) ? learnHtml(w, p) : UI.lifeCat === 'learn' ? adultLearnHtml(w, p) : UI.lifeCat === 'money' ? moneyHtml(w, p) : UI.lifeCat === 'friends' ? friendsHtml(w, p) : `<p class="muted">${esc(T('cat.soon'))}</p>`}</div></div>`}
+        <div class="life-cat-body">${UI.lifeCat === 'work' ? workHtml(w, p) : UI.lifeCat === 'care' ? careHtml(w, p) : UI.lifeCat === 'learn' && !P.isAdult(w, p) ? learnHtml(w, p) : UI.lifeCat === 'learn' ? adultLearnHtml(w, p) : UI.lifeCat === 'money' ? moneyHtml(w, p) : UI.lifeCat === 'love' ? loveHtml(w, p) : UI.lifeCat === 'friends' ? friendsHtml(w, p) : `<p class="muted">${esc(T('cat.soon'))}</p>`}</div></div>`}
       <div class="card"><h3>${esc(T('journal.title'))}</h3>${journalHtml(w)}</div>
       <details class="card life-settings"><summary>${esc(T('life.settings'))}</summary>
         <label>${esc(T('freq.label'))} <select id="life-freq">${['important', 'balanced', 'detailed'].map(k => `<option value="${k}" ${(s.freq || 'balanced') === k ? 'selected' : ''}>${esc(T(`freq.${k}`))}</option>`).join('')}</select></label>
+        <label><input type="checkbox" id="life-mature" ${s.mature ? 'checked' : ''}> ${esc(T('life.mature'))}</label>
         <label><input type="checkbox" id="life-pause" ${pref('les-play-pause', '1') === '1' ? 'checked' : ''}> ${esc(T('life.pauseOn'))}</label>
         <p class="note">${esc(T('life.storyTip'))}</p></details>`;
     const c = $('life-portrait');
@@ -177,12 +201,24 @@
       else if (b.dataset.invest) say(Pl.request(w, 'INVEST', { share: Number(b.dataset.invest) }));
       else if (b.dataset.sell) say(Pl.request(w, 'SELL', { share: Number(b.dataset.sell) }));
       else if (b.dataset.home) say(Pl.request(w, 'MOVE_HOME', { tier: Number(b.dataset.home) }));
+      else if (b.dataset.date) say(Pl.request(w, 'ASK_DATE', { pid: Number(b.dataset.date) }));
+      else if (b.dataset.partner) say(Pl.request(w, 'ASK_PARTNER', { pid: Number(b.dataset.partner) }));
+      else if (b.dataset.propose) say(Pl.request(w, 'PROPOSE', { kind: b.dataset.propose }));
+      else if (b.dataset.counsel) say(Pl.request(w, 'COUNSEL', {}));
+      else if (b.dataset.separate) { if (confirm(T('love.sure'))) say(Pl.request(w, 'SEPARATE', {})); }
+      else if (b.dataset.baby) say(Pl.request(w, 'BABY_WISH', { wish: b.dataset.baby }));
+      else if (b.dataset.endaffair) say(Pl.request(w, 'END_AFFAIR', {}));
+      else if (b.dataset.carekid) say(Pl.request(w, 'CARE_CHILD', { pid: Number(b.dataset.carekid) }));
+      else if (b.dataset.visit) say(Pl.request(w, 'VISIT', { pid: Number(b.dataset.visit) }));
+      else if (b.dataset.gift) say(Pl.request(w, 'GIFT', { pid: Number(b.dataset.gift), share: 0.1 }));
       else if (b.dataset.choice) say(Pl.choose(w, b.dataset.uid, b.dataset.choice));
       else if (b.dataset.pass) { Pl.pass(w, b.dataset.pass); UI.update(true); }
     });
     el.addEventListener('change', e => {
       const w = where();
       if (e.target.id === 'life-freq' && w) w.player.freq = e.target.value;
+      if (e.target.id === 'life-mature' && w) w.player.mature = e.target.checked;
+      if (e.target.dataset && e.target.dataset.kidschool && e.target.value && w) say(Pl.request(w, 'CHOOSE_SCHOOL', { pid: Number(e.target.dataset.kidschool), tier: e.target.value }));
       if (e.target.id === 'life-pause') setPref('les-play-pause', e.target.checked ? '1' : '0');
     });
   };
