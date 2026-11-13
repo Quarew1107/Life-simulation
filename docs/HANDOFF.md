@@ -217,6 +217,15 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
     `{ key, params }`. Language is a browser preference (`les-lang`), never in cfg/saves. Setup screen: title, steps,
     buttons translated and a 🌐 picker; CJK font fallback in CSS. Old text stays English until PL-17.
     Tests: `i18nTests` (8; incl. the same town in Chinese and English: same hash, fingerprint and save).
+  - PL-02 done: `js/sim/player.js` (`LES.Player`: `STAGES`/`stageOf` baby 0-2, child 3-11, teen 12-17, adult
+    18-59, senior 60+; `on(cfg)`, `begin(world|region)`, `town`, `person`, `summary`). Settings `cfg.play` 'off'
+    (absent) | 'random' | 'cast', `cfg.playStage` (random), `cfg.playCast` (a My Cast spec id; that household
+    becomes founders; `Cast.founders` records `w.playCastPid`). The choice uses its own stream (`seed|play`), so a
+    played town equals the unplayed one until the first decision. `w.player = { id, how, since, chain, pending,
+    nextId, journal }` (saved with the world). Setup: a highlighted "🎮 Play a Life · NEW" card at the top, off by
+    default (random resident + life stage, or my character + "Create my character"). Top bar: "🎮 Name, age ·
+    stage" badge (click follows them); a new played world opens on the player. Tests: `playerTests` (10).
+    Note: the person panel still calls every minor "Child"; the player badge uses the five stages.
   - Sources for the plan: ONS LTIM YE Dec 2024 (+345k revised) and long-term assumption +340k/yr; Census Vintage
     2024 (+2.8M) and projections (~0.9M/yr); DOSM CPE 2024/2026; NBS 2024 communique.
 

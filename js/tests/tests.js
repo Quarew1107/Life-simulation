@@ -1884,6 +1884,40 @@
   }
   const POP_BAND = { my: [65, 170], uk: [90, 260] };
 
+  // PL-02: Play a Life setup. Off by default; choosing whom to play never changes the town itself.
+  async function playerTests() {
+    print('--- Play a Life: who you play (PL-02) ---', 'info');
+    const Pl = LES.Player, D = LES.DEFAULTS, P = LES.P, K = LES.Countries;
+    K.ensure(D);
+    const cfgOf = extra => Object.assign({}, D, { seed: 'play-1', founders: 120 }, extra || {});
+    const off = new LES.World(cfgOf());
+    check('Play a Life is off by default: no setting, no player, nothing chosen', D.play === undefined && !Pl.on(D) && !off.player && Pl.begin(off) === null && Pl.town(off) === null);
+    const on = new LES.World(cfgOf({ play: 'random' })), r = Pl.begin(on);
+    check('Turned on, a real living resident of the town is chosen', r && r.p === on.people[on.player.id] && r.p.alive && on.player.chain.length === 1 && on.player.how === 'random');
+    const again = new LES.World(cfgOf({ play: 'random' }));
+    check('The same seed chooses the same person', Pl.begin(again).p.id === r.p.id);
+    for (let d = 0; d < 200; d++) { off.step(); on.step(); }
+    check('Playing (before any decision) leaves the town exactly as it would have been', off.hash() === on.hash() && off.stableHash() === on.stableHash());
+    const ages = [[2, 'baby'], [3, 'child'], [11, 'child'], [12, 'teen'], [17, 'teen'], [18, 'adult'], [59, 'adult'], [60, 'senior']];
+    check('Life stages: baby 0-2, child 3-11, teen 12-17, adult 18-59, senior 60+', ages.every(([a, st]) => Pl.stageOf(a) === st));
+    const got = ['baby', 'child', 'teen', 'adult', 'senior'].map(st => { const w = new LES.World(cfgOf({ play: 'random', playStage: st, founders: 200 })), x = Pl.begin(w); return Pl.summary(w).stage === st && !x.note; });
+    check('A chosen life stage gives a resident of that stage', got.every(Boolean), JSON.stringify(got));
+    const yw = new LES.World(cfgOf({ play: 'random', playStage: 'senior', founderAges: 'young' })), yr = Pl.begin(yw);
+    check('No one of that stage in town: someone else is chosen, with a note', yr.p && yr.note && Pl.summary(yw).stage !== 'senior', yr.note);
+    // Your own character: one real resident, also in a sister town.
+    const spec = Object.assign(LES.Cast.blank(), { id: 'pl-c1', first: 'Testa', last: 'Pemain', age: 30, att: [8, 2, 5, 5, 6, 4] });
+    const cw = new LES.World(cfgOf({ play: 'cast', playCast: 'pl-c1', cast: [spec] })), cr = Pl.begin(cw);
+    check('Playing your own character: exactly one resident, with your name and abilities', cr.p.custom && cr.p.first === 'Testa' && cw.player.how === 'cast' && cw.people.filter(p => p.first === 'Testa' && p.last === 'Pemain').length === 1 && cr.p.att[0] > cr.p.att[1]);
+    const reg = LES.makeRegion(cfgOf({ towns: '3', play: 'cast', playCast: 'pl-c1', cast: [Object.assign({}, spec, { town: 2 })] }));
+    Pl.begin(reg);
+    check('In a region, you play your character in the town you gave them', Pl.town(reg) === reg.towns[2] && reg.towns.filter(t => t.player).length === 1 && Pl.person(reg.towns[2]).first === 'Testa');
+    // Save and load: the player is kept; an unplayed save loads without one.
+    const sv = LES.Save.fromJSON(LES.Save.toJSON(on)), sv0 = LES.Save.fromJSON(LES.Save.toJSON(off));
+    for (let d = 0; d < 30; d++) { on.step(); sv.step(); }
+    check('Save and load keep who you play and continue identically; unplayed saves have no player', sv.player && sv.player.id === on.player.id && sv.stableHash() === on.stableHash() && !sv0.player);
+    K.ensure(D);
+  }
+
   // PL-01: interface language. Words only: the same seed gives the same town and the same save in any language.
   async function i18nTests() {
     print('--- Interface language (PL-01) ---', 'info');
@@ -1993,6 +2027,7 @@
       await founderTests();
       await populationTests();
       await i18nTests();
+      await playerTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -2004,6 +2039,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

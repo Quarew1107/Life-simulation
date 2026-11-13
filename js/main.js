@@ -49,7 +49,20 @@
       else { app.region = null; w = new LES.World(cfg); }
     } catch (e) { showError(`Could not create world: ${e.message}`); console.error(e); return false; }
     app.useWorld(w);
+    if (LES.Player.on(cfg)) { // Play a Life: choose who you play, then follow them
+      const r = LES.Player.begin(app.region || w);
+      if (r && (r.note || r.error)) UI.toast(U.esc(r.note || r.error));
+      app.focusPlayer();
+    }
     return true;
+  };
+  // Show and follow the person you are playing (in whichever town they live).
+  app.focusPlayer = function () {
+    const t = LES.Player.town(app.region || app.world);
+    if (!t || !t.people[t.player.id].alive) return;
+    if (app.region && t !== app.world) app.selectTown(app.region.towns.indexOf(t));
+    app.select(t.player.id, true);
+    app.renderer.follow = true;
   };
   // Switch which town the map and panels show (a region keeps running all of them).
   app.selectTown = function (i) {
@@ -135,6 +148,7 @@
       app.region = loaded instanceof LES.Region ? loaded : null;
       const w = app.region ? app.region.towns[0] : loaded;
       app.useWorld(w);
+      app.focusPlayer(); // a played world opens on its player
       app.paused = true; renderSpeed();
       LES.Setup.close();
       UI.toast(`📂 Loaded ${U.esc(file.name)} (${U.fmtDate(w.day)})`);
@@ -525,6 +539,7 @@
       document.activeElement.blur(); // so Space toggles pause instead of re-clicking
     });
     $('btn-step').addEventListener('click', () => { stepDay(); $('btn-step').blur(); });
+    $('play-badge').addEventListener('click', () => app.focusPlayer());
     // Create a person mid-game (the same creator as Leaders → ★ My cast; "Save and add to town").
     app.createPerson = () => { if (!app.world || app.world.ended || !$('modal').classList.contains('hidden')) return; app.paused = true; renderSpeed(); UI.openCastCreator(-1); };
     $('btn-cast').addEventListener('click', () => { app.createPerson(); $('btn-cast').blur(); });

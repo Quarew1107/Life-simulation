@@ -149,7 +149,10 @@
 
   // Founders chosen on the setup screen (called while the world is built).
   Cast.founders = function (w) {
-    for (const g of Cast.households(w.cfg.cast || [])) Cast.addGroup(w, g, true);
+    for (const g of Cast.households(w.cfg.cast || [])) {
+      const people = Cast.addGroup(w, g, true);
+      if (w.cfg.playCast) g.forEach((s, i) => { if (s.id === w.cfg.playCast && people[i]) w.playCastPid = people[i].id; }); // Play a Life: who you play
+    }
   };
   // Where arrivals are recorded: the region's shared settings (with the town) or the world's.
   const owner = w => (w.region ? w.region.base : w.cfg), townOf = w => w.townIdx || 0;

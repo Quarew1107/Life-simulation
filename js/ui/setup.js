@@ -41,7 +41,43 @@
       }).filter(Boolean);
     }
     if ($('set-cast-again') && !$('set-cast-again').checked) cfg.castArrivals = [];
+    // Play a Life (off unless ticked): who you play. Playing your own character makes them a founder.
+    if ($('set-play')) {
+      delete cfg.play; delete cfg.playStage; delete cfg.playCast;
+      if ($('set-play').checked) {
+        const who = (document.querySelector('input[name=set-play-who]:checked') || {}).value || 'random', id = ($('set-play-cast') || {}).value;
+        cfg.play = who === 'cast' && id ? 'cast' : 'random';
+        if (cfg.play === 'random') cfg.playStage = $('set-play-stage').value;
+        else {
+          cfg.playCast = id;
+          const roster = LES.UI.castRoster ? LES.UI.castRoster() : [], spec = roster.find(o => o.id === id), have = new Set((cfg.cast || []).map(o => o.id));
+          if (spec && !have.has(id)) cfg.cast = (cfg.cast || []).concat(LES.Cast.householdOf(roster, spec).filter(o => !have.has(o.id)).map(o => Object.assign(JSON.parse(JSON.stringify(o)), { town: 0 })));
+        }
+      }
+    }
     return cfg;
+  }
+
+  // Play a Life: the switch (off by default) and who to play.
+  function playCard(base) {
+    const on = LES.Player.on(base), cast = base.play === 'cast', roster = LES.UI.castRoster ? LES.UI.castRoster() : [];
+    const stages = ['any', 'baby', 'child', 'teen', 'adult', 'senior'];
+    return `<div class="play-card${on ? ' on' : ''}" id="play-card">
+      <label class="play-toggle"><input type="checkbox" id="set-play" ${on ? 'checked' : ''}>
+        <span class="play-switch" aria-hidden="true"></span>
+        <span class="play-title">🎮 ${esc(T('play.title'))}</span><span class="play-new">${esc(T('play.new'))}</span></label>
+      <p class="play-tag">${esc(T('play.tagline'))}</p>
+      <div class="play-opts" id="play-opts" ${on ? '' : 'hidden'}>
+        <label class="play-who"><input type="radio" name="set-play-who" value="random" ${cast ? '' : 'checked'}> <b>${esc(T('play.random'))}</b> <span class="muted">${esc(T('play.randomHelp'))}</span></label>
+        <div class="play-sub" id="play-random" ${cast ? 'hidden' : ''}><label for="set-play-stage">${esc(T('play.stage'))}</label>
+          <select id="set-play-stage">${stages.map(k => `<option value="${k}" ${(base.playStage || 'any') === k ? 'selected' : ''}>${esc(T(`play.stage.${k}`))}</option>`).join('')}</select></div>
+        <label class="play-who"><input type="radio" name="set-play-who" value="cast" ${cast ? 'checked' : ''}> <b>${esc(T('play.cast'))}</b> <span class="muted">${esc(T('play.castHelp'))}</span></label>
+        <div class="play-sub" id="play-cast" ${cast ? '' : 'hidden'}>
+          ${roster.length ? `<select id="set-play-cast" aria-label="${esc(T('play.cast'))}">${roster.map(o => `<option value="${esc(o.id)}" ${base.playCast === o.id ? 'selected' : ''}>${esc(`${o.first} ${o.last}`)} · ${o.age}</option>`).join('')}</select>` : `<span class="muted">${esc(T('play.noCast'))}</span>`}
+          <button type="button" class="ghost" id="set-play-create">${esc(T('play.create'))}</button></div>
+        <p class="note">${esc(T('play.preview'))}</p>
+      </div>
+    </div>`;
   }
 
   // "★ My cast as founders" (only when you have saved people): tick people to start the
@@ -89,6 +125,7 @@
         <p class="lead">${first
           ? F('A town of strangers, each born different, each chasing {goal}. Pick a world, set up your town, then watch who makes it, and why.')
           : esc(T('setup.replace'))}</p>
+        ${playCard(base)}
         <h2 class="set-step"><span>1</span> ${esc(T('setup.chooseWorld'))}</h2>
         <div class="scn-grid" role="radiogroup" aria-label="World">${CARDS.map(c => `<button type="button" class="scn-card${c.key === 'classic' ? ' mini' : ''}" role="radio" data-card="${c.key}">${LES.icon(c.icon, 22)}<b>${esc(c.name)}</b><small>${esc(c.short)}</small></button>`).join('')}</div>
         <div class="scn-detail" id="scn-detail"></div>
@@ -186,7 +223,23 @@
       card.oninput = e => { syncPreset(e); refresh(); };
       card.onchange = e => {
         if (e.target.id === 'set-country') return reopen(e.target.value, chosen === 'classic' ? { scenario: 'none' } : null);
+        if (e.target.id === 'set-play' || e.target.name === 'set-play-who') playSync();
         castSync(e); syncPreset(e); refresh();
+      };
+      const playSync = () => {
+        const on = $('set-play').checked, cast = !!document.querySelector('input[name=set-play-who][value=cast]:checked');
+        $('play-card').classList.toggle('on', on); $('play-opts').hidden = !on;
+        $('play-random').hidden = cast; $('play-cast').hidden = !cast;
+      };
+      // Create your character from the Play a Life card: the creator borrows this dialog, then you play them.
+      $('set-play-create').onclick = () => {
+        const cfg = readForm(base);
+        cfg.preset = LES.presetOf(cfg);
+        card.oninput = card.onchange = null;
+        LES.UI.openCastCreator(-1, s => {
+          if (s) Object.assign(cfg, { play: 'cast', playCast: s.id, cast: (cfg.cast || []).concat([Object.assign(JSON.parse(JSON.stringify(s)), { town: 0 })]) });
+          LES.Setup.open(app, first, cfg);
+        });
       };
       for (const el of card.querySelectorAll('.scn-card')) el.onclick = () => choose(el.dataset.card);
       // Create a person from here: the creator borrows this dialog, then the setup comes back

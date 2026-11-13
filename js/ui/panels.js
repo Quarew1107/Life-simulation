@@ -142,6 +142,14 @@
         for (const b of ts.querySelectorAll('button')) b.onclick = () => (b.dataset.town === '-1' ? app.showRegion() : app.selectTown(Number(b.dataset.town)));
       }
     }
+    // Play a Life: who you are playing, their age and life stage (click to follow them).
+    const pt = LES.Player.town(app.region || w), ps = pt && LES.Player.summary(pt), pb = $('play-badge');
+    pb.classList.toggle('hidden', !ps);
+    if (ps) {
+      const T = LES.I18n.t, txt = !ps.alive ? T('play.died', { name: ps.name }) : ps.away ? T('play.away', { name: ps.name }) : T('play.badge', { name: ps.name, age: ps.age, stage: T(`life.${ps.stage}`) });
+      const key = `${txt}|${LES.I18n.lang()}`;
+      if (pb.dataset.key !== key) { pb.dataset.key = key; pb.textContent = `🎮 ${txt}`; pb.title = T('play.badgeTip', { name: ps.name }); pb.classList.toggle('gone', !ps.alive); }
+    }
     const scn = LES.Scenarios.current(w), sb = $('scn-badge');
     sb.classList.toggle('hidden', !scn);
     if (scn && sb.dataset.id !== scn.id) { sb.dataset.id = scn.id; sb.innerHTML = `${LES.icon(scn.icon, 14)} ${U.esc(scn.name)}`; sb.title = `Scenario: ${scn.name}. ${scn.short}`; }
