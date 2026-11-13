@@ -145,6 +145,9 @@
   Pl.tick = function (w) {
     const s = st(w);
     if (s.waiting) { awaitBirth(w); if (s.waiting) return; }
+    const me = Pl.person(w);
+    if (!s.ended && me && (!me.alive || me.away) && Pl.endLife) Pl.endLife(w, me); // PL-12: died or left town
+    if (s.ended) return; // waiting for the next life to be chosen (or just watching)
     s.apps = s.apps || []; s.inbox = s.inbox || [];
     if (s.pending.length) runCommands(w);
     for (const f of Pl.DAILY) f(w, Pl.person(w));

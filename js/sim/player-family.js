@@ -37,7 +37,8 @@
   // Single adults the player might ask out, best match first.
   Pl.singles = (w, p, n) => w.living.filter(q => q.partnerId === null && P.age(w, q) <= 60 && Pl.canDate(w, p, q)).map(q => [q, Pl.compat(w, p, q)]).sort((a, b) => (b[1] - a[1]) || (a[0].id - b[0].id)).slice(0, n || 6).map(x => x[0]);
   const myKids = (w, p) => p.careOf.map(id => w.people[id]).filter(c => c && c.alive && !P.isAdult(w, c));
-  const family = (w, p) => p.parents.concat(p.children).map(id => w.people[id]).filter(q => here(q) && (P.isAdult(w, q)));
+  const family = (w, p) => p.parents.concat(p.children).map(id => w.people[id]).filter(q => here(q) && P.isAdult(w, q))
+    .concat(p.children.flatMap(id => w.people[id].children).map(id => w.people[id]).filter(q => here(q) && P.age(w, q) >= 3)); // and grandchildren
   const pay = (w, p, amt) => w.ledger.spend(p, 'cash', 'MERCHANT', amt);
 
   Object.assign(Pl.HANDLERS, {

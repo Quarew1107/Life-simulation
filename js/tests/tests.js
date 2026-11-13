@@ -2518,6 +2518,71 @@
     LES.Countries.ensure(D);
   }
 
+  // PL-12: retirement, and the next life after the played one ends (death or leaving town).
+  async function playSeniorTests() {
+    print('--- Play a Life: seniors and succession (PL-12) ---', 'info');
+    const Pl = LES.Player, D = LES.DEFAULTS, P = LES.P, I = LES.I18n;
+    LES.Countries.ensure(D);
+    const make = (seed, test, stage) => { // a played town whose player passes the test (the first such resident if the random pick does not)
+      for (let k = 0; k < 40; k++) {
+        const w = new LES.World(Object.assign({}, D, { seed: `${seed}-${k}`, founders: 200, play: 'random', playStage: stage || 'adult' })); Pl.begin(w);
+        if (!test || test(w, Pl.person(w))) return w;
+        const q = w.living.find(x => x.alive && !x.away && !x.inst && test(w, x));
+        if (q) { w.player.id = q.id; w.player.chain[0].id = q.id; return w; }
+      }
+      return null;
+    };
+    const req = (w, kind, args) => { w.player.cool = {}; w.player.hoursDay = -1; const r = Pl.request(w, kind, args); Pl.tick(w); return r.command ? r.command.code : r.error; };
+    // Retiring: from 55, the job ends; keeping on working: the engine's yearly retirement skips the player.
+    const yw = make('pl12y', (x, p) => P.age(x, p) < 50 && !!p.job), ow = make('pl12r', (x, p) => P.age(x, p) >= 56 && P.age(x, p) < 59 && !!p.job && !p.job.fixedTitle), op = Pl.person(ow);
+    const young = req(yw, 'RETIRE', {}), rc = req(ow, 'RETIRE', {});
+    check('Retiring: not before 55; then the job ends and the person is retired', young === 'too_young' && rc === 'ok' && op.retired && !op.job);
+    const twins = [false, true].map(keep => { const w = make('pl12k', (x, p) => P.age(x, p) >= 55 && P.age(x, p) < 59 && !!p.job && !p.job.fixedTitle && !p.retired), q = Pl.person(w); q.birthDay -= Math.round((66 - P.age(w, q)) * 365); /* past 65: the engine retires every worker at the year's end */ if (keep) req(w, 'KEEP_WORKING', {}); for (let d = 0; d < 370; d++) w.step(); return Pl.person(w); });
+    check('Keeping on working: the yearly retirement passes the player by (and only them)', twins[0].retired && !twins[1].retired, `without: ${twins[0].retired}, with: ${twins[1].retired}`);
+    // Death: the engine's own death and estate; a waiting request is cancelled with a receipt and no payment.
+    const dw = make('pl12d', (x, p) => p.children.some(id => { const c = x.people[id]; return c.alive && !c.away; }) && p.cash > 0), dp = Pl.person(dw);
+    Pl.request(dw, 'REST', {});
+    dw.die(dp, 'test');
+    dw.step();
+    const s = dw.player, rec = s.journal.filter(e => e.kind === 'cmd' && e.code === 'dead');
+    check('Death ends the life once: pending request cancelled with one receipt, the estate settled by the engine, books balance', !!s.ended && s.ended.why === 'died' && rec.length === 1 && !s.pending.length && s.journal.filter(e => e.key === 'life.died').length === 1 && dw.checkInvariants().length === 0);
+    dw.step(); dw.step();
+    check('Nothing more happens to a life that has ended (no second death notice, no events)', s.journal.filter(e => e.key === 'life.died').length === 1 && !s.inbox.length);
+    // Succession: heirs are the dead person's real children and grandchildren in town.
+    const heirs = Pl.heirs(dw), stranger = dw.living.find(q => q.alive && !q.away && !heirs.includes(q));
+    const bad = Pl.succeed(dw, stranger.id, 'heir'), dead = Pl.succeed(dw, dp.id, 'chosen');
+    const heir = heirs[0], ok = Pl.succeed(dw, heir.id, 'heir');
+    check('Succession: only a real child or grandchild as heir; never the dead; the chosen heir is now played', heirs.length > 0 && heirs.every(q => dp.children.includes(q.id) || q.parents.some(id => dp.children.includes(id))) && bad === 'not_heir' && dead === 'not_available' && ok === null && Pl.person(dw) === heir && s.chain.length === 2 && s.chain[1].how === 'heir');
+    check('The journal keeps the previous life, and the new life starts fresh (no inherited plans or bonuses)', s.journal.some(e => e.key === 'life.died') && s.journal.some(e => e.key === 'life.next.heir') && !s.married && !s.club && !s.kidSchools && !s.ended);
+    for (let d = 0; d < 40; d++) dw.step();
+    check('The heir\'s life goes on: monthly decisions can come again', !s.ended && dw.checkInvariants().length === 0);
+    // No heirs: the option is empty; a random resident is the same for the same seed; search finds real people.
+    const nw = make('pl12n', (x, p) => !p.children.length), np = Pl.person(nw);
+    nw.die(np, 'test'); nw.step();
+    const r1 = Pl.randomHeir(nw), nw2 = make('pl12n', (x, p) => !p.children.length); nw2.die(Pl.person(nw2), 'test'); nw2.step();
+    const found = Pl.search(nw, r1.first.slice(0, 3));
+    check('No children or grandchildren: no heir option; a random resident is reproducible; search finds residents by name', Pl.heirs(nw).length === 0 && Pl.randomHeir(nw2).id === r1.id && found.includes(r1));
+    // Choosing someone (or nobody) never changes the town: spectator vs a new life with no requests.
+    Pl.spectate(nw2); Pl.succeed(nw, r1.id, 'random');
+    for (let d = 0; d < 200; d++) { nw.step(); nw2.step(); }
+    check('Taking over someone (without acting) or just watching leaves the town identical', nw.hash() === nw2.hash() && nw2.player.spectator && Pl.person(nw) === r1);
+    // Saves: an ended life and the succession survive saving and loading.
+    const sv = make('pl12s'), sp = Pl.person(sv); sv.die(sp, 'test'); sv.step();
+    const back = LES.Save.fromJSON(LES.Save.toJSON(sv));
+    const hb = Pl.randomHeir(back), sb = Pl.succeed(back, hb.id, 'random');
+    for (let d = 0; d < 31; d++) back.step();
+    check('Saved after a death, loaded, then a new life chosen: it carries on', back.player.ended === null && sb === null && Pl.person(back).id === hb.id && back.checkInvariants().length === 0);
+    // Senior years answering every decision: lines complete in both languages, books balance.
+    const ev = make('pl12v', (x, p) => P.age(x, p) >= 60 && P.age(x, p) < 66, 'senior');
+    ev.ledger.pay('GENESIS', Pl.person(ev), 'cash', ev.px(80000));
+    for (let d = 0; d < 365 * 6 && !ev.player.ended; d++) { for (const it of (ev.player.inbox || []).slice()) { const e = Pl.eventById(it.ev), ch = e.choices.find(y => y.cmd) || e.choices[0]; Pl.choose(ev, it.uid, ch.id); } ev.step(); }
+    const lines = ev.player.journal.map(e => I.render(e));
+    await new Promise(r => I.set('zh-Hans', r)); const zh = ev.player.journal.map(e => I.render(e)); await new Promise(r => I.set('en', r));
+    const evs = [...new Set(ev.player.journal.filter(e => e.kind === 'event').map(e => e.ev))];
+    check('Senior years answering every decision: every line complete in English and Chinese, books balance', evs.some(id => id.startsWith('SE-')) && ![...lines, ...zh].some(t => /\{\w+\}|cmd\.|ev\.(AD|SE)|succ\.|life\./.test(t)) && ev.checkInvariants().length === 0, evs.join(' '));
+    LES.Countries.ensure(D);
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -2572,6 +2637,7 @@
       await playFamilyTests();
       await playSocietyTests();
       await playWellbeingTests();
+      await playSeniorTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -2583,6 +2649,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

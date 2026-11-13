@@ -92,6 +92,18 @@
       <h4>${esc(T('health.trips'))}</h4><div class="life-cats">${Object.keys(Pl.TRIPS).map(k => `<button data-travel="${k}" ${busy('TRAVEL') || away ? 'disabled' : ''}>${esc(T(`trip.${k}`))} · ${U.fmtMoney(Pl.tripCost(w, k))} · ${esc(T('health.days', { count: Pl.TRIPS[k].days }))}</button>`).join('')}</div>
       <p class="note">${esc(T('health.note'))}</p>`;
   }
+  // The life has ended: who comes next (a child or grandchild, someone random, someone you pick) or just watch.
+  function successionHtml(w) {
+    const s = w.player, e = s.ended, who = w.people[e.id], heirs = Pl.heirs(w);
+    const res = Pl.search(w, UI._lifeSearch || '', 10);
+    return `<div class="card"><h3>${esc(T(e.why === 'died' ? 'succ.died' : 'succ.left', { name: P.name(who), age: e.age }))}</h3>${s.spectator ? `<p class="muted">${esc(T('succ.watching'))}</p>` : `<p>${esc(T('succ.intro'))}</p>`}
+      <h4>${esc(T('succ.heirs'))}</h4>${heirs.length ? `<ul class="list-plain">${heirs.map(q => `<li><span>${UI.plink(w, q.id)} <small class="muted">${Math.floor(P.age(w, q))}</small></span><button class="ghost small" data-succ="${q.id}" data-how="heir">${esc(T('succ.take'))}</button></li>`).join('')}</ul>` : `<p class="muted">${esc(T('succ.noHeirs'))}</p>`}
+      <h4>${esc(T('succ.other'))}</h4><button class="ghost" data-succrandom="1">🎲 ${esc(T('succ.random'))}</button>
+      <label class="life-search">${esc(T('succ.search'))} <input id="life-search" type="search" value="${esc(UI._lifeSearch || '')}" placeholder="${esc(T('succ.searchPh'))}" autocomplete="off"></label>
+      <ul class="list-plain" id="life-search-res">${res.map(q => `<li><span>${UI.plink(w, q.id)} <small class="muted">${Math.floor(P.age(w, q))}</small></span><button class="ghost small" data-succ="${q.id}" data-how="chosen">${esc(T('succ.take'))}</button></li>`).join('')}</ul>
+      ${s.spectator ? '' : `<button class="link" data-spectate="1">${esc(T('succ.spectate'))}</button>`}</div>
+      <div class="card"><h3>${esc(T('succ.lives'))}</h3><ol class="life-lives">${s.chain.map((c, i) => { const q = w.people[c.id], end = s.chain[i + 1] ? s.chain[i + 1].day : e.day; return `<li>${UI.plink(w, c.id)} <small class="muted">${esc(T(`succ.how.${c.how}`))} · ${U.fmtDate(c.day)} – ${U.fmtDate(end)}${q && !q.alive ? ` · ${esc(T('succ.diedAt', { age: Math.floor(P.age(w, q)) }))}` : ''}</small></li>`; }).join('')}</ol></div>`;
+  }
   function friendsHtml(w, p) {
     const s = w.player, mine = (s.friends || []).map(f => [w.people[f.id], f.since]).filter(x => x[0]);
     const near = w.living.filter(q => q.alive && q !== p && !q.away && !P.isAdult(w, q) && Math.abs(P.age(w, q) - P.age(w, p)) <= 2 && !mine.some(x => x[0] === q)).slice(0, 5);
@@ -130,9 +142,10 @@
     if (!p.adult) return `<p class="muted">${esc(T('cat.youngWork'))}</p>`;
     const s = w.player, apps = s.apps || [], waiting = s.pending.filter(c => c.kind === 'APPLY_JOB').map(c => c.args.vac);
     const list = Pl.openings(w, p, true).slice(0, 8), busy = k => s.pending.some(c => c.kind === k);
+    const old = P.age(w, p) >= 55 && !p.retired && Pl.HANDLERS.RETIRE ? `<div class="life-cats"><button data-retire="1" ${busy('RETIRE') ? 'disabled' : ''}>${esc(T('work.retire'))}</button>${p.job && !s.keepWorking && P.age(w, p) >= 58 ? `<button data-keep="1" ${busy('KEEP_WORKING') ? 'disabled' : ''}>${esc(T('work.keep'))}</button>` : ''}</div>` : '';
     const now = p.job ? `<p>${esc(T('work.now', { job: p.job.title, pay: U.fmtMoney(p.job.salary), date: U.fmtDate(p.job.startDay) }))}</p>${Pl.HANDLERS.ASK_RAISE && !p.job.fixedTitle ? `<button class="ghost small" data-raise="1" ${busy('ASK_RAISE') ? 'disabled' : ''}>${esc(T('work.raise'))}</button> <button class="ghost small" data-quit="1" ${busy('QUIT_JOB') ? 'disabled' : ''}>${esc(T('work.quit'))}</button>` : ''}` : '';
     const when = v => { const d = v.closeDay - w.day; return d > 0 ? T('time.inDays', { count: d }) : T('time.today'); };
-    return `${now}${bizHtml(w, p)}${apps.length ? `<h4>${esc(T('jobs.yourApps'))}</h4><ul class="list-plain">${apps.map(a => `<li><span>📄 ${esc(a.title)} · ${U.fmtMoney(a.salary)}</span><span class="muted">${esc(T('jobs.decides', { when: a.closeDay > w.day ? T('time.inDays', { count: a.closeDay - w.day }) : T('time.today') }))}</span></li>`).join('')}</ul>` : ''}
+    return `${now}${old}${bizHtml(w, p)}${apps.length ? `<h4>${esc(T('jobs.yourApps'))}</h4><ul class="list-plain">${apps.map(a => `<li><span>📄 ${esc(a.title)} · ${U.fmtMoney(a.salary)}</span><span class="muted">${esc(T('jobs.decides', { when: a.closeDay > w.day ? T('time.inDays', { count: a.closeDay - w.day }) : T('time.today') }))}</span></li>`).join('')}</ul>` : ''}
       <h4>${esc(T('jobs.openings'))}</h4>
       ${list.length ? `<ul class="list-plain life-jobs">${list.map(v => {
         const applied = v.appSet.has(p.id), queued = waiting.includes(v.id);
@@ -180,7 +193,7 @@
           <div>${esc(status(w, p))}</div>
           ${p.adult || p.nw > 0 ? `<div class="life-money">${esc(T('life.cash'))} <b>${U.fmtMoney(p.cash)}</b> · ${esc(T('life.worth'))} <b>${U.fmtMoney(p.nw)}</b></div>` : ''}</div>
       </div>
-      ${!p.alive ? `<div class="card"><p>${esc(T('life.dead', { name: sm.name }))}</p></div>` : `
+      ${s.ended ? successionHtml(w) : !p.alive ? `<div class="card"><p>${esc(T('life.dead', { name: sm.name }))}</p></div>` : `
       <div class="card">${bar(T('life.health'), p.health)}${bar(T('life.happy'), p.happy)}${bar(T('life.stress'), p.stress, 'bad')}</div>
       <div class="card"><h3>${esc(T('life.decisions'))}${(s.inbox || []).length ? ` <small class="life-count">${s.inbox.length}</small>` : ''}</h3>${decisionsHtml(w)}</div>
       <div class="card"><h3>${esc(T('life.actions'))}</h3><div class="life-cats" role="group">${cats}</div>
@@ -229,6 +242,11 @@
       else if (b.dataset.invest) say(Pl.request(w, 'INVEST', { share: Number(b.dataset.invest) }));
       else if (b.dataset.sell) say(Pl.request(w, 'SELL', { share: Number(b.dataset.sell) }));
       else if (b.dataset.home) say(Pl.request(w, 'MOVE_HOME', { tier: Number(b.dataset.home) }));
+      else if (b.dataset.retire) { if (confirm(T('work.retireSure'))) say(Pl.request(w, 'RETIRE', {})); }
+      else if (b.dataset.keep) say(Pl.request(w, 'KEEP_WORKING', {}));
+      else if (b.dataset.succ) { const err = Pl.succeed(w, Number(b.dataset.succ), b.dataset.how); if (err) UI.toast(esc(T(`succ.err.${err}`))); else { UI._lifeSearch = ''; UI.app.focusPlayer(); } UI.update(true); }
+      else if (b.dataset.succrandom) { const q = Pl.randomHeir(w); if (q && !Pl.succeed(w, q.id, 'random')) UI.app.focusPlayer(); UI.update(true); }
+      else if (b.dataset.spectate) { Pl.spectate(w); UI.update(true); }
       else if (b.dataset.doctor) say(Pl.request(w, 'SEE_DOCTOR', {}));
       else if (b.dataset.counselling) say(Pl.request(w, 'COUNSELLING', {}));
       else if (b.dataset.rest) say(Pl.request(w, 'REST', {}));
@@ -256,6 +274,13 @@
       else if (b.dataset.choice) say(Pl.choose(w, b.dataset.uid, b.dataset.choice));
       else if (b.dataset.pass) { Pl.pass(w, b.dataset.pass); UI.update(true); }
     });
+    el.addEventListener('input', e => { // the search box: redraw only the results (keeps typing smooth)
+      const w = where();
+      if (e.target.id !== 'life-search' || !w) return;
+      UI._lifeSearch = e.target.value;
+      const box = $('life-search-res');
+      if (box) box.innerHTML = Pl.search(w, UI._lifeSearch, 10).map(q => `<li><span>${UI.plink(w, q.id)} <small class="muted">${Math.floor(P.age(w, q))}</small></span><button class="ghost small" data-succ="${q.id}" data-how="chosen">${esc(T('succ.take'))}</button></li>`).join('');
+    });
     el.addEventListener('change', e => {
       const w = where();
       if (e.target.id === 'life-freq' && w) w.player.freq = e.target.value;
@@ -281,6 +306,11 @@
       app.focusPlayer();
     }
     UI._lifeWaiting = !!w.player.waiting;
+    const end = w.player.ended;
+    if (end && UI._lifeEnded !== `${end.id}-${end.day}`) { // the life just ended: say so, and pause to choose
+      UI._lifeEnded = `${end.id}-${end.day}`;
+      if (w.day - end.day <= 1) { const t = UI.toast(`🕯️ ${esc(T(end.why === 'died' ? 'succ.died' : 'succ.left', { name: P.name(w.people[end.id]), age: end.age }))}`, U.fmtDate(w.day), -1, true); if (t) t.onclick = () => UI.setTab('life'); if (!app.paused) app.togglePause(); UI.setTab('life'); }
+    }
     const inbox = w.player.inbox || [];
     if (tab) tab.dataset.count = inbox.length || '';
     for (const item of inbox) {

@@ -341,6 +341,20 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
     stories (PL-09). Hidden events are skipped before the player's own roll, so hiding never changes the town
     (tested: identical world hash). Events AD-051/052/053/058/063/064/094/097. Health tab. Tests:
     `playWellbeingTests` (8).
+  - PL-12 done (`js/sim/player-senior.js`): `RETIRE` (55+; job ends) and `KEEP_WORKING` (`Labour.yearClose`
+    skips its retirement roll for the player via `Player.keepsWorking`, not past 70, never past China's statutory
+    age for social-insurance jobs). When the played person dies (the engine's normal death and estate, untouched) or
+    leaves town, `Player.tick` calls `Player.endLife` once: pending requests cancelled with one receipt each (no
+    payment), inbox closed, `w.player.ended = { day, id, why, age }`, nothing more runs for that life. Succession
+    (My life tab, pauses the game): a child or grandchild in this town (`Player.heirs`; the option is empty when
+    there are none; other towns of a region are not searched), a random resident (`Player.randomHeir`, own stream
+    `seed|play|succ|<n>`), search by name (`Player.search`), or just watch (`w.player.spectator`; a life can still
+    be taken over later). `Player.succeed` clears every per-life field (no inherited plans, schools, clubs,
+    marriage), keeps the journal and lotto record, appends to `w.player.chain`. Tested: no second death notice,
+    taking over someone without acting leaves the town hash identical to watching, save after a death -> load ->
+    choose -> carries on. Visits now include grandchildren. Eight senior events SE-001/011/012/015/018/023/026/045.
+    Texts that promised "a later update" are updated. Tests: `playSeniorTests` (11).
+  - **Next: PL-13** (catalogue rollout in small tranches) - waiting for the owner's go-ahead. Full suite 516/516.
   - Sources for the plan: ONS LTIM YE Dec 2024 (+345k revised) and long-term assumption +340k/yr; Census Vintage
     2024 (+2.8M) and projections (~0.9M/yr); DOSM CPE 2024/2026; NBS 2024 communique.
 

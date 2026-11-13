@@ -310,7 +310,7 @@
         job.perfOk = 0; job.perfN = 0;
       }
       const cnRet = LES.China && LES.China.on(), ra = cnRet ? LES.China.retireAge(w, p) : 60; // China: the 2025 reform's ages
-      if (age >= ra && !p.retired && !(w.flags && w.flags.noRetire)) {
+      if (age >= ra && !p.retired && !(w.flags && w.flags.noRetire) && !(w.player && LES.Player.keepsWorking && LES.Player.keepsWorking(w, p, age, cnRet && (!job || job.si)))) { // Play a Life: the player chose to keep working
         const pRet = cnRet ? (!job || job.si ? 1 : 0.3 + 0.15 * (age - ra)) : age >= 70 ? 1 : 0.2 + 0.15 * (age - 60); // (jobs with social insurance end at the statutory age)
         if (R.next() < pRet) {
           p.retired = true;
