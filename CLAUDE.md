@@ -37,6 +37,31 @@ those first.
   - leaving town ends control and offers succession.
 - Status and next step: see the "Playable Life Mode" item in `docs/HANDOFF.md`.
 
+## Pick up here (Nov 14 2026)
+- **Done:** PL-00 to PL-12, the owner's extra requests, and the My life redesign (steps 1-5).
+  - The redesign: view A Hub (the default), B Planner and C Story. Plans are checked before they are
+    queued; important decisions stop the clock; the character decides everyday ones at fast speeds; big
+    moments slow the game to 1x.
+  - Last commit `a2358bf`; full suite 534/534.
+- **Next:** ask the owner first. Either they give feedback after trying the three views, or **PL-13**
+  (catalogue rollout in small tranches of 5-10 events, from `Idea/Life simulation expansion/ALL_EVENTS_REVIEW.md`).
+  - Mark each new event important or everyday in `Player.IMPORTANT` (`js/sim/player-flow.js`).
+  - Add its texts to `js/i18n/en.js` and `js/i18n/zh-Hans.js`, with the same keys in both.
+- **Not checked live yet:** the 1x slow-down and the 10-second resume on a visible screen. They were
+  checked by stepping the game by hand, because the preview pane does not run the game loop while hidden.
+- **Where the Play a Life code lives:**
+  - `js/sim/player*.js` (engine side; `player-flow.js` holds the check, auto-decide, moments and clock
+    rules);
+  - `js/ui/player-ui.js` (hub and shared parts, `UI._life`), `js/ui/life-story.js` (view C),
+    `js/ui/life-planner.js` (view B);
+  - tests in `js/tests/tests.js` (`play*Tests`).
+- **Working pattern:**
+  - Make engine edits with small scripts that replace exact text and keep each file's line endings
+    (files mix CRLF and LF).
+  - Run the new test group, then all `play*Tests` groups, then the full suite in the background (never two
+    headless browsers at once; never start it with `&`).
+  - Update HANDOFF, then commit and push to `feature/playable-life`.
+
 ## Practical notes
 - **No Node here.** Run tests in headless Microsoft Edge:
   - `python tools/edge.py tests.html "await LES_TESTS.runAll(), document.getElementById('out').textContent" 2700`

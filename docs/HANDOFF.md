@@ -24,6 +24,8 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
 - Another laptop: `docs/NEW_LAPTOP.md`. Claude's working rules: `CLAUDE.md`.
 
 ## 0. Where to pick up (status at the end of the last session)
+**PICK UP HERE (Nov 14 2026):** Play a Life on branch `feature/playable-life`, PL-00 to PL-12 and the My life redesign done (last `a2358bf`, 534/534). Next: the owner's feedback on the three views, or PL-13 (ask first). Summary and working pattern: `CLAUDE.md` ("Pick up here"); details: the "Playable Life Mode" item below. New laptop: `docs/NEW_LAPTOP.md`.
+
 **To do (keep this list current; the same list is in `docs/ROADMAP.md`):**
 
 **Review follow-up (Nov 2026): 6 tasks from a UI/art/bug review, done one at a time.** Tasks 1 (pop-ups and
