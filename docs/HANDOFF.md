@@ -24,7 +24,7 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
 - Another laptop: `docs/NEW_LAPTOP.md`. Claude's working rules: `CLAUDE.md`.
 
 ## 0. Where to pick up (status at the end of the last session)
-**PICK UP HERE (Nov 14 2026):** Play a Life on branch `feature/playable-life`, PL-00 to PL-12 and the My life redesign done (last `a2358bf`, 534/534). Next: the owner's feedback on the three views, or PL-13 (ask first). Summary and working pattern: `CLAUDE.md` ("Pick up here"); details: the "Playable Life Mode" item below. New laptop: `docs/NEW_LAPTOP.md`.
+**PICK UP HERE (Nov 22 2026):** Play a Life on branch `feature/playable-life`, PL-00 to PL-13 and the My life redesign done (542/542). PL-13 (320 life moments) waits for the owner's review; next is PL-14 (ask first). Summary and working pattern: `CLAUDE.md` ("Pick up here"); details: the "Playable Life Mode" item below. New laptop: `docs/NEW_LAPTOP.md`.
 
 **To do (keep this list current; the same list is in `docs/ROADMAP.md`):**
 
@@ -366,6 +366,17 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
     - new request `ASK_CLINIC` (the carer decides and pays the real clinic fee; +12 health when unwell);
     - revised where the engine has no such thing (for example teens cannot be hired, so job moments are reactions);
     - each event is marked important (`imp: 2`) or everyday. Tests: `playCatalogTests`. Full suite 542/542.
+  - **PL-13 part 2 (Nov 22 2026): adult 120 and senior 50. PL-13 is complete, waiting for the owner's review.**
+    - Totals: baby 50, child 50, teen 50, adult 120, senior 50 (320). Events with at least one real request /
+      reaction-only events: baby 34/16, child 36/14, teen 26/24, adult 93/27, senior 42/8. Nothing is deferred.
+    - Revised (the engine has no such thing): loans to relatives become gifts or budget help; tax refunds and
+      inheritance become "money to spare"; buying a home becomes moving to a better rented tier; hiring staff,
+      pensions and annuities are reactions; bus lines, schemes and bribes are the character's reaction only.
+    - New adult/senior conditions are prefixed `a`/`s` in `player-catalog.js`; new targets `homeDown`, `sellBiz`,
+      `giftFamily`, `datingInCard`.
+    - Measured over 5 years (character deciding everyday moments): adult about 10.6 moments and 1.8 important
+      stops a year, senior about 8.2 moments and almost no stops. Full suite 542/542.
+    - Next: PL-14 (UX, pacing, art and playtest), after the owner's review.
   - Owner requests, Nov 14 2026 (after PL-12):
     - **Planned for tomorrow:** a list of queued requests, each with Cancel (`Player.cancel`, journaled
       `cmd.cancelled`). `Player.describe` words every kind (`act.<KIND>`, English and Chinese; a test checks all

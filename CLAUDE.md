@@ -37,7 +37,10 @@ those first.
   - leaving town ends control and offers succession.
 - Status and next step: see the "Playable Life Mode" item in `docs/HANDOFF.md`.
 
-## Pick up here (Nov 14 2026)
+## Pick up here (Nov 22 2026)
+- **PL-13 done (waiting for the owner's review):** 320 life moments in `js/sim/player-catalog.js` (baby, child,
+  teen and senior 50 each, adult 120), English and Chinese texts; full suite 542/542. Next: **PL-14** (UX, pacing,
+  art and playtest), only after the owner's go-ahead. The notes below describe the state before PL-13.
 - **Done:** PL-00 to PL-12, the owner's extra requests, and the My life redesign (steps 1-5).
   - The redesign: view A Hub (the default), B Planner and C Story. Plans are checked before they are
     queued; important decisions stop the clock; the character decides everyday ones at fast speeds; big

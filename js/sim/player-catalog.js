@@ -227,6 +227,238 @@
     teen('TE-048', 'teenAny', [fx('educational', 'learn'), fx('collab', 'social'), fx('privacy', 'steady')], { minAge: 14 }),
     teen('TE-049', 'exams', [req('refuse', 'SET_EFFORT', 'effortHard'), fx('report', 'steady'), fx('help', 'learn')], { minAge: 15, imp: 2 }),
   );
+  // ---- Adulthood (18-59): 83 more moments. Real requests where the engine has them (job, pay, study, savings,
+  // home, business, family, health, volunteering, donations); otherwise the character's own reaction. Revised so
+  // nothing is faked: no loans or tax refunds that the books do not have, no hires the player cannot make.
+  const myBiz = (w, p) => (p.manages >= 0 && w.biz[p.manages] && w.biz[p.manages].open ? w.biz[p.manages] : null);
+  const partnerOf = (w, p) => { const q = p.partnerId !== null ? w.people[p.partnerId] : null; return q && q.alive && !q.away ? q : null; };
+  const near = q => q && q.alive && !q.away && !q.inst;
+  const staffOf = (w, p) => { const b = myBiz(w, p); if (!b) return 0; let k = 0; for (const q of w.living) if (q.alive && q.job && q.job.biz >= 0 && w.biz[q.job.biz] === b) k++; return k; };
+  const myKid = (w, p, lo, hi) => { const l = p.children.map(id => w.people[id]).filter(c => near(c) && P.age(w, c) >= lo && P.age(w, c) < hi && p.careOf.includes(c.id)); return l.length ? l[(w.day / 30 | 0) % l.length] : null; };
+  const relatives = (w, p) => p.parents.concat(p.children).map(id => w.people[id]).filter(q => near(q) && P.isAdult(w, q));
+  const turn = (w, l) => (l.length ? l[(w.day / 30 | 0) % l.length] : null);
+  const needy = (w, p) => turn(w, relatives(w, p).filter(q => q.cash < q.mcost));
+  const lowRel = (w, p) => turn(w, relatives(w, p).filter(q => q.happy < 40));
+  const hasJob = p => !!p.job && !p.job.fixedTitle;
+  const roomy = (w, p) => p.cash > 6 * p.mcost, wealthy = (w, p) => p.cash > 12 * p.mcost;
+  const hhIncome = (w, p) => Math.max(0, p.incomeEMA) + (partnerOf(w, p) ? Math.max(0, partnerOf(w, p).incomeEMA) : 0);
+  Object.assign(Pl.CONDITIONS, {
+    aJob: (w, p) => hasJob(p),
+    aNewJob: (w, p) => hasJob(p) && w.day - p.job.startDay < 90,
+    aBusyJob: (w, p) => hasJob(p) && p.stress > 45,
+    aLongJob: (w, p) => hasJob(p) && w.day - p.job.startDay > 720,
+    aOpenings: (w, p) => hasJob(p) && Pl.openings(w, p).length > 0,
+    aJobless: (w, p) => !p.job && !p.enrol && !p.retired && !myBiz(w, p),
+    aBiz: (w, p) => !!myBiz(w, p),
+    aBizStaff: (w, p) => staffOf(w, p) > 0,
+    aBizSolo: (w, p) => !!myBiz(w, p) && staffOf(w, p) === 0,
+    aBizOk: (w, p) => { const b = myBiz(w, p); return !!b && b.cash > w.px(5000); },
+    aBizOld: (w, p) => !!myBiz(w, p) && P.age(w, p) >= 45,
+    aNoBiz: (w, p) => !myBiz(w, p) && P.age(w, p) >= 25 && roomy(w, p) && p.bankruptUntil <= w.day,
+    aDebt: (w, p) => (p.debt.study || 0) + (p.debt.medical || 0) > 0,
+    aRoomy: roomy, aWealthy: wealthy,
+    aRoomyHead: (w, p) => p.isHead && roomy(w, p) && p.tiers.housing < 4,
+    aRentHigh: (w, p) => p.isHead && p.tiers.housing > 0 && Pl.rentOf(w, p.tiers.housing) > 0.4 * hhIncome(w, p),
+    aYoungHome: (w, p) => !p.isHead && P.age(w, p) < 30,
+    aShortSave: (w, p) => P.age(w, p) >= 40 && P.invValue(w, p) + p.cash < 24 * p.mcost,
+    aSlump: (w, p) => !!w.mkt && st(w).idxPeak > 0 && w.mkt.idx < 0.9 * st(w).idxPeak,
+    aNeedy: (w, p) => !!needy(w, p),
+    aLowRel: (w, p) => !!lowRel(w, p),
+    aPartner: (w, p) => !!partnerOf(w, p),
+    aPartnerAway: (w, p) => { const q = p.partnerId !== null ? w.people[p.partnerId] : null; return !!q && q.alive && !!q.away; },
+    aDating: (w, p) => p.partnerId === null && !!st(w).dating,
+    aSingle: (w, p) => p.partnerId === null && !st(w).dating,
+    aKidSchool: (w, p) => !!myKid(w, p, 7, 17),
+    aKidTeen: (w, p) => !!myKid(w, p, 15, 18),
+    aKidSmall: (w, p) => !!myKid(w, p, 0, 6),
+    aSoloParent: (w, p) => !partnerOf(w, p) && !!myKid(w, p, 0, 18),
+    aTryBaby: (w, p) => !!partnerOf(w, p) && st(w).babyWish === 'yes' && !myKid(w, p, 0, 2),
+    aUnwell: (w, p) => p.health < 70,
+    aTired: (w, p) => p.stress > 40 || p.energy < 40,
+    aCivic: (w, p) => P.age(w, p) >= 21,
+  });
+  const kidP = (lo, hi) => (w, p) => { const c = myKid(w, p, lo, hi); return { child: c ? c.first : '', pid: c ? c.id : -1 }; };
+  Object.assign(Pl.PARAMS, {
+    needy: (w, p) => { const q = needy(w, p); return { other: q ? P.name(q) : '', pid: q ? q.id : -1 }; },
+    lowRel: (w, p) => { const q = lowRel(w, p); return { other: q ? P.name(q) : '', pid: q ? q.id : -1 }; },
+    kidStudy: kidP(7, 17), kidTeen: kidP(15, 18), kidSmall: kidP(0, 6),
+    dating: (w, p) => { const d = st(w).dating, q = d ? w.people[d.pid] : null; return { other: q ? P.name(q) : '' }; },
+  });
+  Object.assign(Pl.TARGETS, {
+    homeDown: (w, p) => (p.tiers.housing > 0 ? { tier: p.tiers.housing - 1 } : null),
+    sellBiz: (w, p) => (myBiz(w, p) ? {} : null),
+    datingInCard: (w, p) => (st(w).dating ? { pid: st(w).dating.pid } : null),
+    giftFamily: (w, p) => { const q = relatives(w, p)[0]; return q ? { pid: q.id, share: 0.1 } : null; },
+  });
+  const ad = (id, when, choices, o) => Object.assign({ id, stages: ['adult'], minAge: 18, maxAge: 59, when, chance: 0.12, cooldown: 720, expires: 20, imp: 1, params: null, choices }, o || {});
+  Pl.EVENTS.push(
+    // Career
+    ad('AD-002', 'aNewJob', [req('evidence', 'ASK_RAISE', 'raise'), fx('accept', 'steady'), fx('benefits', 'calm')], { params: 'job', chance: 0.4, cooldown: 99999 }),
+    ad('AD-005', 'aBusyJob', [fx('flexible', 'calm'), req('overtime', 'REST', 'rest'), req('change', 'APPLY_JOB', 'typicalPay')], { params: 'job', cooldown: 360 }),
+    ad('AD-006', 'aJob', [fx('report', 'brave'), fx('mediate', 'calm'), req('transfer', 'APPLY_JOB', 'typicalPay')], { chance: 0.05, cooldown: 1440 }),
+    ad('AD-009', 'aJob', [fx('request', 'learn'), fx('mentor', 'social'), req('own', 'ENROLL', 'bestCourse')], { minAge: 22 }),
+    ad('AD-010', 'aLongJob', [fx('commit', 'steady'), req('explore', 'APPLY_JOB', 'bestPaid'), req('redesign', 'ASK_RAISE', 'raise')], { params: 'job' }),
+    // Business
+    ad('AD-012', 'aNoBiz', [req('open', 'START_BIZ', 'bizCheap'), fx('learn', 'learn'), fx('decline', 'steady')], { chance: 0.06, cooldown: 1440 }),
+    ad('AD-013', 'aBizSolo', [fx('recruit', 'social'), fx('junior', 'proud'), fx('solo', 'steady')], { params: 'myBiz' }),
+    ad('AD-015', 'aBiz', [fx('service', 'focus'), req('invest', 'INJECT', 'inject25'), fx('niche', 'curious')], { params: 'myBiz', chance: 0.1 }),
+    ad('AD-016', 'aBizStaff', [fx('raise', 'social'), fx('training', 'learn'), fx('explain', 'steady')], { params: 'myBiz' }),
+    ad('AD-017', 'aBizOk', [fx('test', 'curious'), req('invest', 'INJECT', 'inject25'), fx('local', 'steady')], { params: 'myBiz' }),
+    ad('AD-018', 'aBiz', [fx('alternate', 'focus'), fx('negotiate', 'calm'), fx('limit', 'steady')], { params: 'myBiz', chance: 0.08 }),
+    ad('AD-019', 'aBizOld', [fx('family', 'social'), fx('manager', 'steady'), req('sale', 'SELL_BIZ', 'sellBiz')], { params: 'myBiz', minAge: 45, cooldown: 1440 }),
+    ad('AD-020', 'aBiz', [fx('apply', 'proud'), req('cofund', 'DONATE', 'donateSmall'), fx('decline', 'steady')], { params: 'myBiz', chance: 0.06 }),
+    // Money
+    ad('AD-023', 'aRoomy', [fx('reserve', 'steady'), req('invest', 'INVEST', 'invest10'), fx('treat', 'joy')], { chance: 0.08 }),
+    ad('AD-027', 'aNeedy', [req('gift', 'GIFT', 'giftInCard'), fx('budget', 'social'), fx('decline', 'steady')], { params: 'needy', chance: 0.2, cooldown: 360 }),
+    ad('AD-028', 'aDebt', [fx('plan', 'steady'), fx('extra', 'focus'), fx('advice', 'calm')], { chance: 0.15 }),
+    ad('AD-029', 'aRoomyHead', [fx('save', 'steady'), req('move', 'MOVE_HOME', 'homeUp'), fx('rent', 'calm')], { minAge: 25 }),
+    ad('AD-030', 'aWealthy', [req('plan', 'INVEST', 'invest25'), req('family', 'GIFT', 'giftFamily'), fx('reserve', 'steady')], { minAge: 25 }),
+    // Romance
+    ad('AD-033', 'aPartner', [req('discuss', 'COUNSEL', 'partnerInCard'), fx('reconsider', 'calm'), fx('time', 'steady')], { params: 'partner', chance: 0.08 }),
+    ad('AD-034', 'aPartnerAway', [fx('visits', 'social'), fx('relocate', 'brave'), req('end', 'SEPARATE', 'partnerInCard')], { chance: 0.3, cooldown: 360 }),
+    ad('AD-038', 'aDating', [req('agree', 'ASK_PARTNER', 'datingInCard'), fx('talk', 'calm'), fx('end', 'steady')], { params: 'dating', chance: 0.25, cooldown: 180 }),
+    ad('AD-039', 'aSingle', [fx('boundaries', 'calm'), fx('date', 'social'), fx('decline', 'steady')], { mature: true, maxAge: 50, chance: 0.05 }),
+    // Family
+    ad('AD-042', 'aKidSchool', [req('home', 'CARE_CHILD', 'personInCard'), fx('subsidy', 'learn'), fx('later', 'steady')], { params: 'kidStudy', maxAge: 70, stages: ['adult', 'senior'] }),
+    ad('AD-043', 'aKidTeen', [req('support', 'CARE_CHILD', 'personInCard'), fx('finances', 'steady'), fx('mixed', 'calm')], { params: 'kidTeen', maxAge: 70, stages: ['adult', 'senior'] }),
+    ad('AD-046', 'aSoloParent', [fx('agree', 'calm'), req('family', 'VISIT', 'trusted'), fx('schedule', 'steady')], { chance: 0.15, cooldown: 540 }),
+    ad('AD-048', 'aBizStaff', [fx('merit', 'steady'), fx('intern', 'social'), fx('boundary', 'calm')], { params: 'myBiz', chance: 0.06 }),
+    ad('AD-049', 'aKidSmall', [req('backup', 'VISIT', 'trusted'), req('leave', 'REST', 'rest'), req('care', 'CARE_CHILD', 'personInCard')], { params: 'kidSmall', chance: 0.1 }),
+    ad('AD-050', 'volunteers', [req('help', 'VOLUNTEER', 'volunteer'), req('donate', 'DONATE', 'donateSmall'), fx('kin', 'social')], { params: 'welfare', minAge: 25, chance: 0.06 }),
+    // Health
+    ad('AD-054', 'aUnwell', [req('rehab', 'SEE_DOCTOR', 'doctor'), fx('adjust', 'calm'), req('rest', 'REST', 'rest')], { chance: 0.3, cooldown: 360 }),
+    ad('AD-055', 'aTired', [req('routine', 'REST', 'rest'), req('doctor', 'SEE_DOCTOR', 'doctor'), fx('evenings', 'calm')], { chance: 0.1 }),
+    ad('AD-056', 'always', [fx('support', 'steady'), fx('cut', 'calm'), req('replace', 'SET_EXERCISE', 'exLight')], { minAge: 20, chance: 0.05, cooldown: 1440 }),
+    ad('AD-057', 'aLowRel', [req('contact', 'VISIT', 'personInCard'), req('stay', 'VISIT', 'personInCard'), fx('professional', 'calm')], { params: 'lowRel', sensitive: true, imp: 2, chance: 0.1, cooldown: 540, stages: ['adult', 'senior'], maxAge: 99 }),
+    ad('AD-059', 'rainy', [req('guidance', 'SEE_DOCTOR', 'doctor'), fx('neighbours', 'social'), fx('hygiene', 'steady')], { chance: 0.08, cooldown: 360, stages: ['adult', 'senior'], maxAge: 99 }),
+    ad('AD-060', 'aTryBaby', [req('clinic', 'SEE_DOCTOR', 'doctor'), fx('adopt', 'calm'), req('timing', 'BABY_WISH', 'babyLater')], { params: 'partner', minAge: 25, maxAge: 45, imp: 2, chance: 0.15, cooldown: 720 }),
+    // Home and travel
+    ad('AD-062', 'moved', [fx('commute', 'steady'), fx('schools', 'learn'), req('family', 'VISIT', 'trusted')], { chance: 0.5, cooldown: 360 }),
+    ad('AD-065', 'aOpenings', [req('relocate', 'APPLY_JOB', 'bestPaid'), fx('commute', 'steady'), fx('stay', 'calm')], { params: 'job', chance: 0.08 }),
+    ad('AD-066', 'aRoomyHead', [fx('repair', 'steady'), req('upgrade', 'MOVE_HOME', 'homeUp'), fx('save', 'calm')], { minAge: 30, chance: 0.06, cooldown: 1080 }),
+    ad('AD-067', 'aYoungHome', [fx('budget', 'learn'), fx('solo', 'brave'), fx('stay', 'steady')], { maxAge: 29, chance: 0.15 }),
+    ad('AD-068', 'aJob', [fx('closer', 'curious'), fx('commute', 'rest'), fx('habits', 'steady')], { chance: 0.05 }),
+    ad('AD-069', 'aSlump', [req('staycation', 'TRAVEL', 'domestic'), fx('postpone', 'steady'), req('local', 'REST', 'rest')], { chance: 0.3, cooldown: 540 }),
+    ad('AD-070', 'elderCare', [req('modify', 'MOVE_HOME', 'homeUp'), req('rental', 'GIFT', 'giftInCard'), req('share', 'VISIT', 'personInCard')], { params: 'elder', minAge: 25, chance: 0.15, cooldown: 720 }),
+    // Civic life
+    ad('AD-071', 'aCivic', [fx('schools', 'learn'), fx('health', 'steady'), fx('balanced', 'calm')], { chance: 0.05 }),
+    ad('AD-073', 'aCivic', [req('campaign', 'VOLUNTEER', 'volunteer'), fx('mixed', 'calm'), fx('accept', 'steady')], { chance: 0.04 }),
+    ad('AD-074', 'aCivic', [req('cleanup', 'VOLUNTEER', 'volunteer'), fx('council', 'steady'), req('contribute', 'DONATE', 'donateSmall')], { chance: 0.05 }),
+    ad('AD-075', 'aCivic', [fx('subsidy', 'social'), fx('zoning', 'learn'), fx('study', 'steady')], { chance: 0.04 }),
+    ad('AD-076', 'aCivic', [req('watch', 'VOLUNTEER', 'volunteer'), fx('dialogue', 'social'), fx('evidence', 'steady')], { chance: 0.04 }),
+    ad('AD-078', 'aCivic', [fx('board', 'proud'), req('mentor', 'VOLUNTEER', 'volunteer'), fx('uninvolved', 'rest')], { minAge: 25, chance: 0.04 }),
+    // Risks: the character says no, asks, or reports (reactions only: the engine has no schemes to join)
+    ad('AD-081', 'aRoomy', [fx('reject', 'steady'), fx('adviser', 'calm'), fx('report', 'brave')], { chance: 0.05 }),
+    ad('AD-082', 'aCivic', [fx('statement', 'brave'), fx('advice', 'calm'), fx('decline', 'steady')], { chance: 0.03 }),
+    ad('AD-083', 'aCivic', [fx('calm', 'calm'), fx('leave', 'steady'), fx('call', 'brave')], { chance: 0.03 }),
+    ad('AD-084', 'aBizStaff', [fx('audit', 'focus'), fx('mediate', 'calm'), fx('report', 'brave')], { params: 'myBiz', chance: 0.05 }),
+    ad('AD-085', 'aCivic', [fx('decline', 'steady'), fx('legal', 'social'), fx('help', 'calm')], { chance: 0.03 }),
+    ad('AD-086', 'aCivic', [fx('refuse', 'steady'), fx('transport', 'calm'), fx('encourage', 'social')], { chance: 0.03 }),
+    ad('AD-087', 'aJob', [fx('reject', 'steady'), fx('advice', 'calm'), fx('report', 'brave')], { chance: 0.03 }),
+    ad('AD-088', 'aRoomy', [fx('disclose', 'curious'), fx('withdraw', 'steady'), fx('warn', 'brave')], { chance: 0.04 }),
+    ad('AD-089', 'aCivic', [fx('refuse', 'steady'), fx('legit', 'curious'), fx('report', 'brave')], { chance: 0.03 }),
+    ad('AD-090', 'aCivic', [fx('counsel', 'calm'), fx('mediate', 'social'), fx('formal', 'steady')], { chance: 0.03 }),
+    // Setbacks
+    ad('AD-092', 'bizShort', [fx('creditors', 'calm'), req('sell', 'SELL_BIZ', 'sellBiz'), req('inject', 'INJECT', 'inject25')], { params: 'myBiz', imp: 2, chance: 0.3, cooldown: 360 }),
+    ad('AD-093', 'aRentHigh', [req('downsize', 'MOVE_HOME', 'homeDown'), fx('budget', 'steady'), fx('help', 'calm')], { chance: 0.25, cooldown: 360 }),
+    ad('AD-095', 'aCivic', [fx('talk', 'social'), fx('mediate', 'calm'), fx('away', 'steady')], { chance: 0.04 }),
+    ad('AD-096', 'rainy', [fx('claims', 'steady'), req('recovery', 'VOLUNTEER', 'volunteer'), req('fund', 'DONATE', 'donateSmall')], { chance: 0.03, stages: ['adult', 'senior'], maxAge: 99 }),
+    ad('AD-098', 'aShortSave', [req('save', 'INVEST', 'invest10'), fx('second', 'focus'), fx('reset', 'calm')], { minAge: 40, chance: 0.15 }),
+    ad('AD-099', 'aJob', [fx('evidence', 'steady'), fx('review', 'calm'), fx('legal', 'focus')], { chance: 0.03 }),
+    ad('AD-100', 'aJobless', [req('coordinate', 'VOLUNTEER', 'volunteer'), req('coop', 'START_BIZ', 'bizCheap'), req('retrain', 'ENROLL', 'bestCourse')], { minAge: 22, chance: 0.15 }),
+    // Learning and making things
+    ad('AD-102', 'always', [fx('classes', 'learn'), fx('exchange', 'social'), fx('online', 'focus')], { chance: 0.04 }),
+    ad('AD-103', 'aCivic', [fx('elders', 'social'), fx('archives', 'learn'), req('exhibit', 'VOLUNTEER', 'volunteer')], { minAge: 25, chance: 0.03 }),
+    ad('AD-104', 'always', [fx('workers', 'social'), fx('science', 'learn'), fx('private', 'rest')], { chance: 0.03 }),
+    ad('AD-105', 'aCivic', [req('mentor', 'VOLUNTEER', 'volunteer'), req('literacy', 'VOLUNTEER', 'volunteer'), fx('occasional', 'steady')], { minAge: 25, chance: 0.04 }),
+    ad('AD-106', 'always', [fx('submit', 'proud'), fx('support', 'social'), fx('attend', 'joy')], { chance: 0.04 }),
+    ad('AD-107', 'aJob', [fx('share', 'learn'), req('partner', 'ENROLL', 'bestCourse'), fx('decline', 'rest')], { minAge: 25, chance: 0.03 }),
+    ad('AD-108', 'aJob', [fx('prepare', 'brave'), fx('copresent', 'social'), fx('decline', 'calm')], { minAge: 25, chance: 0.04 }),
+    ad('AD-109', 'always', [fx('prototype', 'curious'), req('support', 'START_BIZ', 'bizBest'), fx('hobby', 'joy')], { minAge: 22, chance: 0.03 }),
+    ad('AD-110', 'aLongJob', [req('study', 'ENROLL', 'bestCourse'), req('travel', 'TRAVEL', 'abroad'), fx('stay', 'steady')], { minAge: 28, chance: 0.05, cooldown: 1440 }),
+    // Society: giving back from a firm or savings
+    ad('AD-111', 'aBizStaff', [fx('fair', 'proud'), req('partner', 'VOLUNTEER', 'volunteer'), fx('standard', 'steady')], { params: 'myBiz', chance: 0.05 }),
+    ad('AD-112', 'aWealthy', [fx('invest', 'curious'), fx('advocate', 'social'), req('transport', 'VOLUNTEER', 'volunteer')], { chance: 0.04 }),
+    ad('AD-113', 'aBizStaff', [fx('wages', 'steady'), req('housing', 'DONATE', 'donateSmall'), fx('lobby', 'social')], { params: 'myBiz', chance: 0.05 }),
+    ad('AD-114', 'aWealthy', [req('donate', 'DONATE', 'donateSmall'), fx('teachers', 'learn'), req('lab', 'VOLUNTEER', 'volunteer')], { chance: 0.05 }),
+    ad('AD-115', 'aWealthy', [fx('equity', 'curious'), req('mentor', 'VOLUNTEER', 'volunteer'), fx('decline', 'steady')], { minAge: 30, chance: 0.04 }),
+    ad('AD-116', 'aRoomy', [req('fund', 'DONATE', 'donateSmall'), fx('cover', 'steady'), fx('planning', 'learn')], { chance: 0.03 }),
+    ad('AD-117', 'aCivic', [fx('documents', 'brave'), fx('inquiry', 'steady'), fx('rumours', 'calm')], { chance: 0.03 }),
+    ad('AD-118', 'aCivic', [req('compete', 'START_BIZ', 'bizBest'), fx('regulation', 'learn'), fx('standards', 'social')], { minAge: 25, chance: 0.03 }),
+    ad('AD-119', 'newcomer', [req('training', 'WELCOME', 'newcomerInCard'), req('recognise', 'WELCOME', 'newcomerInCard'), req('language', 'DONATE', 'donateSmall')], { params: 'newcomer', chance: 0.1, stages: ['adult', 'senior'], maxAge: 99 }),
+    ad('AD-120', 'aWealthy', [req('foundation', 'DONATE', 'legacyGift'), req('institution', 'DONATE', 'donateSmall'), fx('family', 'steady')], { minAge: 50, chance: 0.08, cooldown: 1440 }),
+  );
+  // ---- Seniors (60+): 42 more moments. Pensions and annuities are not separate products in the engine, so those
+  // moments are the character's reaction or a real saving/selling choice; care, family and community use real requests.
+  const adultKids = (w, p) => p.children.map(id => w.people[id]).filter(q => near(q) && P.isAdult(w, q));
+  const bizKid = (w, p) => turn(w, adultKids(w, p).filter(q => !!myBiz(w, q)));
+  const smallKidParent = (w, p) => turn(w, adultKids(w, p).filter(q => q.careOf.some(id => { const c = w.people[id]; return c && c.alive && P.age(w, c) < 6; })));
+  Object.assign(Pl.CONDITIONS, {
+    sAny: () => true,
+    sRetired: (w, p) => !!p.retired,
+    sTight: (w, p) => p.cash < 3 * p.mcost,
+    sInvested: (w, p) => P.invValue(w, p) > w.px(1000),
+    sKid: (w, p) => adultKids(w, p).length > 0,
+    sBizKid: (w, p) => !!bizKid(w, p),
+    sGrandSmall: (w, p) => !!smallKidParent(w, p),
+    sPartnerIll: (w, p) => { const q = partnerOf(w, p); return !!q && q.health < 50; },
+    sFrail: (w, p) => p.health < 60,
+  });
+  const personP = f => (w, p) => { const q = f(w, p); return { other: q ? q.first : '', pid: q ? q.id : -1 }; };
+  Object.assign(Pl.PARAMS, {
+    sKid: personP((w, p) => turn(w, adultKids(w, p))), bizKid: personP(bizKid), grandSmall: personP(smallKidParent),
+    sPartner: (w, p) => { const q = partnerOf(w, p); return { other: q ? P.name(q) : '' }; },
+  });
+  const se = (id, when, choices, o) => Object.assign({ id, stages: ['senior'], minAge: 60, maxAge: 120, when, chance: 0.1, cooldown: 720, expires: 20, imp: 1, params: null, choices }, o || {});
+  Pl.EVENTS.push(
+    // Retirement and money
+    se('SE-002', 'sRetired', [fx('regular', 'steady'), req('invest', 'INVEST', 'invest10'), fx('advice', 'calm')], { chance: 0.6, cooldown: 99999 }),
+    se('SE-003', 'sTight', [fx('spending', 'steady'), req('support', 'VISIT', 'trusted'), req('downsize', 'MOVE_HOME', 'homeDown')], { chance: 0.25, cooldown: 360 }),
+    se('SE-004', 'sInvested', [req('rebalance', 'SELL', 'sell25'), fx('hold', 'steady'), fx('review', 'calm')], { chance: 0.15 }),
+    se('SE-005', 'sRetired', [fx('work', 'proud'), req('mentor', 'VOLUNTEER', 'volunteer'), req('enjoy', 'REST', 'rest')], { maxAge: 72, chance: 0.08 }),
+    se('SE-006', 'aRoomy', [fx('advice', 'calm'), fx('decline', 'steady'), req('family', 'VISIT', 'trusted')], { chance: 0.06 }),
+    se('SE-007', 'aDebt', [fx('repay', 'focus'), fx('refinance', 'steady'), req('counsel', 'COUNSELLING', 'counselling')], { chance: 0.2 }),
+    se('SE-008', 'aPartner', [fx('partner', 'social'), fx('family', 'steady'), fx('own', 'calm')], { params: 'sPartner', chance: 0.06 }),
+    se('SE-009', 'sAny', [fx('reserve', 'steady'), fx('stage', 'calm'), req('help', 'VISIT', 'trusted')], { chance: 0.04 }),
+    se('SE-010', 'aRoomy', [fx('compare', 'learn'), fx('flexible', 'steady'), fx('adviser', 'calm')], { chance: 0.05, cooldown: 1440 }),
+    // Family
+    se('SE-013', 'reunion', [fx('will', 'steady'), fx('equal', 'calm'), req('discuss', 'VISIT', 'personVisit')], { params: 'reunion', minAge: 65, chance: 0.06, cooldown: 1440 }),
+    se('SE-014', 'sKid', [req('talk', 'VISIT', 'personVisit'), fx('mediator', 'calm'), fx('distance', 'steady')], { params: 'sKid', chance: 0.04 }),
+    se('SE-016', 'sPartnerIll', [fx('pro', 'calm'), req('family', 'VISIT', 'trusted'), req('respite', 'REST', 'rest')], { params: 'sPartner', imp: 2, chance: 0.4, cooldown: 360 }),
+    se('SE-017', 'sBizKid', [fx('mentor', 'social'), req('invest', 'GIFT', 'personGift'), fx('cheer', 'joy')], { params: 'bizKid', chance: 0.2, cooldown: 1080 }),
+    se('SE-019', 'sGrandSmall', [req('care', 'VISIT', 'personVisit'), fx('locate', 'steady'), fx('limits', 'calm')], { params: 'grandSmall', chance: 0.12 }),
+    se('SE-020', 'sKid', [req('discuss', 'VISIT', 'personVisit'), fx('mediated', 'calm'), fx('privacy', 'steady')], { params: 'sKid', chance: 0.03, cooldown: 1440 }),
+    // Wellbeing
+    se('SE-021', 'sAny', [req('attend', 'SEE_DOCTOR', 'doctor'), fx('schedule', 'steady'), req('transport', 'VISIT', 'trusted')], { chance: 0.1 }),
+    se('SE-022', 'sFrail', [req('physio', 'SEE_DOCTOR', 'doctor'), fx('adapt', 'steady'), req('adjust', 'SET_EXERCISE', 'exLight')], { chance: 0.2, cooldown: 360 }),
+    se('SE-024', 'sFrail', [req('care', 'SEE_DOCTOR', 'doctor'), req('second', 'SEE_DOCTOR', 'doctor'), req('family', 'VISIT', 'trusted')], { minAge: 65, chance: 0.15 }),
+    se('SE-025', 'sAny', [req('assess', 'SEE_DOCTOR', 'doctor'), fx('aids', 'steady'), req('trusted', 'VISIT', 'trusted')], { minAge: 70, chance: 0.06 }),
+    se('SE-027', 'noExercise', [req('class', 'SET_EXERCISE', 'exRegular'), req('walks', 'SET_EXERCISE', 'exLight'), req('stretch', 'SET_EXERCISE', 'exLight')], { chance: 0.15 }),
+    se('SE-028', 'sAny', [req('assess', 'SEE_DOCTOR', 'doctor'), fx('aids', 'steady'), req('help', 'VISIT', 'trusted')], { minAge: 65, chance: 0.06 }),
+    se('SE-029', 'bereaved', [req('group', 'COUNSELLING', 'counselling'), req('loved', 'VISIT', 'trusted'), req('quiet', 'REST', 'rest')], { params: 'bereaved', sensitive: true, chance: 0.3, cooldown: 120 }),
+    se('SE-030', 'sAny', [fx('record', 'steady'), req('team', 'SEE_DOCTOR', 'doctor'), req('family', 'VISIT', 'trusted')], { minAge: 75, sensitive: true, chance: 0.05, cooldown: 1440 }),
+    // Community
+    se('SE-031', 'sAny', [fx('donate', 'proud'), fx('oral', 'social'), req('mentor', 'VOLUNTEER', 'volunteer')], { chance: 0.04 }),
+    se('SE-032', 'sAny', [fx('background', 'learn'), fx('evidence', 'steady'), fx('independence', 'calm')], { chance: 0.03 }),
+    se('SE-033', 'sAny', [req('garden', 'VOLUNTEER', 'volunteer'), fx('teach', 'social'), fx('access', 'steady')], { chance: 0.05 }),
+    se('SE-034', 'sAny', [req('mentor', 'VOLUNTEER', 'volunteer'), req('fund', 'DONATE', 'donateSmall'), fx('advise', 'social')], { chance: 0.04 }),
+    se('SE-035', 'sAny', [fx('write', 'proud'), req('organise', 'VOLUNTEER', 'volunteer'), fx('attend', 'joy')], { chance: 0.03, cooldown: 99999 }),
+    se('SE-036', 'sRetired', [req('probono', 'VOLUNTEER', 'volunteer'), fx('archive', 'learn'), req('time', 'REST', 'rest')], { chance: 0.05 }),
+    se('SE-037', 'sAny', [fx('join', 'curious'), fx('safeguards', 'steady'), fx('stay', 'calm')], { chance: 0.03 }),
+    se('SE-038', 'sAny', [fx('encourage', 'proud'), fx('reconnect', 'social'), fx('private', 'joy')], { chance: 0.04 }),
+    se('SE-039', 'sAny', [fx('accept', 'proud'), fx('team', 'social'), fx('decline', 'steady')], { chance: 0.02, cooldown: 99999 }),
+    se('SE-040', 'sAny', [fx('share', 'social'), fx('survey', 'learn'), fx('petition', 'brave')], { chance: 0.04 }),
+    // Legacy
+    se('SE-041', 'sAny', [fx('family', 'social'), fx('publish', 'proud'), fx('diary', 'calm')], { minAge: 65, chance: 0.04 }),
+    se('SE-042', 'sKid', [fx('verify', 'learn'), req('interview', 'VISIT', 'personVisit'), fx('archive', 'steady')], { params: 'sKid', chance: 0.04 }),
+    se('SE-043', 'legacy', [fx('will', 'steady'), req('explain', 'VISIT', 'trusted'), fx('advice', 'calm')], { minAge: 70, chance: 0.1, cooldown: 1080 }),
+    se('SE-044', 'aBiz', [fx('heir', 'social'), fx('manager', 'steady'), req('sale', 'SELL_BIZ', 'sellBiz')], { params: 'myBiz', imp: 2, chance: 0.2, cooldown: 1080 }),
+    se('SE-046', 'sAny', [req('amends', 'VISIT', 'trusted'), fx('gratitude', 'joy'), req('support', 'COUNSELLING', 'counselling')], { minAge: 70, chance: 0.04 }),
+    se('SE-047', 'aPartner', [fx('modest', 'joy'), fx('memories', 'social'), req('gather', 'VISIT', 'trusted')], { params: 'sPartner', minAge: 65, chance: 0.08, cooldown: 1800 }),
+    se('SE-048', 'sAny', [fx('plan', 'steady'), fx('archive', 'learn'), req('trusted', 'VISIT', 'trusted')], { minAge: 65, chance: 0.03 }),
+    se('SE-049', 'grandTeen', [req('lessons', 'VISIT', 'personVisit'), req('tools', 'VISIT', 'personVisit'), fx('mentor', 'social')], { params: 'grandTeen', chance: 0.1 }),
+    se('SE-050', 'reunion', [req('reconcile', 'VISIT', 'personVisit'), req('celebrate', 'VISIT', 'personVisit'), fx('small', 'calm')], { params: 'reunion', minAge: 80, imp: 2, chance: 0.2, cooldown: 99999 }),
+  );
   Pl.markImportant = () => { for (const e of Pl.EVENTS) if (e.imp === 2) Pl.IMPORTANT.add(e.id); };
   Pl.markImportant();
 })(globalThis.LES = globalThis.LES || {});
