@@ -359,6 +359,13 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
     choose -> carries on. Visits now include grandchildren. Eight senior events SE-001/011/012/015/018/023/026/045.
     Texts that promised "a later update" are updated. Tests: `playSeniorTests` (11).
   - **Next: PL-13** (catalogue rollout in small tranches) - waiting for the owner's go-ahead. Full suite 516/516.
+  - **PL-13 part 1 (Nov 21 2026): baby, child and teen catalogues, 50 events each.** New file `js/sim/player-catalog.js`:
+    - each choice is a real request (same commands as everywhere) or the character's own reaction (`Player.FX`
+      profiles: a few points of stress/happiness/energy; for children a small potential step, capped at +0.3 per
+      ability for life);
+    - new request `ASK_CLINIC` (the carer decides and pays the real clinic fee; +12 health when unwell);
+    - revised where the engine has no such thing (for example teens cannot be hired, so job moments are reactions);
+    - each event is marked important (`imp: 2`) or everyday. Tests: `playCatalogTests`. Full suite 542/542.
   - Owner requests, Nov 14 2026 (after PL-12):
     - **Planned for tomorrow:** a list of queued requests, each with Cancel (`Player.cancel`, journaled
       `cmd.cancelled`). `Player.describe` words every kind (`act.<KIND>`, English and Chinese; a test checks all

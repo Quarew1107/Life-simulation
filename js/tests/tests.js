@@ -2070,7 +2070,7 @@
     const en = texts('en');
     await new Promise(r => I.set('zh-Hans', r));
     const zh = texts('zh-Hans');
-    const evTexts = Pl.EVENTS.filter(e => e.id.startsWith('BA-')).flatMap(e => ['title', 'body', ...e.choices.map(c => c.id)].map(k => I.t(`ev.${e.id}.${k}`, { carer: 'A', sibling: 'B', other: 'C', name: 'D' })));
+    const evTexts = Pl.EVENTS.filter(e => e.id.startsWith('BA-')).flatMap(e => ['title', 'body', ...e.choices.map(c => c.id)].map(k => I.t(`ev.${e.id}.${k}`, { carer: 'A', sibling: 'B', other: 'C', name: 'D', festival: 'E' })));
     await new Promise(r => I.set('en', r));
     check('Every baby line reads properly with real names, in English and Chinese', ![...en, ...zh, ...evTexts].some(t => /\{\w+\}|ev\.BA/.test(t)) && I.validate('zh-Hans').length === 0, [...en, ...zh].find(t => /\{\w+\}/.test(t)) || '');
     const adult = new LES.World(Object.assign({}, D, { seed: 'pl5-a', founders: 120, play: 'random', playStage: 'adult' })); Pl.begin(adult);
@@ -2691,6 +2691,54 @@
     LES.Countries.ensure(D);
   }
 
+  // PL-13: the catalogue of life moments. Every event is complete and genuine; each stage reads properly over years.
+  async function playCatalogTests() {
+    print('--- Play a Life: the catalogue of life moments (PL-13) ---', 'info');
+    const Pl = LES.Player, D = LES.DEFAULTS, P = LES.P, I = LES.I18n;
+    LES.Countries.ensure(D);
+    await new Promise(r => I.set('zh-Hans', r)); const hasZh = k => I.has(k, 'zh-Hans'); await new Promise(r => I.set('en', r));
+    const bad = [];
+    for (const e of Pl.EVENTS) {
+      if (e.choices.length < 3) bad.push(`${e.id}: ${e.choices.length} choices`);
+      if (!Pl.CONDITIONS[e.when]) bad.push(`${e.id}: condition ${e.when}`);
+      if (e.params && !Pl.PARAMS[e.params]) bad.push(`${e.id}: params ${e.params}`);
+      for (const k of [`ev.${e.id}.title`, `ev.${e.id}.body`].concat(e.choices.map(c => `ev.${e.id}.${c.id}`))) if (!I.has(k, 'en') || !hasZh(k)) bad.push(`${e.id}: text ${k}`);
+      for (const c of e.choices) {
+        if (c.cmd && !Pl.HANDLERS[c.cmd]) bad.push(`${e.id}.${c.id}: kind ${c.cmd}`);
+        if (c.target && typeof Pl.TARGETS[c.target] !== 'function') bad.push(`${e.id}.${c.id}: target ${c.target}`);
+        if (c.fx && !Pl.FX[c.fx]) bad.push(`${e.id}.${c.id}: fx ${c.fx}`);
+        if (!c.cmd && !c.story) bad.push(`${e.id}.${c.id}: neither a request nor a reaction`);
+      }
+    }
+    const ids = Pl.EVENTS.map(e => e.id), dup = ids.filter((x, i) => ids.indexOf(x) !== i);
+    const count = st => new Set(Pl.EVENTS.filter(e => e.id.startsWith(st)).map(e => e.id)).size;
+    check('Every event: 3+ choices, a real condition, texts in English and Chinese, real targets, requests and reactions; no id twice', !bad.length && !dup.length, bad.slice(0, 6).concat(dup).join('; ') || `baby ${count('BA')}/50, child ${count('CH')}/50, teen ${count('TE')}/50, adult ${count('AD')}/120, senior ${count('SE')}/50`);
+    // Reactions: small and capped (a child's potential can move at most 0.3 per ability through experiences).
+    const w = new LES.World(Object.assign({}, D, { seed: 'plc-fx', founders: 150, play: 'random', playStage: 'child' })); Pl.begin(w);
+    const p = Pl.person(w), pot0 = p.pot[LES.C.INT];
+    for (let i = 0; i < 200; i++) Pl.applyFx(w, p, 'learn');
+    check('Reactions are small and capped: 200 learning moments add at most 0.3 to a child\'s potential', Math.abs(p.pot[LES.C.INT] - Math.min(10, pot0 + 0.3)) < 1e-9);
+    // The clinic: the carer decides and pays the real fee; it helps only when unwell.
+    const b = new LES.World(Object.assign({}, D, { seed: 'plc-cl', founders: 150, play: 'random', playStage: 'baby' })); Pl.begin(b);
+    const bp = Pl.person(b), g = Pl.carerOf(b, bp);
+    let code = 'no_carer';
+    if (g) { b.ledger.pay('GENESIS', g, 'cash', b.px(2000)); bp.health = 95; const well = Pl.check(b, 'ASK_CLINIC', {}).code; bp.health = 50; for (let t = 0; t < 10 && code !== 'ok'; t++) { b.player.cool = {}; b.player.hoursDay = -1; const r = Pl.request(b, 'ASK_CLINIC', {}); Pl.tick(b); code = r.command.code; } code = well === 'well' && code === 'ok' && bp.health > 50 ? 'ok' : `${well}/${code}`; }
+    check('Asking to go to the clinic: only when unwell; the carer decides and pays; it helps', code === 'ok' && b.checkInvariants().length === 0, code);
+    // Each stage over its years, everything decided by the character: many different moments, every line complete.
+    for (const [stage, years, pre] of [['baby', 3, 'BA'], ['child', 6, 'CH'], ['teen', 5, 'TE'], ['adult', 8, 'AD'], ['senior', 8, 'SE']]) {
+      const v = new LES.World(Object.assign({}, D, { seed: `plc-${stage}`, founders: 200, play: 'random', playStage: stage })); Pl.begin(v);
+      v.player.autoMinor = true; v.player.freq = 'detailed';
+      const vp = Pl.person(v); if (vp && P.isAdult(v, vp)) v.ledger.pay('GENESIS', vp, 'cash', v.px(30000));
+      for (let d = 0; d < 365 * years && !v.player.ended; d++) { for (const it of (v.player.inbox || []).slice()) Pl.autoDecide(v, it.uid); v.step(); }
+      const seen = new Set(v.player.journal.filter(e => e.kind === 'event').map(e => e.ev)); // any moment met at this stage (seniors also meet adult ones)
+      const lines = v.player.journal.map(e => I.render(e));
+      await new Promise(r => I.set('zh-Hans', r)); const zh = v.player.journal.map(e => I.render(e)); await new Promise(r => I.set('en', r));
+      const broken = [...lines, ...zh].filter(t => /\{\w+\}|cmd\.|ev\.|moment\.|why\.|plan\./.test(t));
+      check(`${years} years of ${stage} life decided by the character: varied moments, every line complete, books balance`, seen.size >= Math.min(8, count(pre) / 3) && !broken.length && v.checkInvariants().length === 0, `${seen.size} different moments${broken.length ? `; ${broken[0]}` : ''}`);
+    }
+    LES.Countries.ensure(D);
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -2748,6 +2796,7 @@
       await playSeniorTests();
       await playControlsTests();
       await playFlowTests();
+      await playCatalogTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -2759,6 +2808,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, playFlowTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, playFlowTests, playCatalogTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

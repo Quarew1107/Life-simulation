@@ -81,7 +81,7 @@
     risky: ['BUY_TICKET', 'TRAVEL', 'START_BIZ', 'INVEST', 'BUY_STOCK', 'INJECT', 'ASK_RAISE', 'MOVE_HOME'],
     study: ['ENROLL', 'ASK_CLUB', 'SET_EFFORT', 'ASK_SCHOOL', 'CHOOSE_SCHOOL', 'SET_PLAN', 'APPLY_JOB'],
     caring: ['CARE_CHILD', 'ASK_CARE', 'GIFT', 'DONATE', 'VOLUNTEER', 'COUNSEL', 'BABY_WISH', 'KEEP_WORKING'],
-    rest: ['REST', 'COUNSELLING', 'SEE_DOCTOR', 'SET_EXERCISE'],
+    rest: ['REST', 'COUNSELLING', 'SEE_DOCTOR', 'SET_EXERCISE', 'ASK_CLINIC'],
     careful: ['SELL', 'SELL_STOCK', 'ASK_ALLOWANCE', 'STOP_SPENDING'],
   };
   const groupOf = k => Object.keys(KIND).find(g => KIND[g].includes(k)) || 'other';
