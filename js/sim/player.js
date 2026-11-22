@@ -340,11 +340,11 @@
     const s = st(w), item = s && (s.inbox || []).find(x => x.uid === uid), e = item && Pl.eventById(item.ev), ch = e && e.choices.find(c => c.id === choiceId);
     if (!ch) return { error: 'no_choice' };
     const p = Pl.person(w), args = !ch.story && ch.target ? Pl.TARGETS[ch.target](w, p, item) : {};
-    if (!ch.story && args && Pl.check) { const r = Pl.check(w, ch.cmd, args); if (!r.ok) return { error: r.code, why: Pl.whyNot(w, ch.cmd, args, r) }; }
+    if (!ch.story && !args) return { error: 'no_target' }; // nothing to do that with now: the decision stays open (PL-14)
+    if (!ch.story && Pl.check) { const r = Pl.check(w, ch.cmd, args); if (!r.ok) return { error: r.code, why: Pl.whyNot(w, ch.cmd, args, r) }; }
     s.inbox = s.inbox.filter(x => x !== item);
     if (!auto) journal(w, { kind: 'choice', ev: e.id, choice: ch.id, key: 'evt.chose', params: { choice: { key: `ev.${e.id}.${ch.id}`, params: item.params || {} } } });
     if (ch.story) { if (ch.fx && Pl.applyFx) Pl.applyFx(w, p, ch.fx); return { story: true }; } // the character's own reaction (PL-13)
-    if (!args) { journal(w, { kind: 'cmd', code: 'no_target', key: 'cmd.error.no_target', params: {} }); return { error: 'no_target' }; }
     return Pl.request(w, ch.cmd, args);
   };
 })(globalThis.LES = globalThis.LES || {});

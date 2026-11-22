@@ -2779,6 +2779,11 @@
     const w = new LES.World(Object.assign({}, D, { seed: 'pace-j', founders: 60, play: 'random' })); Pl.begin(w);
     for (let i = 0; i < 1200; i++) Pl.journal(w, { kind: 'cmd', key: 'x', imp: i % 10 === 0 ? 2 : 1, n: i });
     const jj = w.player.journal;
+    // A choice that cannot happen now (nobody to do it with) leaves the decision open; another choice settles it.
+    const k = new LES.World(Object.assign({}, D, { seed: 'pace-k', founders: 150, play: 'random', playStage: 'adult' })); Pl.begin(k);
+    k.player.inbox.push({ uid: 'k-1', ev: 'AD-027', day: k.day, expires: k.day + 20, params: { other: 'X', pid: -1 } });
+    const k1 = Pl.choose(k, 'k-1', 'gift'), open1 = k.player.inbox.some(x => x.uid === 'k-1'), k2 = Pl.choose(k, 'k-1', 'decline');
+    check('An answer that cannot happen now leaves the decision open; a possible one settles it', k1.error === 'no_target' && open1 && !!k2.story && !k.player.inbox.some(x => x.uid === 'k-1'));
     check('Trimming keeps every highlight and only the newest everyday lines', jj.length === Pl.JOURNAL && jj.filter(e => e.imp >= 2).length === 120 && jj[jj.length - 1].n === 1199, `${jj.length} lines, ${jj.filter(e => e.imp >= 2).length} highlights`);
     LES.Countries.ensure(D);
   }

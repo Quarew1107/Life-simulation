@@ -403,6 +403,18 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
         from a child's card or the child's own Learn page; works in the Story view too. The old dropdown is gone.
       - Full life story (hub): grouped by stage, newest first; highlights first, everyday lines folded per stage.
       - New texts in English and Chinese (`kin.*`, `school.*`, `schoolk.*`, `era.*`). Checked in the preview.
+    - **14.4 done** (`js/ui/player-ui.js`):
+      - Keys: while an important decision waits (the speed is locked then), 1-4 answer it (numbered on its
+        buttons, with a hint line; the game's own 1-8 speed keys work as before otherwise). Enter or Esc continues
+        a big-moment card. Esc goes back one My life page, closes the Story view's sheet, then the Story view.
+        The listener runs first (capture) so a handled key does not also change speed or deselect.
+      - Visible focus outlines on tiles, decision answers, card buttons and Story family faces.
+      - Pop-ups: at most 3 life pop-ups in 8 seconds; the rest are counted in one "+N more in your life story"
+        note (`lifeToast`). Important decisions always show.
+      - Fix: an answer with nothing to do it with (no target) used to close the decision; now the decision
+        stays open, like any other impossible answer (`Player.choose`; test in `playPacingTests`).
+      - Chinese at 320 px: every My life page (hub, work, money, love, health, community, school, story)
+        checked for text spilling past the screen edge: none. The game's own tabs are still English (PL-17).
   - Owner requests, Nov 14 2026 (after PL-12):
     - **Planned for tomorrow:** a list of queued requests, each with Cancel (`Player.cancel`, journaled
       `cmd.cancelled`). `Player.describe` words every kind (`act.<KIND>`, English and Chinese; a test checks all

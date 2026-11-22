@@ -2351,4 +2351,6 @@ LES.I18n.add('en', {
   'era.more': "+ {count} everyday moments",
   'school.for': "A school for {name} ({age})",
   'school.forMe': "Your school",
+  'keys.hint': "Keys 1–{count} answer · Esc goes back",
+  'toast.more': "+{count} more in your life story",
 });

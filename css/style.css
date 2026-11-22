@@ -689,3 +689,8 @@ button.teal { border-color: var(--teal); color: var(--teal); }
 .life-era { border-left: 3px solid var(--line); padding-left: 10px; margin: 8px 0 12px; }
 .life-era h5 { margin: 2px 0 6px; font: 700 11px var(--pixel); letter-spacing: .6px; color: var(--gold); text-transform: uppercase; }
 .life-era + .life-era h5 { color: var(--muted); }
+
+/* ---------- PL-14 step 4: keys and focus ---------- */
+.life-choices .key { display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-right: 6px; border-radius: 4px; background: #0f141a; border: 1px solid var(--line); font-size: 10px; color: var(--muted); }
+.life-keys { display: block; margin-top: 6px; font-size: 11px; }
+.life-tile:focus-visible, .life-choices button:focus-visible, .kin-acts button:focus-visible, .story-kin:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }

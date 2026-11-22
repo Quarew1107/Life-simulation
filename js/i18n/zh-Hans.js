@@ -2351,4 +2351,6 @@ LES.I18n.add('zh-Hans', {
   'era.more': "+ {count} 个日常片刻",
   'school.for': "为{name}（{age}岁）选学校",
   'school.forMe': "你的学校",
+  'keys.hint': "按 1–{count} 作答 · Esc 返回",
+  'toast.more': "另有 {count} 条写进了你的人生故事",
 });

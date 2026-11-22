@@ -41,8 +41,8 @@ those first.
 - **PL-13 done (waiting for the owner's review):** 320 life moments in `js/sim/player-catalog.js` (baby, child,
   teen and senior 50 each, adult 120), English and Chinese texts.
 - **PL-14 in progress (plan approved Nov 22 2026):** steps 14.1 (stop budget, whole-life journal) and 14.2 (phone
-  layout) and 14.3 (family cards, school comparison, story by stage) done, full suite 548/548. Next: 14.4
-  (keyboard, Chinese wrap on phones, message cap), then 14.5 (live playtest). Details in the HANDOFF "Playable Life Mode" item.
+  layout), 14.3 (family cards, school comparison, story by stage) and 14.4 (keys, focus, pop-up cap, Chinese
+  at 320 px) done. Next: 14.5 (live playtest and pacing notes), then stop for the owner's review of PL-14. Details in the HANDOFF "Playable Life Mode" item.
   The notes below describe the state before PL-13.
 - **Done:** PL-00 to PL-12, the owner's extra requests, and the My life redesign (steps 1-5).
   - The redesign: view A Hub (the default), B Planner and C Story. Plans are checked before they are

@@ -288,17 +288,20 @@
   function decisionsHtml(w, p) {
     const inbox = (w.player.inbox || []).slice().sort((a, b) => (Pl.isImportant(b) ? 1 : 0) - (Pl.isImportant(a) ? 1 : 0));
     if (!inbox.length) return '';
+    const urgent = Pl.urgent(w);
     return `<div class="card life-decisions"><h3>${esc(T('life.decisions'))} <small class="life-count">${inbox.length}</small></h3>${inbox.map(item => {
       const e = Pl.eventById(item.ev), imp = Pl.isImportant(item), left = item.expires - w.day, ps = Object.assign({ name: P.name(p) }, item.params || {});
-      const choices = e.choices.map(c => {
+      const keyed = urgent && urgent.uid === item.uid;
+      const choices = e.choices.map((c, i) => {
         let why = '';
         if (!c.story) { const args = c.target ? Pl.TARGETS[c.target](w, p, item) : {}; if (!args) why = T('cmd.error.no_target'); else { const r = Pl.check(w, c.cmd, args); if (!r.ok) why = whyText(w, c.cmd, args, r); } }
-        return `<button class="ghost ${why ? 'off' : ''}" data-uid="${esc(item.uid)}" data-choice="${esc(c.id)}" ${why ? `aria-disabled="true" title="${esc(why)}"` : ''}>${esc(T(`ev.${e.id}.${c.id}`, ps))}${why ? `<small>${esc(why)}</small>` : ''}</button>`;
+        return `<button class="ghost ${why ? 'off' : ''}" data-uid="${esc(item.uid)}" data-choice="${esc(c.id)}" ${keyed && i < 4 ? `aria-keyshortcuts="${i + 1}"` : ''} ${why ? `aria-disabled="true" title="${esc(why)}"` : ''}>${keyed && i < 4 ? `<span class="key" aria-hidden="true">${i + 1}</span>` : ''}${esc(T(`ev.${e.id}.${c.id}`, ps))}${why ? `<small>${esc(why)}</small>` : ''}</button>`;
       }).join('');
       return `<div class="life-event ${imp ? 'imp' : ''}" role="group" aria-label="${esc(T(`ev.${e.id}.title`, ps))}">
         <div class="life-event-head"><b>${imp ? '★ ' : ''}${esc(T(`ev.${e.id}.title`, ps))}</b><small class="muted">${imp ? esc(T('life.important')) : esc(T('life.daysLeft', { count: left }))}</small></div>
         <p>${esc(T(`ev.${e.id}.body`, ps))}</p>
         <div class="life-choices">${choices}<button class="link" data-auto="${esc(item.uid)}">${esc(T('life.letDecide', { name: name1(p) }))}</button></div>
+        ${keyed ? `<small class="muted life-keys">${esc(T('keys.hint', { count: Math.min(4, e.choices.length) }))}</small>` : ''}
       </div>`;
     }).join('')}</div>`;
   }
@@ -505,11 +508,51 @@
     el.querySelector('[data-go]').onclick = () => closeMoment(true);
     el.addEventListener('pointerdown', ev => { if (!ev.target.closest('[data-go]') && cardTimer) { clearInterval(cardTimer); cardTimer = null; count.textContent = T('moment.held'); } });
   }
+  // PL-14 keys (before the game's own keys, which use 1-8 for speed): while an important decision waits (the
+  // speed is locked then), 1-4 answer it. Enter or Esc continues a big-moment card. Esc goes back one page in
+  // My life, or closes the Story view's sheet, or the Story view itself.
+  window.addEventListener('keydown', e => {
+    if (e.ctrlKey || e.metaKey || e.altKey || (LES.Setup && LES.Setup.isOpen && LES.Setup.isOpen())) return;
+    const a = document.activeElement;
+    if (a && /INPUT|SELECT|TEXTAREA/.test(a.tagName)) return;
+    const w = where();
+    if (!w || !w.player) return;
+    const stop = () => { e.preventDefault(); e.stopImmediatePropagation(); };
+    if (card && (e.key === 'Enter' || e.key === 'Escape')) { stop(); closeMoment(true); return; }
+    if (/^[1-4]$/.test(e.key)) {
+      const it = Pl.urgent(w), ev = it && Pl.eventById(it.ev), c = ev && ev.choices[Number(e.key) - 1];
+      if (!c) return;
+      stop(); say(Pl.choose(w, it.uid, c.id)); return;
+    }
+    if (e.key !== 'Escape') return;
+    const storyOn = UI.lifeView === 'C' && !UI.storyHidden && document.querySelector('.life-story:not(.hidden)');
+    if (storyOn && UI.storySheet) { stop(); UI.storySheet = null; UI._storyHtml = null; UI.renderStory(); return; }
+    if (storyOn) { stop(); UI.storyHidden = true; UI._storyHtml = null; UI.renderStory(); return; }
+    if (UI.tab === 'life' && UI.lifePage) { stop(); UI.lifePage = UI.lifePage === 'school' ? UI._schoolFrom || null : null; UI._lifeHtml = null; UI.update(true); }
+  }, true);
   // Any other action by the player stops the countdown (they are busy; Continue restores the speed).
   document.addEventListener('keydown', () => { if (card && cardTimer) { clearInterval(cardTimer); cardTimer = null; const c = card.el.querySelector('.life-moment-count'); if (c) c.textContent = T('moment.held'); } }, true);
 
   // Every few hundred ms: what the clock should do for this life, new decisions, new moments, the end of a life.
   const seen = new Set();
+  // PL-14: no storm of pop-ups. At most 3 life pop-ups in 8 seconds; the rest are counted in one
+  // "+N more in your life story" note (everything is still in the journal). Important ones always show.
+  const recent = [];
+  let extra = 0;
+  function lifeToast(html, when, pid, big, always) {
+    const now = Date.now();
+    while (recent.length && now - recent[0] > 8000) recent.shift();
+    if (!recent.length) extra = 0;
+    if (!always && recent.length >= 3) {
+      extra++;
+      const t = UI.toast(`📖 ${esc(T('toast.more', { count: extra }))}`, '', -1, false, 'life-more');
+      if (t) { t.querySelector('.m').innerHTML = `📖 ${esc(T('toast.more', { count: extra }))}`; t.onclick = () => UI.setTab('life'); }
+      return null;
+    }
+    recent.push(now);
+    return UI.toast(html, when, pid, big);
+  }
+  UI._lifeToast = lifeToast;
   UI.watchLife = function () {
     const app = UI.app, w = where(), tab = document.querySelector('#tabs button[data-tab="life"]');
     if (tab) tab.classList.toggle('hidden', !w);
@@ -537,7 +580,7 @@
       if (seen.has(item.uid)) continue;
       seen.add(item.uid);
       if (w.day - item.day > 1) continue; // already there (a loaded save)
-      const imp = Pl.isImportant(item), t = UI.toast(`${imp ? '★' : '📩'} ${esc(T('life.newDecision', { title: T(`ev.${item.ev}.title`, item.params || {}) }))}`, U.fmtDate(w.day), -1, true);
+      const imp = Pl.isImportant(item), t = lifeToast(`${imp ? '★' : '📩'} ${esc(T('life.newDecision', { title: T(`ev.${item.ev}.title`, item.params || {}) }))}`, U.fmtDate(w.day), -1, true, imp);
       if (t) t.onclick = () => UI.setTab('life');
       if (imp || !s.autoMinor) { UI.lifePage = null; UI.setTab('life'); if (UI.sheet) UI.sheet.atLeast('half'); }
     }
@@ -548,7 +591,7 @@
       if (m.seq <= UI._momentSeq) continue;
       UI._momentSeq = m.seq;
       if (w.day - m.day > 2) continue;
-      if (!m.big) { UI.toast(`✨ ${esc(T(`moment.${m.kind}`, m.params))}`, U.fmtDate(m.day), s.id, false); continue; }
+      if (!m.big) { lifeToast(`✨ ${esc(T(`moment.${m.kind}`, m.params))}`, U.fmtDate(m.day), s.id, false, false); continue; }
       const was = app.pauseReason === 'moment' || !app.paused ? app.speedIdx : null;
       app.pauseReason = null;
       const blocked = !!Pl.urgent(w);
