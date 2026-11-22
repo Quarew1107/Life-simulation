@@ -254,9 +254,15 @@ html:lang(zh-Hans) .card h3 { letter-spacing: 0; }
   #side { width: var(--side-w, 360px); }
 }
 @media (max-width: 760px) {
-  main { flex-direction: column; }
-  #map-wrap { min-height: 50vh; }
-  #side { width: 100%; max-width: none; border-left: 0; border-top: 1px solid var(--line); }
+  main { flex-direction: column; position: relative; }
+  #map-wrap { flex: 1; min-height: 0; }
+  /* PL-14: the side panel is a sheet over the map (js/ui/sheet.js): min / half / full */
+  #side { position: absolute; left: 0; right: 0; bottom: 0; z-index: 30; width: 100%; max-width: none; height: 48%; border-left: 0; border-top: 1px solid var(--line);
+    border-radius: 16px 16px 0 0; box-shadow: 0 -10px 30px rgba(0,0,0,.55); transition: height .2s ease; }
+  body.sheet-full #side { height: calc(100% - 8px); }
+  body.sheet-min #side { height: 112px; }
+  .sheet-grip { display: block; }
+  #map-hint { display: none; }
   #side-grip { display: none; }
   .form-grid { grid-template-columns: 1fr; }
   .goal { display: none; }
@@ -630,3 +636,36 @@ button.off { opacity: .5; filter: grayscale(.6); cursor: help; }
 button.teal { border-color: var(--teal); color: var(--teal); }
 @media (max-width: 1100px) { .plan-cols { grid-template-columns: 1fr 1fr; } .plan-left { display: none; } }
 @media (max-width: 700px) { .plan-cols { grid-template-columns: 1fr; } .life-planner { height: 60%; } }
+
+/* ---------- PL-14 step 2: phones (760 px or less) ---------- */
+/* The sheet handle (js/ui/sheet.js); shown only on phones. */
+.sheet-grip { display: none; width: 100%; flex: none; background: none; border: 0; padding: 8px 0 4px; cursor: grab; touch-action: none; }
+.sheet-grip span { display: block; width: 46px; height: 5px; border-radius: 3px; background: #3a4654; margin: 0 auto; }
+.sheet-grip:hover span, .sheet-grip:focus-visible span { background: var(--teal); }
+.sheet-grip:focus-visible { outline: none; }
+/* A compact top bar: logo, date and your character on one line; the speeds (scrolling sideways) and +1 day on
+   the next; the economy badge and the buttons on the last. */
+@media (max-width: 760px) {
+  #topbar { gap: 6px 8px; padding: 6px 10px; min-height: 0; }
+  #topbar .title, #topbar .sub, #mood, #scn-badge, #btn-cast { display: none; }
+  .brand { order: 1; margin: 0; } .logo { padding: 5px 5px 4px; font-size: 11px; }
+  .clock { order: 2; display: flex; align-items: baseline; gap: 6px; width: auto; min-width: 0; }
+  #play-badge { order: 3; margin-left: auto; max-width: 52vw; }
+  #speed { order: 4; flex: 1 1 calc(100% - 90px); min-width: 0; }
+  #btn-step { order: 5; flex: none; }
+  #regime, #town-switch { order: 6; }
+  #regime { width: auto; font-size: 11px; padding: 3px 8px; }
+  #btn-report { order: 7; } #btn-save { order: 8; } #btn-new { order: 9; margin-left: auto; }
+  #btn-report, #btn-save, #btn-new { padding: 5px 9px; font-size: 12px; }
+  #btn-report, #btn-save { font-size: 0; gap: 0; } /* icon only (the title says what they do) */
+  #play-badge { max-width: calc(100vw - 190px); }
+  .sheet-grip { display: block; }
+  /* Tabs: one row that scrolls sideways */
+  #tabs { display: flex; overflow-x: auto; scrollbar-width: none; flex: none; }
+  #tabs::-webkit-scrollbar { display: none; }
+  #tabs button { flex: none; min-width: 66px; padding: 6px 8px; }
+  /* The Story view and the day planner open over the map; the sheet steps aside while they are open. */
+  body:has(#map-wrap .life-story:not(.hidden)) #side, body:has(#map-wrap .life-planner:not(.hidden):not(.folded)) #side { display: none; }
+  .life-planner { height: 70%; }
+  .life-planner.folded { top: 0; bottom: auto; border-top: 0; border-bottom: 2px solid var(--gold); } /* folded: a bar at the top of the map, clear of the sheet */
+}

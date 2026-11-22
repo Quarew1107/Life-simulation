@@ -494,7 +494,7 @@
       if (w.day - item.day > 1) continue; // already there (a loaded save)
       const imp = Pl.isImportant(item), t = UI.toast(`${imp ? '★' : '📩'} ${esc(T('life.newDecision', { title: T(`ev.${item.ev}.title`, item.params || {}) }))}`, U.fmtDate(w.day), -1, true);
       if (t) t.onclick = () => UI.setTab('life');
-      if (imp || !s.autoMinor) { UI.lifePage = null; UI.setTab('life'); }
+      if (imp || !s.autoMinor) { UI.lifePage = null; UI.setTab('life'); if (UI.sheet) UI.sheet.atLeast('half'); }
     }
     // Moments: small ones as a toast; big ones slow the clock to 1x with a card (unless a decision holds it).
     const ms = s.moments || [];

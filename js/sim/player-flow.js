@@ -70,7 +70,21 @@
     'AD-031', 'AD-032', 'AD-035', 'AD-036', 'AD-037', 'AD-040', 'AD-041', 'AD-044', 'AD-045', 'AD-047', 'AD-011', 'AD-014', 'AD-072', 'AD-091',
     'AD-053', 'AD-058', 'AD-094', 'AD-064', 'AD-097', 'SE-001', 'SE-012', 'SE-015', 'SE-026', 'SE-045']);
   for (const e of Pl.EVENTS) e.imp = Pl.IMPORTANT.has(e.id) ? 2 : 1;
-  Pl.isImportant = item => { const e = item && Pl.eventById(item.ev); return !!e && (e.imp || 1) >= 2; };
+  Pl.isImportant = item => { const e = item && Pl.eventById(item.ev); return !!e && !item.quiet && (e.imp || 1) >= 2; };
+  // PL-14 stop budget: how many important decisions a year may stop the clock, by age (Balanced and Important only;
+  // Detailed has no budget). About 80 in a whole life. Unused budget builds up to 1.5 at most. Crises always stop
+  // (they still use up budget). An event over budget is decided by the character, like an everyday moment.
+  Pl.STOP_RATE = age => (age < 3 ? 1 : age < 40 ? 1.5 : 1);
+  Pl.ALWAYS_STOP = new Set(['AD-004', 'AD-014', 'AD-022', 'AD-058', 'AD-092', 'AD-094', 'AD-097', 'SE-001', 'SE-016']);
+  Pl.overBudget = function (w, p, e) {
+    const s = st(w);
+    if ((s.freq || 'balanced') === 'detailed') return false;
+    const b = s.budget = s.budget || { tok: 1, day: w.day };
+    b.tok = Math.min(1.5, b.tok + Pl.STOP_RATE(P.age(w, p)) * (w.day - b.day) / 365); b.day = w.day;
+    if (Pl.ALWAYS_STOP.has(e.id)) { b.tok = Math.max(-1, b.tok - 1); return false; }
+    if (b.tok >= 1) { b.tok -= 1; return false; }
+    return true;
+  };
   Pl.urgent = w => (st(w) && st(w).inbox ? st(w).inbox.find(Pl.isImportant) || null : null); // an important decision waiting
 
   // The character's own choice: each choice scored from who they are and how things are, then a soft pick
@@ -120,7 +134,7 @@
     if (!item || !p) return false;
     const pick = Pl.autoChoice(w, item);
     if (!pick) return Pl.pass(w, uid);
-    Pl.journal(w, { kind: 'auto', ev: item.ev, key: 'evt.auto', params: { name: p.first, choice: { key: `ev.${item.ev}.${pick.ch.id}`, params: item.params || {} }, why: { key: `why.${pick.why}` } } });
+    Pl.journal(w, { kind: 'auto', ev: item.ev, quiet: !!item.quiet, key: 'evt.auto', params: { name: p.first, choice: { key: `ev.${item.ev}.${pick.ch.id}`, params: item.params || {} }, why: { key: `why.${pick.why}` } } });
     Pl.choose(w, uid, pick.ch.id, true);
     return true;
   };

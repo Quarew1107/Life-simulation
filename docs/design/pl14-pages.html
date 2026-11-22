@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>PL-14 clearer pages</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="mock.css">
+<style>
+.stage { flex:1; display:flex; gap:26px; justify-content:center; padding:22px 24px 70px; }
+.col { width:490px; display:flex; flex-direction:column; gap:10px; }
+.page { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:9px; flex:1; }
+.cap { font:700 14px var(--ui); color:var(--gold); } .cap span { display:block; color:var(--muted); font:500 12px var(--ui); margin-top:2px; }
+.back { display:flex; align-items:center; gap:8px; font-weight:700; font-size:14px; }
+.fam { display:flex; gap:10px; align-items:center; background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:9px; }
+.fam .portrait { width:42px; height:52px; } .fam .portrait::before { left:13px; top:7px; width:16px; height:16px; } .fam .portrait::after { left:9px; top:25px; width:24px; height:25px; }
+.fam .info { flex:1; } .fam .bar { margin-top:5px; }
+.grp { font:700 10px var(--pixel); color:var(--muted); letter-spacing:.6px; margin-top:4px; }
+table { width:100%; border-collapse:separate; border-spacing:0; font-size:12px; }
+th, td { padding:7px 6px; text-align:left; vertical-align:top; border-bottom:1px solid var(--line); }
+th { color:var(--muted); font-weight:600; font-size:11px; }
+td.k { color:var(--muted); width:86px; }
+th.cur { color:var(--gold); } td.cur { background:rgba(242,193,78,.06); }
+.ok { color:var(--green); } .no { color:var(--red); }
+.era { border-left:3px solid var(--line); padding-left:10px; }
+.era h5 { margin:2px 0 6px; font:700 11px var(--pixel); letter-spacing:.6px; color:var(--gold); }
+.era.closed h5 { color:var(--muted); }
+.line { display:flex; gap:8px; font-size:12px; padding:3px 0; } .line small { margin-left:auto; color:var(--muted); white-space:nowrap; }
+.line.big { font-weight:600; }
+</style></head><body><div class="frame">
+<div class="stage">
+  <div class="col">
+    <div class="cap">1 · Love &amp; family as cards<span>Face, relation, age, closeness, one quick action each</span></div>
+    <div class="page">
+      <div class="back"><span class="btn sm">← Back</span> ❤️ Love &amp; family</div>
+      <div class="grp">PARTNER</div>
+      <div class="fam"><div class="portrait"></div><div class="info"><b>Siti Aminah</b> <span class="small muted">· wife · 30 · Teacher</span><div class="bar"><i style="width:78%;background:var(--pink)"></i></div><div class="small muted">Close · married 4 years</div></div><span class="btn sm">See a counsellor</span></div>
+      <div class="grp">CHILDREN</div>
+      <div class="fam"><div class="portrait"></div><div class="info"><b>Aisyah</b> <span class="small muted">· daughter · 8 · Public school</span><div class="bar"><i style="width:64%;background:var(--teal)"></i></div><div class="small muted">Happy 64</div></div><div style="display:flex;flex-direction:column;gap:4px"><span class="btn sm">Spend time</span><span class="btn sm teal">Compare schools</span></div></div>
+      <div class="fam"><div class="portrait"></div><div class="info"><b>Danial</b> <span class="small muted">· son · 3</span><div class="bar"><i style="width:70%;background:var(--teal)"></i></div><div class="small muted">Happy 70</div></div><span class="btn sm">Spend time</span></div>
+      <div class="grp">PARENTS</div>
+      <div class="fam"><div class="portrait"></div><div class="info"><b>Rokiah</b> <span class="small muted">· mother · 61</span><div class="bar"><i style="width:52%;background:var(--violet)"></i></div><div class="small red">Health 48 · may need help</div></div><div style="display:flex;flex-direction:column;gap:4px"><span class="btn sm">Visit</span><span class="btn sm">Give money</span></div></div>
+      <div class="fam"><div class="portrait"></div><div class="info"><b>Salleh</b> <span class="small muted">· father · 64 · retired</span><div class="bar"><i style="width:60%;background:var(--violet)"></i></div></div><span class="btn sm">Visit</span></div>
+      <div class="small muted">The bar shows how happy they are. Buttons are greyed out with the reason when they cannot happen (no time, no money).</div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="cap">2 · Comparing schools<span>The four kinds side by side, for your child (or yourself as a pupil)</span></div>
+    <div class="page">
+      <div class="back"><span class="btn sm">← Back</span> 🎒 A school for Aisyah (8)</div>
+      <table>
+        <tr><th></th><th class="cur">Public ✓ now</th><th>Private</th><th>International</th><th>Prestige</th></tr>
+        <tr><td class="k">Fee a year</td><td class="cur">Free</td><td>RM6,000</td><td>RM24,000</td><td>RM48,000</td></tr>
+        <tr><td class="k">Teaching</td><td class="cur">Standard</td><td>Smaller classes</td><td>English medium, IB</td><td>Top results</td></tr>
+        <tr><td class="k">Places</td><td class="cur">Always</td><td>Yes</td><td>Yes</td><td class="no">Entry test</td></tr>
+        <tr><td class="k">Your money</td><td class="cur ok">—</td><td class="ok">Affordable</td><td class="no">Too dear (cash RM8.1k)</td><td class="no">Too dear</td></tr>
+        <tr><td class="k"></td><td class="cur"></td><td><span class="btn sm primary">Choose</span></td><td><span class="btn sm" style="opacity:.45">Choose</span></td><td><span class="btn sm" style="opacity:.45">Choose</span></td></tr>
+      </table>
+      <div class="small muted">The numbers are the town's real fees and rules. A cheaper school can still be very good; results depend on the child too.</div>
+      <div class="card" style="background:var(--panel-2)"><h3>As a child</h3><div class="small">The same table, with <b>Ask</b> instead of Choose: your carer decides, using their money and their view of you.</div></div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="cap">3 · Life story by stage<span>Highlights first; everyday lines folded away</span></div>
+    <div class="page">
+      <div class="back"><span class="btn sm">← Back</span> 📖 Amir's life story</div>
+      <div class="era"><h5>ADULT · 18 TO NOW</h5>
+        <div class="line big">💍 Married Siti Aminah <small>Y-4 · 28</small></div>
+        <div class="line big">👶 Aisyah was born <small>Y-8 · 24</small></div>
+        <div class="line big">💼 First job: Clerk, RM2,100 a month <small>Y-12 · 20</small></div>
+        <div class="line">★ Asked for a promotion: not this time <small>Y1 · 32</small></div>
+        <div class="line muted">+ 46 everyday moments <span class="gold">show</span></div></div>
+      <div class="era closed"><h5>TEEN · 12–17</h5>
+        <div class="line big">🎓 Finished school (SPM) <small>Y-15 · 17</small></div>
+        <div class="line">★ Chose the vocational track <small>Y-17 · 15</small></div>
+        <div class="line muted">+ 21 everyday moments <span class="gold">show</span></div></div>
+      <div class="era closed"><h5>CHILD · 3–11</h5>
+        <div class="line big">🎒 Started primary school <small>Y-26 · 6</small></div>
+        <div class="line">★ Joined the football club <small>Y-24 · 8</small></div>
+        <div class="line muted">+ 17 everyday moments <span class="gold">show</span></div></div>
+      <div class="era closed"><h5>BABY · 0–2</h5>
+        <div class="line big">👶 Born to Rokiah and Salleh <small>Y-32</small></div>
+        <div class="line muted">+ 6 everyday moments <span class="gold">show</span></div></div>
+      <div class="small muted">Kept for the whole life: every highlight from birth on (PL-14 step 1).</div>
+    </div>
+  </div>
+</div>
+<div class="label">PL-14 · Clearer pages (desktop side panel)<span>Family cards · school comparison · life story grouped by stage</span></div>
+</div>
+</body></html>

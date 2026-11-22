@@ -75,10 +75,15 @@
   Pl.AFTER = [];   // (w, p) => void, run at the end of each day's player work   // (w, p) => void, run every day (a trip ending, PL-11)
   Pl.DAY_HOURS = 8;   // time a player's requests may take per day
   Pl.STALE = 7;       // a request older than this many days is dropped, not carried out
-  Pl.JOURNAL = 400;   // journal entries kept
+  Pl.JOURNAL = 400; Pl.HIGHLIGHTS = 600;   // journal entries kept
   const GENERIC = new Set(['dead', 'away', 'held', 'stale', 'too_young', 'too_old', 'cooldown', 'no_time', 'travelling']); // messages shared by every kind (cmd.error.*)
   const st = w => w.player;
-  const journal = (w, e) => { const j = st(w).journal; j.push(Object.assign({ day: w.day }, e)); if (j.length > Pl.JOURNAL) j.shift(); };
+  // The journal keeps the whole life's highlights (important lines, life moments); everyday lines are trimmed first.
+  const highlight = x => x.imp >= 2 || x.kind === 'moment' || x.kind === 'life';
+  const journal = (w, e) => {
+    const j = st(w).journal; j.push(Object.assign({ day: w.day }, e));
+    if (j.length > Pl.JOURNAL) { const i = j.length > Pl.JOURNAL + Pl.HIGHLIGHTS ? -1 : j.findIndex(x => !highlight(x)); j.splice(i >= 0 ? i : 0, 1); }
+  };
   Pl.journal = journal;
   const isAdult = (w, p) => P.isAdult(w, p);
   const whenOf = (w, v) => { const d = Math.max(0, v.closeDay - w.day); return d ? { key: 'time.inDays', params: { count: d } } : { key: 'time.today' }; };
@@ -282,9 +287,11 @@
     // At most one new event a month (no pile of pop-ups): important ones first, then one at random.
     if (!cands.length) return;
     const top = Math.max(...cands.map(e => e.imp || 1)), pool = cands.filter(e => (e.imp || 1) === top), e = pool[Math.floor(R.next() * pool.length)];
-    s.inbox.push({ uid: `${w.day}-${e.id}`, ev: e.id, day: w.day, expires: w.day + e.expires, params: e.params && Pl.PARAMS[e.params] ? Pl.PARAMS[e.params](w, p) : {} });
+    const item = { uid: `${w.day}-${e.id}`, ev: e.id, day: w.day, expires: w.day + e.expires, params: e.params && Pl.PARAMS[e.params] ? Pl.PARAMS[e.params](w, p) : {} };
+    if ((e.imp || 1) >= 2 && Pl.overBudget && Pl.overBudget(w, p, e)) item.quiet = true; // over this stage's stop budget: decided like an everyday moment
+    s.inbox.push(item);
     s.evCool[e.id] = w.day + e.cooldown;
-    journal(w, { kind: 'event', ev: e.id, key: 'evt.offered', params: { title: { key: `ev.${e.id}.title`, params: s.inbox[s.inbox.length - 1].params } }, imp: e.imp || 1 });
+    journal(w, { kind: 'event', ev: e.id, key: 'evt.offered', params: { title: { key: `ev.${e.id}.title`, params: item.params } }, imp: item.quiet ? 1 : (e.imp || 1) });
   }
   // Unanswered events pass: nothing is done for you (your character's own routine carries on).
   function expireInbox(w) {

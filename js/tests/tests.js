@@ -2648,7 +2648,7 @@
     let leftOver = false;
     for (let d = 0; d < 365 * 4; d++) { f.step(); if ((f.player.inbox || []).some(x => !Pl.isImportant(x))) leftOver = true; }
     const autos = f.player.journal.filter(e => e.kind === 'auto');
-    check('Fast speed: everyday decisions are taken by the character (with a reason); important ones wait', !leftOver && autos.length > 0 && autos.every(e => !Pl.IMPORTANT.has(e.ev)) && f.checkInvariants().length === 0, `${autos.length} decided by the character`);
+    check('Fast speed: everyday decisions are taken by the character (with a reason); important ones wait', !leftOver && autos.length > 0 && autos.every(e => !Pl.IMPORTANT.has(e.ev) || e.quiet) && f.checkInvariants().length === 0, `${autos.length} decided by the character (${autos.filter(e => e.quiet).length} over the stop budget)`);
     // The character's choice follows who they are: a risk-taker buys lottery tickets far more than a careful person.
     const lw = make('plf-l'), lp = Pl.person(lw), item = { uid: 'x', ev: 'AD-024', params: {} };
     lw.ledger.pay('GENESIS', lp, 'cash', lw.px(20000));
@@ -2739,6 +2739,50 @@
     LES.Countries.ensure(D);
   }
 
+  // PL-14 step 1: a stop budget (about 80 important stops in a whole life) and a journal that keeps the whole life's highlights.
+  async function playPacingTests() {
+    print('--- Play a Life: pacing, the stop budget and the whole-life journal (PL-14) ---', 'info');
+    const Pl = LES.Player, D = LES.DEFAULTS, P = LES.P;
+    LES.Countries.ensure(D);
+    const live = (seed, stage, years, freq) => {
+      const v = new LES.World(Object.assign({}, D, { seed, founders: 200, play: 'random', playStage: stage })); Pl.begin(v);
+      v.player.autoMinor = true; if (freq) v.player.freq = freq;
+      const p = Pl.person(v), seen = new Set(); let stops = 0, quiet = 0, allowed = 1.5, always = 0;
+      for (let d = 0; d < 365 * years && !v.player.ended; d++) {
+        for (const it of v.player.inbox || []) if (!seen.has(it.uid)) { seen.add(it.uid); if (Pl.isImportant(it)) { stops++; if (Pl.ALWAYS_STOP.has(it.ev)) always++; } if (it.quiet) quiet++; }
+        allowed += Pl.STOP_RATE(P.age(v, p)) / 365;
+        for (const it of (v.player.inbox || []).slice()) Pl.autoDecide(v, it.uid);
+        v.step();
+      }
+      return { v, p, stops, quiet, allowed, always };
+    };
+    // Balanced: never more stops than the budget allows (crises always stop), and the budget really bites.
+    const a = live('pace-a', 'adult', 20);
+    check('Balanced: over 20 adult years, important stops stay within the yearly budget (crises always stop)', a.stops <= Math.ceil(a.allowed) + a.always && a.stops >= 10 && a.v.checkInvariants().length === 0, `${a.stops} stops (budget ${a.allowed.toFixed(1)} + ${a.always} crises), ${a.quiet} decided quietly`);
+    // The rule itself: one stop in hand; a second the same day is over budget; a crisis always stops but uses budget;
+    // a year at 1.5 a year brings the budget back (never more than 1.5 saved up).
+    const u = new LES.World(Object.assign({}, D, { seed: 'pace-u', founders: 150, play: 'random', playStage: 'adult' })); Pl.begin(u);
+    const up = Pl.person(u), ev = { id: 'AD-003' }, crisis = { id: 'AD-094' };
+    const r1 = Pl.overBudget(u, up, ev), r2 = Pl.overBudget(u, up, ev), r3 = Pl.overBudget(u, up, crisis), r4 = Pl.overBudget(u, up, ev);
+    u.day += 365 * 3; const r5 = Pl.overBudget(u, up, ev), r6 = Pl.overBudget(u, up, ev); u.day -= 365 * 3;
+    check('The stop budget: one in hand, the next is over budget, crises always stop, it refills slowly and never piles up', !r1 && r2 && !r3 && r4 && !r5 && r6, [r1, r2, r3, r4, r5, r6].join(' '));
+    // A quiet event is an everyday moment: it never holds the clock.
+    const q = (a.v.player.inbox || []).find(x => x.quiet);
+    check('An event over budget does not stop the clock', !q || !Pl.isImportant(q));
+    // Detailed: no budget at all.
+    const b = live('pace-a', 'adult', 3, 'detailed');
+    check('Detailed: no stop budget (every important decision stops)', b.quiet === 0 && b.stops > 0, `${b.stops} stops`);
+    // The journal: everyday lines are trimmed first, so the first year's highlights are still there after 20 years.
+    const j = a.v.player.journal, firstBig = j.find(e => e.imp >= 2 || e.kind === 'moment' || e.kind === 'life');
+    check('The journal keeps the whole life\'s highlights: everyday lines are trimmed first', j.length <= Pl.JOURNAL + Pl.HIGHLIGHTS && !!firstBig && firstBig.day - a.v.player.since < 365 * 3 && j.filter(e => !(e.imp >= 2 || e.kind === 'moment' || e.kind === 'life')).length <= Pl.JOURNAL, `${j.length} lines, first highlight in year ${firstBig ? Math.floor((firstBig.day - a.v.player.since) / 365) + 1 : '-'}`);
+    // The trimming rule on its own: 1,200 lines, every tenth a highlight.
+    const w = new LES.World(Object.assign({}, D, { seed: 'pace-j', founders: 60, play: 'random' })); Pl.begin(w);
+    for (let i = 0; i < 1200; i++) Pl.journal(w, { kind: 'cmd', key: 'x', imp: i % 10 === 0 ? 2 : 1, n: i });
+    const jj = w.player.journal;
+    check('Trimming keeps every highlight and only the newest everyday lines', jj.length === Pl.JOURNAL && jj.filter(e => e.imp >= 2).length === 120 && jj[jj.length - 1].n === 1199, `${jj.length} lines, ${jj.filter(e => e.imp >= 2).length} highlights`);
+    LES.Countries.ensure(D);
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -2797,6 +2841,7 @@
       await playControlsTests();
       await playFlowTests();
       await playCatalogTests();
+      await playPacingTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -2808,6 +2853,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, playFlowTests, playCatalogTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, playFlowTests, playCatalogTests, playPacingTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

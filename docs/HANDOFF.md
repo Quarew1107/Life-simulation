@@ -377,6 +377,22 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
     - Measured over 5 years (character deciding everyday moments): adult about 10.6 moments and 1.8 important
       stops a year, senior about 8.2 moments and almost no stops. Full suite 542/542.
     - Next: PL-14 (UX, pacing, art and playtest), after the owner's review.
+  - **PL-14 (plan approved Nov 22 2026; 5 steps, one at a time):** 14.1 stop budget and whole-life journal;
+    14.2 phone layout; 14.3 family cards, school comparison, story by stage; 14.4 keyboard, Chinese wrap, message
+    cap; 14.5 live playtest and pacing notes. Mockups: `docs/design/pl14-phone.html`, `docs/design/pl14-pages.html`.
+    - **14.1 done.** Before: about 170-190 important stops in a whole life (target 60-100). Now a stop budget
+      (`Player.overBudget`, `Player.STOP_RATE`: 1 a year under 3, 1.5 a year to 39, 1 a year from 40; up to 1.5
+      saved; Balanced and Important only, not Detailed). Crises in `Player.ALWAYS_STOP` always stop but use
+      budget. An event over budget gets `item.quiet` and is decided by the character like an everyday moment
+      (journal `evt.auto` with `quiet: true`). Measured: whole lives of 90 and 78 years had 76 and 86 stops.
+      The journal (`Player.journal`) trims everyday lines first and keeps up to 600 more highlights (important
+      lines, life moments), so childhood survives to old age. Tests: `playPacingTests` (6).
+    - **14.2 done.** Phones (760 px or less): a 3-row top bar (logo, date, character; speeds scrolling sideways
+      and +1 day; economy badge, icon-only Report/Save, New world); the side panel is a sheet over the map
+      (`js/ui/sheet.js`: min / half / full, tap or drag the handle, arrow keys; a tab tapped while down opens it
+      halfway; an important decision opens it at least halfway; remembered in `les-sheet`). Tabs scroll in one
+      row. The Story view and the open day planner hide the sheet; the folded planner bar moves to the top of
+      the map. Desktop is unchanged. Checked in the preview at 375x812 (the test page has no UI).
   - Owner requests, Nov 14 2026 (after PL-12):
     - **Planned for tomorrow:** a list of queued requests, each with Cancel (`Player.cancel`, journaled
       `cmd.cancelled`). `Player.describe` words every kind (`act.<KIND>`, English and Chinese; a test checks all
