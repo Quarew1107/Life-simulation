@@ -22,8 +22,9 @@
   const GLASSES = [[0, 'None'], [1, 'Dark frames'], [2, 'Gold frames'], [3, 'Round spectacles']];
   const BEARDS = [[0, 'None'], [1, 'Stubble'], [2, 'Moustache'], [3, 'Full beard'], [4, 'Goatee']];
   const HATS = [[0, 'None'], [1, 'Songkok'], [2, 'Kopiah (white cap)'], [3, 'Cap'], [4, 'Turban'], [5, 'Beanie']];
-  const slider = (id, label, v, max) => `<label class="cast-sl"><span>${esc(label)}</span><input type="range" id="${id}" min="0" max="${max}" step="${max > 10 ? 1 : 0.1}" value="${v}"><b id="${id}-v">${v}</b></label>`;
-  const sel = (id, opts, v) => `<select id="${id}">${opts.map(([k, l]) => `<option value="${k}" ${String(k) === String(v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
+  const T = (k, p) => LES.I18n.t(k, p), G = s => LES.I18n.g(s), t = (k, p) => esc(T(k, p)); // PL-17: option and slider labels go through the glossary
+  const slider = (id, label, v, max) => `<label class="cast-sl"><span>${esc(G(label))}</span><input type="range" id="${id}" min="0" max="${max}" step="${max > 10 ? 1 : 0.1}" value="${v}"><b id="${id}-v">${v}</b></label>`;
+  const sel = (id, opts, v) => `<select id="${id}">${opts.map(([k, l]) => `<option value="${k}" ${String(k) === String(v) ? 'selected' : ''}>${esc(G(l))}</option>`).join('')}</select>`;
   const colour = (id, v) => `<input type="color" id="${id}" value="${v}">`;
 
   // back(spec | null): called instead of closing (the setup screen reopens itself).
@@ -32,35 +33,36 @@
     const others = roster.filter(o => o.id !== spec.id);
     const card = $('modal-card');
     card.classList.add('wide');
-    card.innerHTML = `<h1>${idx >= 0 ? 'Edit' : 'Create'} a person</h1><p class="lead">Design anyone you like. Once in town they follow the same rules as everyone else: their choices are still weighted dice rolls.</p>
+    const f = (k, html) => `<div class="field"><label>${t(`ca.${k}`)}</label>${html}</div>`, lk = (k, html) => `<label>${t(`ca.${k}`)} ${html}</label>`;
+    card.innerHTML = `<h1>${t(idx >= 0 ? 'ca.edit' : 'ca.create')}</h1><p class="lead">${t('ca.lead')}</p>
       <div class="cast-grid">
-        <div class="card"><h3>Who</h3><div class="form-grid">
-          <div class="field"><label>First name</label><input id="c-first" type="text" maxlength="30" value="${esc(spec.first)}"></div>
-          <div class="field"><label>Family name</label><input id="c-last" type="text" maxlength="30" value="${esc(spec.last)}"></div>
-          <div class="field"><label>Sex</label>${sel('c-sex', [['F', 'Female'], ['M', 'Male']], spec.sex)}</div>
-          <div class="field"><label>Age</label><input id="c-age" type="number" min="0" max="90" value="${spec.age}"></div>
-          <div class="field"><label>Ethnicity</label>${sel('c-eth', C.ETHNICITIES.map(e => [e, C.ETHNIC_NAMES[e]]), spec.eth)}</div>
-          <div class="field"><label>Religion</label>${sel('c-rel', RELS, spec.rel)}</div>
-          <div class="field"><label>Qualification</label>${sel('c-qual', LES.Cast.QUALS, spec.qual)}</div>
-          <div class="field"><label>Life strategy</label>${sel('c-strat', C.STRATEGIES.map(s => [s, C.STRATEGY_NAMES[s]]), spec.strategy)}</div>
-          <div class="field"><label>Money they bring (Year-1 RM)</label><input id="c-cash" type="number" min="0" max="1000000000" value="${spec.cash}"></div>
+        <div class="card"><h3>${t('ca.who')}</h3><div class="form-grid">
+          ${f('first', `<input id="c-first" type="text" maxlength="30" value="${esc(spec.first)}">`)}
+          ${f('last', `<input id="c-last" type="text" maxlength="30" value="${esc(spec.last)}">`)}
+          ${f('sex', sel('c-sex', [['F', 'Female'], ['M', 'Male']], spec.sex))}
+          ${f('age', `<input id="c-age" type="number" min="0" max="90" value="${spec.age}">`)}
+          ${f('eth', sel('c-eth', C.ETHNICITIES.map(e => [e, C.ETHNIC_NAMES[e]]), spec.eth))}
+          ${f('rel', sel('c-rel', RELS, spec.rel))}
+          ${f('qual', sel('c-qual', LES.Cast.QUALS, spec.qual))}
+          ${f('strat', sel('c-strat', C.STRATEGIES.map(s => [s, C.STRATEGY_NAMES[s]]), spec.strategy))}
+          ${f('cash', `<input id="c-cash" type="number" min="0" max="1000000000" value="${spec.cash}">`)}
         </div></div>
-        <div class="card"><h3>Abilities <small class="muted">0-10</small></h3>${C.ATTR_NAMES.map((n, i) => slider(`c-a${i}`, n, spec.att[i], 10)).join('')}
-          <h3 style="margin-top:8px">Personality <small class="muted">0-100</small></h3>${C.PERS.map(k => slider(`c-p-${k}`, C.PERS_NAMES[k], spec.pers[k], 100)).join('')}${slider('c-fam', 'Wish for a family', spec.famDesire, 100)}${slider('c-relig', 'Devotion', spec.relig, 100)}</div>
-        <div class="card"><h3>Looks</h3><div class="cast-looks">
-          <label>Skin ${colour('c-skin', spec.look.skin)}</label><label>Hair ${colour('c-hair', spec.look.hair)}</label>
-          <label>Shirt ${colour('c-shirt', spec.look.shirt)}</label><label>Trousers ${colour('c-pants', spec.look.pants)}</label>
-          <label>Headscarf ${colour('c-scarf', spec.look.scarf)}</label><label>Hair style ${sel('c-style', STYLES, spec.look.style)}</label>
-          <label>Glasses ${sel('c-glasses', GLASSES, spec.look.glasses || 0)}</label><label>Beard ${sel('c-beard', BEARDS, spec.look.beard || 0)}</label>
-          <label>Headwear ${sel('c-hat', HATS, spec.look.hat || 0)}</label><label>Cap / turban / beanie ${colour('c-hatc', spec.look.hatColour || '#1d3557')}</label></div>
+        <div class="card"><h3>${t('ca.abilities')} <small class="muted">0-10</small></h3>${C.ATTR_NAMES.map((n, i) => slider(`c-a${i}`, n, spec.att[i], 10)).join('')}
+          <h3 style="margin-top:8px">${t('pn.personality')} <small class="muted">0-100</small></h3>${C.PERS.map(k => slider(`c-p-${k}`, C.PERS_NAMES[k], spec.pers[k], 100)).join('')}${slider('c-fam', 'Wish for a family', spec.famDesire, 100)}${slider('c-relig', 'Devotion', spec.relig, 100)}</div>
+        <div class="card"><h3>${t('ca.looks')}</h3><div class="cast-looks">
+          ${lk('skin', colour('c-skin', spec.look.skin))}${lk('hair', colour('c-hair', spec.look.hair))}
+          ${lk('shirt', colour('c-shirt', spec.look.shirt))}${lk('pants', colour('c-pants', spec.look.pants))}
+          ${lk('scarf', colour('c-scarf', spec.look.scarf))}${lk('style', sel('c-style', STYLES, spec.look.style))}
+          ${lk('glasses', sel('c-glasses', GLASSES, spec.look.glasses || 0))}${lk('beard', sel('c-beard', BEARDS, spec.look.beard || 0))}
+          ${lk('hat', sel('c-hat', HATS, spec.look.hat || 0))}${lk('hatc', colour('c-hatc', spec.look.hatColour || '#1d3557'))}</div>
           <canvas id="c-preview" width="120" height="150"></canvas></div>
-        <div class="card"><h3>Family <small class="muted">within your cast</small></h3><div class="form-grid">
-          <div class="field"><label>Partner</label>${sel('c-partner', [['', 'None'], ...others.map(o => [o.id, `${o.first} ${o.last} (${o.sex === 'M' ? 'man' : 'woman'}, ${o.age})`])], spec.partner)}<div class="help">They arrive and live together as a couple (a man and a woman, as for every couple in town).</div></div>
-          <div class="field"><label>Parent</label>${sel('c-par1', [['', 'None'], ...others.map(o => [o.id, `${o.first} ${o.last} (${o.age})`])], spec.parents[0] || '')}</div>
-          <div class="field"><label>Second parent</label>${sel('c-par2', [['', 'None'], ...others.map(o => [o.id, `${o.first} ${o.last} (${o.age})`])], spec.parents[1] || '')}<div class="help">Under 18? They need a parent from your cast, at least 12 years older, and arrive in their care.</div></div>
+        <div class="card"><h3>${t('pn.family')} <small class="muted">${t('ca.withinCast')}</small></h3><div class="form-grid">
+          <div class="field"><label>${t('ca.partner')}</label>${sel('c-partner', [['', 'None'], ...others.map(o => [o.id, `${o.first} ${o.last} (${T(o.sex === 'M' ? 'ca.man' : 'ca.woman', { age: o.age })})`])], spec.partner)}<div class="help">${t('ca.partnerHelp')}</div></div>
+          <div class="field"><label>${t('ca.parent')}</label>${sel('c-par1', [['', 'None'], ...others.map(o => [o.id, `${o.first} ${o.last} (${o.age})`])], spec.parents[0] || '')}</div>
+          <div class="field"><label>${t('ca.parent2')}</label>${sel('c-par2', [['', 'None'], ...others.map(o => [o.id, `${o.first} ${o.last} (${o.age})`])], spec.parents[1] || '')}<div class="help">${t('ca.parentHelp')}</div></div>
         </div><div class="msgs" id="c-msgs"></div></div>
       </div>
-      <div class="modal-actions"><button class="ghost" id="c-random">🎲 Random</button><span class="spacer"></span><button class="ghost" id="c-cancel">Cancel</button><button class="ghost" id="c-save">Save to my cast</button>${back ? '' : '<button class="primary" id="c-add">Save and add to town</button>'}</div>`;
+      <div class="modal-actions"><button class="ghost" id="c-random">🎲 ${t('ca.random')}</button><span class="spacer"></span><button class="ghost" id="c-cancel">${t('ui.cancel')}</button><button class="ghost" id="c-save">${t('ca.save')}</button>${back ? '' : `<button class="primary" id="c-add">${t('ca.add')}</button>`}</div>`;
     $('modal').classList.remove('hidden');
     const read = () => ({
       first: $('c-first').value.trim() || 'Nameless', last: $('c-last').value.trim(), sex: $('c-sex').value, age: Number($('c-age').value) || 25, eth: $('c-eth').value, rel: $('c-rel').value,
@@ -73,8 +75,8 @@
     // Friendly checks on the family links (the engine also ignores impossible ones).
     const problems = s => {
       const out = [], o = id => others.find(x => x.id === id), pt = o(s.partner);
-      if (pt && pt.sex === s.sex) out.push('Partners in town are a man and a woman: this partner will be ignored.');
-      if (s.age < 18 && !s.parents.some(id => o(id) && o(id).age >= Math.max(18, s.age + 12))) out.push('Under 18 without a parent from your cast (at least 12 years older): they will arrive as an 18-year-old.');
+      if (pt && pt.sex === s.sex) out.push(T('ca.p.partner'));
+      if (s.age < 18 && !s.parents.some(id => o(id) && o(id).age >= Math.max(18, s.age + 12))) out.push(T('ca.p.minor'));
       return out;
     };
     const preview = () => {
@@ -124,7 +126,7 @@
       const people = LES.Cast.arrive(w, group), p = people[group.findIndex(o => o.id === spec.id)] || people[0];
       app.select(p.id, true);
       UI.toast(`★ ${esc(P.name(p))} arrived in ${esc(LES.townName(w))}${people.length > 1 ? ` with ${people.length - 1} family member${people.length > 2 ? 's' : ''}` : ''}`);
-    } catch (e) { console.error(e); UI.toast(`Could not add ${esc(spec.first)}: ${esc(e.message)}`); }
+    } catch (e) { console.error(e); UI.toast(t('ca.couldNot', { name: spec.first, msg: e.message })); }
     UI.renderLeaders(true);
   };
 
@@ -161,16 +163,16 @@
     const app = UI.app, w = app.world, roster = load(), el = $('lb-list');
     if (!force && el.contains(document.activeElement)) return;
     const live = w.people.filter(p => p.custom);
-    const status = p => (!p.alive ? `died aged ${Math.floor(P.age(w, p))}` : p.away ? 'living elsewhere' : p.inst ? 'in prison or rehab' : p.job ? LES.Labour.title(p.job) : p.manages >= 0 ? `runs ${w.biz[p.manages].name}` : p.retired ? 'retired' : p.enrol ? 'studying' : 'looking for work');
-    el.innerHTML = `<div class="card"><h3>Your cast in ${esc(LES.townName(w))}</h3>
-      <div class="cast-alerts">Alerts for their life events: ${sel('cast-alert', [['major', 'Major events'], ['all', 'Everything'], ['off', 'Off']], UI.castAlertLevel())}</div>
+    const status = p => (!p.alive ? T('ca.s.died', { age: Math.floor(P.age(w, p)) }) : p.away ? T('ca.s.away') : p.inst ? T('ca.s.inst') : p.job ? LES.Labour.title(p.job) : p.manages >= 0 ? T('ca.s.runs', { biz: w.biz[p.manages].name }) : p.retired ? T('ca.s.retired') : p.enrol ? T('ca.s.studying') : T('ca.s.looking'));
+    el.innerHTML = `<div class="card"><h3>${t('ca.inTown', { town: LES.townName(w) })}</h3>
+      <div class="cast-alerts">${t('ca.alerts')} ${sel('cast-alert', [['major', 'Major events'], ['all', 'Everything'], ['off', 'Off']], UI.castAlertLevel())}</div>
       ${live.length ? live.map(p => `<div class="lb-row ${p.id === app.selected ? 'sel' : ''}" data-pid="${p.id}"><span class="rank">★</span><span class="dot" style="background:${C.STRATEGY_COLORS[p.strategy]}"></span>
-        <span><div class="nm">${esc(P.name(p))}${p.alive ? '' : ' <span class="muted">†</span>'}</div><div class="sub">${Math.floor(P.age(w, p))} yrs · ${esc(status(p))} · 😊 ${Math.round(p.happy)} · ❤️ ${Math.round(p.health)}</div></span><span class="val">${U.fmtMoney(p.nw)}</span></div>`).join('') : '<p class="note">Nobody from your cast lives here yet. Add someone from your saved list below, or create a new person.</p>'}
+        <span><div class="nm">${esc(P.name(p))}${p.alive ? '' : ' <span class="muted">†</span>'}</div><div class="sub">${t('pl.yrs', { age: Math.floor(P.age(w, p)) })} · ${esc(status(p))} · 😊 ${Math.round(p.happy)} · ❤️ ${Math.round(p.health)}</div></span><span class="val">${U.fmtMoney(p.nw)}</span></div>`).join('') : `<p class="note">${t('ca.nobody')}</p>`}
       </div>
-      <div class="card"><h3>Saved people <small class="muted">kept in this browser</small></h3>
-        ${roster.length ? `<ul class="list-plain">${roster.map((s, i) => `<li><span><b>${esc(s.first)} ${esc(s.last)}</b> <span class="muted">${s.age} · ${esc(C.ETHNIC_NAMES[s.eth] || s.eth)} · ${esc(C.STRATEGY_NAMES[s.strategy] || '')}</span></span><span><button class="ghost" data-cast="add" data-i="${i}">Add to town</button> <button class="ghost" data-cast="edit" data-i="${i}">Edit</button> <button class="ghost" data-cast="del" data-i="${i}" title="Remove from the list">✕</button></span></li>`).join('')}</ul>` : '<p class="note">No saved people yet.</p>'}
-        <div class="modal-actions"><button class="primary" data-cast="new">＋ Create a person</button><span class="spacer"></span><button class="ghost" data-cast="export">Export</button><button class="ghost" data-cast="import">Import</button><input type="file" id="cast-file" accept=".json,application/json" hidden></div>
-        <div class="note">Cast members arrive by train like any newcomer and are marked ★ on the leaderboards. Click one to follow them.</div></div>`;
+      <div class="card"><h3>${t('ca.saved')} <small class="muted">${t('ca.kept')}</small></h3>
+        ${roster.length ? `<ul class="list-plain">${roster.map((s, i) => `<li><span><b>${esc(s.first)} ${esc(s.last)}</b> <span class="muted">${s.age} · ${esc(G(C.ETHNIC_NAMES[s.eth] || s.eth))} · ${esc(G(C.STRATEGY_NAMES[s.strategy] || ''))}</span></span><span><button class="ghost" data-cast="add" data-i="${i}">${t('ca.addTown')}</button> <button class="ghost" data-cast="edit" data-i="${i}">${t('ca.editBtn')}</button> <button class="ghost" data-cast="del" data-i="${i}" title="${t('ca.remove')}">✕</button></span></li>`).join('')}</ul>` : `<p class="note">${t('ca.noSaved')}</p>`}
+        <div class="modal-actions"><button class="primary" data-cast="new">＋ ${t('ca.create')}</button><span class="spacer"></span><button class="ghost" data-cast="export">${t('ca.export')}</button><button class="ghost" data-cast="import">${t('ca.import')}</button><input type="file" id="cast-file" accept=".json,application/json" hidden></div>
+        <div class="note">${t('ca.note')}</div></div>`;
     el.onchange = e => { if (e.target.id === 'cast-alert') { try { localStorage.setItem(ALERT_KEY, e.target.value); } catch (err) { /* storage unavailable */ } } };
     el.onclick = e => {
       const b = e.target.closest('[data-cast]');
@@ -182,7 +184,7 @@
       else if (b.dataset.cast === 'add' && list[i]) UI.addCast(list[i]);
       else if (b.dataset.cast === 'del') { list.splice(i, 1); save(list); UI.renderCast(true); }
       else if (b.dataset.cast === 'export') { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(list, null, 1)], { type: 'application/json' })); a.download = 'my-cast.json'; a.click(); }
-      else if (b.dataset.cast === 'import') { const f = $('cast-file'); f.onchange = async () => { try { const x = JSON.parse(await f.files[0].text()); if (Array.isArray(x)) { save(list.concat(x.filter(s => s && s.att && s.pers))); UI.renderCast(true); } } catch (err) { UI.toast('That file is not a cast list.'); } }; f.click(); }
+      else if (b.dataset.cast === 'import') { const f = $('cast-file'); f.onchange = async () => { try { const x = JSON.parse(await f.files[0].text()); if (Array.isArray(x)) { save(list.concat(x.filter(s => s && s.att && s.pers))); UI.renderCast(true); } } catch (err) { UI.toast(t('ca.badFile')); } }; f.click(); }
     };
   };
 })(globalThis.LES = globalThis.LES || {});

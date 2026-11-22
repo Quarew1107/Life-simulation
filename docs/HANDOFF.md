@@ -475,6 +475,13 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
       text (`g:<English>` keys), so each country pack's own names work and unknown names stay English. The feed
       filter buttons redraw on a language switch. Still English (engine-made, step 5): feed and life-story
       sentences, job titles, the activity in the status line, causes of death.
+    - **Step 3 done: society, crime, government, places and stock market, newspaper, My Cast, comparison**
+      (`society-ui.js` `so.*`, `crime-ui.js` `cr.*`, `gov-ui.js` `gv.*`, `places.js` `pl.*`/`bu.*`, `news-ui.js`
+      `nw.*`, `cast-ui.js` `ca.*`, `compare.js` `cm.*`; ~510 keys). Dropdown options and slider labels in My Cast
+      go through the glossary (`sel`/`slider`). Country-pack notes (laws, taxes, council, bank) pass through
+      `I18n.g` so they can be translated later as data. The comparison window now matches a finished run by its
+      kind, not its label (the label is in the reader's language). Text-file helper: keys with an apostrophe are
+      written in double quotes.
     - For the native-speaker review: some PL-13 life-moment texts use 他 as a general "they" (common, but
       a reviewer may prefer 其 / TA); the new texts use 其 / 此人.
   - Owner requests, Nov 14 2026 (after PL-12):
