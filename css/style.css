@@ -669,3 +669,23 @@ button.teal { border-color: var(--teal); color: var(--teal); }
   .life-planner { height: 70%; }
   .life-planner.folded { top: 0; bottom: auto; border-top: 0; border-bottom: 2px solid var(--gold); } /* folded: a bar at the top of the map, clear of the sheet */
 }
+
+/* ---------- PL-14 step 3: family cards, school comparison, life story by stage ---------- */
+.kin-card { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 9px; margin: 6px 0; }
+.kin-pic { flex: none; width: 40px; height: 52px; image-rendering: pixelated; background: #141b23; border: 1px solid var(--line); border-radius: 6px; }
+.kin-info { flex: 1 1 150px; min-width: 0; overflow-wrap: anywhere; }
+.kin-bar { margin: 5px 0 2px; height: 6px; }
+.kin-acts { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; margin-left: auto; }
+.kin-acts button { white-space: nowrap; }
+.kin-warn { color: var(--red); }
+.school-wrap { overflow-x: auto; margin: 4px 0 8px; }
+.school-cmp { width: 100%; min-width: 380px; border-collapse: separate; border-spacing: 0; font-size: 12px; }
+.school-cmp th, .school-cmp td { padding: 6px 5px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.school-cmp th { color: var(--muted); font-weight: 600; font-size: 11px; }
+.school-cmp td.k { color: var(--muted); width: 70px; }
+.school-cmp .cur { background: rgba(242,193,78,.07); } .school-cmp th.cur { color: var(--gold); }
+.school-cmp .life-bar { height: 6px; margin-bottom: 2px; }
+.school-cmp .ok { color: var(--green); }
+.life-era { border-left: 3px solid var(--line); padding-left: 10px; margin: 8px 0 12px; }
+.life-era h5 { margin: 2px 0 6px; font: 700 11px var(--pixel); letter-spacing: .6px; color: var(--gold); text-transform: uppercase; }
+.life-era + .life-era h5 { color: var(--muted); }

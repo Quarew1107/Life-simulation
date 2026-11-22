@@ -393,6 +393,16 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
       halfway; an important decision opens it at least halfway; remembered in `les-sheet`). Tabs scroll in one
       row. The Story view and the open day planner hide the sheet; the folded planner bar moves to the top of
       the map. Desktop is unchanged. Checked in the preview at 375x812 (the test page has no UI).
+    - **14.3 done** (`js/ui/player-ui.js`, as in `docs/design/pl14-pages.png`):
+      - Love & family: partner, children, parents and grown children as cards (`kinCard`): portrait, relation
+        (wife/husband/son/daughter/mother/father), age, job or school, a happiness bar, a red note when health is
+        below 60, and quick buttons (counselling / spend time / compare schools / visit / give money).
+      - School comparison (`schoolHtml`, page `school`): the four kinds side by side with this town's real
+        monthly fees, teaching quality, what each is, whether there is one in town, and whether the family can
+        afford it. A parent chooses (`CHOOSE_SCHOOL`); a child asks (`ASK_SCHOOL`; the carer decides). Opened
+        from a child's card or the child's own Learn page; works in the Story view too. The old dropdown is gone.
+      - Full life story (hub): grouped by stage, newest first; highlights first, everyday lines folded per stage.
+      - New texts in English and Chinese (`kin.*`, `school.*`, `schoolk.*`, `era.*`). Checked in the preview.
   - Owner requests, Nov 14 2026 (after PL-12):
     - **Planned for tomorrow:** a list of queued requests, each with Cancel (`Player.cancel`, journaled
       `cmd.cancelled`). `Player.describe` words every kind (`act.<KIND>`, English and Chinese; a test checks all
