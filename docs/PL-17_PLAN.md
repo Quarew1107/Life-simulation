@@ -1,6 +1,6 @@
 # PL-17 plan: full Simplified Chinese (draft for the owner, Nov 22 2026)
 
-Status: **approved by the owner on 22 Nov 2026; not started (no files changed yet).** The owner did not answer the two
+Status: **approved by the owner on 22 Nov 2026. Steps 1-4 done (Nov 22 2026); step 5 waits for the owner's review.** The owner did not answer the two
 questions below, so use the defaults: the order as written, and mark the Chinese as a draft ("machine draft, not
 reviewed") until a native speaker has checked it.
 

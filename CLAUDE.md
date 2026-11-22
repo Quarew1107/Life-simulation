@@ -46,7 +46,8 @@ those first.
   **PL-14 is complete.**
 - **PL-15 done (Nov 22 2026):** final integration matrix (`playMatrixTests`), full suite 556/556; results and the
   known issues are in HANDOFF. **Next needs the owner:** PL-16 (Vite website) needs separate approval; PL-17 (full
-  Chinese) **is approved** (22 Nov 2026): follow `docs/PL-17_PLAN.md` step by step (not started yet); merging into `main`
+  Chinese) **steps 1-4 done** (tabs and dialogs, person panel and stats, the other tabs, the report; English byte-for-byte
+  unchanged); **step 5 (engine sentences) waits for the owner's review** (`docs/PL-17_PLAN.md`); merging into `main`
   is the owner's call. Details in the HANDOFF "Playable Life Mode" item.
   The notes below describe the state before PL-13.
 - **Done:** PL-00 to PL-12, the owner's extra requests, and the My life redesign (steps 1-5).

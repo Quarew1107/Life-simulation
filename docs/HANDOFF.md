@@ -482,6 +482,15 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
       `I18n.g` so they can be translated later as data. The comparison window now matches a finished run by its
       kind, not its label (the label is in the reader's language). Text-file helper: keys with an apostrophe are
       written in double quotes.
+    - **Step 4 done: the report** (`js/ui/report.js`, keys `rp.*`, ~270): the analysis paragraphs ("Why it
+      turned out this way"), Hall of Fame, the person panel's "What shaped their wealth", every section, chart,
+      table and the page frame (`<html lang>` follows the language). The English is byte-for-byte the same: the
+      stored report fingerprints (`countryTests`, "Its report reads exactly as before") still pass. Plural and
+      phrase pieces (e.g. "a weak positive association") are keys too.
+    - **Still English after steps 1-4 (for step 5 and the data work):** sentences the engine writes into
+      records (news feed, life stories, council log, newspaper stories, the activity in "Why did they do
+      that?", job titles, causes of death); data descriptions (building info, calibration labels and sources,
+      settings names, country-pack notes, course names); dates ("Jan Y2"). Step 5 needs the owner's review first.
     - For the native-speaker review: some PL-13 life-moment texts use 他 as a general "they" (common, but
       a reviewer may prefer 其 / TA); the new texts use 其 / 此人.
   - Owner requests, Nov 14 2026 (after PL-12):
