@@ -47,6 +47,9 @@
     return fill(s === null ? key : s, params);
   };
   I.missing = () => [...missing];
+  // Glossary (PL-17): names that come from the game's data (strategies, lifestyle levels, weather...) are
+  // translated by their exact English text, so every country pack's own names work. Unknown: the English as is.
+  I.g = s => (typeof s === 'string' && lang !== 'en' && I.has(`g:${s}`) ? I.t(`g:${s}`) : s);
   I.ev = (eventId, part, params) => I.t(`ev.${eventId}.${part}`, params);
   // A saved text record: an old plain English string, or { key, params } written by newer code.
   I.render = rec => (rec && typeof rec === 'object' && rec.key ? I.t(rec.key, rec.params) : String(rec === undefined || rec === null ? '' : rec));

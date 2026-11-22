@@ -5,11 +5,12 @@
   const U = LES.U, C = LES.C, P = LES.P, A = LES.Actions;
   const $ = id => document.getElementById(id);
   const esc = U.esc;
+  const T = (k, p) => LES.I18n.t(k, p), G = s => LES.I18n.g(s); // PL-17: interface text and data names
   const UI = LES.UI = { tab: 'person', lbMode: 'alive', feedFilter: 'all', last: {}, feedSeqShown: 0 };
 
   const FEED_FILTERS = [['all', 'All'], ['cast', '★ Cast'], ['goal', 'Goals'], ['wealth', 'Wealth'], ['biz', 'Business'], ['career', 'Career'], ['edu', 'Education'], ['family', 'Family'], ['luck', 'Luck'], ['migration', 'Migration'], ['crime', 'Crime'], ['politics', 'Politics'], ['death', 'Deaths'], ['economy', 'Economy']];
   const CAT_ICON = { wealth: '💰', biz: '🏪', career: '💼', edu: '🎓', family: '👪', luck: '🎲', death: '🕯️', economy: '📊', money: '💵', life: '🧭', goal: '🎯', migration: '🚆', crime: '🚨', politics: '🏛️' };
-  const SLOT_NAMES = ['Day shift · 08:00–15:12', 'Evening · 15:40–22:24'];
+  const SLOT_NAMES = () => [T('pn.slot.day'), T('pn.slot.evening')];
 
   UI.init = function (app) {
     UI.app = app;
@@ -21,7 +22,9 @@
       $('lb-mode').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
       UI.renderLeaders(true);
     });
-    $('feed-filter').innerHTML = FEED_FILTERS.map(([k, l]) => `<button data-f="${k}" class="${k === 'all' ? 'on' : ''}">${l}</button>`).join('');
+    UI.feedFilterHtml = () => { $('feed-filter').innerHTML = FEED_FILTERS.map(([k]) => `<button data-f="${k}" class="${k === UI.feedFilter ? 'on' : ''}">${esc(T(`pn.feed.${k}`))}</button>`).join(''); };
+    UI.feedFilterHtml();
+    window.addEventListener('les-lang', () => UI.feedFilterHtml());
     $('btn-news').addEventListener('click', () => LES.NewsUI.open(app));
     $('feed-filter').addEventListener('click', e => {
       const b = e.target.closest('button'); if (!b) return;
@@ -86,7 +89,7 @@
     const f = w.firsts || {};
     return `<ul class="list-plain milestones">${list.map(th => {
       const r = f[th];
-      return `<li><span>${th === w.goal ? '🏆' : '★'} First to ${U.fmtMoney(th)}</span><span>${r ? `${UI.plink(w, r.pid)} <span class="muted">Y${U.dayToDate(r.day).year}, age ${r.age}</span>` : '<span class="muted">nobody yet</span>'}</span></li>`;
+      return `<li><span>${th === w.goal ? '🏆' : '★'} ${esc(T('pn.firstTo', { amt: U.fmtMoney(th) }))}</span><span>${r ? `${UI.plink(w, r.pid)} <span class="muted">${esc(T('pn.yearAge', { year: U.dayToDate(r.day).year, age: r.age }))}</span>` : `<span class="muted">${esc(T('pn.nobodyYet'))}</span>`}</span></li>`;
     }).join('')}</ul>`;
   };
   // Old saves (rules revision 8 and before) logged every unpaid bill into the town news; the All view skips them.
@@ -100,7 +103,7 @@
 
   UI.mainSource = function (p) {
     const e = p.earned;
-    const src = [['Salary', e.wages + e.gigs], ['Business', e.business], ['Investing', e.invest + e.interest], ['Inheritance', e.inherit + e.gifts], ['Luck', e.luck]];
+    const src = [[T('pn.src.salary'), e.wages + e.gigs], [T('pn.src.business'), e.business], [T('pn.src.investing'), e.invest + e.interest], [T('pn.src.inherit'), e.inherit + e.gifts], [T('pn.src.luck'), e.luck]];
     src.sort((a, b) => b[1] - a[1]);
     return src[0][1] > 0 ? src[0][0] : '—';
   };
@@ -131,17 +134,17 @@
     const app = UI.app, w = app.world;
     const day = Math.max(0, w.lastDay);
     $('date-text').textContent = U.fmtDate(day);
-    $('time-text').textContent = w.lastDay < 0 ? 'Not started' : app.fast ? `${app.speedLabel()} · fast-forward` : LES.clockAt(app.dayFrac);
+    $('time-text').textContent = w.lastDay < 0 ? T('pn.notStarted') : app.fast ? T('pn.fastForward', { speed: app.speedLabel() }) : LES.clockAt(app.dayFrac);
     const sub = $('town-sub'); if (sub && sub.textContent !== LES.townName(w)) sub.textContent = LES.townName(w);
     const R = app.region, ts = $('town-switch');
     ts.classList.toggle('hidden', !R);
     if (R) {
       const regionOn = app.view === 'region';
-      const key = R.towns.map(t => `${t.counts.living}`).join(',') + w.townIdx + regionOn;
+      const key = R.towns.map(t => `${t.counts.living}`).join(',') + w.townIdx + regionOn + LES.I18n.lang();
       if (ts.dataset.key !== key) {
         ts.dataset.key = key;
-        ts.innerHTML = `<button data-town="-1" class="${regionOn ? 'on' : ''}" title="All the towns on one map (or scroll out past the whole town)">🗺 Region</button>`
-          + R.towns.map((t, i) => `<button data-town="${i}" class="${t === w && !regionOn ? 'on' : ''}" title="Show ${U.esc(LES.townName(t))}">${U.esc(LES.townName(t))} <small>${t.counts.living}</small></button>`).join('');
+        ts.innerHTML = `<button data-town="-1" class="${regionOn ? 'on' : ''}" title="${esc(T('pn.region.tip'))}">🗺 ${esc(T('pn.region'))}</button>`
+          + R.towns.map((t, i) => `<button data-town="${i}" class="${t === w && !regionOn ? 'on' : ''}" title="${esc(T('pn.showTown', { town: LES.townName(t) }))}">${U.esc(LES.townName(t))} <small>${t.counts.living}</small></button>`).join('');
         for (const b of ts.querySelectorAll('button')) b.onclick = () => (b.dataset.town === '-1' ? app.showRegion() : app.selectTown(Number(b.dataset.town)));
       }
     }
@@ -155,38 +158,38 @@
     }
     const scn = LES.Scenarios.current(w), sb = $('scn-badge');
     sb.classList.toggle('hidden', !scn);
-    if (scn && sb.dataset.id !== scn.id) { sb.dataset.id = scn.id; sb.innerHTML = `${LES.icon(scn.icon, 14)} ${U.esc(scn.name)}`; sb.title = `Scenario: ${scn.name}. ${scn.short}`; }
+    if (scn && sb.dataset.id !== scn.id + LES.I18n.lang()) { sb.dataset.id = scn.id + LES.I18n.lang(); sb.innerHTML = `${LES.icon(scn.icon, 14)} ${U.esc(G(scn.name))}`; sb.title = T('pn.scenario', { name: G(scn.name), short: G(scn.short) }); }
     const r = C.REGIMES[w.regime];
     const badge = $('regime');
-    badge.textContent = `${r.name} economy`;
+    badge.textContent = T('pn.economy', { name: G(r.name) });
     badge.style.color = r.color;
     const day0 = Math.max(0, w.lastDay), fest = LES.Ambience.festival(day0), wx = LES.Ambience.weather(day0);
-    $('mood').innerHTML = `${{ rain: '🌧️', haze: '🌫️', clear: '☀️', snow: '❄️', heat: '🥵' }[wx.id] || '☀️'} ${wx.name}${fest ? ` · 🎉 <b>${fest.name}</b>` : ''}`;
-    $('mood').title = `${wx.name}${fest ? ` · ${fest.name}` : ''}`; // full text if the fixed-width box truncates it
+    $('mood').innerHTML = `${{ rain: '🌧️', haze: '🌫️', clear: '☀️', snow: '❄️', heat: '🥵' }[wx.id] || '☀️'} ${esc(G(wx.name))}${fest ? ` · 🎉 <b>${esc(G(fest.name))}</b>` : ''}`;
+    $('mood').title = `${G(wx.name)}${fest ? ` · ${G(fest.name)}` : ''}`; // full text if the fixed-width box truncates it
     const h = w.history[w.history.length - 1];
     const adults = w.counts.adults;
     const employed = w.living.filter(p => p.alive && p.job).length;
     const millionaires = w.living.filter(p => p.alive && p.adult && P.goalWorth(w, p) >= U.RM(1e6)).length;
     // Short labels keep the top bar on one row at 1080p; details live in the tooltips.
     $('kpis').innerHTML = [
-      [w.counts.living, 'people', `${w.counts.living} people in town (${w.counts.children} children)`],
-      [adults ? U.fmtPct(employed / adults) : '–', 'employed', 'Share of adults with a job'],
-      [w.biz.filter(b => b.open).length, 'firms', 'Open businesses'],
-      [millionaires, 'millionaires', `Adults worth ${U.sym()}1M+${w.cfg.goalMode === 'real' ? ' in Year-1 money' : ''}`],
-      [h ? h.gini.toFixed(2) : '–', 'Gini', 'Wealth inequality: 0 = everyone equal, 1 = one person owns everything'],
-      [`${(w.infl * 100).toFixed(1)}%`, 'inflation', `This year's inflation; prices are ×${w.price.toFixed(2)} Year-1 levels`],
-      [`${(w.mkt.idx).toFixed(0)}`, LES.Countries.pack.names.exchangeShort, `${LES.Countries.pack.names.exchange} index (started at 100); residents drive ${(w.mkt.alpha * 100).toFixed(0)}% of price moves`],
+      [w.counts.living, T('pn.kpi.people'), T('pn.kpi.people.tip', { count: w.counts.living, children: w.counts.children })],
+      [adults ? U.fmtPct(employed / adults) : '–', T('pn.kpi.employed'), T('pn.kpi.employed.tip')],
+      [w.biz.filter(b => b.open).length, T('pn.kpi.firms'), T('pn.kpi.firms.tip')],
+      [millionaires, T('pn.kpi.millionaires'), T(w.cfg.goalMode === 'real' ? 'pn.kpi.millionaires.tipReal' : 'pn.kpi.millionaires.tip', { sym: U.sym() })],
+      [h ? h.gini.toFixed(2) : '–', T('pn.kpi.gini'), T('pn.kpi.gini.tip')],
+      [`${(w.infl * 100).toFixed(1)}%`, T('pn.kpi.inflation'), T('pn.kpi.inflation.tip', { x: w.price.toFixed(2) })],
+      [`${(w.mkt.idx).toFixed(0)}`, LES.Countries.pack.names.exchangeShort, T('pn.kpi.index.tip', { name: LES.Countries.pack.names.exchange, pct: (w.mkt.alpha * 100).toFixed(0) })],
     ].map(([v, l, t]) => `<div class="kpi" title="${U.esc(t)}"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
     const rich = app.richest();
     const goalEl = $('goal');
     if (w.winner) {
       const win = w.people[w.winner.pid];
       goalEl.className = 'goal won';
-      goalEl.innerHTML = `<div class="row"><span>🏆 <a class="plink" data-pid="${win.id}">${esc(P.name(win))}</a> won</span><span class="muted">Y${U.dayToDate(w.winner.day).year}, age ${w.winner.age}</span></div><div class="bar"><i style="width:100%"></i></div>`;
+      goalEl.innerHTML = `<div class="row"><span>🏆 ${T('pn.goalWon', { name: `<a class="plink" data-pid="${win.id}">${esc(P.name(win))}</a>` })}</span><span class="muted">${esc(T('pn.yearAge', { year: U.dayToDate(w.winner.day).year, age: w.winner.age }))}</span></div><div class="bar"><i style="width:100%"></i></div>`;
     } else {
       const gw = rich ? P.goalWorth(w, rich) : 0, nx = UI.nextMilestone(w, gw);
       goalEl.className = 'goal';
-      goalEl.innerHTML = `<div class="row"><span>Goal ${U.fmtMoney(w.goal)}${w.cfg.goalMode === 'real' ? ' (Y1 money)' : ''}</span><span class="muted">${rich ? `${esc(rich.first)} ${U.fmtMoney(gw)} · ${UI.goalShare(w, gw)}` : ''}</span></div><div class="bar" title="Richest person on the way to the next milestone, ${U.fmtMoney(nx.th)}: ${Math.round(nx.frac * 100)}% (${UI.goalShare(w, gw)} of the goal)"><i style="width:${(nx.frac * 100).toFixed(1)}%"></i></div>`;
+      goalEl.innerHTML = `<div class="row"><span>${esc(T(w.cfg.goalMode === 'real' ? 'pn.goalReal' : 'pn.goal', { amt: U.fmtMoney(w.goal) }))}</span><span class="muted">${rich ? `${esc(rich.first)} ${U.fmtMoney(gw)} · ${UI.goalShare(w, gw)}` : ''}</span></div><div class="bar" title="${esc(T('pn.goal.tip', { amt: U.fmtMoney(nx.th), pct: Math.round(nx.frac * 100), share: UI.goalShare(w, gw) }))}"><i style="width:${(nx.frac * 100).toFixed(1)}%"></i></div>`;
     }
     goalEl.onclick = e => { const l = e.target.closest('[data-pid]'); if (l) app.select(Number(l.dataset.pid), true); else if (rich) app.select(rich.id, true); };
   };
@@ -194,7 +197,7 @@
   // ---------------- Person ----------------
   function bar(label, value, max, color, pot, num) {
     const pct = U.clamp(value / max, 0, 1) * 100;
-    const potMark = pot !== undefined ? `<i class="pot" style="left:${U.clamp(pot / max, 0, 1) * 100}%" title="Inherited potential ${pot.toFixed(1)}"></i>` : '';
+    const potMark = pot !== undefined ? `<i class="pot" style="left:${U.clamp(pot / max, 0, 1) * 100}%" title="${esc(T('pn.potential', { v: pot.toFixed(1) }))}"></i>` : '';
     return `<div class="row"><span>${label}</span><div class="track"><i class="fill" style="width:${pct.toFixed(1)}%;background:${color}"></i>${potMark}</div><span class="num">${num !== undefined ? num : Math.round(value)}</span></div>`;
   }
   function pips(n, total) { let s = '<span class="pips">'; for (let i = 0; i < total; i++) s += `<i class="${i <= n ? 'on' : ''}"></i>`; return s + '</span>'; }
@@ -206,22 +209,22 @@
     const age = Math.floor(P.age(w, p));
     const stratCol = C.STRATEGY_COLORS[p.strategy];
     let status;
-    if (!p.alive) status = `🕯️ Died aged ${age} (${esc(p.causeOfDeath)}) on ${U.fmtDate(p.deathDay)}`;
-    else if (p.away) status = `✈️ Living outside ${esc(LES.townName(w))} (left for ${esc(p.away.reason)})`;
+    if (!p.alive) status = `🕯️ ${esc(T('pn.died', { age, cause: G(p.causeOfDeath), date: U.fmtDate(p.deathDay) }))}`;
+    else if (p.away) status = `✈️ ${esc(T('pn.away', { town: LES.townName(w), reason: G(p.away.reason) }))}`;
     else if (p.plan && p.plan.length) {
       const s = p.plan[app.dayFrac * 1440 < LES.SLOT_B ? 0 : 1] || p.plan[0];
       status = `${A.ICONS[s.act] || '•'} ${esc(s.label)}`;
-    } else status = '🏠 At home';
-    const job = p.job ? `${LES.Labour.title(p.job)} · ${U.fmtMoney(p.job.salary)}/mo` : p.retired ? 'Retired' : p.adult ? 'No job' : 'Child';
-    const chips = [`<span class="chip strat" style="--c:${stratCol}">${C.STRATEGY_NAMES[p.strategy]}</span>`];
-    if (!p.alive) chips.push('<span class="chip dead">Deceased</span>');
-    if (p.gen === 0 && !p.migrant) chips.push('<span class="chip">Founder</span>');
-    if (p.migrant) chips.push(`<span class="chip">Migrant${p.arrivedDay ? ' · ' + U.fmtMonthYear(p.arrivedDay) : ''}</span>`);
-    if (p.away) chips.push(`<span class="chip dead">Moved away · ${U.fmtMonthYear(p.away.since)}</span>`);
-    if (p.custom) chips.push('<span class="chip">Custom</span>');
-    if (p.guardian === 'WELFARE') chips.push('<span class="chip">Welfare home</span>');
-    if (p.bankruptUntil >= w.day) chips.push('<span class="chip dead">Bankrupt</span>');
-    if (p.pregnancy) chips.push('<span class="chip">Expecting 👶</span>');
+    } else status = `🏠 ${esc(T('pn.atHome'))}`;
+    const job = p.job ? T('pn.jobPay', { job: LES.Labour.title(p.job), pay: U.fmtMoney(p.job.salary) }) : p.retired ? T('pn.retired') : p.adult ? T('pn.noJob') : T('pn.child');
+    const chips = [`<span class="chip strat" style="--c:${stratCol}">${esc(G(C.STRATEGY_NAMES[p.strategy]))}</span>`];
+    if (!p.alive) chips.push(`<span class="chip dead">${esc(T('pn.chip.dead'))}</span>`);
+    if (p.gen === 0 && !p.migrant) chips.push(`<span class="chip">${esc(T('pn.chip.founder'))}</span>`);
+    if (p.migrant) chips.push(`<span class="chip">${esc(T('pn.chip.migrant'))}${p.arrivedDay ? ' · ' + U.fmtMonthYear(p.arrivedDay) : ''}</span>`);
+    if (p.away) chips.push(`<span class="chip dead">${esc(T('pn.chip.away'))} · ${U.fmtMonthYear(p.away.since)}</span>`);
+    if (p.custom) chips.push(`<span class="chip">${esc(T('pn.chip.custom'))}</span>`);
+    if (p.guardian === 'WELFARE') chips.push(`<span class="chip">${esc(T('pn.chip.welfare'))}</span>`);
+    if (p.bankruptUntil >= w.day) chips.push(`<span class="chip dead">${esc(T('pn.chip.bankrupt'))}</span>`);
+    if (p.pregnancy) chips.push(`<span class="chip">${esc(T('pn.chip.expecting'))} 👶</span>`);
     for (const th of p.milestones) chips.push(`<span class="chip gold">★ ${U.fmtMoney(th)}</span>`);
 
     const nw = p.nw, goal = w.goal;
@@ -236,152 +239,152 @@
         <canvas class="portrait" id="portrait" width="64" height="88"></canvas>
         <div>
           <h2>${esc(P.name(p))}</h2>
-          <div class="meta">${p.sex === 'M' ? '♂' : '♀'} ${age} yrs · Gen ${p.gen} · ${esc(job)}</div>
+          <div class="meta">${p.sex === 'M' ? '♂' : '♀'} ${esc(T('pn.ageGen', { age, gen: p.gen }))} · ${esc(job)}</div>
           <div class="status">${status}</div>
           <div class="chips">${chips.join('')}</div>
         </div>
       </div>
       ${UI.toolbarHtml(app, p)}
       <div class="card">
-        <h3>Net worth <small class="muted">peak ${U.fmtMoney(p.peakNw)}</small></h3>
-        <div class="networth"><span class="big ${nw < 0 ? 'neg' : ''}">${U.fmtMoney(nw)}</span><span class="muted">${UI.goalShare(w, gwP)} of the goal${gwP < goal ? ` · next ${U.fmtMoney(nxP.th)}: ${Math.round(nxP.frac * 100)}%` : ''}</span></div>
-        ${w.price > 1.01 ? `<div class="note">In Year-1 money: <b>${U.fmtMoney(realNw)}</b> (prices are ×${w.price.toFixed(2)} since Year 1)</div>` : ''}
-        <div class="progress" title="On the way to the next milestone, ${U.fmtMoney(nxP.th)}"><i style="width:${(nxP.frac * 100).toFixed(1)}%"></i></div>
+        <h3>${esc(T('pn.nw'))} <small class="muted">${esc(T('pn.peak', { amt: U.fmtMoney(p.peakNw) }))}</small></h3>
+        <div class="networth"><span class="big ${nw < 0 ? 'neg' : ''}">${U.fmtMoney(nw)}</span><span class="muted">${esc(T('pn.ofGoal', { share: UI.goalShare(w, gwP) }))}${gwP < goal ? ` · ${esc(T('pn.next', { amt: U.fmtMoney(nxP.th), pct: Math.round(nxP.frac * 100) }))}` : ''}</span></div>
+        ${w.price > 1.01 ? `<div class="note">${T('pn.y1money', { amt: `<b>${U.fmtMoney(realNw)}</b>`, x: w.price.toFixed(2) })}</div>` : ''}
+        <div class="progress" title="${esc(T('pn.nextTip', { amt: U.fmtMoney(nxP.th) }))}"><i style="width:${(nxP.frac * 100).toFixed(1)}%"></i></div>
         <div class="grid2">
-          <div><span class="muted">Cash</span><span>${U.fmtMoney(p.cash)}</span></div>
+          <div><span class="muted">${esc(T('pn.cash'))}</span><span>${U.fmtMoney(p.cash)}</span></div>
           <div><span class="muted">${LES.Countries.pack.names.retirement}</span><span>${U.fmtMoney(p.epf)}</span></div>
-          ${p.epfFlex || p.epfWell ? `<div title="Akaun Fleksibel can be withdrawn any time; Akaun Sejahtera pays study and medical bills; the rest (Akaun Persaraan) is locked until ${LES.Countries.pack.retirement.accessAge}"><span class="muted">· Fleksibel / Sejahtera</span><span>${U.fmtMoney(p.epfFlex || 0)} / ${U.fmtMoney(p.epfWell || 0)}</span></div>` : ''}
-          <div><span class="muted">Index fund</span><span>${U.fmtMoney(invIdx)}</span></div>
-          <div title="${esc(holdings)}"><span class="muted">Shares</span><span>${U.fmtMoney(invStk)}</span></div>
-          <div><span class="muted">Business equity</span><span>${U.fmtMoney(P.bizValue(w, p))}</span></div>
-          <div><span class="muted">Trust (minor)</span><span>${U.fmtMoney(p.trust)}</span></div>
-          <div><span class="muted">Study debt</span><span class="${p.debt.study ? 'neg' : ''}">${U.fmtMoney(-p.debt.study)}</span></div>
-          <div><span class="muted">Living costs</span><span>${U.fmtMoney(p.mcost)}/mo</span></div>
+          ${p.epfFlex || p.epfWell ? `<div title="${esc(T('pn.epf.tip', { age: LES.Countries.pack.retirement.accessAge }))}"><span class="muted">· Fleksibel / Sejahtera</span><span>${U.fmtMoney(p.epfFlex || 0)} / ${U.fmtMoney(p.epfWell || 0)}</span></div>` : ''}
+          <div><span class="muted">${esc(T('pn.idx'))}</span><span>${U.fmtMoney(invIdx)}</span></div>
+          <div title="${esc(holdings)}"><span class="muted">${esc(T('pn.shares'))}</span><span>${U.fmtMoney(invStk)}</span></div>
+          <div><span class="muted">${esc(T('pn.bizEq'))}</span><span>${U.fmtMoney(P.bizValue(w, p))}</span></div>
+          <div><span class="muted">${esc(T('pn.trust'))}</span><span>${U.fmtMoney(p.trust)}</span></div>
+          <div><span class="muted">${esc(T('pn.studyDebt'))}</span><span class="${p.debt.study ? 'neg' : ''}">${U.fmtMoney(-p.debt.study)}</span></div>
+          <div><span class="muted">${esc(T('pn.living'))}</span><span>${esc(T('pn.perMonth', { amt: U.fmtMoney(p.mcost) }))}</span></div>
         </div>
         <canvas class="chart" id="chart-nw"></canvas>
-        <div class="grid2" title="Lifetime earnings by source">
-          <div><span class="muted">Wages + ${LES.Countries.pack.names.retirement}</span><span>${U.fmtMoney(e.wages)}</span></div>
-          <div><span class="muted">Gigs</span><span>${U.fmtMoney(e.gigs)}</span></div>
-          <div><span class="muted">Business payouts</span><span>${U.fmtMoney(e.business)}</span></div>
-          <div><span class="muted">Investment gains</span><span class="${e.invest < 0 ? 'neg' : ''}">${U.fmtMoney(e.invest + e.interest)}</span></div>
-          <div><span class="muted">Inherited / gifts</span><span>${U.fmtMoney(e.inherit + e.gifts)}</span></div>
-          <div><span class="muted">Luck / welfare</span><span>${U.fmtMoney(e.luck + e.welfare)}</span></div>
+        <div class="grid2" title="${esc(T('pn.earn.tip'))}">
+          <div><span class="muted">${esc(T('pn.earn.wages', { ret: LES.Countries.pack.names.retirement }))}</span><span>${U.fmtMoney(e.wages)}</span></div>
+          <div><span class="muted">${esc(T('pn.earn.gigs'))}</span><span>${U.fmtMoney(e.gigs)}</span></div>
+          <div><span class="muted">${esc(T('pn.earn.biz'))}</span><span>${U.fmtMoney(e.business)}</span></div>
+          <div><span class="muted">${esc(T('pn.earn.inv'))}</span><span class="${e.invest < 0 ? 'neg' : ''}">${U.fmtMoney(e.invest + e.interest)}</span></div>
+          <div><span class="muted">${esc(T('pn.earn.inherit'))}</span><span>${U.fmtMoney(e.inherit + e.gifts)}</span></div>
+          <div><span class="muted">${esc(T('pn.earn.luck'))}</span><span>${U.fmtMoney(e.luck + e.welfare)}</span></div>
         </div>
-        ${holdings ? `<div class="note">Shares held: ${esc(holdings)}</div>` : ''}
+        ${holdings ? `<div class="note">${esc(T('pn.held', { list: holdings }))}</div>` : ''}
       </div>`;
     if (p.adult && LES.Report && LES.Report.wealthStory) {
       const ws = LES.Report.wealthStory(w, p);
-      html += `<div class="card"><h3>What shaped their wealth</h3><ul class="list-plain">${ws.lines.map(x => `<li>${x}</li>`).join('')}</ul><div class="note">${ws.note}</div></div>`;
+      html += `<div class="card"><h3>${esc(T('pn.shaped'))}</h3><ul class="list-plain">${ws.lines.map(x => `<li>${x}</li>`).join('')}</ul><div class="note">${ws.note}</div></div>`;
     }
 
     if (p.adult && p.goal) {
       const gd = LES.Goals.DEFS[p.goal.id];
       const done = p.goalsDone.map(x => `<li><span>${LES.Goals.DEFS[x.id].icon} ${esc(x.text)}</span><span class="muted">age ${x.age}</span></li>`).join('');
-      html += `<div class="card"><h3>Life goal <small class="muted">since ${U.fmtMonthYear(Math.max(0, p.goal.since))}</small></h3>
+      html += `<div class="card"><h3>${esc(T('pn.lifeGoal'))} <small class="muted">${esc(T('pn.since', { date: U.fmtMonthYear(Math.max(0, p.goal.since)) }))}</small></h3>
         <div class="goal-now"><span class="goal-ic">${gd.icon}</span><div><b>${esc(gd.name)}</b><div class="muted">${esc(LES.Goals.text(p.goal))}</div></div></div>
         <div class="progress"><i style="width:${(p.goal.progress * 100).toFixed(1)}%"></i></div>
-        <div class="note">${Math.round(p.goal.progress * 100)}% there · happiness ${Math.round(p.happy)}/100 (2-year average ${Math.round(p.happyAvg)})</div>
+        <div class="note">${esc(T('pn.goalNote', { pct: Math.round(p.goal.progress * 100), happy: Math.round(p.happy), avg: Math.round(p.happyAvg) }))}</div>
         ${done ? `<ul class="list-plain" style="margin-top:6px">${done}</ul>` : ''}</div>`;
     }
 
     if (p.alive && !p.away && p.why && p.why.length) {
-      html += `<div class="card"><h3>Why did they do that? <small class="muted">${U.fmtDate(w.lastDay)}</small></h3>`;
+      html += `<div class="card"><h3>${esc(T('pn.why'))} <small class="muted">${U.fmtDate(w.lastDay)}</small></h3>`;
       const revealB = app.fast || app.paused || app.dayFrac * 1440 >= LES.SLOT_B;
       p.why.forEach((s, i) => {
-        if (i === 1 && !revealB) { html += `<div class="why-slot"><div class="hd"><span class="muted">${SLOT_NAMES[1]}</span><span class="muted">decides at 15:12…</span></div></div>`; return; }
-        const ok = s.ok === undefined ? '' : s.ok ? ' <span class="pos">✓ success</span>' : ' <span class="neg">✗ failed</span>';
-        html += `<div class="why-slot"><div class="hd"><span class="muted">${SLOT_NAMES[i]}</span><span>${A.ICONS[s.act] || ''} ${esc(s.chosen)}${ok}${s.forced ? ' <span class="neg">(health override)</span>' : ''}</span></div>`;
+        if (i === 1 && !revealB) { html += `<div class="why-slot"><div class="hd"><span class="muted">${esc(SLOT_NAMES()[1])}</span><span class="muted">${esc(T('pn.decidesAt'))}</span></div></div>`; return; }
+        const ok = s.ok === undefined ? '' : s.ok ? ` <span class="pos">✓ ${esc(T('pn.success'))}</span>` : ` <span class="neg">✗ ${esc(T('pn.failed'))}</span>`;
+        html += `<div class="why-slot"><div class="hd"><span class="muted">${esc(SLOT_NAMES()[i])}</span><span>${A.ICONS[s.act] || ''} ${esc(G(s.chosen))}${ok}${s.forced ? ` <span class="neg">(${esc(T('pn.override'))})</span>` : ''}</span></div>`;
         for (const o of s.options.slice().sort((a, b) => b.p - a.p).slice(0, 7)) {
-          html += `<div class="why-opt ${o.label === s.chosen ? 'chosen' : ''}" title="Utility ${o.u.toFixed(2)}"><span>${A.ICONS[o.act || o.id] || ''} ${esc(o.label)}</span><div class="track"><i style="width:${(o.p * 100).toFixed(1)}%"></i></div><span class="pct">${(o.p * 100).toFixed(o.p < 0.1 ? 1 : 0)}%</span></div>`;
+          html += `<div class="why-opt ${o.label === s.chosen ? 'chosen' : ''}" title="${esc(T('pn.utility', { v: o.u.toFixed(2) }))}"><span>${A.ICONS[o.act || o.id] || ''} ${esc(G(o.label))}</span><div class="track"><i style="width:${(o.p * 100).toFixed(1)}%"></i></div><span class="pct">${(o.p * 100).toFixed(o.p < 0.1 ? 1 : 0)}%</span></div>`;
         }
         html += '</div>';
       });
-      html += `<div class="note">Each option's probability comes from its utility (personality + strategy + needs + money) through a softmax. A separate dice roll decides success.</div></div>`;
+      html += `<div class="note">${esc(T('pn.whyNote'))}</div></div>`;
     } else if (p.alive && !p.adult) {
-      html += `<div class="card"><h3>Childhood</h3><div class="grid2">
-        <div><span class="muted">Upbringing</span><span>${Math.round(p.upbringing * 100)}%</span></div>
-        <div><span class="muted">Caregivers</span><span>${p.guardian === 'WELFARE' ? 'Welfare home' : p.caregivers.length}</span></div></div>
-        <div class="note">Children cannot act. Upbringing (care time, food, housing, paid costs) decides how much of their inherited potential they reach at 18.</div></div>`;
+      html += `<div class="card"><h3>${esc(T('pn.childhood'))}</h3><div class="grid2">
+        <div><span class="muted">${esc(T('pn.upbringing'))}</span><span>${Math.round(p.upbringing * 100)}%</span></div>
+        <div><span class="muted">${esc(T('pn.caregivers'))}</span><span>${p.guardian === 'WELFARE' ? esc(T('pn.chip.welfare')) : p.caregivers.length}</span></div></div>
+        <div class="note">${esc(T('pn.childNote'))}</div></div>`;
     }
 
     if (p.alive) {
-      html += `<div class="card bars"><h3>Condition</h3>
-        ${bar('Happiness', p.happy, 100, '#f2c14e')}${bar('Health', p.health, 100, '#57d38c')}${bar('Energy', p.energy, 100, '#5aa9e6')}${bar('Stress', p.stress, 100, '#ff6b6b')}${bar('Hunger', p.hunger, 100, '#f4a261')}</div>`;
+      html += `<div class="card bars"><h3>${esc(T('pn.condition'))}</h3>
+        ${bar(esc(T('pn.happiness')), p.happy, 100, '#f2c14e')}${bar(esc(T('pn.health')), p.health, 100, '#57d38c')}${bar(esc(T('pn.energy')), p.energy, 100, '#5aa9e6')}${bar(esc(T('pn.stress')), p.stress, 100, '#ff6b6b')}${bar(esc(T('pn.hunger')), p.hunger, 100, '#f4a261')}</div>`;
     }
-    html += `<div class="card bars"><h3>Attributes <small class="muted">bar = current · line = inherited potential</small></h3>
-      ${C.ATTR_NAMES.map((n, i) => bar(n, p.att[i], 10, '#f2c14e', p.pot[i], p.att[i].toFixed(1))).join('')}
-      ${p.ageing ? `<div class="note" title="Ageing genes are inherited (about half from parents' average). Gym, healthy food and training slow decline; chronic stress speeds it up.">🧬 Body ages from <b>${p.ageing.bOnset.toFixed(0)}</b> (−${(p.ageing.bRate * 100).toFixed(1)}%/yr, floor ${(p.ageing.bFloor * 100).toFixed(0)}% of peak) · Mind ages from <b>${p.ageing.mOnset.toFixed(0)}</b> (−${(p.ageing.mRate * 100).toFixed(1)}%/yr, floor ${(p.ageing.mFloor * 100).toFixed(0)}%)</div>` : ''}
+    html += `<div class="card bars"><h3>${esc(T('pn.attributes'))} <small class="muted">${esc(T('pn.attrKey'))}</small></h3>
+      ${C.ATTR_NAMES.map((n, i) => bar(esc(G(n)), p.att[i], 10, '#f2c14e', p.pot[i], p.att[i].toFixed(1))).join('')}
+      ${p.ageing ? `<div class="note" title="${esc(T('pn.ageing.tip'))}">🧬 ${T('pn.ageing', { b: `<b>${p.ageing.bOnset.toFixed(0)}</b>`, br: (p.ageing.bRate * 100).toFixed(1), bf: (p.ageing.bFloor * 100).toFixed(0), m: `<b>${p.ageing.mOnset.toFixed(0)}</b>`, mr: (p.ageing.mRate * 100).toFixed(1), mf: (p.ageing.mFloor * 100).toFixed(0) })}</div>` : ''}
       ${p.attHist.length > 1 ? '<canvas class="chart" id="chart-att"></canvas>' : ''}</div>`;
-    html += `<div class="card bars"><h3>Personality</h3>
-      ${C.PERS.map(k => bar(C.PERS_NAMES[k], p.pers[k], 100, '#b892ff')).join('')}
-      ${bar('Family desire', p.famDesire, 100, '#f28482')}</div>`;
+    html += `<div class="card bars"><h3>${esc(T('pn.personality'))}</h3>
+      ${C.PERS.map(k => bar(esc(G(C.PERS_NAMES[k])), p.pers[k], 100, '#b892ff')).join('')}
+      ${bar(esc(T('pn.famDesire')), p.famDesire, 100, '#f28482')}</div>`;
 
     html += UI.societyCard ? UI.societyCard(w, p) : '';
     html += UI.crimeCard ? UI.crimeCard(w, p) : '';
     html += UI.politicsCard ? UI.politicsCard(w, p) : '';
     if (app.region && ((p.away && p.away.town !== undefined) || (p.xlinks && p.xlinks.length))) { // links to the same family in other towns
       const R = app.region, rows = [];
-      if (p.away && p.away.town !== undefined) rows.push(`<li>Now lives in <a href="#" data-xtown="${p.away.town}" data-xid="${p.away.id}">${U.esc(LES.townName(R.towns[p.away.town]))}</a></li>`);
-      for (const x of p.xlinks || []) { const q = R.towns[x.town].people[x.id]; if (q) rows.push(`<li>${x.rel === 'self' ? 'Moved here from' : x.rel === 'parent' ? 'Parent in' : 'Child in'} <a href="#" data-xtown="${x.town}" data-xid="${x.id}">${U.esc(LES.townName(R.towns[x.town]))}</a>${x.rel === 'self' ? '' : `: ${U.esc(P.name(q))}`}</li>`); }
-      html += `<div class="card"><h3>Other towns</h3><ul class="list-plain xlinks">${rows.join('')}</ul></div>`;
+      if (p.away && p.away.town !== undefined) rows.push(`<li>${esc(T('pn.x.now'))} <a href="#" data-xtown="${p.away.town}" data-xid="${p.away.id}">${U.esc(LES.townName(R.towns[p.away.town]))}</a></li>`);
+      for (const x of p.xlinks || []) { const q = R.towns[x.town].people[x.id]; if (q) rows.push(`<li>${esc(T(x.rel === 'self' ? 'pn.x.from' : x.rel === 'parent' ? 'pn.x.parent' : 'pn.x.child'))} <a href="#" data-xtown="${x.town}" data-xid="${x.id}">${U.esc(LES.townName(R.towns[x.town]))}</a>${x.rel === 'self' ? '' : `: ${U.esc(P.name(q))}`}</li>`); }
+      html += `<div class="card"><h3>${esc(T('pn.otherTowns'))}</h3><ul class="list-plain xlinks">${rows.join('')}</ul></div>`;
     }
-    if (p.clan && LES.Scenarios.CLAN_BY_ID[p.clan]) { const cl = LES.Scenarios.CLAN_BY_ID[p.clan]; html += `<div class="card"><h3>Clan <small class="muted">Five Clans scenario</small></h3><p><span style="color:${cl.colour}">■</span> <b>${U.esc(cl.name)}</b> (${U.esc(cl.en)}): born with a gift for ${C.ATTR_NAMES[cl.attr].toLowerCase()}.</p></div>`; }
+    if (p.clan && LES.Scenarios.CLAN_BY_ID[p.clan]) { const cl = LES.Scenarios.CLAN_BY_ID[p.clan]; html += `<div class="card"><h3>${esc(T('pn.clan'))} <small class="muted">${esc(T('pn.clanScn'))}</small></h3><p><span style="color:${cl.colour}">■</span> <b>${U.esc(cl.name)}</b> (${U.esc(G(cl.en))}): ${esc(T('pn.clanGift', { attr: G(C.ATTR_NAMES[cl.attr]) }))}</p></div>`; }
     if (p.adult) {
-      html += `<div class="card tiers"><h3>Lifestyle <small class="muted">${U.fmtMoney(p.mcost)}/month incl. children</small></h3>
+      html += `<div class="card tiers"><h3>${esc(T('pn.lifestyle'))} <small class="muted">${esc(T('pn.lifestyleCost', { amt: U.fmtMoney(p.mcost) }))}</small></h3>
         ${C.TIER_CATS.map(cat => {
           const t = C.TIERS[cat][p.tiers[cat]];
           const paysHousing = cat !== 'housing' || p.isHead;
-          return `<div class="row"><span class="muted">${C.TIER_CAT_NAMES[cat]}</span><span>${pips(p.tiers[cat], C.TIERS[cat].length)}${esc(t.name)}<div class="fx">${esc(t.fx || '')}</div></span><span>${paysHousing ? U.fmtMoney(LES.Finance.tierCost(w, cat, p.tiers[cat])) : 'partner pays'}</span></div>`;
+          return `<div class="row"><span class="muted">${esc(G(C.TIER_CAT_NAMES[cat]))}</span><span>${pips(p.tiers[cat], C.TIERS[cat].length)}${esc(G(t.name))}<div class="fx">${esc(G(t.fx || ''))}</div></span><span>${paysHousing ? U.fmtMoney(LES.Finance.tierCost(w, cat, p.tiers[cat])) : esc(T('pn.partnerPays'))}</span></div>`;
         }).join('')}</div>`;
     }
 
     // Career & education
-    const quals = p.quals.length ? p.quals.map(q => P.qualName(p, q)).join(', ') : 'None';
-    let career = `<div class="grid2"><div><span class="muted">Qualifications</span><span>${esc(quals)}</span></div></div>`;
+    const quals = p.quals.length ? p.quals.map(q => G(P.qualName(p, q))).join(', ') : T('pn.none');
+    let career = `<div class="grid2"><div><span class="muted">${esc(T('pn.quals'))}</span><span>${esc(quals)}</span></div></div>`;
     if (p.enrol) {
       const c = C.COURSE_BY_ID[p.enrol.course];
       const pct = p.enrol.progress / (c.months * 12);
-      career += `<div class="bars">${bar(esc(c.name.replace('Bachelor of ', 'B. ')), pct, 1, '#b892ff', undefined, U.fmtPct(pct))}</div>
-        <div class="note">${p.enrol.scholarship ? 'Full scholarship' : `Fees ${U.fmtMoney(p.enrol.feeMonthly)}/mo`} · started ${U.fmtDate(p.enrol.startDay)}</div>`;
+      career += `<div class="bars">${bar(esc(G(c.name).replace('Bachelor of ', 'B. ')), pct, 1, '#b892ff', undefined, U.fmtPct(pct))}</div>
+        <div class="note">${esc(p.enrol.scholarship ? T('pn.scholarship') : T('pn.fees', { amt: U.fmtMoney(p.enrol.feeMonthly) }))} · ${esc(T('pn.started', { date: U.fmtDate(p.enrol.startDay) }))}</div>`;
     }
     if (p.job) {
       career += `<div class="grid2" style="margin-top:6px">
-        <div><span class="muted">Job</span><span>${esc(LES.Labour.title(p.job))}</span></div>
-        <div><span class="muted">Salary</span><span>${U.fmtMoney(p.job.salary)}/mo</span></div>
-        <div><span class="muted">Shifts this month</span><span>${p.job.shiftsMonth}/${w.cfg.shiftsPerMonth}</span></div>
-        <div><span class="muted">Since</span><span>${p.job.startDay < 0 ? 'before Y1' : U.fmtMonthYear(p.job.startDay)}</span></div></div>`;
+        <div><span class="muted">${esc(T('pn.job'))}</span><span>${esc(LES.Labour.title(p.job))}</span></div>
+        <div><span class="muted">${esc(T('pn.salary'))}</span><span>${esc(T('pn.perMonth', { amt: U.fmtMoney(p.job.salary) }))}</span></div>
+        <div><span class="muted">${esc(T('pn.shifts'))}</span><span>${p.job.shiftsMonth}/${w.cfg.shiftsPerMonth}</span></div>
+        <div><span class="muted">${esc(T('pn.sinceLabel'))}</span><span>${p.job.startDay < 0 ? esc(T('pn.beforeY1')) : U.fmtMonthYear(p.job.startDay)}</span></div></div>`;
     }
     const xps = C.XP_CATS.filter(k => p.xp[k] >= 0.05);
-    if (xps.length) career += `<div class="bars" style="margin-top:6px">${xps.map(k => bar(`${k[0].toUpperCase()}${k.slice(1)} exp.`, p.xp[k], 5, '#3ec7b5', undefined, p.xp[k].toFixed(1))).join('')}</div>`;
-    if (p.adult) html += `<div class="card"><h3>Career & education</h3>${career}</div>`;
+    if (xps.length) career += `<div class="bars" style="margin-top:6px">${xps.map(k => bar(esc(T(`pn.xp.${k}`)), p.xp[k], 5, '#3ec7b5', undefined, p.xp[k].toFixed(1))).join('')}</div>`;
+    if (p.adult) html += `<div class="card"><h3>${esc(T('pn.career'))}</h3>${career}</div>`;
 
     const owned = Object.keys(p.shares).map(k => w.biz[Number(k)]);
     const founded = w.biz.filter(b => b.founderId === p.id && !b.open);
     if (owned.length || founded.length) {
-      html += `<div class="card"><h3>Businesses</h3><ul class="list-plain">`;
+      html += `<div class="card"><h3>${esc(T('pn.businesses'))}</h3><ul class="list-plain">`;
       for (const b of owned) {
-        html += `<li><span><b>${esc(b.name)}</b> <span class="muted">${esc(b.typeDef.name)} · ${Math.round(p.shares[b.id] * 100)}%${b.managerId === p.id ? ' · manager' : ''}${b.booms ? ` · ${b.booms} boom${b.booms > 1 ? 's' : ''}` : ''}</span><br><span class="muted">Revenue ${U.fmtMoney(b.lastRevenue)}/mo · profit <span class="${b.lastProfit < 0 ? 'neg' : 'pos'}">${U.fmtMoney(b.lastProfit)}</span></span></span><span>${U.fmtMoney(b.equity)}</span></li>`;
+        html += `<li><span><b>${esc(b.name)}</b> <span class="muted">${esc(G(b.typeDef.name))} · ${Math.round(p.shares[b.id] * 100)}%${b.managerId === p.id ? ` · ${esc(T('pn.manager'))}` : ''}${b.booms ? ` · ${esc(T('pn.booms', { count: b.booms }))}` : ''}</span><br><span class="muted">${T('pn.revenue', { rev: U.fmtMoney(b.lastRevenue), profit: `<span class="${b.lastProfit < 0 ? 'neg' : 'pos'}">${U.fmtMoney(b.lastProfit)}</span>` })}</span></span><span>${U.fmtMoney(b.equity)}</span></li>`;
       }
-      for (const b of founded.slice(-4)) html += `<li><span class="muted">${esc(b.name)} — ${esc(b.closeReason || 'closed')} ${b.closedDay !== null ? U.fmtMonthYear(b.closedDay) : ''}</span><span class="muted">peak ${U.fmtMoney(b.peakEquity)}</span></li>`;
+      for (const b of founded.slice(-4)) html += `<li><span class="muted">${esc(b.name)} — ${esc(G(b.closeReason || 'closed'))} ${b.closedDay !== null ? U.fmtMonthYear(b.closedDay) : ''}</span><span class="muted">${esc(T('pn.peak', { amt: U.fmtMoney(b.peakEquity) }))}</span></li>`;
       html += '</ul></div>';
     }
 
     // Family
     const fam = [];
-    if (p.partnerId !== null) fam.push(['Partner', UI.plink(w, p.partnerId)]);
-    if (p.exPartners.length) fam.push(['Former partners', p.exPartners.map(id => UI.plink(w, id)).join(', ')]);
-    if (p.parents.length) fam.push(['Parents', p.parents.map(id => UI.plink(w, id)).join(' & ')]);
-    if (p.children.length) fam.push(['Children', p.children.map(id => `${UI.plink(w, id)} <span class="muted">(${Math.floor(P.age(w, w.people[id]))})</span>`).join(', ')]);
-    if (!p.adult && p.caregivers.length) fam.push(['Raised by', p.caregivers.map(id => UI.plink(w, id)).join(', ')]);
-    if (p.stratHist.length > 1) fam.push(['Strategy history', p.stratHist.map(s => `${C.STRATEGY_NAMES[s.strategy]} <span class="muted">(${U.fmtMonthYear(s.day < 0 ? 0 : s.day)}${s.reason !== 'founder' ? ', ' + esc(s.reason) : ''})</span>`).join(' → ')]);
+    if (p.partnerId !== null) fam.push([T('pn.f.partner'), UI.plink(w, p.partnerId)]);
+    if (p.exPartners.length) fam.push([T('pn.f.ex'), p.exPartners.map(id => UI.plink(w, id)).join(', ')]);
+    if (p.parents.length) fam.push([T('pn.f.parents'), p.parents.map(id => UI.plink(w, id)).join(' & ')]);
+    if (p.children.length) fam.push([T('pn.f.children'), p.children.map(id => `${UI.plink(w, id)} <span class="muted">(${Math.floor(P.age(w, w.people[id]))})</span>`).join(', ')]);
+    if (!p.adult && p.caregivers.length) fam.push([T('pn.f.raised'), p.caregivers.map(id => UI.plink(w, id)).join(', ')]);
+    if (p.stratHist.length > 1) fam.push([T('pn.f.strat'), p.stratHist.map(s => `${esc(G(C.STRATEGY_NAMES[s.strategy]))} <span class="muted">(${U.fmtMonthYear(s.day < 0 ? 0 : s.day)}${s.reason !== 'founder' ? ', ' + esc(G(s.reason)) : ''})</span>`).join(' → ')]);
     const dyn = LES.Extras.dynasty(w, p);
-    if (dyn.total) fam.push(['Dynasty', `${dyn.total} descendants (${dyn.living} alive) · ${U.fmtMoney(dyn.wealth)} combined`]);
-    if (fam.length) html += `<div class="card"><h3>Family</h3>${p.parents.length || p.children.length || p.partnerId !== null || p.exPartners.length ? LES.Extras.familyTreeSvg(w, p) : ''}<ul class="list-plain">${fam.map(([k, v]) => `<li><span class="muted">${k}</span><span style="text-align:right">${v}</span></li>`).join('')}</ul></div>`;
+    if (dyn.total) fam.push([T('pn.f.dynasty'), esc(T('pn.dynasty', { total: dyn.total, living: dyn.living, amt: U.fmtMoney(dyn.wealth) }))]);
+    if (fam.length) html += `<div class="card"><h3>${esc(T('pn.family'))}</h3>${p.parents.length || p.children.length || p.partnerId !== null || p.exPartners.length ? LES.Extras.familyTreeSvg(w, p) : ''}<ul class="list-plain">${fam.map(([k, v]) => `<li><span class="muted">${esc(k)}</span><span style="text-align:right">${v}</span></li>`).join('')}</ul></div>`;
 
     // Life story
     const entries = p.log.slice().reverse().slice(0, 150);
-    html += `<div class="card"><h3>Life story <small class="muted">${p.log.length} events</small></h3><ul class="list-plain story">
-      ${entries.map(x => `<li class="imp${x.imp}"><span class="when">${U.fmtMonthYear(x.day)}<br>age ${Math.floor((x.day - p.birthDay) / 365)}</span><span class="what">${esc(x.text)}</span></li>`).join('')}</ul></div>`;
+    html += `<div class="card"><h3>${esc(T('pn.lifeStory'))} <small class="muted">${esc(T('pn.events', { count: p.log.length }))}</small></h3><ul class="list-plain story">
+      ${entries.map(x => `<li class="imp${x.imp}"><span class="when">${U.fmtMonthYear(x.day)}<br>${esc(T('pn.age', { age: Math.floor((x.day - p.birthDay) / 365) }))}</span><span class="what">${esc(LES.I18n.render(x.text))}</span></li>`).join('')}</ul></div>`;
 
     if (app.pinned >= 0 && app.pinned !== p.id && w.people[app.pinned]) {
       const cut = html.indexOf('<div class="card">');
@@ -407,7 +410,7 @@
     if (cn) {
       const data = p.nwHist.map(([d, v]) => [d / 365, Math.max(0, v)]);
       if (p.alive) data.push([w.day / 365, Math.max(0, p.nw)]);
-      LES.Charts.line(cn, { series: [{ label: 'Net worth (log)', color: '#f2c14e', data }], logY: true, yFmt: LES.Charts.fmtAxisMoney, xFmt: x => `Y${Math.floor(x) + 1}`, bands: UI.regimeBands(w) });
+      LES.Charts.line(cn, { series: [{ label: T('pn.chart.nw'), color: '#f2c14e', data }], logY: true, yFmt: LES.Charts.fmtAxisMoney, xFmt: x => `Y${Math.floor(x) + 1}`, bands: UI.regimeBands(w) });
     }
     const ca = $('chart-att');
     if (ca) {
@@ -418,8 +421,8 @@
 
   // Short help: the full welcome before the first day; afterwards a "?" toggle on the glance card.
   UI.helpHtml = function (w) {
-    return `<p style="margin:0 0 6px">${w.cfg.founders} strangers each try to reach <b class="gold">${U.fmtMoney(w.goal)}</b>. Nobody is controlled: every choice is a weighted dice roll from their personality, strategy, needs and money.</p>
-      <p class="muted" style="margin:0">Click anyone on the map, or pick someone from a list. Keys: <b>Space</b> play/pause, <b>1–7</b> speed, <b>S</b> step one day, <b>F</b> follow the selected person, <b>T</b> turbo, <b>P</b> add a person, <b>Esc</b> close.</p>`;
+    return `<p style="margin:0 0 6px">${T('pn.help1', { count: w.cfg.founders, goal: `<b class="gold">${U.fmtMoney(w.goal)}</b>` })}</p>
+      <p class="muted" style="margin:0">${T('pn.help2Html')}</p>`;
   };
 
   UI.welcomeHtml = function () {
@@ -427,13 +430,13 @@
     const adults = w.living.filter(p => p.alive && p.adult && !p.away);
     const young = adults.filter(p => P.age(w, p) < 21).sort((a, b) => (P.age(w, a) - P.age(w, b)) || (a.id - b.id)).slice(0, 3);
     const ent = adults.filter(p => p.strategy === 'ENT').slice(0, 2);
-    const pick = arr => arr.map(p => `<li><span>${UI.plink(w, p.id)} <span class="muted">${Math.floor(P.age(w, p))} · ${C.STRATEGY_NAMES[p.strategy]}</span></span><span>${U.fmtMoney(p.nw)}</span></li>`).join('');
-    const extra = `${young.length ? `<div class="card"><h3>Youngest adults</h3><ul class="list-plain">${pick(young)}</ul></div>` : ''}
-      ${ent.length ? `<div class="card"><h3>Would-be entrepreneurs</h3><ul class="list-plain">${pick(ent)}</ul></div>` : ''}`;
+    const pick = arr => arr.map(p => `<li><span>${UI.plink(w, p.id)} <span class="muted">${Math.floor(P.age(w, p))} · ${esc(G(C.STRATEGY_NAMES[p.strategy]))}</span></span><span>${U.fmtMoney(p.nw)}</span></li>`).join('');
+    const extra = `${young.length ? `<div class="card"><h3>${esc(T('pn.youngest'))}</h3><ul class="list-plain">${pick(young)}</ul></div>` : ''}
+      ${ent.length ? `<div class="card"><h3>${esc(T('pn.wouldBe'))}</h3><ul class="list-plain">${pick(ent)}</ul></div>` : ''}`;
     if (w.lastDay < 1) { // before the first day: the welcome
       const rich = adults.slice().sort((a, b) => b.nw - a.nw).slice(0, 3);
-      return `<div class="card"><h3>Welcome to ${esc(LES.townName(w))}</h3>${UI.helpHtml(w)}</div>
-        <div class="card"><h3>Richest right now</h3><ul class="list-plain">${pick(rich)}</ul></div>${extra}`;
+      return `<div class="card"><h3>${esc(T('pn.welcome', { town: LES.townName(w) }))}</h3>${UI.helpHtml(w)}</div>
+        <div class="card"><h3>${esc(T('pn.richestNow'))}</h3><ul class="list-plain">${pick(rich)}</ul></div>${extra}`;
     }
     return UI.glanceHtml(w) + extra;
   };
@@ -443,31 +446,31 @@
     const app = UI.app, goal = w.goal;
     const race = w.living.filter(p => p.alive && p.adult && !p.away).sort((a, b) => (P.goalWorth(w, b) - P.goalWorth(w, a)) || (a.id - b.id)).slice(0, 3);
     let raceHtml;
-    if (w.winner) raceHtml = `<p style="margin:0">🏆 ${UI.plink(w, w.winner.pid)} reached the goal in Year ${U.dayToDate(w.winner.day).year}, aged ${w.winner.age}.</p>`;
-    else raceHtml = `<ul class="list-plain glance-race">${race.map(p => `<li><span>${UI.plink(w, p.id)} <span class="muted">${Math.floor(P.age(w, p))} · ${C.STRATEGY_NAMES[p.strategy]}</span></span><span>${U.fmtMoney(P.goalWorth(w, p))} <span class="muted">${UI.goalShare(w, P.goalWorth(w, p))}</span></span></li>`).join('')}</ul>`;
+    if (w.winner) raceHtml = `<p style="margin:0">🏆 ${T('pn.reachedGoal', { name: UI.plink(w, w.winner.pid), year: U.dayToDate(w.winner.day).year, age: w.winner.age })}</p>`;
+    else raceHtml = `<ul class="list-plain glance-race">${race.map(p => `<li><span>${UI.plink(w, p.id)} <span class="muted">${Math.floor(P.age(w, p))} · ${esc(G(C.STRATEGY_NAMES[p.strategy]))}</span></span><span>${U.fmtMoney(P.goalWorth(w, p))} <span class="muted">${UI.goalShare(w, P.goalWorth(w, p))}</span></span></li>`).join('')}</ul>`;
     // Big events: the last 7 days, or else the most recent ones.
     const big = w.feed.filter(e => e.imp >= 2);
-    let recent = big.filter(e => e.day >= w.lastDay - 6), evTitle = 'This week';
-    if (!recent.length) { recent = big; evTitle = 'Latest big events'; }
+    let recent = big.filter(e => e.day >= w.lastDay - 6), evTitle = T('pn.thisWeek');
+    if (!recent.length) { recent = big; evTitle = T('pn.latestBig'); }
     recent = recent.slice(-4).reverse();
-    const evHtml = recent.length ? `<ul class="list-plain glance-ev">${recent.map(e => `<li${e.pid >= 0 ? ` data-pid="${e.pid}" class="clickable"` : ''}><span>${CAT_ICON[e.cat] || '•'} ${e.pid >= 0 ? `<b>${esc(P.name(w.people[e.pid]))}</b>: ` : ''}${esc(e.text)}</span><span class="muted">${U.fmtDate(e.day)}</span></li>`).join('')}</ul>` : '<p class="muted" style="margin:0">Nothing big has happened yet.</p>';
+    const evHtml = recent.length ? `<ul class="list-plain glance-ev">${recent.map(e => `<li${e.pid >= 0 ? ` data-pid="${e.pid}" class="clickable"` : ''}><span>${CAT_ICON[e.cat] || '•'} ${e.pid >= 0 ? `<b>${esc(P.name(w.people[e.pid]))}</b>: ` : ''}${esc(LES.I18n.render(e.text))}</span><span class="muted">${U.fmtDate(e.day)}</span></li>`).join('')}</ul>` : `<p class="muted" style="margin:0">${esc(T('pn.nothingBig'))}</p>`;
     // Trends: now vs. about a year ago (monthly snapshots).
     const h = w.history, last = h[h.length - 1], then = h[Math.max(0, h.length - 13)];
     const empRate = r => { const lf = r.employed + r.unemployed + r.owners; return lf ? (r.employed + r.owners) / lf : 0; };
     const delta = (a, b, fmt, downIsGood) => { const d = a - b; return d === 0 || !Number.isFinite(d) ? '<span class="muted">±0</span>' : `<span class="${(d > 0) !== !!downIsGood ? 'pos' : 'neg'}">${d > 0 ? '▲' : '▼'} ${fmt(Math.abs(d))}</span>`; };
-    const since = last && then && last !== then ? (h.length > 13 ? 'vs. a year ago' : 'since the start') : '';
+    const since = last && then && last !== then ? (h.length > 13 ? T('pn.vsYear') : T('pn.sinceStart')) : '';
     const trends = last ? `<div class="grid2 glance-trend">
-        <div><span class="muted">People</span><span>${w.counts.living} ${since ? delta(last.pop, then.pop, v => v) : ''}</span></div>
-        <div><span class="muted">In work</span><span>${U.fmtPct(empRate(last))} ${since ? delta(Math.round(empRate(last) * 100), Math.round(empRate(then) * 100), v => v + ' pts') : ''}</span></div>
-        <div><span class="muted">Jobless</span><span>${last.unemployed} ${since ? delta(last.unemployed, then.unemployed, v => v, true) : ''}</span></div>
-        <div><span class="muted">Firms open</span><span>${last.businesses} ${since ? delta(last.businesses, then.businesses, v => v) : ''}</span></div>
-      </div>${since ? `<div class="note">Changes ${since}.</div>` : ''}` : '';
-    return `<div class="card glance"><h3><span>${esc(LES.townName(w))} at a glance</span><button class="ghost help-btn ${UI.helpOpen ? 'on' : ''}" data-ui="help" title="How to watch: a short help" aria-expanded="${UI.helpOpen ? 'true' : 'false'}">?</button></h3>
+        <div><span class="muted">${esc(T('pn.t.people'))}</span><span>${w.counts.living} ${since ? delta(last.pop, then.pop, v => v) : ''}</span></div>
+        <div><span class="muted">${esc(T('pn.t.work'))}</span><span>${U.fmtPct(empRate(last))} ${since ? delta(Math.round(empRate(last) * 100), Math.round(empRate(then) * 100), v => T('pn.pts', { v })) : ''}</span></div>
+        <div><span class="muted">${esc(T('pn.t.jobless'))}</span><span>${last.unemployed} ${since ? delta(last.unemployed, then.unemployed, v => v, true) : ''}</span></div>
+        <div><span class="muted">${esc(T('pn.t.firms'))}</span><span>${last.businesses} ${since ? delta(last.businesses, then.businesses, v => v) : ''}</span></div>
+      </div>${since ? `<div class="note">${esc(T('pn.changes', { since }))}</div>` : ''}` : '';
+    return `<div class="card glance"><h3><span>${esc(T('pn.glance', { town: LES.townName(w) }))}</span><button class="ghost help-btn ${UI.helpOpen ? 'on' : ''}" data-ui="help" title="${esc(T('pn.help.tip'))}" aria-expanded="${UI.helpOpen ? 'true' : 'false'}">?</button></h3>
         ${UI.helpOpen ? `<div class="glance-help">${UI.helpHtml(w)}</div>` : ''}
-        <div class="glance-sec">${w.winner ? 'Goal reached' : `Closest to ${U.fmtMoney(goal)}`}</div>${raceHtml}
-        <div class="glance-sec">${evTitle}</div>${evHtml}
-        <div class="glance-sec">Trends</div>${trends}
-        <p class="muted" style="margin:8px 0 0">Click a name, or anyone on the map, to follow their life.</p></div>`;
+        <div class="glance-sec">${esc(w.winner ? T('pn.goalReached') : T('pn.closest', { amt: U.fmtMoney(goal) }))}</div>${raceHtml}
+        <div class="glance-sec">${esc(evTitle)}</div>${evHtml}
+        <div class="glance-sec">${esc(T('pn.trends'))}</div>${trends}
+        <p class="muted" style="margin:8px 0 0">${esc(T('pn.clickName'))}</p></div>`;
   };
 
   // Person toolbar: the main actions as icon buttons (tooltips + labels for screen readers),
@@ -478,23 +481,23 @@
     const S = LES.Spectator, mk = S ? S.mark(p.id) : null;
     const btn = (act, icon, label, tip, on) => `<button class="tb ${on ? 'on' : ''}" data-act="${act}" title="${esc(tip)}" aria-label="${esc(label)}"${on !== undefined ? ` aria-pressed="${on ? 'true' : 'false'}"` : ''}><span aria-hidden="true">${icon}</span></button>`;
     const main = [];
-    if (p.alive) main.push(btn('follow', '🎥', app.renderer.follow ? 'Stop following' : 'Follow', app.renderer.follow ? 'Following: the camera stays on them (F to stop)' : 'Follow: keep the camera on this person (F)', !!app.renderer.follow));
+    if (p.alive) main.push(btn('follow', '🎥', T(app.renderer.follow ? 'pn.tb.unfollow' : 'pn.tb.follow'), T(app.renderer.follow ? 'pn.tb.unfollow.tip' : 'pn.tb.follow.tip'), !!app.renderer.follow));
     const pinned = app.pinned === p.id;
-    main.push(btn(pinned ? 'unpin' : 'pin', '⚖️', pinned ? 'Unpin from compare' : 'Compare', pinned ? 'Pinned for comparing: select someone else to see them side by side (click to unpin)' : 'Compare: pin this person, then select someone else to see them side by side', pinned));
+    main.push(btn(pinned ? 'unpin' : 'pin', '⚖️', T(pinned ? 'pn.tb.unpin' : 'pn.tb.pin'), T(pinned ? 'pn.tb.unpin.tip' : 'pn.tb.pin.tip'), pinned));
     if (S) {
-      main.push(btn('spotlight', '🔦', 'Spotlight', 'Spotlight: dim the map around this person (spectator tools only watch: nothing in the simulation changes)', S.spotlight === p.id));
-      main.push(btn('bookmark', '🔖', 'Bookmark', 'Bookmark this person (kept in this browser for this seed; see Leaders → Bookmarks)', !!(mk && !mk.family)));
+      main.push(btn('spotlight', '🔦', T('pn.tb.spot'), T('pn.tb.spot.tip'), S.spotlight === p.id));
+      main.push(btn('bookmark', '🔖', T('pn.tb.mark'), T('pn.tb.mark.tip'), !!(mk && !mk.family)));
     }
     const more = [];
     if (S) {
-      more.push(`<button role="menuitemcheckbox" aria-checked="${mk && mk.family ? 'true' : 'false'}" class="${mk && mk.family ? 'on' : ''}" data-act="bookmarkFamily" title="Bookmark this person with partner, parents and children">👪 Bookmark family${mk && mk.family ? ' ✓' : ''}</button>`);
-      if (p.alive) more.push('<button role="menuitem" data-act="celebrate" title="Confetti on the map (just for show)">🎉 Celebrate</button>');
+      more.push(`<button role="menuitemcheckbox" aria-checked="${mk && mk.family ? 'true' : 'false'}" class="${mk && mk.family ? 'on' : ''}" data-act="bookmarkFamily" title="${esc(T('pn.tb.markFam.tip'))}">👪 ${esc(T('pn.tb.markFam'))}${mk && mk.family ? ' ✓' : ''}</button>`);
+      if (p.alive) more.push(`<button role="menuitem" data-act="celebrate" title="${esc(T('pn.tb.party.tip'))}">🎉 ${esc(T('pn.tb.party'))}</button>`);
     }
-    if (p.alive && LES.God) more.push('<button role="menuitem" data-act="fate" title="Sandbox: end this person&#39;s life (asks first; marks the world as intervened)">⚠️ Fate…</button>');
+    if (p.alive && LES.God) more.push(`<button role="menuitem" data-act="fate" title="${esc(T('pn.tb.fate.tip'))}">⚠️ ${esc(T('pn.tb.fate'))}</button>`);
     const moreHtml = more.length ? `<div class="p-more">
-        <button class="tb more ${UI.moreOpen ? 'on' : ''}" data-ui="more" aria-haspopup="menu" aria-expanded="${UI.moreOpen ? 'true' : 'false'}" title="More actions">More ▾</button>
+        <button class="tb more ${UI.moreOpen ? 'on' : ''}" data-ui="more" aria-haspopup="menu" aria-expanded="${UI.moreOpen ? 'true' : 'false'}" title="${esc(T('pn.tb.more.tip'))}">${esc(T('pn.tb.more'))} ▾</button>
         ${UI.moreOpen ? `<div class="p-more-menu" role="menu">${more.join('')}</div>` : ''}</div>` : '';
-    return `<div class="p-toolbar" role="toolbar" aria-label="Actions for ${esc(P.name(p))}">${main.join('')}${moreHtml}<span class="sp"></span>${btn('deselect', '✕', 'Close', 'Close (Esc)')}</div>`;
+    return `<div class="p-toolbar" role="toolbar" aria-label="${esc(T('pn.tb.aria', { name: P.name(p) }))}">${main.join('')}${moreHtml}<span class="sp"></span>${btn('deselect', '✕', T('pn.tb.close'), T('pn.tb.close.tip'))}</div>`;
   };
   // Re-renders replace the panel's HTML: keep keyboard focus on the same control.
   UI.focusKey = function (el) {
@@ -541,9 +544,9 @@
     grip.id = 'side-grip';
     grip.setAttribute('role', 'separator');
     grip.setAttribute('aria-orientation', 'vertical');
-    grip.setAttribute('aria-label', 'Resize the side panel');
+    grip.setAttribute('aria-label', T('pn.grip'));
     grip.tabIndex = 0;
-    grip.title = 'Drag to resize the panel (double-click to reset)';
+    grip.title = T('pn.grip.tip');
     side.prepend(grip);
     const maxW = () => Math.max(SIDE_MIN, Math.min(900, window.innerWidth * 0.6));
     let raf = 0;
@@ -573,14 +576,14 @@
 
   // ---------------- Leaderboard ----------------
   // Key to the coloured squares in the lists: each person's money strategy.
-  UI.strategyLegend = () => `<div class="lb-legend" title="The coloured square next to each name is that person's money strategy"><b>Strategy:</b> ${C.STRATEGIES.map(st => `<span><i style="background:${C.STRATEGY_COLORS[st]}"></i>${C.STRATEGY_NAMES[st]}</span>`).join('')}</div>`;
+  UI.strategyLegend = () => `<div class="lb-legend" title="${esc(T('pn.legend.tip'))}"><b>${esc(T('pn.legend'))}</b> ${C.STRATEGIES.map(st => `<span><i style="background:${C.STRATEGY_COLORS[st]}"></i>${esc(G(C.STRATEGY_NAMES[st]))}</span>`).join('')}</div>`;
   UI.renderLeaders = function (force) {
     const app = UI.app, w = app.world;
     if (UI.lbMode === 'cast' && UI.renderCast) { UI.renderCast(force); return; } // My cast (js/ui/cast-ui.js)
     if (UI.lbMode === 'marks' && LES.Spectator) { // bookmarks (spectator tools)
       LES.Spectator.sync(w);
       const ms = LES.Spectator.marks.filter(m => w.people[m.id]);
-      $('lb-list').innerHTML = ms.length ? UI.strategyLegend() + ms.map(m => { const p = w.people[m.id]; return `<div class="lb-row ${p.id === app.selected ? 'sel' : ''}" data-pid="${p.id}"><span class="rank">🔖</span><span class="dot" style="background:${C.STRATEGY_COLORS[p.strategy]}"></span><span><div class="nm">${esc(P.name(p))}${m.family ? ' <span class="muted">+ family</span>' : ''}</div><div class="sub">${Math.floor(P.age(w, p))} yrs · bookmarked Y${U.dayToDate(m.day).year}</div></span><span class="val">${p.alive ? (p.away ? 'away' : U.fmtMoney(p.nw)) : 'died'}</span></div>`; }).join('') : '<p class="note">No bookmarks yet. Select someone and press Bookmark (or Bookmark family). Bookmarks are kept in this browser for this seed.</p>';
+      $('lb-list').innerHTML = ms.length ? UI.strategyLegend() + ms.map(m => { const p = w.people[m.id]; return `<div class="lb-row ${p.id === app.selected ? 'sel' : ''}" data-pid="${p.id}"><span class="rank">🔖</span><span class="dot" style="background:${C.STRATEGY_COLORS[p.strategy]}"></span><span><div class="nm">${esc(P.name(p))}${m.family ? ` <span class="muted">${esc(T('pn.lb.plusFam'))}</span>` : ''}</div><div class="sub">${esc(T('pn.lb.marked', { age: Math.floor(P.age(w, p)), year: U.dayToDate(m.day).year }))}</div></span><span class="val">${p.alive ? (p.away ? esc(T('pn.lb.away')) : U.fmtMoney(p.nw)) : esc(T('pn.lb.died'))}</span></div>`; }).join('') : `<p class="note">${esc(T('pn.lb.noMarks'))}</p>`;
       return;
     }
     const q = $('search').value.trim().toLowerCase();
@@ -614,11 +617,11 @@
     $('lb-list').innerHTML = (list.length ? legend : '') + list.map((p, i) => `
       <div class="lb-row ${p.id === app.selected ? 'sel' : ''}" data-pid="${p.id}">
         <span class="rank ${i < 3 && !q ? 'top' : ''}">${q ? '' : i + 1}</span>
-        <span class="dot" style="background:${C.STRATEGY_COLORS[p.strategy]}" title="${C.STRATEGY_NAMES[p.strategy]}"></span>
-        <span><div class="nm">${p.custom ? '<span class="pos" title="Your cast">★</span> ' : ''}${esc(P.name(p))}${p.alive ? '' : ' <span class="muted">†</span>'}</div>
-          <div class="sub">${Math.floor(P.age(w, p))} yrs · ${p.goal ? `${LES.Goals.DEFS[p.goal.id].icon} ${LES.Goals.DEFS[p.goal.id].name}` : C.STRATEGY_NAMES[p.strategy]} · via ${UI.mainSource(p)}${p.gen ? ` · gen ${p.gen}` : ''}</div></span>
+        <span class="dot" style="background:${C.STRATEGY_COLORS[p.strategy]}" title="${esc(G(C.STRATEGY_NAMES[p.strategy]))}"></span>
+        <span><div class="nm">${p.custom ? `<span class="pos" title="${esc(T('pn.lb.cast'))}">★</span> ` : ''}${esc(P.name(p))}${p.alive ? '' : ' <span class="muted">†</span>'}</div>
+          <div class="sub">${esc(T('pn.lb.sub', { age: Math.floor(P.age(w, p)), what: p.goal ? `${LES.Goals.DEFS[p.goal.id].icon} ${G(LES.Goals.DEFS[p.goal.id].name)}` : G(C.STRATEGY_NAMES[p.strategy]), via: UI.mainSource(p) }))}${p.gen ? ` · ${esc(T('pn.lb.gen', { gen: p.gen }))}` : ''}</div></span>
         <span class="val">${val(p)}</span>
-      </div>`).join('') || '<p class="muted">Nobody matches.</p>';
+      </div>`).join('') || `<p class="muted">${esc(T('pn.lb.none'))}</p>`;
   };
 
   // ---------------- Events feed ----------------
@@ -631,9 +634,9 @@
       if (f === 'cast' ? !(e.pid >= 0 && w.people[e.pid].custom) : f !== 'all' && !(e.cat === f || (f === 'wealth' && e.cat === 'money'))) continue;
       if (f === 'all' && e.cat === 'money' && CUTBACK.test(e.text)) continue; // (old saves) these are under Wealth
       const name = e.pid >= 0 ? `<span class="nm">${esc(P.name(w.people[e.pid]))}</span> — ` : '';
-      rows.push(`<div class="feed-row imp${e.imp}" data-pid="${e.pid}"><span class="when">${U.fmtMonthYear(e.day)}</span><span>${CAT_ICON[e.cat] || '•'}</span><span class="txt">${name}${esc(e.text)}</span></div>`);
+      rows.push(`<div class="feed-row imp${e.imp}" data-pid="${e.pid}"><span class="when">${U.fmtMonthYear(e.day)}</span><span>${CAT_ICON[e.cat] || '•'}</span><span class="txt">${name}${esc(LES.I18n.render(e.text))}</span></div>`);
     }
-    $('feed-list').innerHTML = rows.join('') || '<p class="muted">Nothing yet — press play.</p>';
+    $('feed-list').innerHTML = rows.join('') || `<p class="muted">${esc(T('pn.feed.empty'))}</p>`;
   };
 
   // ---------------- Stats ----------------
@@ -649,8 +652,9 @@
       const crime = t.crime ? Math.round(LES.Crime.rates(t).index) : null;
       return `<tr class="${t === w ? 'on' : ''}"><td><a href="#" data-xtown="${i}" data-xid="-1">${U.esc(LES.townName(t))}</a></td><td>${t.counts.living}</td><td>${h.unemployed !== undefined ? (h.unemployed / Math.max(1, h.unemployed + h.employed + h.owners) * 100).toFixed(1) + '%' : '–'}</td><td>${wages.length ? U.fmtMoney(U.quantile(wages, 0.5)) : '–'}</td><td>${U.fmtMoney(h.median || 0)}</td><td>${t.rentMult ? Math.round(t.rentMult[1] * 100) : 100}</td><td>${crime === null ? '–' : crime}</td><td>${gangCell(t)}</td><td>${com[i]}</td><td>+${inn} / −${out}</td></tr>`;
     }).join('');
-    return `<div class="card"><h3>Towns in the region</h3><div style="overflow-x:auto"><table class="cmp region-cmp"><tr><th>Town</th><th>Pop.</th><th>Jobless</th><th>Pay</th><th>Wealth</th><th>Rent</th><th>Crime</th><th title="Active gangs (chapters of a gang from another town)">Gangs</th><th title="Residents working in another town">Comm.</th><th title="People who moved in / out">In/out</th></tr>${rows}</table></div>
-      <div class="note">One economy and one stock exchange. Households move to the town that suits them better (jobs, rent, prospects), and job openings that find nobody at home are advertised in the other towns, so people commute. Pay and wealth are medians; rent is an index (100 = normal); crime is index crimes per 100k a year; Comm. = residents who work in another town. Click a town to show it.</div></div>`;
+    const th = (k, tip) => `<th${tip ? ` title="${esc(T(`pn.rg.${k}.tip`))}"` : ''}>${esc(T(`pn.rg.${k}`))}</th>`;
+    return `<div class="card"><h3>${esc(T('pn.rg.title'))}</h3><div style="overflow-x:auto"><table class="cmp region-cmp"><tr>${th('town')}${th('pop')}${th('jobless')}${th('pay')}${th('wealth')}${th('rent')}${th('crime')}${th('gangs', 1)}${th('comm', 1)}${th('inout', 1)}</tr>${rows}</table></div>
+      <div class="note">${esc(T('pn.rg.note'))}</div></div>`;
   };
 
   UI.renderStats = function () {
@@ -659,66 +663,60 @@
     const last = h[h.length - 1];
     const st = w.stats;
     const xs = x => `Y${Math.floor(x) + 1}`;
-    const series = (k, label, color) => ({ label, color, data: h.map(r => [r.day / 365, r[k]]) });
+    const series = (k, label, color) => ({ label: T(label), color, data: h.map(r => [r.day / 365, r[k]]) });
     const race = w.living.filter(p => p.alive && p.adult).sort((a, b) => P.goalWorth(w, b) - P.goalWorth(w, a)).slice(0, 5);
     const scn = LES.Scenarios.current(w);
-    el.innerHTML = `${UI.app.region ? '' : `<div class="tab-tools"><button class="ghost" data-act="compare">${LES.icon('compare', 16)} Compare with ${U.esc(LES.Compare.label(w.cfg))}</button></div>`}${UI.regionCard(w)}
-      ${scn ? `<div class="card"><h3><span>${LES.icon(scn.icon, 14)} Scenario: ${U.esc(scn.name)}</span></h3><div class="note">${U.esc(scn.short)}</div><div class="scn-status">${scn.status(w)}</div><canvas class="chart" id="st-scn"></canvas></div>` : ''}
+    el.innerHTML = `${UI.app.region ? '' : `<div class="tab-tools"><button class="ghost" data-act="compare">${LES.icon('compare', 16)} ${esc(T('end.compare', { label: G(LES.Compare.label(w.cfg)) }))}</button></div>`}${UI.regionCard(w)}
+      ${scn ? `<div class="card"><h3><span>${LES.icon(scn.icon, 14)} ${esc(T('pn.st.scenario', { name: G(scn.name) }))}</span></h3><div class="note">${U.esc(G(scn.short))}</div><div class="scn-status">${scn.status(w)}</div><canvas class="chart" id="st-scn"></canvas></div>` : ''}
       <div class="stat-grid">
-        <div class="stat"><div class="v">${last.pop}</div><div class="l">alive (${last.children} kids)</div></div>
-        <div class="stat"><div class="v">${U.fmtMoney(last.median)}</div><div class="l">median net worth</div></div>
-        <div class="stat"><div class="v">${last.millionaires}</div><div class="l">millionaires</div></div>
-        <div class="stat"><div class="v">${st.births}/${st.deaths}</div><div class="l">births / deaths</div></div>
-        <div class="stat"><div class="v">${st.bizStarted}/${st.bizFailed}</div><div class="l">businesses started / failed</div></div>
-        <div class="stat"><div class="v">${st.graduations}</div><div class="l">graduations</div></div>
+        <div class="stat"><div class="v">${last.pop}</div><div class="l">${esc(T('pn.st.alive', { kids: last.children }))}</div></div>
+        <div class="stat"><div class="v">${U.fmtMoney(last.median)}</div><div class="l">${esc(T('pn.st.median'))}</div></div>
+        <div class="stat"><div class="v">${last.millionaires}</div><div class="l">${esc(T('pn.kpi.millionaires'))}</div></div>
+        <div class="stat"><div class="v">${st.births}/${st.deaths}</div><div class="l">${esc(T('pn.st.births'))}</div></div>
+        <div class="stat"><div class="v">${st.bizStarted}/${st.bizFailed}</div><div class="l">${esc(T('pn.st.biz'))}</div></div>
+        <div class="stat"><div class="v">${st.graduations}</div><div class="l">${esc(T('pn.st.grads'))}</div></div>
       </div>
-      <div class="card"><h3>Race to ${U.fmtMoney(w.goal)}${w.cfg.goalMode === 'real' ? ' <small class="muted">Year-1 money</small>' : ''}</h3><ul class="list-plain">
-        ${race.map(p => `<li><span>${UI.plink(w, p.id)} <span class="muted">${Math.floor(P.age(w, p))} · ${C.STRATEGY_NAMES[p.strategy]}</span></span><span>${U.fmtMoney(P.goalWorth(w, p))} <span class="muted">${UI.goalShare(w, P.goalWorth(w, p))}</span></span></li>`).join('')}</ul>
+      <div class="card"><h3>${esc(T('pn.st.race', { amt: U.fmtMoney(w.goal) }))}${w.cfg.goalMode === 'real' ? ` <small class="muted">${esc(T('pn.st.y1'))}</small>` : ''}</h3><ul class="list-plain">
+        ${race.map(p => `<li><span>${UI.plink(w, p.id)} <span class="muted">${Math.floor(P.age(w, p))} · ${esc(G(C.STRATEGY_NAMES[p.strategy]))}</span></span><span>${U.fmtMoney(P.goalWorth(w, p))} <span class="muted">${UI.goalShare(w, P.goalWorth(w, p))}</span></span></li>`).join('')}</ul>
         ${UI.firstsHtml(w)}
-        ${w.winner ? `<div class="note">🏆 First to the goal: ${UI.plink(w, w.winner.pid)} in Y${U.dayToDate(w.winner.day).year} at age ${w.winner.age}.</div>` : ''}</div>
-      <div class="card"><h3>Life goals <small class="muted">achieved so far · median happiness ${Math.round(last.happy || 0)}/100</small></h3><canvas class="chart" id="st-goals"></canvas>
-        <div class="note">Not everyone is chasing money: each person has their own goal. Bars show how many times each goal has been achieved in this world.</div></div>
-      <div class="card"><h3>Happiness <small class="muted">median adult, 0-100</small></h3><canvas class="chart" id="st-happy"></canvas></div>
-      <div class="card"><h3>Wealth <small class="muted">adults, Year-1 money, log · shading = boom / recession</small></h3><canvas class="chart tall" id="st-wealth"></canvas></div>
-      <div class="card"><h3>Median net worth by strategy <small class="muted">adults 30+, today</small></h3><canvas class="chart" id="st-strat"></canvas>
-        <div class="note">Exploratory only: one world, and people also differ in age, ability and luck. To test a pattern, compare several seeds (Stats → Compare, or a new town with another seed).</div></div>
-      <div class="card"><h3>Population</h3><canvas class="chart" id="st-pop"></canvas></div>
-      <div class="card"><h3>Work</h3><canvas class="chart" id="st-work"></canvas></div>
-      <div class="card"><h3>${LES.Countries.pack.names.exchange} <small class="muted">index (log) · town influence now ${(w.mkt.alpha * 100).toFixed(1)}%</small></h3><canvas class="chart" id="st-mkt"></canvas>
-        <div class="note">${st.panicSells} panic sell-offs so far. Town influence = residents' holdings ÷ (holdings + ${U.sym()}${(w.cfg.marketOutsideRM / 1e6).toFixed(0)}M outside market), capped at ${w.cfg.marketInfluenceCap}%.</div></div>
-      <div class="card"><h3>Prices & inflation <small class="muted">prices ×${w.price.toFixed(2)} since Year 1</small></h3><canvas class="chart" id="st-infl"></canvas></div>
-      <div class="card"><h3>Migration <small class="muted">pressure ${w.townMood.pressure.toFixed(2)} · opportunity ${w.townMood.opportunity.toFixed(2)} · homes ${(w.crowding * 100).toFixed(0)}% full</small></h3><canvas class="chart" id="st-mig"></canvas>
-        <div class="grid2"><div><span class="muted">Moved in</span><span>${st.immigrants}</span></div><div><span class="muted">Moved out</span><span>${st.emigrants}</span></div><div><span class="muted">Came back</span><span>${st.returns}</span></div><div><span class="muted">Living away now</span><span>${w.counts.away || 0}</span></div></div></div>
-      <div class="card"><h3>Life events so far</h3><div class="grid2">
-        <div><span class="muted">Couples formed</span><span>${st.couples}</span></div><div><span class="muted">Break-ups</span><span>${st.breakups}</span></div>
-        <div><span class="muted">Twins</span><span>${st.twins}</span></div><div><span class="muted">Welfare children</span><span>${st.welfareKids}</span></div>
-        <div><span class="muted">Hires</span><span>${st.hires}</span></div><div><span class="muted">Promotions</span><span>${st.promotions}</span></div>
-        <div><span class="muted">Laid off / fired</span><span>${st.laidOff}/${st.fired}</span></div><div><span class="muted">Dropouts</span><span>${st.dropouts}</span></div>
-        <div><span class="muted">Scholarships</span><span>${st.scholarships}</span></div><div><span class="muted">Business booms</span><span>${st.booms}</span></div>
-        <div><span class="muted">Bankruptcies</span><span>${st.bankruptcies}</span></div><div><span class="muted">Serious accidents</span><span>${st.catastrophes}</span></div>
-        <div><span class="muted">Illnesses</span><span>${st.illnesses}</span></div><div><span class="muted">Windfalls / scams</span><span>${st.windfalls}/${st.scams}</span></div>
+        ${w.winner ? `<div class="note">🏆 ${T('pn.st.first', { name: UI.plink(w, w.winner.pid), year: U.dayToDate(w.winner.day).year, age: w.winner.age })}</div>` : ''}</div>
+      <div class="card"><h3>${esc(T('pn.st.goals'))} <small class="muted">${esc(T('pn.st.goalsSub', { v: Math.round(last.happy || 0) }))}</small></h3><canvas class="chart" id="st-goals"></canvas>
+        <div class="note">${esc(T('pn.st.goalsNote'))}</div></div>
+      <div class="card"><h3>${esc(T('pn.happiness'))} <small class="muted">${esc(T('pn.st.happySub'))}</small></h3><canvas class="chart" id="st-happy"></canvas></div>
+      <div class="card"><h3>${esc(T('pn.st.wealth'))} <small class="muted">${esc(T('pn.st.wealthSub'))}</small></h3><canvas class="chart tall" id="st-wealth"></canvas></div>
+      <div class="card"><h3>${esc(T('pn.st.byStrat'))} <small class="muted">${esc(T('pn.st.byStratSub'))}</small></h3><canvas class="chart" id="st-strat"></canvas>
+        <div class="note">${esc(T('pn.st.byStratNote'))}</div></div>
+      <div class="card"><h3>${esc(T('pn.st.pop'))}</h3><canvas class="chart" id="st-pop"></canvas></div>
+      <div class="card"><h3>${esc(T('pn.st.work'))}</h3><canvas class="chart" id="st-work"></canvas></div>
+      <div class="card"><h3>${esc(LES.Countries.pack.names.exchange)} <small class="muted">${esc(T('pn.st.mktSub', { pct: (w.mkt.alpha * 100).toFixed(1) }))}</small></h3><canvas class="chart" id="st-mkt"></canvas>
+        <div class="note">${esc(T('pn.st.mktNote', { n: st.panicSells, out: `${U.sym()}${(w.cfg.marketOutsideRM / 1e6).toFixed(0)}M`, cap: w.cfg.marketInfluenceCap }))}</div></div>
+      <div class="card"><h3>${esc(T('pn.st.prices'))} <small class="muted">${esc(T('pn.st.pricesSub', { x: w.price.toFixed(2) }))}</small></h3><canvas class="chart" id="st-infl"></canvas></div>
+      <div class="card"><h3>${esc(T('pn.st.mig'))} <small class="muted">${esc(T('pn.st.migSub', { p: w.townMood.pressure.toFixed(2), o: w.townMood.opportunity.toFixed(2), full: (w.crowding * 100).toFixed(0) }))}</small></h3><canvas class="chart" id="st-mig"></canvas>
+        <div class="grid2"><div><span class="muted">${esc(T('pn.st.in'))}</span><span>${st.immigrants}</span></div><div><span class="muted">${esc(T('pn.st.out'))}</span><span>${st.emigrants}</span></div><div><span class="muted">${esc(T('pn.st.back'))}</span><span>${st.returns}</span></div><div><span class="muted">${esc(T('pn.st.awayNow'))}</span><span>${w.counts.away || 0}</span></div></div></div>
+      <div class="card"><h3>${esc(T('pn.st.events'))}</h3><div class="grid2">
+        ${[['couples', st.couples], ['breakups', st.breakups], ['twins', st.twins], ['welfareKids', st.welfareKids], ['hires', st.hires], ['promotions', st.promotions], ['laidOff', `${st.laidOff}/${st.fired}`], ['dropouts', st.dropouts], ['scholarships', st.scholarships], ['booms', st.booms], ['bankruptcies', st.bankruptcies], ['accidents', st.catastrophes], ['illnesses', st.illnesses], ['windfalls', `${st.windfalls}/${st.scams}`]].map(([k, v]) => `<div><span class="muted">${esc(T(`pn.ev.${k}`))}</span><span>${v}</span></div>`).join('')}
       </div></div>
-      <p><button class="ghost" data-act="csv">Export everyone as CSV</button> <button class="ghost" data-act="report">Open full report</button></p>
-      <p class="note">Results describe outcomes of this simulation under its specified assumptions and random seed (“${esc(w.cfg.seed)}”); they do not establish universal real-world causes of success.</p>`;
+      <p><button class="ghost" data-act="csv">${esc(T('pn.st.csv'))}</button> <button class="ghost" data-act="report">${esc(T('pn.st.report'))}</button></p>
+      <p class="note">${esc(T('pn.st.disclaimer', { seed: w.cfg.seed }))}</p>`;
     if (scn && $('st-scn')) LES.Charts.line($('st-scn'), { series: scn.series(h), xFmt: xs, yMin: scn.logY ? undefined : 0, logY: !!scn.logY, yFmt: scn.logY ? LES.Charts.fmtAxisMoney : undefined });
     LES.Charts.line($('st-wealth'), {
-      series: [series('top', 'Richest', '#f2c14e'), series('p90', 'Top 10%', '#3ec7b5'), series('median', 'Median', '#5aa9e6')].map(s => ({ ...s, data: s.data.map(([x, y]) => [x, Math.max(0, y)]) })),
+      series: [series('top', 'pn.ch.richest', '#f2c14e'), series('p90', 'pn.ch.top10', '#3ec7b5'), series('median', 'pn.ch.median', '#5aa9e6')].map(s => ({ ...s, data: s.data.map(([x, y]) => [x, Math.max(0, y)]) })),
       logY: true, yFmt: LES.Charts.fmtAxisMoney, xFmt: xs, bands: UI.regimeBands(w),
     });
     const GD = LES.Goals.DEFS;
     const goalIds = LES.Goals.IDS.filter(id => LES.C.expOn(w, GD[id])), gc = $('st-goals');
     if (gc) gc.style.height = (goalIds.length * 22 + 8) + 'px'; // one roomy row per goal
-    LES.Charts.bars(gc, goalIds.map(id => ({ label: `${GD[id].icon} ${GD[id].name}`, value: st.goalsAchieved[id] || 0, color: '#f2c14e' })), v => String(v));
-    LES.Charts.line($('st-happy'), { series: [{ label: 'Median happiness', color: '#f2c14e', data: h.filter(r => r.happy !== undefined).map(r => [r.day / 365, r.happy]) }], xFmt: xs, yMin: 0 });
-    LES.Charts.bars($('st-strat'), C.STRATEGIES.map(s => ({ label: C.STRATEGY_NAMES[s], value: last.stratMedian[s], color: C.STRATEGY_COLORS[s] })), v => U.fmtMoney(v));
-    LES.Charts.line($('st-pop'), { series: [series('pop', 'Total', '#e8edf2'), series('adults', 'Adults', '#5aa9e6'), series('children', 'Children', '#f28482')], xFmt: xs, yMin: 0 });
+    LES.Charts.bars(gc, goalIds.map(id => ({ label: `${GD[id].icon} ${G(GD[id].name)}`, value: st.goalsAchieved[id] || 0, color: '#f2c14e' })), v => String(v));
+    LES.Charts.line($('st-happy'), { series: [{ label: T('pn.ch.medHappy'), color: '#f2c14e', data: h.filter(r => r.happy !== undefined).map(r => [r.day / 365, r.happy]) }], xFmt: xs, yMin: 0 });
+    LES.Charts.bars($('st-strat'), C.STRATEGIES.map(s => ({ label: G(C.STRATEGY_NAMES[s]), value: last.stratMedian[s], color: C.STRATEGY_COLORS[s] })), v => U.fmtMoney(v));
+    LES.Charts.line($('st-pop'), { series: [series('pop', 'pn.ch.total', '#e8edf2'), series('adults', 'pn.ch.adults', '#5aa9e6'), series('children', 'pn.ch.children', '#f28482')], xFmt: xs, yMin: 0 });
     const mk = w.mkt, step = Math.max(1, Math.floor(mk.idxHist.length / 600));
     const idxData = [];
     for (let i = 0; i < mk.idxHist.length; i += step) idxData.push([mk.dayHist[i] / 365, mk.idxHist[i]]);
-    LES.Charts.line($('st-mkt'), { series: [{ label: `${LES.Countries.pack.names.exchangeShort} index`, color: '#57d38c', data: idxData }], logY: true, yFmt: v => v.toFixed(0), xFmt: xs, bands: UI.regimeBands(w) });
-    LES.Charts.line($('st-infl'), { series: [{ label: 'Inflation %/yr', color: '#f4a261', data: h.map(r => [r.day / 365, (r.infl || 0) * 100]) }, { label: 'Price level ×', color: '#e8edf2', data: h.map(r => [r.day / 365, r.price || 1]) }], xFmt: xs, yFmt: v => v.toFixed(1) });
-    LES.Charts.line($('st-mig'), { series: [series('migrants', 'Migrant adults in town', '#5aa9e6'), series('away', 'Living away', '#ff8c42')], xFmt: xs, yMin: 0 });
-    LES.Charts.line($('st-work'), { series: [series('employed', 'Employed', '#57d38c'), series('unemployed', 'Unemployed', '#ff6b6b'), series('owners', 'Business owners', '#ff8c42'), series('students', 'Students', '#b892ff')], xFmt: xs, yMin: 0 });
+    LES.Charts.line($('st-mkt'), { series: [{ label: T('pn.ch.index', { name: LES.Countries.pack.names.exchangeShort }), color: '#57d38c', data: idxData }], logY: true, yFmt: v => v.toFixed(0), xFmt: xs, bands: UI.regimeBands(w) });
+    LES.Charts.line($('st-infl'), { series: [{ label: T('pn.ch.infl'), color: '#f4a261', data: h.map(r => [r.day / 365, (r.infl || 0) * 100]) }, { label: T('pn.ch.price'), color: '#e8edf2', data: h.map(r => [r.day / 365, r.price || 1]) }], xFmt: xs, yFmt: v => v.toFixed(1) });
+    LES.Charts.line($('st-mig'), { series: [series('migrants', 'pn.ch.migrants', '#5aa9e6'), series('away', 'pn.ch.away', '#ff8c42')], xFmt: xs, yMin: 0 });
+    LES.Charts.line($('st-work'), { series: [series('employed', 'pn.ch.employed', '#57d38c'), series('unemployed', 'pn.ch.unemployed', '#ff6b6b'), series('owners', 'pn.ch.owners', '#ff8c42'), series('students', 'pn.ch.students', '#b892ff')], xFmt: xs, yMin: 0 });
   };
 
   // ---------------- Director mode ----------------

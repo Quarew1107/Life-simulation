@@ -469,6 +469,12 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
       Fate dialog and toast (`fate.*`, plural forms), rename dialog (`rename.*`), end screen (`end.*`), error
       banners (`err.*`). `sheet.js`: the handle's labels. 126 new keys in English and Chinese; English text is
       word-for-word as before. Engine-made text (e.g. "Normal economy", `God.resolve` errors) waits for step 5.
+    - **Step 2 done: person panel, leaderboards, events feed, stats, top-bar figures** (`js/ui/panels.js`,
+      keys `pn.*`, ~240). New glossary `I18n.g(english)`: data names (strategies, attributes, personality,
+      lifestyle levels and effects, economy states, weather, life goals) are translated by their exact English
+      text (`g:<English>` keys), so each country pack's own names work and unknown names stay English. The feed
+      filter buttons redraw on a language switch. Still English (engine-made, step 5): feed and life-story
+      sentences, job titles, the activity in the status line, causes of death.
     - For the native-speaker review: some PL-13 life-moment texts use 他 as a general "they" (common, but
       a reviewer may prefer 其 / TA); the new texts use 其 / 此人.
   - Owner requests, Nov 14 2026 (after PL-12):
