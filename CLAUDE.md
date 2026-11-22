@@ -43,7 +43,10 @@ those first.
 - **PL-14 in progress (plan approved Nov 22 2026):** steps 14.1 (stop budget, whole-life journal) and 14.2 (phone
   layout), 14.3 (family cards, school comparison, story by stage), 14.4 (keys, focus, pop-up cap, Chinese at
   320 px) and 14.5 (live timing: Story = 5 days/s; an 80-year life is about 1 h 55 min to 2 h 10 min) done.
-  **PL-14 is complete and waits for the owner's review.** Next: PL-15, only after the owner's go-ahead. Details in the HANDOFF "Playable Life Mode" item.
+  **PL-14 is complete.**
+- **PL-15 done (Nov 22 2026):** final integration matrix (`playMatrixTests`), full suite 556/556; results and the
+  known issues are in HANDOFF. **Next needs the owner:** PL-16 (Vite website) needs separate approval; PL-17 (full
+  Chinese) has a draft plan in `docs/PL-17_PLAN.md` waiting for approval; merging into `main` is the owner's call. Details in the HANDOFF "Playable Life Mode" item.
   The notes below describe the state before PL-13.
 - **Done:** PL-00 to PL-12, the owner's extra requests, and the My life redesign (steps 1-5).
   - The redesign: view A Hub (the default), B Planner and C Story. Plans are checked before they are

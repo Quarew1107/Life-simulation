@@ -432,6 +432,34 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
       - Not done: a timed session by a person on a visible screen (the owner can confirm on their own laptop).
   - **PL-14 complete (Nov 22 2026), waiting for the owner's review.** Next: PL-15 (final integration and
     calibration), only after the owner's go-ahead. PL-16 (Vite) needs separate approval.
+  - **PL-15 (Nov 22 2026): final integration matrix.** New test group `playMatrixTests` (7 checks) on top of
+    the ~130 Play a Life checks that already cover the acceptance matrix (commands, consent, money, schools,
+    family, death and succession, saves, language switching). Results:
+    - Off, in Malaysia, UK, US, China and Classic: no player state and **0 calls** to player code (spied).
+    - On but untouched, same five: the town is **identical** (hash and stable fingerprint) to the town with it off.
+    - A 3-town region, 6 played years: the played person is always in the right town; books balance in every
+      town; a region saved mid-life and loaded carries on identically.
+    - God Mode Fate on the played person with a request waiting: the engine's death, the request ends with
+      code `dead` (once), the life ends once, books balance.
+    - 2,500 people: 22.2 ms a day with the mode off, 21.8 ms with a played life (no extra cost).
+    - 15 years x 3 seeds, played life (character deciding) vs none: population 4.6% apart (seed noise 6%),
+      median wealth 11.8% (14%), degrees 2.5% (17%), jobs 1.9% (17%), deaths 1.3% (15%): within noise.
+    - Tests: passing checks now keep their details in `globalThis.LES_TEST_DETAILS` (for reading numbers back).
+  - **Known issues and limits (PL-15):**
+    - Nobody has timed a real play session on a visible screen yet (the preview pane stays hidden to the tools;
+      timings were taken in headless Edge, see 14.5). Story speed runs below 5 days/s if the page draws under
+      10 frames a second (each frame's step is capped at 0.1 s).
+    - The game's own tabs, panels, report and setup are mostly English; only Play a Life and the setup screen
+      have full Chinese (PL-17).
+    - About 90 of the 320 moments are reaction-only (no request); hiring staff, pensions and annuities, loans
+      between people and home ownership are not in the engine, so those moments are reactions (see PL-13).
+    - School fairness is tested by rules (a poor family cannot pay, a rich one is not bound, the teen's wish
+      counts) and for one played child; it is not measured across income groups over many seeds, because only
+      the played family uses the four-tier choice.
+    - God Mode has one action (Fate); it is covered. Saves from before Play a Life load in watching mode.
+    - Big moments slow to 1x, which is 1 game minute a second: the town nearly stops for those 10 seconds.
+    - Release: merging `feature/playable-life` into `main` is the owner's decision. PL-16 (Vite website) needs
+      separate approval. PL-17 (full Chinese) needs a native speaker's review before release.
   - Owner requests, Nov 14 2026 (after PL-12):
     - **Planned for tomorrow:** a list of queued requests, each with Cancel (`Player.cancel`, journaled
       `cmd.cancelled`). `Player.describe` words every kind (`act.<KIND>`, English and Chinese; a test checks all

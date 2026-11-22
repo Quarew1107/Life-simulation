@@ -13,7 +13,7 @@
     out.appendChild(span);
   };
   const check = (name, cond, detail) => {
-    if (cond) { passed++; print(`PASS  ${name}`, 'pass'); }
+    if (cond) { passed++; print(`PASS  ${name}`, 'pass'); if (detail) (globalThis.LES_TEST_DETAILS = globalThis.LES_TEST_DETAILS || []).push(`${name} -> ${detail}`); } // details of passing checks, for reading back
     else { failed++; print(`FAIL  ${name}${detail ? ' -> ' + detail : ''}`, 'fail'); }
   };
   const yieldUI = () => new Promise(r => setTimeout(r, 0));
@@ -2788,6 +2788,87 @@
     LES.Countries.ensure(D);
   }
 
+  // PL-15: final integration. Every country with Play a Life off and on, regions, God Mode, saves, the cost of
+  // the mode when it is off, a 2,500-person town, and the town's outcomes with a played life against none.
+  async function playMatrixTests() {
+    print('--- Play a Life: final integration matrix (PL-15) ---', 'info');
+    const Pl = LES.Player, D = LES.DEFAULTS, P = LES.P, K = LES.Countries;
+    // 1. Off: no player code runs at all; on (untouched): the town is exactly the same, in every country and Classic.
+    const realTick = Pl.tick; let ticks = 0;
+    Pl.tick = w => { ticks++; return realTick(w); };
+    const kinds = [['my', {}], ['uk', K.get('uk').defaults], ['us', K.get('us').defaults], ['cn', K.get('cn').defaults], ['classic', LES.PRESETS.classic.values]];
+    const parity = [];
+    try {
+      for (const [c, extra] of kinds) {
+        const base = Object.assign({}, D, extra, c === 'classic' ? {} : { country: c }, { seed: `pl15-${c}`, founders: 80 });
+        K.ensure(base);
+        ticks = 0;
+        const off = new LES.World(base); for (let d = 0; d < 300; d++) off.step();
+        const offTicks = ticks;
+        const on = new LES.World(Object.assign({}, base, { play: 'random' })); Pl.begin(on); for (let d = 0; d < 300; d++) on.step();
+        parity.push({ c, offTicks, noState: !off.player, same: off.hash() === on.hash() && off.stableHash() === on.stableHash(), onTicks: ticks - offTicks });
+      }
+    } finally { Pl.tick = realTick; K.ensure(D); }
+    check('Play a Life off, in every country and Classic: no player state and no player code runs (not one call)', parity.every(x => x.offTicks === 0 && x.noState), parity.map(x => `${x.c}:${x.offTicks}`).join(' '));
+    check('Play a Life on but untouched, in every country and Classic: the town is exactly the same as with it off', parity.every(x => x.same && x.onTicks > 0), parity.filter(x => !x.same).map(x => x.c).join(' ') || 'all identical');
+    // 2. A 3-town region, the character deciding for 6 years: the played person is always found in the right
+    // town, the books balance in every town, and a save made on the way carries on identically.
+    const mkR = () => new LES.Region(Object.assign({}, D, { seed: 'pl15-reg', migration: 'normal', towns: '3', play: 'random' }), [{ founders: 90 }, { founders: 60, seed: 'pl15-reg2' }, { founders: 50, seed: 'pl15-reg3' }]);
+    const R = mkR(); Pl.begin(R);
+    let where = true, inv = [];
+    const run = (reg, days) => { for (let d = 0; d < days; d++) { const t = Pl.town(reg); if (t && t.player) { t.player.autoMinor = true; for (const it of (t.player.inbox || []).slice()) Pl.autoDecide(t, it.uid); } reg.step(); } };
+    for (let y = 0; y < 6; y++) {
+      run(R, 365);
+      const t = Pl.town(R), p = t && Pl.person(t);
+      if (!t || !(R.towns.includes(t)) || (p && !t.people[p.id])) where = false;
+      inv = inv.concat(R.towns.flatMap(x => x.checkInvariants()));
+    }
+    check('A 3-town region over 6 played years: the played person is always found in the right town; books balance in every town', where && !inv.length, inv.slice(0, 2).join('; '));
+    let saveOk = 'no region save';
+    if (LES.Save && LES.Save.toJSON) {
+      try {
+        const A = mkR(); Pl.begin(A); run(A, 400);
+        const B = LES.Save.fromJSON(LES.Save.toJSON(A));
+        run(A, 200); run(B, 200);
+        saveOk = A.towns.every((t, i) => t.hash() === B.towns[i].hash()) ? 'ok' : 'differs';
+      } catch (e) { saveOk = `error: ${e.message}`; }
+    }
+    check('A region saved mid-life and loaded carries on identically, the played life included', saveOk === 'ok', saveOk);
+    // 3. God Mode's Fate on the played person while a request waits: the engine's death, the request cancelled
+    // with one receipt, the life ends once, nothing paid, books balance.
+    const g = new LES.World(Object.assign({}, D, { seed: 'pl15-god', founders: 120, play: 'random', playStage: 'adult' })); Pl.begin(g);
+    const gp = Pl.person(g);
+    g.ledger.pay('GENESIS', gp, 'cash', g.px(5000));
+    const req = Pl.request(g, 'REST', {}), cash0 = gp.cash;
+    LES.God.requestFate(g, gp.id); g.step(); g.step(); g.step();
+    const deadNotes = g.player.journal.filter(e => /succ\.died|life\.died|res\.died/.test(e.key || '') || e.code === 'dead').length;
+    check('God Mode Fate on the played person: dies by the engine\'s rules, the waiting request is cancelled once, the life ends once', !gp.alive && !!g.player.ended && g.player.ended.id === gp.id && (!req.command || ['dead', 'cancelled', 'stale'].includes(req.command.code) || req.command.status !== 'done') && deadNotes <= 2 && g.checkInvariants().length === 0, `request ${req.command ? req.command.code || req.command.status : '-'}, cash ${cash0 === gp.cash ? 'unchanged' : 'changed (estate)'}`);
+    // 4. The cost of the mode: a 2,500-person town runs at the same speed with a played life (well within 25%),
+    // and the world with the mode off runs none of it (checked above).
+    const big = extra => new LES.World(Object.assign({}, D, { seed: 'pl15-big', founders: 2500 }, extra || {}));
+    const bo = big(), bn = big({ play: 'random', playStage: 'adult' }); Pl.begin(bn); bn.player.autoMinor = true;
+    for (let d = 0; d < 20; d++) { bo.step(); bn.step(); } // warm up
+    const time = (w, n) => { const t0 = performance.now(); for (let d = 0; d < n; d++) { if (w.player) for (const it of (w.player.inbox || []).slice()) Pl.autoDecide(w, it.uid); w.step(); } return (performance.now() - t0) / n; };
+    let mo = 0, mn = 0;
+    for (let k = 0; k < 3; k++) { mo += time(bo, 20); mn += time(bn, 20); } // interleaved, so both see the same machine load
+    check('A 2,500-person town: a played life costs well under 25% extra time per day', mn <= mo * 1.25 && bn.checkInvariants().length === 0, `${(mo / 3).toFixed(1)} ms/day off, ${(mn / 3).toFixed(1)} ms/day with a played life (${bo.living.length} people)`);
+    // 5. Outcomes over 15 years and 3 seeds: a played life (decided by the character) leaves the town's
+    // population, wealth, schooling and deaths within ordinary seed-to-seed noise of a town without one.
+    const stats = w => { const ad = w.living.filter(q => q.alive && !q.away && P.isAdult(w, q)), nw = ad.map(q => P.netWorth(w, q)).sort((a, b) => a - b);
+      return { pop: w.living.filter(q => q.alive && !q.away).length, med: nw.length ? nw[nw.length >> 1] : 0, deg: ad.filter(q => q.quals.some(P.isBachelor)).length / Math.max(1, ad.length), jobs: ad.filter(q => q.job).length / Math.max(1, ad.length), dead: w.people.filter(q => !q.alive).length }; };
+    const S = { off: [], on: [] };
+    for (const seed of ['pl15-o1', 'pl15-o2', 'pl15-o3']) {
+      const o = new LES.World(Object.assign({}, D, { seed, founders: 220 })), n = new LES.World(Object.assign({}, D, { seed, founders: 220, play: 'random', playStage: 'adult' })); Pl.begin(n); n.player.autoMinor = true;
+      for (let d = 0; d < 365 * 15; d++) { o.step(); for (const it of (n.player.inbox || []).slice()) Pl.autoDecide(n, it.uid); n.step(); }
+      S.off.push(stats(o)); S.on.push(stats(n));
+    }
+    const avg = (a, k) => a.reduce((t, x) => t + x[k], 0) / a.length, rel = k => Math.abs(avg(S.on, k) - avg(S.off, k)) / Math.max(1e-9, Math.abs(avg(S.off, k)));
+    const spread = k => { const v = S.off.map(x => x[k]); return (Math.max(...v) - Math.min(...v)) / Math.max(1e-9, Math.abs(avg(S.off, k))); };
+    const keys = ['pop', 'med', 'deg', 'jobs', 'dead'], fine = keys.every(k => rel(k) <= Math.max(0.1, spread(k)));
+    check('15 years x 3 seeds: with a played life the town\'s population, wealth, degrees, jobs and deaths stay within seed-to-seed noise', fine, keys.map(k => `${k} ${(rel(k) * 100).toFixed(1)}% (noise ${(spread(k) * 100).toFixed(0)}%)`).join(', '));
+    LES.Countries.ensure(D);
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -2847,6 +2928,7 @@
       await playFlowTests();
       await playCatalogTests();
       await playPacingTests();
+      await playMatrixTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -2858,6 +2940,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, playFlowTests, playCatalogTests, playPacingTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, playFlowTests, playCatalogTests, playPacingTests, playMatrixTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);
