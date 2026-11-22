@@ -1,6 +1,21 @@
 # PL-17 plan: full Simplified Chinese (draft for the owner, Nov 22 2026)
 
-Status: **not started; waiting for the owner's approval.** Written after PL-15 so the next session can start at once.
+Status: **approved by the owner on 22 Nov 2026; not started (no files changed yet).** The owner did not answer the two
+questions below, so use the defaults: the order as written, and mark the Chinese as a draft ("machine draft, not
+reviewed") until a native speaker has checked it.
+
+## Notes for whoever starts step 1
+- `js/core/i18n.js` `I.apply(root)` swaps static markup on a language change, but only `data-i18n` (text) and
+  `data-i18n-title` (tooltip). Add `data-i18n-aria` (aria-label) and `data-i18n-placeholder` first.
+- Buttons with `data-icon` get an SVG icon inserted in front of their text (`js/ui/icons.js`). Setting
+  `textContent` on the button would delete the icon, so wrap the text in `<span data-i18n="...">` (as the My life
+  tab already does). The phone layout hides the text of `#btn-report` / `#btn-save` with `font-size: 0`; keep
+  that working.
+- `js/main.js`: the speed labels and tooltips (`SPEEDS`, about line 9), `MAP_HINT`, the region hint, the speed
+  bar tooltips (`renderSpeed`, about line 267), God Mode's Fate dialog and toast, the town-rename dialog, the end
+  screen, and the error banners. These are drawn by code, so use `LES.I18n.t()` and redraw on a language switch.
+- `js/ui/sheet.js`: the handle's aria-labels ("Raise the panel" / "Lower the panel").
+- The language is switched on the setup screen; after a switch the side panels redraw through `UI.update(true)`.
 
 ## Where things stand
 - The translation system (`LES.I18n`, `js/i18n/en.js`, `js/i18n/zh-Hans.js`) is in place. Every one of the
