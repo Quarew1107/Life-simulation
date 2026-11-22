@@ -151,7 +151,7 @@
       for (; i < log.length; i++) {
         const e = log[i];
         if (level === 'major' && !(e.imp >= 1 || (MAJOR.has(e.cat) && !/^New life goal|^Application|rejected$/.test(e.text)))) continue;
-        if (shown++ < 3) UI.toast(`★ <b>${esc(P.name(p))}</b> — ${esc(e.text)}`, U.fmtDate(e.day), p.id, e.cat === 'death');
+        if (shown++ < 3) UI.toast(`★ <b>${esc(P.name(p))}</b> — ${esc(LES.I18n.render(e.text))}`, U.fmtDate(e.day), p.id, e.cat === 'death');
         if (p.id !== app.selected) LES.Audio.onEvent(Object.assign({ pid: p.id }, e), app, true, true);
       }
     }
@@ -163,7 +163,7 @@
     const app = UI.app, w = app.world, roster = load(), el = $('lb-list');
     if (!force && el.contains(document.activeElement)) return;
     const live = w.people.filter(p => p.custom);
-    const status = p => (!p.alive ? T('ca.s.died', { age: Math.floor(P.age(w, p)) }) : p.away ? T('ca.s.away') : p.inst ? T('ca.s.inst') : p.job ? LES.Labour.title(p.job) : p.manages >= 0 ? T('ca.s.runs', { biz: w.biz[p.manages].name }) : p.retired ? T('ca.s.retired') : p.enrol ? T('ca.s.studying') : T('ca.s.looking'));
+    const status = p => (!p.alive ? T('ca.s.died', { age: Math.floor(P.age(w, p)) }) : p.away ? T('ca.s.away') : p.inst ? T('ca.s.inst') : p.job ? G(LES.Labour.title(p.job)) : p.manages >= 0 ? T('ca.s.runs', { biz: w.biz[p.manages].name }) : p.retired ? T('ca.s.retired') : p.enrol ? T('ca.s.studying') : T('ca.s.looking'));
     el.innerHTML = `<div class="card"><h3>${t('ca.inTown', { town: LES.townName(w) })}</h3>
       <div class="cast-alerts">${t('ca.alerts')} ${sel('cast-alert', [['major', 'Major events'], ['all', 'Everything'], ['off', 'Off']], UI.castAlertLevel())}</div>
       ${live.length ? live.map(p => `<div class="lb-row ${p.id === app.selected ? 'sel' : ''}" data-pid="${p.id}"><span class="rank">★</span><span class="dot" style="background:${C.STRATEGY_COLORS[p.strategy]}"></span>

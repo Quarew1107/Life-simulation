@@ -2869,6 +2869,26 @@
     LES.Countries.ensure(D);
   }
 
+  // PL-17 step 5: the engine's records stay in English (fingerprints and saves read them); in Chinese they are
+  // translated when shown, by sentence patterns.
+  async function i18nSentenceTests() {
+    print('--- Languages: the engine\'s sentences shown in Chinese (PL-17) ---', 'info');
+    const I = LES.I18n, D = LES.DEFAULTS;
+    LES.Countries.ensure(D);
+    const w = new LES.World(Object.assign({}, D, { seed: 'i18n-s', founders: 150 }));
+    for (let d = 0; d < 365 * 8; d++) w.step();
+    const texts = [...w.people.flatMap(p => p.log.map(e => e.text)), ...w.feed.map(e => e.text)];
+    const h0 = w.hash(), s0 = w.stableHash();
+    check('In English every record is shown exactly as the engine wrote it', texts.every(t => I.render(t) === t));
+    await new Promise(r => I.set('zh-Hans', r));
+    const cjk = /[\u4e00-\u9fff]/, shown = texts.map(t => I.render(t)), ok = shown.filter(t => cjk.test(t)).length;
+    const pats = (I.sentencesOf ? I.sentencesOf('zh-Hans') : []);
+    const badPat = pats.filter(([re, tpl]) => { const groups = new RegExp(`${re.source}|`).exec('').length - 1; return (tpl.match(/\{(\d)\}/g) || []).some(x => Number(x[1]) > groups); });
+    await new Promise(r => I.set('en', r));
+    check('In Chinese at least 95% of an 8-year town\'s records read in Chinese; no unfilled {n}; every pattern\'s groups exist', ok / texts.length >= 0.95 && !shown.some(t => /\{\d\}/.test(t)) && pats.length > 100 && !badPat.length, `${ok} of ${texts.length} (${(ok / texts.length * 100).toFixed(1)}%), ${pats.length} patterns${badPat.length ? `, bad: ${badPat[0][0]}` : ''}`);
+    check('Showing records in Chinese changes nothing in the simulation (hash, stable fingerprint, the stored English)', w.hash() === h0 && w.stableHash() === s0 && [...w.people.flatMap(p => p.log.map(e => e.text)), ...w.feed.map(e => e.text)].join('~') === texts.join('~'));
+  }
+
   async function runAll() {
     out.textContent = '';
     passed = 0; failed = 0;
@@ -2929,6 +2949,7 @@
       await playCatalogTests();
       await playPacingTests();
       await playMatrixTests();
+      await i18nSentenceTests();
       await tileTests();
       await determinism();
       await invariantSweep(3, 60);
@@ -2940,6 +2961,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, playFlowTests, playCatalogTests, playPacingTests, playMatrixTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, playFlowTests, playCatalogTests, playPacingTests, playMatrixTests, i18nSentenceTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

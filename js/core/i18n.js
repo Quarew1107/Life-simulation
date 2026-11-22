@@ -49,10 +49,31 @@
   I.missing = () => [...missing];
   // Glossary (PL-17): names that come from the game's data (strategies, lifestyle levels, weather...) are
   // translated by their exact English text, so every country pack's own names work. Unknown: the English as is.
-  I.g = s => (typeof s === 'string' && lang !== 'en' && I.has(`g:${s}`) ? I.t(`g:${s}`) : s);
+  I.g = s => {
+    if (typeof s !== 'string' || lang === 'en') return s;
+    if (I.has(`g:${s}`)) return I.t(`g:${s}`);
+    const m = /^(Senior|Lead|Head|Chief) (.+)$/.exec(s); // a rank before a job title ("Lead Waiter")
+    return m && I.has(`g:${m[2]}`) && I.has(`g:${m[1]} *`) ? I.t(`g:${m[1]} *`, { title: I.t(`g:${m[2]}`) }) : s;
+  };
+  // Sentences (PL-17 step 5): the engine keeps writing plain English into its records (the fingerprints and
+  // saves read that text, so it never changes). When a record is shown in another language, a table of
+  // sentence patterns (js/i18n/<lang>-sentences.js) maps the English sentence to that language: each pattern
+  // is [RegExp, template]; {1}, {2}... in the template are the pattern's groups, each passed through the
+  // glossary (names and numbers come through unchanged). No pattern: the English is shown as it is.
+  const sentences = {};
+  I.sentences = (code, list) => { (sentences[code] = sentences[code] || []).push(...list); };
+  I.sentencesOf = code => (sentences[code] || []).slice();
+  I.sentence = function (s) {
+    if (typeof s !== 'string' || lang === 'en' || !sentences[lang]) return s;
+    for (const [re, tpl] of sentences[lang]) {
+      const m = re.exec(s);
+      if (m) return tpl.replace(/\{(\d)\}/g, (x, n) => (m[n] === undefined ? '' : I.g(m[n])));
+    }
+    return I.g(s); // a short name (an activity, a place) may be in the glossary
+  };
   I.ev = (eventId, part, params) => I.t(`ev.${eventId}.${part}`, params);
   // A saved text record: an old plain English string, or { key, params } written by newer code.
-  I.render = rec => (rec && typeof rec === 'object' && rec.key ? I.t(rec.key, rec.params) : String(rec === undefined || rec === null ? '' : rec));
+  I.render = rec => (rec && typeof rec === 'object' && rec.key ? I.t(rec.key, rec.params) : I.sentence(String(rec === undefined || rec === null ? '' : rec)));
   // Numbers and percentages in the reader's language (money stays with the country pack: U.fmtMoney).
   I.num = (n, opts) => { try { return new Intl.NumberFormat(lang, opts).format(n); } catch (e) { return String(n); } };
 
@@ -69,7 +90,7 @@
     if (code === 'en' || I.loaded(code) || typeof document === 'undefined') { finish(); return; }
     const s = document.createElement('script');
     s.src = `js/i18n/${code}.js`;
-    s.onload = finish;
+    s.onload = () => { const s2 = document.createElement('script'); s2.src = `js/i18n/${code}-sentences.js`; s2.onload = finish; s2.onerror = finish; document.head.appendChild(s2); }; // and its sentence patterns
     s.onerror = () => { code = I.DEFAULT; finish(); };
     document.head.appendChild(s);
   };

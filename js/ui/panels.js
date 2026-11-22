@@ -213,9 +213,9 @@
     else if (p.away) status = `✈️ ${esc(T('pn.away', { town: LES.townName(w), reason: G(p.away.reason) }))}`;
     else if (p.plan && p.plan.length) {
       const s = p.plan[app.dayFrac * 1440 < LES.SLOT_B ? 0 : 1] || p.plan[0];
-      status = `${A.ICONS[s.act] || '•'} ${esc(s.label)}`;
+      status = `${A.ICONS[s.act] || '•'} ${esc(LES.I18n.render(s.label))}`;
     } else status = `🏠 ${esc(T('pn.atHome'))}`;
-    const job = p.job ? T('pn.jobPay', { job: LES.Labour.title(p.job), pay: U.fmtMoney(p.job.salary) }) : p.retired ? T('pn.retired') : p.adult ? T('pn.noJob') : T('pn.child');
+    const job = p.job ? T('pn.jobPay', { job: G(LES.Labour.title(p.job)), pay: U.fmtMoney(p.job.salary) }) : p.retired ? T('pn.retired') : p.adult ? T('pn.noJob') : T('pn.child');
     const chips = [`<span class="chip strat" style="--c:${stratCol}">${esc(G(C.STRATEGY_NAMES[p.strategy]))}</span>`];
     if (!p.alive) chips.push(`<span class="chip dead">${esc(T('pn.chip.dead'))}</span>`);
     if (p.gen === 0 && !p.migrant) chips.push(`<span class="chip">${esc(T('pn.chip.founder'))}</span>`);
@@ -279,7 +279,7 @@
 
     if (p.adult && p.goal) {
       const gd = LES.Goals.DEFS[p.goal.id];
-      const done = p.goalsDone.map(x => `<li><span>${LES.Goals.DEFS[x.id].icon} ${esc(x.text)}</span><span class="muted">age ${x.age}</span></li>`).join('');
+      const done = p.goalsDone.map(x => `<li><span>${LES.Goals.DEFS[x.id].icon} ${esc(LES.I18n.render(x.text))}</span><span class="muted">${esc(T('pn.age', { age: x.age }))}</span></li>`).join('');
       html += `<div class="card"><h3>${esc(T('pn.lifeGoal'))} <small class="muted">${esc(T('pn.since', { date: U.fmtMonthYear(Math.max(0, p.goal.since)) }))}</small></h3>
         <div class="goal-now"><span class="goal-ic">${gd.icon}</span><div><b>${esc(gd.name)}</b><div class="muted">${esc(LES.Goals.text(p.goal))}</div></div></div>
         <div class="progress"><i style="width:${(p.goal.progress * 100).toFixed(1)}%"></i></div>
@@ -293,9 +293,9 @@
       p.why.forEach((s, i) => {
         if (i === 1 && !revealB) { html += `<div class="why-slot"><div class="hd"><span class="muted">${esc(SLOT_NAMES()[1])}</span><span class="muted">${esc(T('pn.decidesAt'))}</span></div></div>`; return; }
         const ok = s.ok === undefined ? '' : s.ok ? ` <span class="pos">✓ ${esc(T('pn.success'))}</span>` : ` <span class="neg">✗ ${esc(T('pn.failed'))}</span>`;
-        html += `<div class="why-slot"><div class="hd"><span class="muted">${esc(SLOT_NAMES()[i])}</span><span>${A.ICONS[s.act] || ''} ${esc(G(s.chosen))}${ok}${s.forced ? ` <span class="neg">(${esc(T('pn.override'))})</span>` : ''}</span></div>`;
+        html += `<div class="why-slot"><div class="hd"><span class="muted">${esc(SLOT_NAMES()[i])}</span><span>${A.ICONS[s.act] || ''} ${esc(LES.I18n.render(s.chosen))}${ok}${s.forced ? ` <span class="neg">(${esc(T('pn.override'))})</span>` : ''}</span></div>`;
         for (const o of s.options.slice().sort((a, b) => b.p - a.p).slice(0, 7)) {
-          html += `<div class="why-opt ${o.label === s.chosen ? 'chosen' : ''}" title="${esc(T('pn.utility', { v: o.u.toFixed(2) }))}"><span>${A.ICONS[o.act || o.id] || ''} ${esc(G(o.label))}</span><div class="track"><i style="width:${(o.p * 100).toFixed(1)}%"></i></div><span class="pct">${(o.p * 100).toFixed(o.p < 0.1 ? 1 : 0)}%</span></div>`;
+          html += `<div class="why-opt ${o.label === s.chosen ? 'chosen' : ''}" title="${esc(T('pn.utility', { v: o.u.toFixed(2) }))}"><span>${A.ICONS[o.act || o.id] || ''} ${esc(LES.I18n.render(o.label))}</span><div class="track"><i style="width:${(o.p * 100).toFixed(1)}%"></i></div><span class="pct">${(o.p * 100).toFixed(o.p < 0.1 ? 1 : 0)}%</span></div>`;
         }
         html += '</div>';
       });
@@ -349,7 +349,7 @@
     }
     if (p.job) {
       career += `<div class="grid2" style="margin-top:6px">
-        <div><span class="muted">${esc(T('pn.job'))}</span><span>${esc(LES.Labour.title(p.job))}</span></div>
+        <div><span class="muted">${esc(T('pn.job'))}</span><span>${esc(G(LES.Labour.title(p.job)))}</span></div>
         <div><span class="muted">${esc(T('pn.salary'))}</span><span>${esc(T('pn.perMonth', { amt: U.fmtMoney(p.job.salary) }))}</span></div>
         <div><span class="muted">${esc(T('pn.shifts'))}</span><span>${p.job.shiftsMonth}/${w.cfg.shiftsPerMonth}</span></div>
         <div><span class="muted">${esc(T('pn.sinceLabel'))}</span><span>${p.job.startDay < 0 ? esc(T('pn.beforeY1')) : U.fmtMonthYear(p.job.startDay)}</span></div></div>`;
@@ -746,8 +746,9 @@
     app.renderer.follow = true;
     const age = Math.floor(P.age(w, p));
     const past = p.log.filter(x => x.day < e.day - 300 && x.imp >= 1).slice(-1)[0];
-    const ctx = past ? `${Math.max(1, Math.round((e.day - past.day) / 365))} years earlier: ${past.text.charAt(0).toLowerCase()}${past.text.slice(1)}.` : `${C.STRATEGY_NAMES[p.strategy]} · net worth ${U.fmtMoney(p.nw)}`;
-    $('caption').innerHTML = `<div class="cap-when">${U.fmtDate(e.day)} · ${esc(P.name(p))}, ${age}</div><div class="cap-text">${esc(e.text)}</div><div class="cap-ctx">${esc(ctx)}</div>`;
+    const pastTxt = past ? (LES.I18n.lang() === 'en' ? `${past.text.charAt(0).toLowerCase()}${past.text.slice(1)}` : LES.I18n.render(past.text)) : '';
+    const ctx = past ? T('pn.dir.earlier', { n: Math.max(1, Math.round((e.day - past.day) / 365)), text: pastTxt }) : T('pn.dir.ctx', { strat: G(C.STRATEGY_NAMES[p.strategy]), amt: U.fmtMoney(p.nw) });
+    $('caption').innerHTML = `<div class="cap-when">${U.fmtDate(e.day)} · ${esc(P.name(p))}, ${age}</div><div class="cap-text">${esc(LES.I18n.render(e.text))}</div><div class="cap-ctx">${esc(ctx)}</div>`;
     $('caption').classList.remove('hidden');
     d.until = now + DIRECTOR_SHOT_MS;
     if (!app.paused && app.speedIdx >= FAST_FROM) {

@@ -91,10 +91,10 @@
 
     const staff = w.living.filter(p => p.alive && p.job && p.job.place === b.id);
     if (staff.length) {
-      cards.push(`<div class="card"><h3>${t('pl.employees')} <small class="muted">${staff.length}</small></h3><ul class="list-plain">${staff.slice(0, 40).map(p => `<li><span>${UI.plink(w, p.id)} <span class="muted">${esc(LES.Labour.title(p.job))}</span></span><span>${t('pn.perMonth', { amt: U.fmtMoney(p.job.salary) })}</span></li>`).join('')}</ul></div>`);
+      cards.push(`<div class="card"><h3>${t('pl.employees')} <small class="muted">${staff.length}</small></h3><ul class="list-plain">${staff.slice(0, 40).map(p => `<li><span>${UI.plink(w, p.id)} <span class="muted">${esc(G(LES.Labour.title(p.job)))}</span></span><span>${t('pn.perMonth', { amt: U.fmtMoney(p.job.salary) })}</span></li>`).join('')}</ul></div>`);
     }
     const vacs = w.vacancies.filter(v => v.place === b.id);
-    if (vacs.length) cards.push(`<div class="card"><h3>${t('pl.vacancies')}</h3><ul class="list-plain">${vacs.map(v => `<li><span>${esc(v.job.title)} <span class="muted">${v.job.req ? esc(G(LES.P.reqName(v.job.req))) : t('pl.noQual')} · ${t('pl.applicants', { count: v.applicants.length, date: U.fmtDate(v.closeDay) })}</span></span><span>${U.fmtMoney(v.salary)}</span></li>`).join('')}</ul></div>`);
+    if (vacs.length) cards.push(`<div class="card"><h3>${t('pl.vacancies')}</h3><ul class="list-plain">${vacs.map(v => `<li><span>${esc(G(v.job.title))} <span class="muted">${v.job.req ? esc(G(LES.P.reqName(v.job.req))) : t('pl.noQual')} · ${t('pl.applicants', { count: v.applicants.length, date: U.fmtDate(v.closeDay) })}</span></span><span>${U.fmtMoney(v.salary)}</span></li>`).join('')}</ul></div>`);
 
     if (b.kind === 'memorial') {
       const gone = w.people.filter(p => !p.alive && p.gen === 0 && !p.migrant).sort((x, y) => y.deathDay - x.deathDay);
@@ -105,7 +105,7 @@
         <div class="note">${t('pl.busNote')}</div></div>`);
     }
     if (b.kind === 'lot') cards.push(`<div class="card"><p class="muted" style="margin:0">${t('pl.lot')}</p></div>`);
-    cards.push(`<div class="card"><h3>${t('pl.hereNow')} <small class="muted">${here.length}</small></h3><ul class="list-plain">${here.slice(0, 40).map(p => `<li><span>${UI.plink(w, p.id)}</span><span class="muted">${esc(G(p.plan[slot].label))}</span></li>`).join('') || `<li class="muted">${t('pl.nobody')}</li>`}</ul></div>`);
+    cards.push(`<div class="card"><h3>${t('pl.hereNow')} <small class="muted">${here.length}</small></h3><ul class="list-plain">${here.slice(0, 40).map(p => `<li><span>${UI.plink(w, p.id)}</span><span class="muted">${esc(LES.I18n.render(p.plan[slot].label))}</span></li>`).join('') || `<li class="muted">${t('pl.nobody')}</li>`}</ul></div>`);
     const scroll = el.scrollTop;
     el.innerHTML = cards.join('');
     el.scrollTop = scroll;

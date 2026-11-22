@@ -296,7 +296,7 @@
     const peak = p => Math.max(0, ...p.nwHist.map(([d, v]) => real(w, v, d)), real(w, p.peakNw, p.deathDay || w.day));
     const SRC = { wages: 1, gigs: 1, business: 1, invest: 1, inherit: 1, gifts: 1, interest: 1, welfare: 1, luck: 1 };
     const main = p => { const e = p.earned, k = Object.keys(SRC).sort((a, b) => e[b] - e[a])[0]; return e[k] > 0 ? T(`rp.cs.src.${k}`) : '—'; };
-    const career = p => (p.job ? LES.Labour.title(p.job) : p.manages >= 0 && w.biz[p.manages] ? T('ca.s.runs', { biz: w.biz[p.manages].name }) : w.biz.some(b => b.founderId === p.id) ? T('rp.cs.founder') : p.retired ? T('ca.s.retired') : !p.adult ? T('pl.child') : '—');
+    const career = p => (p.job ? G(LES.Labour.title(p.job)) : p.manages >= 0 && w.biz[p.manages] ? T('ca.s.runs', { biz: w.biz[p.manages].name }) : w.biz.some(b => b.founderId === p.id) ? T('rp.cs.founder') : p.retired ? T('ca.s.retired') : !p.adult ? T('pl.child') : '—');
     const adults = w.people.filter(p => p.adult || P.age(w, p) >= 30), med = arr => (arr.length ? U.median(arr) : 0);
     const townPeak = med(adults.map(peak)), townHappy = med(w.living.filter(p => p.adult).map(p => p.happyAvg));
     const fate = p => (!p.alive ? T('ca.s.died', { age: Math.floor(P.age(w, p)) }) : p.away ? T('rp.cs.moved') : T('rp.cs.alive', { age: Math.floor(P.age(w, p)) }));

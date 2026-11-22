@@ -86,9 +86,10 @@
     if (n > 1 && p && !e.text.includes(name)) // "Had a bag snatched — 5 cases today (latest: Aina)"
       return `${icon} ${esc(e.text.replace(/\s*\([^)]*\)/g, ''))} — <b>${n} cases</b> today (latest: <b>${esc(name)}</b>)`;
     const more = n > 1 ? ` <b>(×${n} today)</b>` : '';
-    if (!p) return `${icon} ${esc(e.text)}${more}`;
-    if (e.text.includes(name)) return `${icon} ${esc(e.text).split(esc(name)).join(`<b>${esc(name)}</b>`)}${more}`;
-    return `${icon} <b>${esc(name)}</b> — ${esc(e.text)}${more}`;
+    const text = LES.I18n.render(e.text); // (in another language: the sentence translated, PL-17)
+    if (!p) return `${icon} ${esc(text)}${more}`;
+    if (text.includes(name)) return `${icon} ${esc(text).split(esc(name)).join(`<b>${esc(name)}</b>`)}${more}`;
+    return `${icon} <b>${esc(name)}</b> — ${esc(text)}${more}`;
   }
 
   // Called from the main loop (throttled): new feed events become pop-ups, director shots, sounds.

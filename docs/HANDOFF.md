@@ -491,6 +491,19 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
       records (news feed, life stories, council log, newspaper stories, the activity in "Why did they do
       that?", job titles, causes of death); data descriptions (building info, calibration labels and sources,
       settings names, country-pack notes, course names); dates ("Jan Y2"). Step 5 needs the owner's review first.
+    - **Step 5 done: the engine's sentences** (Nov 22 2026). Changed approach (approved plan said "store a key"):
+      the fingerprints read the stored English (`textOf` hashes every log and feed sentence, `stableHash` the
+      last feed line), so the engine keeps writing exactly the same English and nothing it stores changes.
+      Translation happens only when a record is shown: `I18n.sentence` matches the English against sentence
+      patterns in `js/i18n/zh-Hans-sentences.js` (198 patterns, loaded with the Chinese texts) and fills the
+      Chinese template; captured words (job titles with their rank, courses, business types, crimes, causes of
+      death, reasons) go through the glossary. Anything unmatched stays English. `I18n.render` applies it, and
+      every place that shows a record uses it (feed, life story, glance, newspaper, report, pop-ups, director
+      caption, My Cast alerts, status line, "Why did they do that?"). Old saves are translated too.
+      Coverage (8-year towns): Malaysia 99.5%, UK 99.9%, US 99.6%, China 99.5% of records read in Chinese.
+      Tests: `i18nSentenceTests` (English shown exactly as stored; >= 95% in Chinese; every pattern's groups
+      exist; showing Chinese changes no hash, fingerprint or stored text). Still English: dates ("Jan Y2"), long
+      data descriptions (building info, calibration labels, settings names, country notes).
     - For the native-speaker review: some PL-13 life-moment texts use 他 as a general "they" (common, but
       a reviewer may prefer 其 / TA); the new texts use 其 / 此人.
   - Owner requests, Nov 14 2026 (after PL-12):

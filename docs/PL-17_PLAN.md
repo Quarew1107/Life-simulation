@@ -1,6 +1,6 @@
 # PL-17 plan: full Simplified Chinese (draft for the owner, Nov 22 2026)
 
-Status: **approved by the owner on 22 Nov 2026. Steps 1-4 done (Nov 22 2026); step 5 waits for the owner's review.** The owner did not answer the two
+Status: **approved by the owner on 22 Nov 2026. Steps 1-5 done (Nov 22 2026).** Step 5 translates records when they are shown (sentence patterns) instead of changing what the engine stores, so fingerprints and saves cannot change. Left: step 6 (dates, long data descriptions, native-speaker review). The owner did not answer the two
 questions below, so use the defaults: the order as written, and mark the Chinese as a draft ("machine draft, not
 reviewed") until a native speaker has checked it.
 
