@@ -415,6 +415,23 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
         stays open, like any other impossible answer (`Player.choose`; test in `playPacingTests`).
       - Chinese at 320 px: every My life page (hub, work, money, love, health, community, school, story)
         checked for text spilling past the screen edge: none. The game's own tabs are still English (PL-17).
+    - **14.5 done: live timing and the 2-hour figure (a target, not a promise).**
+      - How it was measured: the app's built-in preview pane stays hidden to the tools (no animation frames),
+        so the real page (`index.html`, the real frame loop) was run in headless Edge. There, frames run for about
+        10 seconds and then stop (even with the anti-throttling flags), so timings were taken inside that window.
+      - Story speed: exactly **5 game days a second** while frames run (10 days every 2 seconds, 60 frames a
+        second; drawing ~0.1 ms and the panel update ~0.4 ms a frame). Note: Story steps days inside each frame
+        with a 0.1 s cap per frame, so a machine drawing under 10 frames a second would run slower than 5.
+      - Big moment, watched live: the card appears at once, the game drops to 1x, the count goes 10, 9 ... 1 a
+        second, and Story speed is back at 10.1 s.
+      - Whole lives (character deciding everyday moments): 90 and 79 years, 76 and 86 important stops, 27 and
+        17 big moments.
+      - **An 80-year life:** 29,200 days / 5 = 97 minutes of clock, plus about 80 stops at 10-20 s each (13-27
+        minutes), plus about 20 big moments at 10 s (3-4 minutes) = **about 1 h 55 min to 2 h 10 min.** A 90-year
+        life is about 20 minutes more. The Story button's "about 2 hours" stands, as a target.
+      - Not done: a timed session by a person on a visible screen (the owner can confirm on their own laptop).
+  - **PL-14 complete (Nov 22 2026), waiting for the owner's review.** Next: PL-15 (final integration and
+    calibration), only after the owner's go-ahead. PL-16 (Vite) needs separate approval.
   - Owner requests, Nov 14 2026 (after PL-12):
     - **Planned for tomorrow:** a list of queued requests, each with Cancel (`Player.cancel`, journaled
       `cmd.cancelled`). `Player.describe` words every kind (`act.<KIND>`, English and Chinese; a test checks all
