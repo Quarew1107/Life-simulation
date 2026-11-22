@@ -16,7 +16,7 @@
     const g = document.getElementById('sheet-grip');
     if (g) {
       g.setAttribute('aria-expanded', state === 'min' ? 'false' : 'true');
-      g.setAttribute('aria-label', state === 'full' ? 'Lower the panel' : 'Raise the panel');
+      g.setAttribute('aria-label', LES.I18n ? LES.I18n.t(state === 'full' ? 'ui.sheet.lower' : 'ui.sheet.raise') : '');
     }
   }
   UI.sheet = {

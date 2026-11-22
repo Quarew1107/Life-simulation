@@ -72,7 +72,7 @@
     if (!R || !R.towns[i]) return;
     const wasRegion = app.view === 'region';
     app.view = 'town'; $('tooltip').classList.add('hidden');
-    $('map-hint').textContent = MAP_HINT;
+    $('map-hint').textContent = MAP_HINT();
     if (R.towns[i] === app.world) { if (wasRegion) { app.renderer.fit(); UI.update(true); } return; }
     app.world = R.towns[i];
     app.selected = -1; app._rich.t = 0; UI.feedSeqShown = 0; UI.clearToasts();
@@ -80,14 +80,15 @@
     UI.update(true);
   };
 
-  const MAP_HINT = 'Click a person or building · drag to pan · scroll to zoom · Space to pause';
+  const T = (k, p) => LES.I18n.t(k, p);
+  const MAP_HINT = () => T('ui.mapHint');
   // Region view: every town on one map (only when there are several towns).
   app.showRegion = function () {
     if (!app.region) return;
     app.view = 'region';
     app.renderer.follow = false; app.renderer.hoverId = -1;
     $('tooltip').classList.add('hidden');
-    $('map-hint').textContent = 'Click or scroll in on a town to open it · Esc goes back';
+    $('map-hint').textContent = T('ui.regionHint');
     UI.update(true);
   };
 
@@ -140,7 +141,7 @@
     try {
       let bytes = new Uint8Array(await file.arrayBuffer());
       if (bytes[0] === 0x1f && bytes[1] === 0x8b) {
-        if (typeof DecompressionStream !== 'function') throw new Error('This browser cannot open compressed saves.');
+        if (typeof DecompressionStream !== 'function') throw new Error(T('err.noDecompress'));
         bytes = new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
       }
       const loaded = LES.Save.fromJSON(new TextDecoder().decode(bytes));
@@ -164,11 +165,13 @@
     if (!p || !p.alive) return;
     const r = LES.God.resolve(w, id), im = r.p ? LES.God.impact(r.w, r.p) : null, esc = U.esc;
     card.onclick = null; card.classList.remove('wide');
-    card.innerHTML = `<h1>Fate: ${esc(P.name(p))}</h1>
-      ${r.error ? `<p class="lead">${esc(r.error)}</p>` : `<p class="note">${esc(P.name(r.p))}, aged ${Math.floor(P.age(r.w, r.p))}, lives in ${esc(LES.townName(r.w))}${im.partner ? `, partner of ${esc(P.name(im.partner))}` : ''}${im.stakes ? `, with shares in ${im.stakes} business${im.stakes > 1 ? 'es' : ''}` : ''}.</p>
-      <p class="lead">This ends ${esc(P.name(p))}'s life at the start of the next simulated day, through the normal course of a death: the family grieves, ${im.kids ? `${im.kids} child${im.kids > 1 ? 'ren' : ''} in their care ${im.soleCarer ? `(${im.soleCarer} with no other carer) will need a guardian` : im.kids > 1 ? 'stay with the other carer' : 'stays with the other carer'}` : 'no children depend on them'}, ${im.heirs ? `the estate goes to ${im.heirs === 1 ? 'their child' : `their ${im.heirs} children`}` : 'with no living children the estate leaves the town'}${im.runs ? `, ${esc(im.runs)} needs a new manager` : ''}${im.job ? `, and the job as ${esc(im.job)} falls vacant` : ''}.</p>
-      <p class="note">${LES.God.intervened(w) ? 'This world is already a sandbox world.' : 'From then on this world is marked <b>Sandbox / intervened</b>: its report and statistics say so, and Fate deaths are left out of life expectancy. Save a copy first if you want to keep the unchanged world.'}</p>`}
-      <div class="modal-actions">${r.error ? '' : '<button class="ghost" id="fate-save">Save a copy first</button>'}<span class="spacer"></span><button class="ghost" id="fate-cancel">Cancel</button>${r.error ? '' : '<button class="primary" id="fate-go">Confirm Fate</button>'}</div>`;
+    const kids = !im || !im.kids ? T('fate.kids.none') : im.soleCarer ? T('fate.kids.sole', { count: im.kids, sole: im.soleCarer }) : T('fate.kids.other', { count: im.kids });
+    const estate = !im || !im.heirs ? T('fate.estate.none') : im.heirs === 1 ? T('fate.estate.child') : T('fate.estate.kids', { count: im.heirs });
+    card.innerHTML = `<h1>${esc(T('fate.title', { name: P.name(p) }))}</h1>
+      ${r.error ? `<p class="lead">${esc(r.error)}</p>` : `<p class="note">${esc(T('fate.who', { name: P.name(r.p), age: Math.floor(P.age(r.w, r.p)), town: LES.townName(r.w) }))}${im.partner ? esc(T('fate.partner', { other: P.name(im.partner) })) : ''}${im.stakes ? esc(T('fate.stakes', { count: im.stakes })) : ''}${esc(T('fate.stop'))}</p>
+      <p class="lead">${esc(T('fate.lead', { name: P.name(p), kids, estate }))}${im.runs ? esc(T('fate.runs', { biz: im.runs })) : ''}${im.job ? esc(T('fate.job', { job: im.job })) : ''}${esc(T('fate.stop'))}</p>
+      <p class="note">${LES.God.intervened(w) ? esc(T('fate.already')) : T('fate.markHtml')}</p>`}
+      <div class="modal-actions">${r.error ? '' : `<button class="ghost" id="fate-save">${esc(T('fate.saveFirst'))}</button>`}<span class="spacer"></span><button class="ghost" id="fate-cancel">${esc(T('ui.cancel'))}</button>${r.error ? '' : `<button class="primary" id="fate-go">${esc(T('fate.confirm'))}</button>`}</div>`;
     $('modal').classList.remove('hidden');
     $('fate-cancel').onclick = () => $('modal').classList.add('hidden');
     if (r.error) return;
@@ -176,7 +179,7 @@
     $('fate-go').onclick = () => {
       const out = LES.God.requestFate(w, id);
       $('modal').classList.add('hidden');
-      if (out.error) showError(out.error); else UI.toast(`Fate will reach ${esc(P.name(p))} at the start of the next day${app.paused ? ' (time is paused: press +1 day or play)' : ''}.`);
+      if (out.error) showError(out.error); else UI.toast(esc(T(app.paused ? 'fate.toastPaused' : 'fate.toast', { name: P.name(p) })));
     };
   };
 
@@ -184,24 +187,24 @@
     const w = app.world, card = $('modal-card');
     if (!w) return;
     card.onclick = null; card.classList.remove('wide');
-    card.innerHTML = `<h1>Rename the town</h1><p class="lead">Only a label: nothing in the simulation changes. Past life events and newspaper issues keep the name of their day.</p>
-      <div class="field"><label for="tn-input">Town name</label><input id="tn-input" type="text" maxlength="60"><div class="help" id="tn-msg">1-40 characters. Leave blank for the default (${U.esc(LES.C.TOWN_NAME)}).</div></div>
-      <div class="modal-actions"><button class="ghost" id="tn-reset">Use the default</button><span class="spacer"></span><button class="ghost" id="tn-cancel">Cancel</button><button class="primary" id="tn-save">Save</button></div>`;
+    card.innerHTML = `<h1>${U.esc(T('rename.title'))}</h1><p class="lead">${U.esc(T('rename.lead'))}</p>
+      <div class="field"><label for="tn-input">${U.esc(T('rename.label'))}</label><input id="tn-input" type="text" maxlength="60"><div class="help" id="tn-msg">${U.esc(T('rename.help', { name: LES.C.TOWN_NAME }))}</div></div>
+      <div class="modal-actions"><button class="ghost" id="tn-reset">${U.esc(T('rename.reset'))}</button><span class="spacer"></span><button class="ghost" id="tn-cancel">${U.esc(T('ui.cancel'))}</button><button class="primary" id="tn-save">${U.esc(T('ui.save'))}</button></div>`;
     $('tn-input').value = w.displayName || '';
     $('modal').classList.remove('hidden');
     const done = () => { $('modal').classList.add('hidden'); UI.update(true); };
     $('tn-cancel').onclick = () => $('modal').classList.add('hidden');
     $('tn-reset').onclick = () => { LES.setTownName(w, ''); done(); };
-    $('tn-save').onclick = () => { const v = $('tn-input').value; if (v.trim() === '') { LES.setTownName(w, ''); done(); } else if (LES.setTownName(w, v)) done(); else $('tn-msg').textContent = 'Please use 1-40 characters (no control characters).'; };
+    $('tn-save').onclick = () => { const v = $('tn-input').value; if (v.trim() === '') { LES.setTownName(w, ''); done(); } else if (LES.setTownName(w, v)) done(); else $('tn-msg').textContent = T('rename.bad'); };
   };
 
   app.showEnd = function () {
     const w = app.world, card = $('modal-card');
     card.onclick = null; card.classList.remove('wide');
-    card.innerHTML = `<h1>The simulation has ended</h1>
-      <p class="lead">${U.esc(w.endReason === 'extinct' ? 'The population died out.' : `${w.cfg.horizonYears} years have passed.`)} ${w.winner ? `🏆 ${U.esc(P.name(w.people[w.winner.pid]))} reached the goal.` : 'Nobody reached the goal.'}</p>
-      <p>Open the full report to see what happened, why, the Hall of Fame and the most notable lives.</p>
-      <div class="modal-actions"><button class="ghost" id="end-csv">Export CSV</button><span class="spacer"></span><button class="ghost" id="end-close">Keep exploring</button>${app.region ? '' : `<button class="ghost" id="end-cmp">Compare with ${U.esc(LES.Compare.label(w.cfg))}</button>`}<button class="ghost" id="end-new">Replay with a change</button><button class="primary" id="end-report">Open report</button></div>`;
+    card.innerHTML = `<h1>${U.esc(T('end.title'))}</h1>
+      <p class="lead">${U.esc(w.endReason === 'extinct' ? T('end.extinct') : T('end.years', { count: w.cfg.horizonYears }))} ${U.esc(w.winner ? T('end.winner', { name: P.name(w.people[w.winner.pid]) }) : T('end.nobody'))}</p>
+      <p>${U.esc(T('end.open'))}</p>
+      <div class="modal-actions"><button class="ghost" id="end-csv">${U.esc(T('end.csv'))}</button><span class="spacer"></span><button class="ghost" id="end-close">${U.esc(T('end.keep'))}</button>${app.region ? '' : `<button class="ghost" id="end-cmp">${U.esc(T('end.compare', { label: LES.Compare.label(w.cfg) }))}</button>`}<button class="ghost" id="end-new">${U.esc(T('end.replay'))}</button><button class="primary" id="end-report">${U.esc(T('end.report'))}</button></div>`;
     $('modal').classList.remove('hidden');
     LES.Audio.setScene('report');
     $('end-close').onclick = () => $('modal').classList.add('hidden');
@@ -214,7 +217,7 @@
   app.select = function (id, center) {
     const w = app.world;
     if (!w || !w.people[id]) return;
-    if (app.view === 'region') { app.view = 'town'; $('map-hint').textContent = MAP_HINT; } // a person is shown on their town's map
+    if (app.view === 'region') { app.view = 'town'; $('map-hint').textContent = MAP_HINT(); } // a person is shown on their town's map
     app.selected = id;
     app.renderer.selectedId = id;
     if (center && w.people[id].alive) {
@@ -257,17 +260,18 @@
       app.paused = true;
       renderSpeed();
       console.error(e);
-      showError(`Simulation error on ${U.fmtDate(w.day)} (seed "${w.cfg.seed}"): ${e.message}. The world is paused.`);
+      showError(T('err.sim', { date: U.fmtDate(w.day), seed: w.cfg.seed, msg: e.message }));
     }
   }
 
   // ---------------- Speed controls ----------------
   function renderSpeed() {
     const el = $('speed');
-    el.innerHTML = `<button class="pause ${app.paused ? 'on' : ''}" data-s="pause" title="Play / pause (Space)">${app.paused ? '▶' : '❚❚'}</button>`
-      + SPEEDS.map((s, i) => `<button data-s="${i}" class="${!app.paused && i === app.speedIdx ? 'on' : ''}" title="${s.tip} (key ${i + 1})">${s.label}</button>`).join('')
-      + `<button data-s="night" class="${app.skipNights ? 'on night' : 'night'}" title="Fast-forward nights 23:00-06:00 at slow speeds">🌙</button>`
-      + `<button data-s="turbo" class="${app.turbo ? 'on turbo' : 'turbo'}" title="Turbo view (T): at 10d/s and faster the map is redrawn about 4 times a second instead of every frame, so a big town simulates more days per second. Every event and result is exactly the same.">⚡</button>`;
+    const q = x => U.esc(x);
+    el.innerHTML = `<button class="pause ${app.paused ? 'on' : ''}" data-s="pause" title="${q(T('speed.pause'))}" aria-label="${q(T('speed.pause'))}">${app.paused ? '▶' : '❚❚'}</button>`
+      + SPEEDS.map((s, i) => `<button data-s="${i}" class="${!app.paused && i === app.speedIdx ? 'on' : ''}" title="${q(T('speed.keyTip', { tip: T(`speed.tip.${i}`), n: i + 1 }))}">${q(T(`speed.label.${i}`))}</button>`).join('')
+      + `<button data-s="night" class="${app.skipNights ? 'on night' : 'night'}" title="${q(T('speed.night'))}" aria-label="${q(T('speed.night'))}">🌙</button>`
+      + `<button data-s="turbo" class="${app.turbo ? 'on turbo' : 'turbo'}" title="${q(T('speed.turbo'))}" aria-label="${q(T('speed.turbo'))}">⚡</button>`;
   }
   app.setTurbo = function (on) {
     app.turbo = !!on; renderSpeed();
@@ -557,7 +561,7 @@
     $('btn-report').addEventListener('click', () => { try { LES.Report.open(app.world, app.prevSummary); } catch (e) { console.error(e); showError(`Report failed: ${e.message}`); } });
     // Rename the town shown (C08): a display label only; past log lines and paper issues keep their names.
     const sub = $('town-sub');
-    if (sub) { sub.title = 'Click to rename this town'; sub.style.cursor = 'pointer'; sub.addEventListener('click', () => app.renameTown()); }
+    if (sub) { sub.title = T('ui.rename.tip'); sub.style.cursor = 'pointer'; sub.addEventListener('click', () => app.renameTown()); }
     window.addEventListener('keydown', e => {
       if (LES.Setup.isOpen() || /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;
       if (e.code === 'Space') { e.preventDefault(); app.togglePause(); }
@@ -571,7 +575,9 @@
     window.addEventListener('resize', () => r.resize());
   }
 
-  window.addEventListener('error', e => showError(`Unexpected error: ${e.message}`));
+  window.addEventListener('error', e => showError(T('err.unexpected', { msg: e.message })));
+  // PL-17: a language switch redraws what code drew (the speed bar, the map hint, the panels).
+  window.addEventListener('les-lang', () => { try { renderSpeed(); const h = $('map-hint'); if (h) h.textContent = app.view === 'region' ? T('ui.regionHint') : MAP_HINT(); const sub = $('town-sub'); if (sub) sub.title = T('ui.rename.tip'); UI.update(true); } catch (e) { /* before the app is ready */ } });
 
   function boot() {
     app.renderer = new LES.Renderer($('map'));

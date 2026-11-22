@@ -460,6 +460,17 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
     - Big moments slow to 1x, which is 1 game minute a second: the town nearly stops for those 10 seconds.
     - Release: merging `feature/playable-life` into `main` is the owner's decision. PL-16 (Vite website) needs
       separate approval. PL-17 (full Chinese) needs a native speaker's review before release.
+  - **PL-17 (approved Nov 22 2026; plan `docs/PL-17_PLAN.md`; Chinese is a machine draft until reviewed):**
+    - **Step 1 done: tabs, buttons, tooltips, speed bar, dialogs.** `I18n.apply` now also fills
+      `data-i18n-aria` and `data-i18n-placeholder`, and a language switch fires a `les-lang` window event
+      (`main.js` redraws the speed bar, map hint and panels on it). `index.html`: tab names and tooltips, top-bar
+      buttons (text in `<span data-i18n>` where a `data-icon` adds an SVG), map tools, search box, leaderboard
+      buttons, newspaper button. `main.js`: speed labels and tips (`speed.*`), map and region hints, God Mode's
+      Fate dialog and toast (`fate.*`, plural forms), rename dialog (`rename.*`), end screen (`end.*`), error
+      banners (`err.*`). `sheet.js`: the handle's labels. 126 new keys in English and Chinese; English text is
+      word-for-word as before. Engine-made text (e.g. "Normal economy", `God.resolve` errors) waits for step 5.
+    - For the native-speaker review: some PL-13 life-moment texts use 他 as a general "they" (common, but
+      a reviewer may prefer 其 / TA); the new texts use 其 / 此人.
   - Owner requests, Nov 14 2026 (after PL-12):
     - **Planned for tomorrow:** a list of queued requests, each with Cancel (`Player.cancel`, journaled
       `cmd.cancelled`). `Player.describe` words every kind (`act.<KIND>`, English and Chinese; a test checks all

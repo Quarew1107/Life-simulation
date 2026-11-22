@@ -59,7 +59,7 @@
     if (!I.LANGS.some(l => l[0] === code)) code = I.DEFAULT;
     const finish = () => {
       lang = code;
-      if (typeof document !== 'undefined') { document.documentElement.lang = code; I.apply(document); }
+      if (typeof document !== 'undefined') { document.documentElement.lang = code; I.apply(document); try { window.dispatchEvent(new Event('les-lang')); } catch (e) { /* old browser */ } }
       try { localStorage.setItem('les-lang', code); } catch (e) { /* private window */ }
       if (done) done(code);
     };
@@ -77,6 +77,8 @@
     if (!root || !root.querySelectorAll) return;
     for (const el of root.querySelectorAll('[data-i18n]')) el.textContent = I.t(el.dataset.i18n);
     for (const el of root.querySelectorAll('[data-i18n-title]')) el.title = I.t(el.dataset.i18nTitle);
+    for (const el of root.querySelectorAll('[data-i18n-aria]')) el.setAttribute('aria-label', I.t(el.dataset.i18nAria));
+    for (const el of root.querySelectorAll('[data-i18n-placeholder]')) el.placeholder = I.t(el.dataset.i18nPlaceholder);
   };
 
   // Checks for tests and translators: every key of a language exists in English, and uses exactly English's

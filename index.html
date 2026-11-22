@@ -15,7 +15,7 @@
     <div class="brand">
       <div class="logo">LES</div>
       <div>
-        <div class="title">Life Evolution Simulator</div>
+        <div class="title" data-i18n="ui.appTitle">Life Evolution Simulator</div>
         <div class="sub" id="town-sub">Bandar Rezeki · demo</div>
       </div>
     </div>
@@ -29,59 +29,59 @@
     <div id="regime" class="badge">Normal economy</div>
     <div id="mood" class="infl"></div>
     <div id="speed" class="speed" role="group" aria-label="Simulation speed"></div>
-    <button id="btn-step" class="ghost" title="Advance one day (S)">+1 day</button>
-    <button id="btn-cast" class="ghost" title="Create your own person and add them to the town now (P). Your saved people are in the Leaders tab → ★ My cast.">＋ Person</button>
+    <button id="btn-step" class="ghost" title="Advance one day (S)" data-i18n-title="ui.step.tip" data-i18n="ui.step">+1 day</button>
+    <button id="btn-cast" class="ghost" title="Create your own person and add them to the town now (P). Your saved people are in the Leaders tab → ★ My cast." data-i18n-title="ui.cast.tip" data-i18n="ui.cast">＋ Person</button>
     <div id="kpis" class="kpis"></div>
     <div id="goal" class="goal"></div>
-    <button id="btn-report" class="ghost" data-icon="chart" title="Open the simulation report in a new tab">Report</button>
-    <button id="btn-save" class="ghost" data-icon="save" title="Save this world to a file (load it from the New world screen)">Save</button>
-    <button id="btn-new" class="primary" title="Create a new world">New world</button>
+    <button id="btn-report" class="ghost" data-icon="chart" title="Open the simulation report in a new tab" data-i18n-title="ui.report.tip" data-i18n-aria="ui.report"><span data-i18n="ui.report">Report</span></button>
+    <button id="btn-save" class="ghost" data-icon="save" title="Save this world to a file (load it from the New world screen)" data-i18n-title="ui.save.tip" data-i18n-aria="ui.save"><span data-i18n="ui.save">Save</span></button>
+    <button id="btn-new" class="primary" title="Create a new world" data-i18n-title="ui.new.tip" data-i18n="ui.new">New world</button>
   </header>
   <main>
     <section id="map-wrap">
-      <canvas id="map" aria-label="Town map. Click a person to inspect them."></canvas>
+      <canvas id="map" aria-label="Town map. Click a person to inspect them." data-i18n-aria="ui.map.aria"></canvas>
       <div id="map-tools">
-        <button data-z="in" title="Zoom in" aria-label="Zoom in" data-icon="plus"></button>
-        <button data-z="out" title="Zoom out" aria-label="Zoom out" data-icon="minus"></button>
-        <button data-z="fit" title="Fit town" aria-label="Fit town" data-icon="expand"></button>
+        <button data-z="in" title="Zoom in" aria-label="Zoom in" data-i18n-title="ui.zoomIn" data-i18n-aria="ui.zoomIn" data-icon="plus"></button>
+        <button data-z="out" title="Zoom out" aria-label="Zoom out" data-i18n-title="ui.zoomOut" data-i18n-aria="ui.zoomOut" data-icon="minus"></button>
+        <button data-z="fit" title="Fit town" aria-label="Fit town" data-i18n-title="ui.fit" data-i18n-aria="ui.fit" data-icon="expand"></button>
         <div class="vol-wrap">
-          <button data-z="sound" id="btn-sound" title="Music &amp; sound effects (off by default)" aria-label="Sound" data-icon="volume-x"></button>
+          <button data-z="sound" id="btn-sound" title="Music &amp; sound effects (off by default)" aria-label="Sound" data-i18n-title="ui.sound.tip" data-i18n-aria="ui.sound" data-icon="volume-x"></button>
           <div id="vol-pop" class="hidden">
-            <label title="Music volume">🎵<input type="range" id="vol-music" min="0" max="100" step="1" aria-label="Music volume"></label>
-            <label title="Sound effects volume">🔔<input type="range" id="vol-sfx" min="0" max="100" step="1" aria-label="Sound effects volume"></label>
+            <label title="Music volume" data-i18n-title="ui.vol.music">🎵<input type="range" id="vol-music" min="0" max="100" step="1" aria-label="Music volume" data-i18n-aria="ui.vol.music"></label>
+            <label title="Sound effects volume" data-i18n-title="ui.vol.sfx">🔔<input type="range" id="vol-sfx" min="0" max="100" step="1" aria-label="Sound effects volume" data-i18n-aria="ui.vol.sfx"></label>
           </div>
         </div>
-        <select id="overlay" title="Map overlay" aria-label="Map overlay"></select>
-        <button data-z="director" id="btn-director" title="Director mode: the camera jumps to the most interesting moments" aria-label="Director mode" data-icon="film"></button>
+        <select id="overlay" title="Map overlay" aria-label="Map overlay" data-i18n-title="ui.overlay" data-i18n-aria="ui.overlay"></select>
+        <button data-z="director" id="btn-director" title="Director mode: the camera jumps to the most interesting moments" aria-label="Director mode" data-i18n-title="ui.director.tip" data-i18n-aria="ui.director" data-icon="film"></button>
       </div>
       <div id="toasts" aria-live="polite"></div>
       <div id="tooltip" class="hidden"></div>
       <div id="caption" class="hidden"></div>
-      <div id="map-hint">Click a person or building · drag to pan · scroll to zoom · Space to pause</div>
+      <div id="map-hint" data-i18n="ui.mapHint">Click a person or building · drag to pan · scroll to zoom · Space to pause</div>
     </section>
     <aside id="side">
       <nav id="tabs">
-        <button data-tab="life" data-icon="human" title="Play a Life: your character" class="hidden"><span data-i18n="life.tab">My life</span></button>
-        <button data-tab="person" data-icon="user" title="The selected person" class="active"><span>Person</span></button>
-        <button data-tab="leaders" data-icon="trophy" title="Leaderboards and search"><span>Leaders</span></button>
-        <button data-tab="feed" data-icon="notes" title="What is happening in town"><span>Events</span></button>
-        <button data-tab="place" data-icon="building" title="The selected building"><span>Place</span></button>
-        <button data-tab="stats" data-icon="chart" title="Town statistics and charts"><span>Stats</span></button>
-        <button data-tab="society" data-icon="users" title="Class, ethnicity and religion"><span>Society</span></button>
-        <button data-tab="crime" data-icon="shield" title="Crime, police and justice"><span>Crime</span></button>
-        <button data-tab="gov" data-icon="flag" title="Government, council and treasury"><span>Gov't</span></button>
+        <button data-tab="life" data-icon="human" title="Play a Life: your character" data-i18n-title="ui.tab.life.tip" class="hidden"><span data-i18n="life.tab">My life</span></button>
+        <button data-tab="person" data-icon="user" title="The selected person" data-i18n-title="ui.tab.person.tip" class="active"><span data-i18n="ui.tab.person">Person</span></button>
+        <button data-tab="leaders" data-icon="trophy" title="Leaderboards and search" data-i18n-title="ui.tab.leaders.tip"><span data-i18n="ui.tab.leaders">Leaders</span></button>
+        <button data-tab="feed" data-icon="notes" title="What is happening in town" data-i18n-title="ui.tab.feed.tip"><span data-i18n="ui.tab.feed">Events</span></button>
+        <button data-tab="place" data-icon="building" title="The selected building" data-i18n-title="ui.tab.place.tip"><span data-i18n="ui.tab.place">Place</span></button>
+        <button data-tab="stats" data-icon="chart" title="Town statistics and charts" data-i18n-title="ui.tab.stats.tip"><span data-i18n="ui.tab.stats">Stats</span></button>
+        <button data-tab="society" data-icon="users" title="Class, ethnicity and religion" data-i18n-title="ui.tab.society.tip"><span data-i18n="ui.tab.society">Society</span></button>
+        <button data-tab="crime" data-icon="shield" title="Crime, police and justice" data-i18n-title="ui.tab.crime.tip"><span data-i18n="ui.tab.crime">Crime</span></button>
+        <button data-tab="gov" data-icon="flag" title="Government, council and treasury" data-i18n-title="ui.tab.gov.tip"><span data-i18n="ui.tab.gov">Gov't</span></button>
       </nav>
       <div id="tab-life" class="tab"></div>
       <div id="tab-person" class="tab active"></div>
       <div id="tab-leaders" class="tab">
         <div class="tab-tools">
-          <input id="search" type="search" placeholder="Search people by name…" autocomplete="off">
-          <div class="seg wrap" id="lb-mode"><button data-mode="alive" class="on" title="Richest people alive now">💰 Richest</button><button data-mode="all" title="Highest net worth ever reached">All-time</button><button data-mode="poor" title="The 10 adults with the lowest net worth now (debts count against it)">📉 Poorest</button><button data-mode="happy" title="Happiest adults">😊 Happiest</button><button data-mode="family" title="Most children">👪 Family</button><button data-mode="fit" title="Fittest: average strength, endurance and agility">💪 Fittest</button><button data-mode="goals" title="Most life goals achieved">🎯 Goals</button><button data-mode="cast" title="Your own characters: create them and follow their lives">★ My cast</button><button data-mode="marks" title="People and families you bookmarked">🔖 Bookmarks</button></div>
+          <input id="search" type="search" placeholder="Search people by name…" data-i18n-placeholder="ui.search" data-i18n-aria="ui.search" autocomplete="off">
+          <div class="seg wrap" id="lb-mode"><button data-mode="alive" class="on" title="Richest people alive now" data-i18n-title="ui.lb.alive.tip" data-i18n="ui.lb.alive">💰 Richest</button><button data-mode="all" title="Highest net worth ever reached" data-i18n-title="ui.lb.all.tip" data-i18n="ui.lb.all">All-time</button><button data-mode="poor" title="The 10 adults with the lowest net worth now (debts count against it)" data-i18n-title="ui.lb.poor.tip" data-i18n="ui.lb.poor">📉 Poorest</button><button data-mode="happy" title="Happiest adults" data-i18n-title="ui.lb.happy.tip" data-i18n="ui.lb.happy">😊 Happiest</button><button data-mode="family" title="Most children" data-i18n-title="ui.lb.family.tip" data-i18n="ui.lb.family">👪 Family</button><button data-mode="fit" title="Fittest: average strength, endurance and agility" data-i18n-title="ui.lb.fit.tip" data-i18n="ui.lb.fit">💪 Fittest</button><button data-mode="goals" title="Most life goals achieved" data-i18n-title="ui.lb.goals.tip" data-i18n="ui.lb.goals">🎯 Goals</button><button data-mode="cast" title="Your own characters: create them and follow their lives" data-i18n-title="ui.lb.cast.tip" data-i18n="ui.lb.cast">★ My cast</button><button data-mode="marks" title="People and families you bookmarked" data-i18n-title="ui.lb.marks.tip" data-i18n="ui.lb.marks">🔖 Bookmarks</button></div>
         </div>
         <div id="lb-list"></div>
       </div>
       <div id="tab-feed" class="tab">
-        <div class="tab-tools"><div class="seg wrap" id="feed-filter"></div><button class="ghost" id="btn-news" data-icon="news" title="The town newspaper: a front page every month">Newspaper</button></div>
+        <div class="tab-tools"><div class="seg wrap" id="feed-filter"></div><button class="ghost" id="btn-news" data-icon="news" title="The town newspaper: a front page every month" data-i18n-title="ui.news.tip"><span data-i18n="ui.news">Newspaper</span></button></div>
         <div id="feed-list"></div>
       </div>
       <div id="tab-place" class="tab"></div>
