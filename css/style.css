@@ -248,6 +248,7 @@ canvas.chart.tall { height: 190px; }
 .set-lang { display: inline-flex; align-items: center; gap: 6px; color: var(--text); flex: none; margin-left: auto;
   background: var(--panel-2); border: 2px solid var(--teal); border-radius: 999px; padding: 3px 4px 3px 10px; font-size: 15px; }
 .set-lang select { width: auto; border: 0; background: transparent; color: var(--text); font-weight: 600; padding: 2px 4px; cursor: pointer; }
+.set-lang select option { color: #111; background: #fff; } /* the open list is drawn by the system with a light background */
 .set-lang:focus-within { box-shadow: 0 0 0 2px rgba(62,199,181,.35); }
 /* Interface languages (js/core/i18n.js): the pixel font has no CJK glyphs, so Chinese text uses system fonts. */
 html:lang(zh-Hans) { --ui: Inter, "Microsoft YaHei", "PingFang SC", "Noto Sans SC", system-ui, sans-serif; --pixel: "Silkscreen", "Microsoft YaHei", "PingFang SC", "Noto Sans SC", monospace; }
