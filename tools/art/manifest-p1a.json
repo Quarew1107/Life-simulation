@@ -1,0 +1,28 @@
+{
+  "batch": "P1A",
+  "sheets": [
+    {
+      "file": "p1a-test.png",
+      "rows": [
+        [
+          { "id": "home.bed_double", "w": 32, "h": 40, "type": "art" },
+          { "id": "home.sofa_rattan", "w": 48, "h": 28, "type": "art" },
+          { "id": "home.table_dining", "w": 32, "h": 24, "type": "art" },
+          { "id": "home.stove_counter", "w": 32, "h": 28, "type": "art" },
+          { "id": "home.fridge", "w": 16, "h": 32, "type": "art" },
+          { "id": "home.fan_standing", "w": 12, "h": 24, "type": "art" }
+        ],
+        [
+          { "id": "person.adult.stand", "w": 16, "h": 24, "type": "mask" },
+          { "id": "person.adult.sit", "w": 16, "h": 20, "type": "mask" },
+          { "id": "person.adult.sleep", "w": 16, "h": 24, "type": "mask" }
+        ],
+        [
+          { "id": "person.child.stand", "w": 16, "h": 20, "type": "mask" },
+          { "id": "person.child.sit", "w": 16, "h": 17, "type": "mask" },
+          { "id": "person.child.sleep", "w": 16, "h": 20, "type": "mask" }
+        ]
+      ]
+    }
+  ]
+}

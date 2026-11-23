@@ -26,6 +26,8 @@ conversation. Branch: `main` on `Quarew1107/Life-simulation`. Last update: Nov 2
 ## 0. Where to pick up (status at the end of the last session)
 **PICK UP HERE (Nov 22 2026):** Play a Life on branch `feature/playable-life`, PL-00 to PL-13 and the My life redesign done (542/542). PL-13 (320 life moments) waits for the owner's review; next is PL-14 (ask first). Summary and working pattern: `CLAUDE.md` ("Pick up here"); details: the "Playable Life Mode" item below. New laptop: `docs/NEW_LAPTOP.md`.
 
+**Art upgrade (Nov 23 2026, planning):** plan in `Idea/Art upgrade/TECH_REVIEW.md` (local only); ChatGPT draws, `tools/art-import.py` cleans its sheets (magenta background -> game-size sprites, palette `tools/art/palette.json`, people in mask colours, packed `.js` with embedded image data so it works from file://). Pilot P1A: furniture passed, people redo requested (Part 1R in `Idea/Art upgrade/CHATGPT_PHASE1_PROMPT.md`). Run: `python -E -P tools/art-import.py tools/art/manifest-<batch>.json "Idea/Art upgrade/incoming/<batch>" "Idea/Art upgrade/previews"`. No game code yet.
+
 **To do (keep this list current; the same list is in `docs/ROADMAP.md`):**
 
 **Review follow-up (Nov 2026): 6 tasks from a UI/art/bug review, done one at a time.** Tasks 1 (pop-ups and
