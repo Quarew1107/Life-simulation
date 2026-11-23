@@ -433,40 +433,40 @@
     [
      {
       "id": "anim.steam.0",
-      "w": 8,
-      "h": 10,
+      "w": 12,
+      "h": 12,
       "type": "art"
      },
      {
       "id": "anim.steam.1",
-      "w": 8,
-      "h": 10,
+      "w": 12,
+      "h": 12,
       "type": "art"
      },
      {
       "id": "anim.steam.2",
-      "w": 8,
-      "h": 10,
+      "w": 12,
+      "h": 12,
       "type": "art"
      }
     ],
     [
      {
       "id": "anim.tv.0",
-      "w": 14,
-      "h": 10,
+      "w": 28,
+      "h": 27,
       "type": "art"
      },
      {
       "id": "anim.tv.1",
-      "w": 14,
-      "h": 10,
+      "w": 28,
+      "h": 27,
       "type": "art"
      },
      {
       "id": "anim.tv.2",
-      "w": 14,
-      "h": 10,
+      "w": 28,
+      "h": 27,
       "type": "art"
      }
     ],
@@ -474,33 +474,33 @@
      {
       "id": "anim.fan.0",
       "w": 12,
-      "h": 12,
+      "h": 22,
       "type": "art"
      },
      {
       "id": "anim.fan.1",
       "w": 12,
-      "h": 12,
+      "h": 22,
       "type": "art"
      },
      {
       "id": "anim.fan.2",
       "w": 12,
-      "h": 12,
+      "h": 22,
       "type": "art"
      }
     ],
     [
      {
       "id": "anim.lamp.0",
-      "w": 12,
-      "h": 16,
+      "w": 14,
+      "h": 22,
       "type": "art"
      },
      {
       "id": "anim.lamp.1",
-      "w": 12,
-      "h": 16,
+      "w": 14,
+      "h": 22,
       "type": "art"
      }
     ]
@@ -534,25 +534,29 @@
       "id": "person.adult.eat.0",
       "w": 16,
       "h": 20,
-      "type": "mask"
+      "type": "mask",
+      "skip": true
      },
      {
       "id": "person.adult.eat.1",
       "w": 16,
       "h": 20,
-      "type": "mask"
+      "type": "mask",
+      "skip": true
      },
      {
       "id": "person.adult.write.0",
       "w": 16,
       "h": 20,
-      "type": "mask"
+      "type": "mask",
+      "skip": true
      },
      {
       "id": "person.adult.write.1",
       "w": 16,
       "h": 20,
-      "type": "mask"
+      "type": "mask",
+      "skip": true
      }
     ],
     [
@@ -560,13 +564,15 @@
       "id": "person.adult.sofa.0",
       "w": 16,
       "h": 20,
-      "type": "mask"
+      "type": "mask",
+      "skip": true
      },
      {
       "id": "person.adult.sofa.1",
       "w": 16,
       "h": 20,
-      "type": "mask"
+      "type": "mask",
+      "skip": true
      },
      {
       "id": "person.adult.sleep_head.0",
@@ -594,25 +600,29 @@
       "id": "person.adult.cook.0",
       "w": 16,
       "h": 24,
-      "type": "mask"
+      "type": "mask",
+      "skip": true
      },
      {
       "id": "person.adult.cook.1",
       "w": 16,
       "h": 24,
-      "type": "mask"
+      "type": "mask",
+      "skip": true
      },
      {
       "id": "person.adult.baby.0",
       "w": 16,
       "h": 24,
-      "type": "mask"
+      "type": "mask",
+      "skip": true
      },
      {
       "id": "person.adult.baby.1",
       "w": 16,
       "h": 24,
-      "type": "mask"
+      "type": "mask",
+      "skip": true
      }
     ],
     [
@@ -685,13 +695,15 @@
       "id": "person.child.sofa.0",
       "w": 16,
       "h": 17,
-      "type": "mask"
+      "type": "mask",
+      "skip": true
      },
      {
       "id": "person.child.sofa.1",
       "w": 16,
       "h": 17,
-      "type": "mask"
+      "type": "mask",
+      "skip": true
      },
      {
       "id": "person.child.sleep_head.0",
@@ -1171,7 +1183,8 @@
       "type": "mask",
       "parts": [
        "skin"
-      ]
+      ],
+      "skip": true
      },
      {
       "id": "bust_hair.songkok",
@@ -1180,7 +1193,8 @@
       "type": "mask",
       "parts": [
        "skin"
-      ]
+      ],
+      "skip": true
      }
     ]
    ]

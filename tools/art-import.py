@@ -269,8 +269,8 @@ def write_outputs(items, cols, mask_cols, out_dir, batch, report):
     sprites = []
     for it in items:
         rgba = to_rgba(it['small'], pal_rgb if it['spec']['type'] == 'art' else mask_rgb)
-        sprites.append((it['spec']['id'], rgba))
         it['rgba'] = rgba
+        if not it['spec'].get('skip'): sprites.append((it['spec']['id'], rgba))  # 'skip': cut and previewed, not packed
 
     # Packed sheet + frame table (id: [x, y, w, h, anchorX, anchorY]; anchor = middle of the bottom edge).
     W, x, y, rowh, frames = 256, 1, 1, 0, {}

@@ -376,6 +376,10 @@
         const p = w.people[this.selectedId];
         if (p && p.alive && !p.away) { const pos = this.posOf(p, t, fast); if (!pos.riding) this.centerOn(pos.x, pos.y, 0.15); }
       }
+      // Inside view (art upgrade): the followed person's home instead of the town ('paused' at 1 day/s and faster).
+      const room = LES.Room ? LES.Room.target(this, t, fast) : null;
+      this.roomState = room ? (room.paused ? 'paused' : 'on') : null;
+      if (room && !room.paused) { LES.Room.draw(this, g, room, t, now); return; }
       g.setTransform(1, 0, 0, 1, 0, 0);
       g.fillStyle = '#5f8a45';
       g.fillRect(0, 0, this.cv.width, this.cv.height);
@@ -853,6 +857,7 @@
 
     // Building under a screen point (topmost), or -1.
     pickBuilding(sx, sy) {
+      if (this.roomState === 'on') return -1;
       const T = this.town.T, wx = this.cx + sx / this.z, wy = this.cy + sy / this.z;
       for (let i = this.town.buildings.length - 1; i >= 0; i--) {
         const b = this.town.buildings[i];

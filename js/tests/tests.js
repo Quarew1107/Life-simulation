@@ -2873,6 +2873,83 @@
   // translated when shown, by sentence patterns.
   // Rules revision 11 (the owner's review, Nov 2026): life in prison and rehab is paid by the state; rent goes to
   // a partner at home or the rented home is given up; Play a Life offers no events while held.
+  // Art upgrade Phase 2: the inside view of a home (js/render/artpack.js, js/render/room.js).
+  async function roomTests() {
+    print('--- Inside view: kampung home art, layouts, real people, no effect on the simulation ---', 'info');
+    if (typeof document === 'undefined' || !LES.Room) { print('(browser only: skipped)'); return; }
+    const AP = LES.ArtPack, R = LES.Room;
+    if (!AP.ready && !AP.failed) AP.init();
+    check('The art packs load (embedded image data, works from file://)', await AP.whenReady());
+    const need = ['home.bed_double', 'home.bed_single_blue', 'home.bed_single_pink', 'home.sofa_rattan', 'home.table_dining', 'home.stove_counter', 'home.fridge', 'home.sink_counter', 'home.desk', 'home.wardrobe', 'home.bookshelf', 'home.display_cabinet', 'home.cot', 'home.tilam', 'home.rug', 'home.coffee_table', 'home.floor_wood.0', 'home.floor_kitchen.0', 'home.wall_wood.0', 'home.window_nako', 'anim.tv.0', 'anim.lamp.1', 'anim.flame.0',
+      'person.adult.stand', 'person.adult.eat.0', 'person.adult.write.0', 'person.adult.sofa.0', 'person.adult.cook.0', 'person.adult.baby.0', 'person.adult.pray.0', 'person.adult.sleep_head.0',
+      'person.child.stand', 'person.child.eat.0', 'person.child.write.0', 'person.child.play.0', 'person.child.pray.0', 'person.child.sleep_head.0', 'person.baby.sit', 'person.baby.sleep', 'hair.front.tudung', 'hair.back.short'];
+    const miss = need.filter(id => !AP.has(id));
+    check('Every sprite the home view uses is in the packs', !miss.length, miss.join(', '));
+    // Repainting: no mask colour is left on a repainted person, and a tudung takes the scarf colour.
+    const look = { skin: '#c68e5e', hair: '#2b1d14', shirt: '#3e8e7e', pants: '#6d597a', style: 3, scarf: '#e07a5f' };
+    const spr = AP.person('person.adult.stand', look, {}), d = spr.getContext('2d').getImageData(0, 0, spr.width, spr.height).data;
+    let left = 0, scarf = 0;
+    for (let i = 0; i < d.length; i += 4) { const part = AP.partAt(d, i); if (part && part !== 'other') left++; if (d[i + 3] && d[i] === 0xe0 && d[i + 1] === 0x7a && d[i + 2] === 0x5f) scarf++; }
+    check('A repainted person has no mask colours left, and her tudung is her scarf colour', left === 0 && scarf > 4, `${left} mask pixels, ${scarf} scarf pixels`);
+    // The three plans: beds, seats, a stove, a sofa, a desk and free floor in each, with or without a baby.
+    for (let k = 0; k < R.LAYOUTS.length; k++) {
+      const pl = R.plan(k, { baby: true, faith: 'hinduism', sleepers: 7 }), S = pl.spots;
+      check(`Plan ${k + 1}: double bed, single beds, cot, 4 table seats, stove, 3 sofa seats, desk, shrine, standing room`, S.bed.length >= 4 && S.cot.length === 1 && S.seat.length === 4 && S.cook.length === 1 && S.sofa.length === 3 && S.desk.length >= 1 && !!S.shrine && S.stand.length >= 4 && pl.items.every(it => AP.has(it.id)), `${S.bed.length} beds, ${S.stand.length} standing`);
+    }
+
+    const w = new LES.World(Object.assign({}, LES.DEFAULTS, { seed: 'room-view', founders: 160 }));
+    for (let d = 0; d < 400; d++) w.step();
+    const cv = document.createElement('canvas'); cv.style.cssText = 'position:fixed;left:0;top:0;width:800px;height:600px;visibility:hidden';
+    document.body.appendChild(cv);
+    const r = new LES.Renderer(cv); r.setWorld(w);
+    const homes = new Map();
+    for (const p of w.living) if (p.alive && !p.away && !p.inst && p.homeId >= 0 && R.isHome(w.town.buildings[p.homeId])) (homes.get(p.homeId) || homes.set(p.homeId, []).get(p.homeId)).push(p);
+    const [hid, fam] = [...homes.entries()].sort((a, b) => b[1].length - a[1].length)[0];
+    const b = w.town.buildings[hid], me = fam.find(p => p.adult) || fam[0];
+    const at = h => (((h - 6) + 24) % 24) / 24;
+    check('No inside view unless it is switched on and someone is followed', R.target(r, at(23.5), false) === null);
+    r.roomOn = true; r.follow = true; r.selectedId = me.id;
+    const tg = R.target(r, at(23.5), false);
+    check('Following someone at home at night shows their home', !!tg && tg.b === b && !tg.paused);
+    check('At 1 day per second and faster the town is shown instead (paused inside view)', R.target(r, at(23.5), true).paused === true);
+    const night = R.scene(w, r, b, at(23.5), false);
+    check('At night everyone at home is asleep, and only people who live here are shown', night.length >= 2 && night.every(s => (s.act === 'sleep' || s.act === 'cot') && s.p.homeId === b.id), night.map(s => s.act).join(','));
+    let real = true, valid = true;
+    for (const h of [6.2, 7, 12.2, 15, 19, 21, 22.6]) {
+      const sc = R.scene(w, r, b, at(h), false);
+      for (const s of sc) { const pos = r.posOf(s.p, at(h), false); if (s.p.homeId !== b.id || !(pos.inside === b.id || pos.at === b.id)) real = false; }
+      const pl = R.place(R.plan(R.layoutOf(b), { baby: true, faith: 'islam', sleepers: sc.length }), sc, 0);
+      if (pl.some(m => !AP.has(m.frame))) valid = false;
+    }
+    check('Through the day the room only holds household members who are really at home', real);
+    check('Every pose shown has a sprite (children, teens, adults, elders, babies)', valid);
+    const kinds = new Set([...homes.keys()].map(h => R.layoutOf(w.town.buildings[h])));
+    check('Each home keeps one plan (fixed by the building), and the town uses all three', R.layoutOf(b) === R.layoutOf(b) && kinds.size === 3);
+    const worker = w.living.find(p => p.alive && !p.away && p.plan && p.plan[0] && p.plan[0].act === 'WORK' && p.plan[0].loc !== p.homeId);
+    const keep = r.selectedId; r.selectedId = worker.id;
+    check('At work (not at home): the town is shown', R.target(r, at(11), false) === null);
+    r.selectedId = keep;
+
+    // Drawing the room and the town; the simulation must not notice (same save, step by step).
+    const twin = new LES.World(Object.assign({}, LES.DEFAULTS, { seed: 'room-view', founders: 160 }));
+    for (let d = 0; d < 400; d++) twin.step();
+    let t0 = performance.now(), n = 0;
+    for (let d = 0; d < 30; d++) { for (const h of [6.5, 12, 19.5, 23.5]) { r.frame(at(h), false, d * 1000 + h * 50); n++; } w.step(); twin.step(); }
+    const roomMs = (performance.now() - t0) / n;
+    check('Thirty days drawn in the inside view leave the simulation exactly as without it', LES.Save.toJSON(w).replace(/"saved":"[^"]*",/, '') === LES.Save.toJSON(twin).replace(/"saved":"[^"]*",/, '')); // the save time differs
+    r.roomOn = false; t0 = performance.now();
+    for (let k = 0; k < 40; k++) r.frame(at(12), false, k * 100);
+    const townMs = (performance.now() - t0) / 40;
+    print(`  Drawing time per frame: inside view ${roomMs.toFixed(2)} ms, town ${townMs.toFixed(2)} ms (headless)`);
+    check('The inside view draws in under 12 ms per frame here (target: under 4 ms on a laptop)', roomMs < 12, `${roomMs.toFixed(2)} ms`);
+    // Missing art: the town is drawn as before, with no error.
+    r.roomOn = true; AP.ready = false;
+    let ok = true; try { r.frame(at(23.5), false, 0); } catch (e) { ok = false; }
+    check('Without the art packs the town is drawn as before (no inside view, no error)', ok && r.roomState === null);
+    AP.ready = true;
+    cv.remove();
+  }
+
   async function heldTests() {
     print('--- Prison and rehab: what is paid, the home, and life events (rules revision 11) ---', 'info');
     const D = LES.DEFAULTS, CR = LES.Crime, F = LES.Finance, Pl = LES.Player, Wd = LES.World;
@@ -3018,6 +3095,7 @@
       await nameTests();
       await compareTests();
       await peopleArtTests();
+      await roomTests();
       await buildingArtTests();
       await crimeRevTests();
       await wealthRevTests();
@@ -3053,6 +3131,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, heldTests, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, playFlowTests, playCatalogTests, playPacingTests, playMatrixTests, i18nSentenceTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, roomTests, heldTests, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, playFlowTests, playCatalogTests, playPacingTests, playMatrixTests, i18nSentenceTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

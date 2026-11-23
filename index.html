@@ -53,10 +53,12 @@
         </div>
         <select id="overlay" title="Map overlay" aria-label="Map overlay" data-i18n-title="ui.overlay" data-i18n-aria="ui.overlay"></select>
         <button data-z="director" id="btn-director" title="Director mode: the camera jumps to the most interesting moments" aria-label="Director mode" data-i18n-title="ui.director.tip" data-i18n-aria="ui.director" data-icon="film"></button>
+        <button data-z="room" id="btn-room" title="Inside view: while you follow someone who is at home, see inside their home" aria-label="Inside view" data-i18n-title="ui.room.tip" data-i18n-aria="ui.room" data-icon="home"></button>
       </div>
       <div id="toasts" aria-live="polite"></div>
       <div id="tooltip" class="hidden"></div>
       <div id="caption" class="hidden"></div>
+      <div id="room-note" class="hidden" data-i18n="ui.room.speed">Inside view resumes at 60× or slower</div>
       <div id="map-hint" data-i18n="ui.mapHint">Click a person or building · drag to pan · scroll to zoom · Space to pause</div>
     </section>
     <aside id="side">
@@ -148,6 +150,11 @@
 <script src="js/render/ambience.js"></script>
 <script src="js/render/tiles.js"></script>
 <script src="js/render/renderer.js"></script>
+<script src="js/render/artpack.js"></script>
+<script src="js/render/room.js"></script>
+<script src="assets/art/art-P1A.js"></script>
+<script src="assets/art/art-P1B.js"></script>
+<script src="assets/art/art-P1B-R.js"></script>
 <script src="js/render/region-view.js"></script>
 <script src="js/ui/icons.js"></script>
 <script src="js/ui/charts.js"></script>

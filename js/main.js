@@ -393,6 +393,8 @@
       app.renderer.richIds = app.richIds();
       if (app.view === 'region' && app.region) app.regionView.draw(app, now);
       else app.renderer.frame(app.dayFrac, app.fast && !app.paused, now);
+      const note = app.view !== 'region' && app.renderer.roomState === 'paused';
+      if (note !== app._roomNote) { app._roomNote = note; $('room-note').classList.toggle('hidden', !note); }
       UI.update(false);
     }
     if (w) UI.directorTick(now);
@@ -518,6 +520,13 @@
     $('map-tools').addEventListener('click', e => {
       const b = e.target.closest('button'); if (!b) return;
       if (b.dataset.z === 'sound') { app.toggleSound(); return; }
+      if (b.dataset.z === 'room') { // inside view on/off (remembered); turning it on follows the selected person
+        r.roomOn = !r.roomOn;
+        b.classList.toggle('on', r.roomOn);
+        try { localStorage.setItem('les-room', r.roomOn ? '1' : '0'); } catch (err) { /* private window */ }
+        if (r.roomOn && r.selectedId >= 0) r.follow = true;
+        return;
+      }
       if (b.dataset.z === 'director') {
         const d = UI.director;
         d.on = !d.on;
@@ -581,6 +590,9 @@
 
   function boot() {
     app.renderer = new LES.Renderer($('map'));
+    try { app.renderer.roomOn = localStorage.getItem('les-room') !== '0'; } catch (e) { app.renderer.roomOn = true; }
+    $('btn-room').classList.toggle('on', app.renderer.roomOn);
+    if (LES.ArtPack) { LES.ArtPack.init(); LES.ArtPack.whenReady().then(ok => { if (!ok) $('btn-room').classList.add('hidden'); }); }
     app.regionView = new LES.RegionView(app.renderer);
     UI.init(app);
     initInput();
