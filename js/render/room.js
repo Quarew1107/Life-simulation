@@ -46,6 +46,28 @@
     return out;
   }
 
+  // Which room each floor tile belongs to: rooms are areas closed by walls and doors (# | - D W E). A room with
+  // the double bed is the parents' room, one with single beds the children's room; kitchen tiles (k) are the
+  // kitchen, and every other floor is the living room (also in an open-plan kitchen and living room).
+  R.zones = function (rows) {
+    const id = rows.map(r => [...r].map(() => -1)), tags = [];
+    const open = ch => !'#|-DWE'.includes(ch), kind = ch => ('kTCKF'.includes(ch) ? 'k' : '.'); // kitchen tiles and wood floor are separate rooms
+    for (let r = 1; r < rows.length; r++) for (let c = 0; c < 16; c++) {
+      if (!open(rows[r][c]) || id[r][c] >= 0) continue;
+      const n = tags.length, stack = [[r, c]], has = new Set();
+      id[r][c] = n;
+      while (stack.length) {
+        const [y, x] = stack.pop(); has.add(rows[y][x]);
+        for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const Y = y + a, X = x + b;
+          if (Y >= 1 && Y < rows.length && X >= 0 && X < 16 && id[Y][X] < 0 && open(rows[Y][X]) && kind(rows[Y][X]) === kind(rows[y][x])) { id[Y][X] = n; stack.push([Y, X]); }
+        }
+      }
+      tags.push(has.has('B') ? 'parents' : has.has('b') ? 'kids' : 'living');
+    }
+    return rows.map((row, r) => [...row].map((ch, c) => ch === 'k' || ('TCKF'.includes(ch) && id[r][c] >= 0 && tags[id[r][c]] === 'living') ? 'kitchen' : id[r][c] >= 0 ? tags[id[r][c]] : null));
+  };
+
   // The plan of one home: furniture to draw and the places people use. `fam` adds a cot for a baby, the faith
   // corner of the family and a floor mattress for extra sleepers.
   R.plan = function (layout, fam) {
@@ -54,16 +76,23 @@
     const add = (id, cx, bottom, extra) => { const [w, h] = sz(id); const it = Object.assign({ id, x: Math.round(cx - w / 2), y: bottom - h, w, h, key: bottom }, extra || {}); items.push(it); return it; };
     // Put a piece of furniture as near as possible to (px, pbottom) on free floor: inside the room, on floor
     // tiles of one room (no wall, door or other furniture under its footprint), not overlapping other pieces.
-    const floorAt = (x, y) => { const c = Math.floor(x / TS), r = Math.floor((y - 16) / TS); return r >= 1 && r < rows.length && c >= 0 && c < 16 && '.k'.includes(rows[r][c]); };
-    const clear = (x0, y0, x1, y1) => x0 >= 2 && x1 <= W - 2 && y0 >= 30 && y1 <= H - 2 && floorAt(x0 + 1, y1 - 2) && floorAt(x1 - 1, y1 - 2) && floorAt((x0 + x1) / 2, y1 - 2)
-      && !items.some(it => !it.floor && !it.wall && x0 < it.x + it.w + 1 && x1 > it.x - 1 && y0 < it.key && y1 > it.y + Math.max(0, it.h - 14));
-    const fit = (id, px, pb, extra, reach) => {
+    const zone = R.zones(rows);
+    const zoneAt = (x, y) => { const c = Math.floor(x / TS), r = Math.floor((y - 16) / TS); return r >= 1 && r < rows.length && c >= 0 && c < 16 && '.k'.includes(rows[r][c]) ? zone[r][c] : null; };
+    // Free floor of one room under a footprint (its whole base), not overlapping other furniture.
+    const clear = (x0, y0, x1, y1, z) => {
+      if (x0 < 2 || x1 > W - 2 || y0 < 30 || y1 > H - 2) return false;
+      for (let x = x0 + 1; x <= x1 + 3; x += 4) { const X = Math.min(x, x1 - 1); if (zoneAt(X, y1 - 2) !== z || zoneAt(X, y0 + 1) !== z) return false; }
+      return !items.some(it => !it.floor && !it.wall && x0 < it.x + it.w + 1 && x1 > it.x - 1 && y0 < it.key && y1 > it.y + Math.max(0, it.h - 14));
+    };
+    // Put a piece as near as possible to (px, pbottom), only on free floor of room `z` (default: living room).
+    const fit = (id, px, pb, extra, reach, z) => {
       const [w, h] = sz(id);
       if (!w) return null;
       let best = null, bd = Infinity;
-      for (let dy = -(reach || 48); dy <= (reach || 48); dy += 4) for (let dx = -(reach || 64); dx <= (reach || 64); dx += 4) {
+      const R2 = reach || 200;
+      for (let dy = -R2; dy <= R2; dy += 4) for (let dx = -R2; dx <= R2; dx += 4) {
         const cx = px + dx, b = pb + dy, x0 = Math.round(cx - w / 2), d = dx * dx + dy * dy * 2;
-        if (d < bd && clear(x0, b - Math.min(h, 14), x0 + w, b)) { bd = d; best = [cx, b]; }
+        if (d < bd && clear(x0, b - Math.min(h, 14), x0 + w, b, z || 'living')) { bd = d; best = [cx, b]; }
       }
       return best ? add(id, best[0], best[1], extra) : null;
     };
@@ -79,14 +108,19 @@
       const it = add(SPRITE[q.ch], cx, bottom);
       if (q.ch === 'B') {
         spots.bed.unshift({ x: cx - 8, y: it.y + 3, kind: 'double', key: bottom + 0.5 }, { x: cx + 8, y: it.y + 3, kind: 'double', key: bottom + 0.5 });
-        const lamp = fit('anim.lamp.0', it.x + it.w + 8, bottom - 6, { lamp: true }, 24) || fit('anim.lamp.0', it.x - 8, bottom - 6, { lamp: true }, 24);
+        const lamp = fit('anim.lamp.0', it.x + it.w + 8, bottom - 6, { lamp: true }, 32, 'parents') || fit('anim.lamp.0', it.x - 8, bottom - 6, { lamp: true }, 32, 'parents');
         if (lamp) spots.lamp.push({ x: lamp.x + lamp.w / 2, y: lamp.y + 3 });
-        if (fam.baby) { const cot = fit('home.cot', it.x + it.w + 14, bottom + 4); if (cot) spots.cot.push({ x: cot.x + cot.w / 2, y: cot.y + 8, key: cot.key + 0.5 }); }
+        if (fam.baby) { const cot = fit('home.cot', it.x + it.w + 14, bottom + 4, null, 0, 'parents'); if (cot) spots.cot.push({ x: cot.x + cot.w / 2, y: cot.y + 8, key: cot.key + 0.5 }); }
       }
       if (q.ch === 'T') { // two chairs behind the table (heads above it), one at each side
-        spots.seat.push({ x: it.x + 7, y: it.y + 9, key: bottom - 1 }, { x: it.x + it.w - 7, y: it.y + 9, key: bottom - 1 },
-          { x: it.x - 7, y: bottom + 1, key: bottom + 1 }, { x: it.x + it.w + 7, y: bottom + 1, key: bottom + 1 });
+        spots.seat.push({ x: it.x + 7, y: it.y + 9, key: bottom - 1 }, { x: it.x + it.w - 7, y: it.y + 9, key: bottom - 1 });
         for (const dx of [7, it.w - 7]) add('home.dining_chair_front', it.x + dx, it.y + 12, { key: bottom - 2 }); // chairs behind the table
+        for (const sx of [it.x - 7, it.x + it.w + 7]) { // a chair at each end where there is floor: people sit on it
+          const z = zoneAt(sx, bottom - 2);
+          if (z !== 'kitchen' && z !== 'living') continue;
+          const ch = add('home.dining_chair_front', sx, bottom + 1, { key: bottom });
+          spots.seat.push({ x: sx, y: ch.y + 13, key: bottom + 0.5 });
+        }
       }
       if (q.ch === 'C') { spots.cook.push({ x: cx, y: bottom + 12, key: bottom + 12, view: 'back' }); spots.flame = { x: it.x + 5, y: it.y + 6 }; }
       if (q.ch === 'd') spots.desk.push({ x: cx, y: it.y + 9, key: bottom - 1 });
@@ -100,33 +134,36 @@
     }
     if (spots.sofaAt) { // the TV and the fan beside the sofa, wherever there is room
       const { cx, bottom } = spots.sofaAt;
-      spots.tv = fit('anim.tv.0', cx + 50, bottom, null, 40);
-      spots.fan = fit('home.fan_standing', cx + 78, bottom, null, 40);
+      spots.tv = fit('anim.tv.0', cx + 50, bottom, null, 48);
+      spots.fan = fit('home.fan_standing', cx + 78, bottom, null, 48);
     }
-    for (let r = 1; r < rows.length; r++) { const c = rows[r].indexOf('E'); if (c >= 0) fit('home.shoe_rack', c * TS + 30, top(r), null, 16); }
+    for (let r = 1; r < rows.length; r++) { const c = rows[r].indexOf('E'); if (c >= 0) fit('home.shoe_rack', c * TS + 30, top(r), null, 24); }
     fit('home.plant', W - 14, top(9), null, 40);
-    // Free floor in the living area (rows 6-9) for standing and prayer.
+    // Free floor in the living room for standing and prayer.
     const used = (x, y) => items.some(it => !it.floor && !it.wall && x >= it.x - 2 && x <= it.x + it.w + 2 && y >= it.y && y <= it.key + 2);
-    for (let r = 6; r <= 9; r++) for (let c = 1; c < 15; c++) {
+    for (let r = 1; r < rows.length; r++) for (let c = 1; c < 15; c++) {
       const x = c * TS + 8, y = top(r) + 14;
-      if (rows[r][c] === '.' && !used(x, y)) spots.stand.push({ x, y, key: y });
+      if (zone[r][c] === 'living' && rows[r][c] === '.' && !used(x, y)) spots.stand.push({ x, y, key: y });
     }
     // The family's faith corner: a prayer mat is laid out when someone prays; other faiths have a shrine or a cross.
     const free = spots.stand.filter(s => s.x > 150);
     if (fam.faith === 'islam' && free.length) spots.pray.push(free[0]);
     else if (fam.faith && fam.faith !== 'none' && free.length) {
       const f = free[0], id = fam.faith === 'christianity' ? 'home.cross' : fam.faith === 'hinduism' ? 'home.shelf_hindu' : 'home.altar_chinese';
-      const s = fit(id, f.x, f.y - 8, null, 40);
+      const s = fit(id, f.x, f.y - 8, null, 48);
       if (s) {
         spots.shrine = { x: s.x + s.w / 2, y: s.key + 14, key: s.key + 14 };
         spots.stand = spots.stand.filter(q => Math.abs(q.x - spots.shrine.x) + Math.abs(q.y - spots.shrine.y) > 18 && !(q.x > s.x - 4 && q.x < s.x + s.w + 4 && q.y > s.y && q.y < s.key + 6));
       }
     }
-    if (fam.sleepers > spots.bed.length + 1) { // floor mattress for extra sleepers, in the living room
-      const f = spots.stand.find(s => s.x < 120 && s.y > 150) || spots.stand[spots.stand.length - 1];
-      const t = f && fit('home.tilam', f.x, f.y + 4, null, 40); if (t) { spots.bed.push({ x: t.x + t.w / 2 - 6, y: t.y + 2, kind: 'floor', key: t.key + 0.5 }, { x: t.x + t.w / 2 + 6, y: t.y + 2, kind: 'floor', key: t.key + 0.5 }); }
+    // Floor mattresses (tilam) for extra sleepers: in the children's room, else the parents' room, never the kitchen.
+    // Only a very big household (bedrooms full) also sleeps on mattresses in the living room.
+    for (let k = 0; k < 8 && fam.sleepers > spots.bed.length; k++) {
+      const kid = spots.bed.find(b => b.kind === 'single');
+      const t = (kid && fit('home.tilam', kid.x + 20, kid.key + 6, null, 0, 'kids')) || fit('home.tilam', W / 4, top(3), null, 0, 'parents') || fit('home.tilam', 40, top(9), null, 0, 'living');
+      if (!t) break;
+      spots.bed.push({ x: t.x + t.w / 2 - 6, y: t.y + 2, kind: 'floor', key: t.key + 0.5 }, { x: t.x + t.w / 2 + 6, y: t.y + 2, kind: 'floor', key: t.key + 0.5 });
     }
-    spots.stand = spots.stand.filter(s => !items.some(it => it.id === 'home.tilam' && Math.abs(it.x + it.w / 2 - s.x) < 20 && Math.abs(it.key - s.y) < 16));
     return { rows, items, spots };
   };
 
@@ -134,8 +171,11 @@
   R.hour = t => (((t * 1440) + 360) % 1440) / 60;
   const ageGroup = a => a < 3 ? 'baby' : a < 13 ? 'child' : 'adult';
 
-  // Who is home and what each one is doing: [{ p, act, group }]. act: sleep, eat, cook, write, play, sofa, baby
-  // (holding the baby), pray, shrine (praying at a shrine), stand; babies: crawl, sit, lie, cry, cot, held.
+  // Who is home and what each one is doing: [{ p, act, alt, group, bed }]. act: sleep, eat, cook, write, play,
+  // sofa, baby (holding the baby), pray, shrine (praying at a shrine), stand; babies: crawl, sit, lie, cry, cot,
+  // held. alt is what they do when the place for act is taken (no free chair at the table: they eat later).
+  // bed: who sleeps where (0 the couple, or the eldest adult when there is no couple, in the double bed;
+  // 1 children; 2 other adults, in single beds or on a floor mattress).
   R.scene = function (w, r, b, t, fast) {
     const hr = R.hour(t), day = w.lastDay < 0 ? 0 : w.lastDay, block = Math.floor(hr * 2);
     const home = [];
@@ -145,27 +185,38 @@
       if (pos.inside === b.id || (pos.at === b.id && !pos.moving)) home.push(p); // inside, or about the house
     }
     home.sort((a, c) => a.id - c.id);
-    const age = p => LES.P.age(w, p), out = new Map();
+    const age = p => LES.P.age(w, p), out = new Map(), ids = new Set(home.map(p => p.id));
     const adults = home.filter(p => age(p) >= 13).sort((a, c) => (a.sex === 'F' ? 0 : 1) - (c.sex === 'F' ? 0 : 1) || age(c) - age(a) || a.id - c.id);
     const babies = home.filter(p => age(p) < 3);
     const night = hr >= 23 || hr < 6;
     const meal = [[6, 7.5], [12, 13.5], [18.5, 20]].find(([s, e]) => hr >= s - 0.5 && hr < e);
     const cook = meal && adults.find(p => age(p) >= 18 && age(p) < 75 && !(p.health < 30));
+    // The double bed: a couple who are both home, else the eldest adult.
+    const grown = home.filter(p => age(p) >= 18).sort((a, c) => age(c) - age(a) || a.id - c.id);
+    const couple = grown.find(p => p.partnerId !== null && p.partnerId !== undefined && ids.has(p.partnerId));
+    const dbl = new Set(couple ? [couple.id, couple.partnerId] : grown.length ? [grown[0].id] : []);
     let carer = null;
     for (const p of home) {
       const a = age(p), g = ageGroup(a), x = hash(p.id, day, block);
-      let act;
+      let alt;
+      if (g === 'baby') alt = x < 0.4 ? 'crawl' : x < 0.7 ? 'sit' : x < 0.9 ? 'lie' : 'cry';
+      else if (g === 'child') alt = a >= 6 && hr >= 15 && x < 0.5 ? 'write' : 'play';
+      else if (a < 18) alt = x < 0.5 ? 'write' : 'sofa';
+      else if (babies.length && !carer && a < 75 && x < 0.6) { alt = 'baby'; carer = p; }
+      else alt = a >= 65 ? (x < 0.7 ? 'sofa' : 'stand') : x < 0.55 ? 'sofa' : x < 0.75 ? 'write' : 'stand';
+      let act = alt;
       if (night || p.health < 30 || (g === 'baby' && hr >= 13 && hr < 15)) act = g === 'baby' ? 'cot' : 'sleep';
-      else if (g === 'baby') act = x < 0.4 ? 'crawl' : x < 0.7 ? 'sit' : x < 0.9 ? 'lie' : 'cry';
+      else if (g === 'baby') act = alt;
       else if (meal && p === cook && hr < meal[0] + 0.25) act = 'cook';
       else if (meal && hr >= meal[0] && p !== cook) act = 'eat';
       else if (prays(p, a, hr)) act = p.rel === 'islam' ? 'pray' : 'shrine';
-      else if (g === 'child') act = a >= 6 && hr >= 15 && x < 0.5 ? 'write' : 'play';
-      else if (a < 18) act = x < 0.5 ? 'write' : 'sofa';
-      else if (babies.length && !carer && a < 75 && x < 0.6) { act = 'baby'; carer = p; }
-      else act = a >= 65 ? (x < 0.7 ? 'sofa' : 'stand') : x < 0.55 ? 'sofa' : x < 0.75 ? 'write' : 'stand';
-      out.set(p.id, { p, act, group: g, elder: a >= 65 });
+      if (act !== alt && alt === 'baby') { carer = null; alt = 'sofa'; } // busy: someone else may hold the baby
+      out.set(p.id, { p, act, alt, group: g, elder: a >= 65, age: a, bed: dbl.has(p.id) ? 0 : a < 18 ? 1 : 2 });
     }
+    if (!carer) { // the baby is held by an adult who is free (not eating, cooking, praying or asleep)
+      const c = adults.map(p => out.get(p.id)).find(s => s.age >= 18 && s.age < 75 && ['sofa', 'stand', 'write'].includes(s.act));
+      if (c && babies.some(q => out.get(q.id).act !== 'cot')) { c.act = 'baby'; carer = c.p; }
+    } else if (out.get(carer.id).act !== 'baby') carer = null;
     if (carer) { const held = babies.find(q => out.get(q.id).act !== 'cot'); if (held) out.get(held.id).act = 'held'; else out.get(carer.id).act = 'sofa'; }
     return [...out.values()];
   };
@@ -177,42 +228,64 @@
     return (hr >= 6.25 && hr < 6.5) || (hr >= 21.5 && hr < 21.75 && p.rel === 'christianity');
   }
 
+  // What the plan needs for this household: a cot for a baby, the faith corner, enough beds (a second baby needs one too).
+  R.family = function (w, b) { // from everyone who lives here (not only who is home now), so the furniture stays put
+    const all = w.living.filter(p => p.alive && !p.away && !p.inst && p.homeId === b.id), age = p => LES.P.age(w, p);
+    const babies = all.filter(p => age(p) < 3).length, head = all.filter(p => age(p) >= 18).sort((a, c) => age(c) - age(a))[0] || all[0];
+    return { baby: babies > 0, faith: head ? head.rel || 'none' : 'none', sleepers: all.length - babies + Math.max(0, babies - 1) };
+  };
+
   // Sprite and place for each activity. Children use their own frames; teens, adults and elders the adult ones.
   const FRAMES = {
     adult: { stand: 'stand', eat: 'eat', write: 'write', sofa: 'sofa', sleep: 'sleep_head', cook: 'cook', baby: 'baby', pray: 'pray', shrine: 'stand' },
     child: { stand: 'stand', eat: 'eat', write: 'write', sofa: 'play', sleep: 'sleep_head', play: 'play', pray: 'pray', shrine: 'stand', cook: 'stand', baby: 'stand' },
   };
-  const STATION = { eat: 'seat', write: 'desk', sofa: 'sofa', sleep: 'bed', cook: 'cook', play: 'play', pray: 'pray', shrine: 'shrine', baby: 'stand', stand: 'stand', cot: 'cot' };
-  const FALLBACK = { seat: 'sofa', desk: 'sofa', sofa: 'stand', bed: 'bed', cook: 'stand', play: 'stand', pray: 'stand', shrine: 'stand', cot: 'play', crawl: 'play', sit: 'play', lie: 'play', cry: 'play' };
+  // Where each activity happens, and where it moves to when that is taken. Eating needs a chair at the table
+  // (otherwise the person does their other activity); homework moves from the desk to the dining table.
+  const STATION = { eat: ['seat'], write: ['desk', 'seat', 'sofa', 'stand'], sofa: ['sofa', 'stand'], cook: ['cook', 'stand'], play: ['play', 'stand'],
+    pray: ['pray', 'stand'], shrine: ['shrine', 'stand'], baby: ['stand'], stand: ['stand'], cot: ['cot'], crawl: ['play', 'stand'], sit: ['play', 'stand'], lie: ['play', 'stand'], cry: ['play', 'stand'] };
+  R.STATION = STATION;
 
-  // Place everyone: [{ p, frame, x, y (feet), key, view }].
+  // Place everyone: [{ p, frame, x, y (feet), key, view, kind }].
   R.place = function (plan, scene, now) {
     const free = {}; for (const k in plan.spots) free[k] = Array.isArray(plan.spots[k]) ? plan.spots[k].slice() : plan.spots[k] ? [plan.spots[k]] : [];
+    const beds = { double: free.bed.filter(b => b.kind === 'double'), single: free.bed.filter(b => b.kind === 'single'), floor: free.bed.filter(b => b.kind === 'floor') };
     const out = [], tick = Math.floor((now || 0) / 650);
-    const take = (kind, p) => {
-      for (let n = 0, k = kind; n < 4 && k; n++, k = FALLBACK[k]) {
+    const take = (kinds, p) => {
+      for (const k of kinds) {
         const list = free[k];
-        if (k === 'stand' && list && list.length) { const i = Math.floor(hash(p.id, 5) * list.length); return { spot: list.splice(i, 1)[0], kind: k }; }
-        if (list && list.length) return { spot: list.shift(), kind: k };
+        if (!list || !list.length) continue;
+        if (k === 'stand') { const i = Math.floor(hash(p.id, 5) * list.length); return { spot: list.splice(i, 1)[0], kind: k }; }
+        return { spot: list.shift(), kind: k };
       }
       return null;
     };
-    for (const s of scene) {
+    const bedFor = s => { // the couple in the double bed; children, then other adults, in single beds or on a mattress
+      const order = s.bed === 0 ? ['double', 'single', 'floor'] : ['single', 'floor'];
+      for (const k of order) if (beds[k].length) return { spot: beds[k].shift(), kind: 'bed' };
+      return null;
+    };
+    const list = scene.slice().sort((a, c) => (a.act === 'sleep' ? a.bed : 0) - (c.act === 'sleep' ? c.bed : 0) || (c.age || 0) - (a.age || 0) || a.p.id - c.p.id);
+    for (const s of list) {
       if (s.act === 'held') continue; // drawn in the carer's arms
       const f2 = (tick + s.p.id) % 2;
-      let frame, kind = s.group === 'baby' ? (s.act === 'cot' ? 'cot' : 'play') : STATION[s.act];
-      const got = take(kind, s.p);
-      if (!got) continue;
-      kind = got.kind;
-      const act = kind === 'stand' && s.act !== 'shrine' && s.act !== 'baby' ? 'stand' : kind === 'sofa' && s.act !== 'sofa' ? 'sofa' : s.act;
-      if (s.group === 'baby') frame = kind === 'cot' ? 'person.baby.sleep' : `person.baby.${s.act === 'crawl' ? `crawl.${f2}` : ['sit', 'lie', 'cry'].includes(s.act) ? s.act : 'sit'}`;
+      let act = s.act, got = act === 'sleep' ? bedFor(s) : take(STATION[act] || ['stand'], s.p);
+      if (!got && act === 'cot') got = bedFor(s); // a second baby sleeps in a bed or on a mattress
+      if (!got && s.alt && s.alt !== act) { act = s.alt; got = take(STATION[act] || ['stand'], s.p); }
+      if (!got) got = take(['stand'], s.p);
+      if (!got) continue; // a very full house: nowhere left to put them
+      const kind = got.kind;
+      if (kind === 'stand' && !['shrine', 'baby', 'stand'].includes(act)) act = 'stand';
+      if (kind === 'sofa') act = 'sofa';
+      let frame;
+      if (s.group === 'baby') frame = kind === 'cot' || kind === 'bed' ? 'person.baby.sleep' : `person.baby.${act === 'crawl' ? `crawl.${f2}` : ['sit', 'lie', 'cry'].includes(act) ? act : 'sit'}`;
       else {
         const g = s.group === 'child' ? 'child' : 'adult', name = FRAMES[g][act] || 'stand';
         frame = `person.${g}.${name}${name === 'stand' ? '' : `.${f2}`}`;
         if (!A().has(frame)) frame = `person.${g}.${name}.0`;
         if (!A().has(frame)) frame = `person.${g}.stand`;
       }
-      out.push({ p: s.p, s, frame, x: got.spot.x, y: got.spot.y, key: got.spot.key, view: kind === 'cook' ? 'back' : kind === 'bed' || kind === 'cot' ? 'top' : 'front', mat: s.act === 'pray' && kind === 'pray' });
+      out.push({ p: s.p, s, act, kind, frame, x: got.spot.x, y: got.spot.y, key: got.spot.key, view: kind === 'cook' ? 'back' : kind === 'bed' || kind === 'cot' ? 'top' : 'front', mat: act === 'pray' && kind === 'pray' });
     }
     return out;
   };
@@ -259,16 +332,15 @@
   R.draw = function (r, g, tgt, t, now) {
     const w = r.w, b = tgt.b, art = A();
     const scene = R.scene(w, r, b, t, false);
-    const head = scene.find(s => s.group !== 'baby') || scene[0];
-    const fam = { baby: scene.some(s => s.group === 'baby'), faith: head ? head.p.rel || 'none' : 'none', sleepers: scene.filter(s => s.group !== 'baby').length };
-    const layout = R.layoutOf(b), sig = `${layout}|${fam.baby ? 1 : 0}|${fam.faith}|${fam.sleepers > 5 ? 1 : 0}`;
+    const fam = R.family(w, b);
+    const layout = R.layoutOf(b), sig = `${layout}|${fam.baby ? 1 : 0}|${fam.faith}|${fam.sleepers}`;
     if (!r._roomPlan || r._roomPlan.sig !== `${b.id}|${sig}`) r._roomPlan = { sig: `${b.id}|${sig}`, plan: R.plan(layout, fam) };
     const plan = r._roomPlan.plan, hr = R.hour(t);
     const rc = r._roomCv || (r._roomCv = Object.assign(document.createElement('canvas'), { width: W, height: H }));
     const q = rc.getContext('2d'); q.imageSmoothingEnabled = false;
     q.drawImage(staticLayer(b, plan, sig), 0, 0);
     const people = R.place(plan, scene, now), f2 = Math.floor((now || 0) / 650) % 2, f3 = Math.floor((now || 0) / 300) % 3;
-    const sofaBusy = people.some(m => m.s.act === 'sofa'), cooking = people.some(m => m.s.act === 'cook'), lampOn = hr >= 19 || hr < 6.5;
+    const sofaBusy = people.some(m => m.act === 'sofa'), cooking = people.some(m => m.act === 'cook'), lampOn = hr >= 19 || hr < 6.5;
     const draws = [];
     for (const it of plan.items) {
       if (it.floor || it.wall) continue;
@@ -292,7 +364,7 @@
       } });
       if (m.p.id === r.selectedId) marks.push({ x: m.x, y });
       scr.push({ id: m.p.id, rx: m.x, ry: y + spr.height / 2 });
-      if (m.s.act === 'baby') { const baby = scene.find(s => s.act === 'held'); if (baby) scr.push({ id: baby.p.id, rx: m.x, ry: y + spr.height / 2 + 2 }); }
+      if (m.act === 'baby') { const baby = scene.find(s => s.act === 'held'); if (baby) scr.push({ id: baby.p.id, rx: m.x, ry: y + spr.height / 2 + 2 }); }
     }
     draws.sort((a, c) => a.key - c.key);
     for (const d of draws) d.fn();

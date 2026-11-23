@@ -2925,6 +2925,42 @@
     check('Every pose shown has a sprite (children, teens, adults, elders, babies)', valid);
     const kinds = new Set([...homes.keys()].map(h => R.layoutOf(w.town.buildings[h])));
     check('Each home keeps one plan (fixed by the building), and the town uses all three', R.layoutOf(b) === R.layoutOf(b) && kinds.size === 3);
+    // Owner's review (Nov 23): furniture stays in its own room, people only eat on a chair, sleep only in a bed in a
+    // bedroom, and everyone at home has a bed at night. Every household, every plan, every half hour.
+    const TS = 16, zoneOf = (rows, x, y) => { const z = R.zones(rows), c = Math.floor(x / TS), rr = Math.floor((y - 16) / TS); return rr >= 1 && rr < rows.length && c >= 0 && c < 16 ? z[rr][c] : null; };
+    const WANT = { 'home.tilam': ['kids', 'parents'], 'home.cot': ['parents'], 'anim.lamp.0': ['parents'], 'anim.tv.0': ['living'], 'home.fan_standing': ['living'], 'home.plant': ['living'], 'home.shoe_rack': ['living'], 'home.altar_chinese': ['living'], 'home.shelf_hindu': ['living'], 'home.cross': ['living'] };
+    const misplaced = [];
+    for (let k = 0; k < R.LAYOUTS.length; k++) for (const f of [{ baby: true, faith: 'islam', sleepers: 9 }, { baby: false, faith: 'hinduism', sleepers: 3 }, { baby: true, faith: 'taoism', sleepers: 7 }]) {
+      const pl = R.plan(k, f);
+      for (const it of pl.items) if (WANT[it.id] && !WANT[it.id].includes(zoneOf(pl.rows, it.x + it.w / 2, it.key - 2))) misplaced.push(`plan ${k + 1} ${it.id}`);
+    }
+    check('Beds, mattresses, the cot and the lamp are in bedrooms; the TV, fan, plant, shrine and shoe rack in the living room', !misplaced.length, misplaced.join(', '));
+    let eatNoChair = 0, sleepOut = 0, noBed = 0, placedN = 0;
+    const keepLayout = R.layoutOf;
+    for (const h of homes.keys()) for (let k = 0; k < R.LAYOUTS.length; k++) {
+      R.layoutOf = () => k;
+      for (let hh = 0; hh < 24; hh += 0.5) {
+        const scn = R.scene(w, r, w.town.buildings[h], at(hh), false);
+        const pl = R.plan(k, R.family(w, w.town.buildings[h]));
+        const placed = R.place(pl, scn, 0);
+        placedN += placed.length;
+        for (const m of placed) {
+          if (m.act === 'eat' && m.kind !== 'seat') eatNoChair++;
+          const fam = R.family(w, w.town.buildings[h]), room = m.kind === 'bed' ? zoneOf(pl.rows, m.x, m.key - 4) : null;
+          if ((m.act === 'sleep' || m.kind === 'bed') && !(m.kind === 'bed' && (['kids', 'parents'].includes(room) || (room === 'living' && fam.sleepers > 8)))) sleepOut++; // the living room only for a very big household
+        }
+        const asleep = scn.filter(s => s.act === 'sleep' || s.act === 'cot').length, inBed = placed.filter(m => m.kind === 'bed' || m.kind === 'cot').length;
+        if (inBed < asleep) noBed += asleep - inBed;
+      }
+    }
+    R.layoutOf = keepLayout;
+    check('Nobody eats without a chair (when the table is full they do something else and eat later)', eatNoChair === 0 && placedN > 1000, `${eatNoChair} of ${placedN}`);
+    check('Nobody sleeps outside a bed in a bedroom (only households of 9+ also use the living room), and at night everyone at home has a bed or mattress', sleepOut === 0 && noBed === 0, `${sleepOut} outside, ${noBed} without a bed`);
+    const cpl = (() => { for (const h of homes.keys()) { const scn = R.scene(w, r, w.town.buildings[h], at(23.5), false); const two = scn.filter(s => s.bed === 0); if (two.length === 2) return { scn, two }; } return null; })();
+    if (cpl) {
+      const placed = R.place(R.plan(0, { baby: true, faith: 'islam', sleepers: cpl.scn.length }), cpl.scn, 0);
+      check('A couple who are both home share the double bed', cpl.two[0].p.partnerId === cpl.two[1].p.id && placed.filter(m => cpl.two.includes(m.s)).every(m => m.kind === 'bed' && m.y < 80));
+    }
     const worker = w.living.find(p => p.alive && !p.away && p.plan && p.plan[0] && p.plan[0].act === 'WORK' && p.plan[0].loc !== p.homeId);
     const keep = r.selectedId; r.selectedId = worker.id;
     check('At work (not at home): the town is shown', R.target(r, at(11), false) === null);
