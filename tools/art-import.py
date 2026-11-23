@@ -330,7 +330,7 @@ def preview_room(items, mask_cols, out_dir, batch, k=4):
     put('home.fan_standing', 170, 60)
     put('home.table_dining', 120, 104)
     put('home.sofa_rattan', 40, 130)
-    put('person.child.sleep', 14, 58, LOOKS[2])
+    put('person.child.sleep_head', 16, 46, LOOKS[2])
     put('person.adult.stand', 114, 60, LOOKS[0])
     put('person.adult.sit', 104, 112, LOOKS[1])
     put('person.child.stand', 96, 132, LOOKS[1])
