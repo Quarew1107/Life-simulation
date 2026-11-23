@@ -3826,4 +3826,8 @@ LES.I18n.add('zh-Hans', {
   'ex.age': "{n}岁",
   'su.c.del.tip': "从已保存的人物中删除{name}",
   'su.c.del.ask': "要从已保存的人物中删除{name}吗？此操作无法撤销。其伴侣和子女会保留，但不再与此人关联。",
+  'ui.and': "和",
+  'toast.casesHtml': "今天 <b>{n} 起</b>（最新：<b>{name}</b>）",
+  'toast.timesHtml': "<b>（今天 ×{n}）</b>",
+  'i18n.nameSep': "",
 });

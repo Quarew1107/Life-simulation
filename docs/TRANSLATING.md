@@ -1,5 +1,8 @@
 # Adding a language
 
+Languages in the game: English, Simplified Chinese, Japanese, Korean (machine drafts until a native speaker
+reviews them). Spanish is in progress (`translations/`).
+
 The game's text system (`js/core/i18n.js`) was built for Simplified Chinese (PL-17) and works the same way for any
 language. The English, the saves and the fingerprints never change: a language only changes what is shown.
 

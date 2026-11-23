@@ -3826,4 +3826,8 @@ LES.I18n.add('en', {
   'ex.age': "{n}y",
   'su.c.del.tip': "Delete {name} from your saved people",
   'su.c.del.ask': "Delete {name} from your saved people? This cannot be undone. Their partner and children stay saved, without the link to them.",
+  'ui.and': " & ",
+  'toast.casesHtml': "<b>{n} cases</b> today (latest: <b>{name}</b>)",
+  'toast.timesHtml': "<b>(×{n} today)</b>",
+  'i18n.nameSep': " ",
 });

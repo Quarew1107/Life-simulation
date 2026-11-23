@@ -14,7 +14,7 @@
 (function (LES) {
   'use strict';
   const I = LES.I18n = {};
-  I.LANGS = [['en', 'English'], ['zh-Hans', '简体中文']]; // later: es, ja, ko
+  I.LANGS = [['en', 'English'], ['zh-Hans', '简体中文'], ['ja', '日本語'], ['ko', '한국어']]; // later: es
   I.DEFAULT = 'en';
   const dict = { en: {} };
   const missing = new Set();
@@ -80,7 +80,7 @@
     // as it is, then the sentence with a capital, as the engine first wrote it.
     if (depth === 0) {
       const nm = /^(\p{Lu}[\p{L}'’.\-]*(?: \p{Lu}[\p{L}'’.\-]*){0,3}) (\p{Ll}.*)$/u.exec(s);
-      if (nm) { const rest = nm[2][0].toUpperCase() + nm[2].slice(1), t = tr(rest, depth + 1); if (t !== rest) return nm[1] + t; }
+      if (nm) { const rest = nm[2][0].toUpperCase() + nm[2].slice(1), t = tr(rest, depth + 1); if (t !== rest) return nm[1] + (dict[lang] && typeof dict[lang]['i18n.nameSep'] === 'string' ? dict[lang]['i18n.nameSep'] : '') + t; } // i18n.nameSep: what stands between the name and the sentence
     }
     return s;
   }

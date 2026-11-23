@@ -2964,6 +2964,17 @@
     await new Promise(r => I.set('en', r));
     check('Every data name shown in the four countries (jobs, courses, festivals, homes, laws, offices, report sources) has Chinese', !gaps.size, [...gaps].slice(0, 4).map(([s, p]) => `${p}: ${s}`).join(' | '));
     check('Sentences built from parts (ranks, injuries, goals, the newspaper\'s name-first lines) read fully in Chinese', !partsLeft.length, partsLeft.slice(0, 2).join(' | '));
+    // Every other language in the picker: complete, placeholders as in English, and the composed sentences translated.
+    const langs = I.LANGS.map(l => l[0]).filter(c => c !== 'en'), langRes = [];
+    for (const code of langs) {
+      await new Promise(r => I.set(code, r));
+      const cov = Object.entries(I.coverage(code)).filter(([ns]) => ns !== 'test').map(x => x[1]), done = cov.reduce((a, c) => a + c.done, 0), total = cov.reduce((a, c) => a + c.total, 0); // test.*: keys a test adds to English only
+      const left = parts.map(s => I.render(s)).filter(s => /[A-Za-z]{3,}/.test(s.replace(/Aina Rahman|Adam|Hafiz Rahman|Hari Raya|Aidilfitri|RM/g, '')));
+      const jobs = Object.values(LES.Countries.get('my').content.jobs).map(j => j.title).filter(t => I.g(t) === t);
+      langRes.push({ code, ok: I.lang() === code && !I.validate(code).length && done === total && !left.length && !jobs.length, why: `${code}: ${done}/${total} keys${I.validate(code)[0] ? `, ${I.validate(code)[0]}` : ''}${left[0] ? `, English left: ${left[0]}` : ''}${jobs[0] ? `, job: ${jobs[0]}` : ''}` });
+    }
+    await new Promise(r => I.set('en', r));
+    check(`Every language in the picker (${langs.join(', ')}) is complete, keeps English's placeholders and translates jobs and composed sentences`, langs.length >= 3 && langRes.every(x => x.ok), langRes.filter(x => !x.ok).map(x => x.why).join(' | '));
     check('Showing records in Chinese changes nothing in the simulation (hash, stable fingerprint, the stored English)', w.hash() === h0 && w.stableHash() === s0 && [...w.people.flatMap(p => p.log.map(e => e.text)), ...w.feed.map(e => e.text)].join('~') === texts.join('~'));
   }
 

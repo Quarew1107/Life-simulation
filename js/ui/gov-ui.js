@@ -101,7 +101,7 @@
   // Bank Negara, the sovereign fund and government-linked companies.
   function moneyCard(w) {
     const g = w.gov, glc = w.mkt.stocks.filter(s => s.def.glc), f = g.fund;
-    return `<div class="card"><h3>${esc(G(LES.Countries.pack.names.centralBank))}${LES.I18n.lang() === "en" ? " &amp; " : "和"}${esc(G(LES.Countries.pack.names.fund))}</h3>
+    return `<div class="card"><h3>${esc(G(LES.Countries.pack.names.centralBank))}${esc(T('ui.and'))}${esc(G(LES.Countries.pack.names.fund))}</h3>
       <div class="grid2"><div><span class="muted">${t('gv.policyRate', { name: LES.Countries.pack.names.policyRate })}</span><span>${(g.opr * 100).toFixed(2)}%</span></div><div><span class="muted">${t('gv.rates')}</span><span>${(LES.Fiscal.depositRate(w) * 100).toFixed(2)}% / ${(LES.Fiscal.loanRate(w) * 100).toFixed(2)}%</span></div>
         <div><span class="muted">${t('gv.fundValue')}</span><span>${U.fmtMoney(LES.Fiscal.fundValue(w))}</span></div><div><span class="muted">${t('gv.putIn')}</span><span>${U.fmtMoney(f.invested)} / ${U.fmtMoney(f.drawn)}</span></div></div>
       <canvas class="chart" id="gv-opr"></canvas>

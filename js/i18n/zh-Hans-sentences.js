@@ -5,6 +5,11 @@
 // glossary, so names, money and numbers come through unchanged). Most specific patterns first. A sentence
 // without a pattern is shown in English. Loaded with js/i18n/zh-Hans.js (LES.I18n.set).
 LES.I18n.sentences('zh-Hans', [
+  // rules revision 11 (rent while held): before the general "Took over ..."
+  [/^Took over the rent while (.+) is in (prison|rehab)$/, '在{1}{2}期间接手支付房租'],
+  [/^Gave up the rented (.+)$/, '退掉了租住的{1}'],
+  [/^Moved into an? (.+) after prison$/, '出狱后搬进了{1}'],
+  [/^Moved into an? (.+) after rehab$/, '戒毒结束后搬进了{1}'],
   // ---- Family ----
   [/^Became partners with (.+)$/, '与{1}成为伴侣'],
   [/^Separated from (.+)$/, '与{1}分开'],
@@ -988,8 +993,8 @@ LES.I18n.sentences('zh-Hans', [
   [/^Route (\d+)$/, '路线 {1}'], [/^Laluan (\d+)$/, '路线 {1}（Laluan {1}）'], [/^Line (\d+)$/, '{1} 号线'],
   [/^(\d+(?:\.\d+)?) officers per 1,000$/, '每千人 {1} 名警察'], [/^(\d+(?:\.\d+)?) per 1,000$/, '每千人 {1} 名'],
   [/^(\d+(?:\.\d+)?) teachers per 1,000$/, '每千人 {1} 名教师'],
-  [/^(.+?)\/month for every adult$/, '每名成年人每月 {1}'], [/^(.+?)\/month$/, '每月 {1}'], [/^(.+?) a month$/, '每月 {1}'],
-  [/^(.+?) an hour$/, '每小时 {1}'],
+  [/^((?:RM|£|\$|¥)[\d,.]+[kM]?)\/month for every adult$/, '每名成年人每月 {1}'], [/^((?:RM|£|\$|¥)[\d,.]+[kM]?)\/month$/, '每月 {1}'], [/^((?:RM|£|\$|¥)[\d,.]+[kM]?) a month$/, '每月 {1}'],
+  [/^((?:RM|£|\$|¥)[\d,.]+[kM]?) an hour$/, '每小时 {1}'],
 ]);
 
 LES.I18n.glossary('zh-Hans', {"Grandparents": "祖父母", "Compare": "比较", "Stop comparing": "停止比较", "Age": "年龄", "Qualifications": "学历", "None": "无", "Net worth": "净资产", "Peak net worth": "最高净资产", "Wages earned": "工资收入", "Business payouts": "企业分红", "Inherited": "继承所得", "Businesses founded": "创办的企业", "Police chief": "警察局长", "spouse": "配偶", "relative": "亲戚", "Kampung": "村庄（Kampung）", "Metropolis": "大都市"});
@@ -1009,7 +1014,7 @@ LES.I18n.sentences('zh-Hans', [
   [/^being laid off$/, '被裁员'], [/^prison$/, '出狱'], [/^a business failure$/, '生意失败'],
   [/^sold \((.+)\)$/, '已出售（{1}）'],
   [/^Medical debt of (.+) sent to collections$/, '{1}的医疗欠款被转交催收'],
-  [/^(.+?)\/month \(emergency\)$/, '每月 {1}（紧急）'],
+  [/^((?:RM|£|\$|¥)[\d,.]+[kM]?)\/month \(emergency\)$/, '每月 {1}（紧急）'],
   [/^(Chief of Police|Police Chief|Finance Director|City Finance Director|Director of Finance|Director of Communities|Director of Community Services|Director of Public Security|Director of Civil Affairs|Director of the Finance Bureau|Ketua Polis Daerah|Bendahari Bandaraya|Pengarah Pembangunan Masyarakat) ([A-Z].+)$/, '{1}{2}'],
   [/^Crime at 30× (\w+) rates, a thin and crooked police force\.$/, '犯罪率是{1}的 30 倍，警力单薄且腐败。'],
 ]);
@@ -1038,7 +1043,13 @@ LES.I18n.glossary('zh-Hans', {"All founders get $10,000, identical abilities (5 
 
 LES.I18n.glossary('zh-Hans', {"prison": "服刑", "rehab": "戒毒"});
 LES.I18n.sentences('zh-Hans', [
-  [/^Took over the rent while (.+) is in (prison|rehab)$/, '在{1}{2}期间接手支付房租'],
-  [/^Gave up the rented (.+)$/, '退掉了租住的{1}'],
-  [/^Moved into an? (.+) after (prison|rehab)$/, '{2}后搬进了{1}'],
+]);
+// Owner's review fixes (Nov 2026): reasons, development projects, law values in an emergency, courses with a field.
+LES.I18n.glossary('zh-Hans', {"retired": "退休", "road resurfacing": "道路重铺", "drainage and flood mitigation": "排水和防洪", "street lighting": "街道照明", "park upgrades": "公园改造", "covered walkways": "有盖走道", "a market hall renovation": "翻新市场大厅", "public Wi-Fi": "公共 Wi-Fi", "a community library corner": "社区图书角", "Vocational Certificate": "职业证书"});
+LES.I18n.sentences('zh-Hans', [
+  [/^(.+) \(emergency\)$/, '{1}（紧急）'],
+  [/^(.+?) moved on after (\d+) terms$/, '{1}任满 {2} 届后调任'],
+  [/^(.+?) was promoted to the province$/, '{1}升任省里职务'],
+  [/^arrested for (.+)$/, '因{1}被捕'],
+  [/^(.+) \(([A-Z][^()]*)\)$/, '{1}（{2}）'], // a course with its field, a business with its type (last: other patterns first)
 ]);

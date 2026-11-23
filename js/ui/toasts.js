@@ -84,8 +84,8 @@
     const p = e.pid >= 0 ? w.people[e.pid] : null, name = p ? P.name(p) : '';
     const icon = CAT_ICON[e.cat] || '';
     if (n > 1 && p && !e.text.includes(name)) // "Had a bag snatched — 5 cases today (latest: Aina)"
-      return `${icon} ${esc(e.text.replace(/\s*\([^)]*\)/g, ''))} — <b>${n} cases</b> today (latest: <b>${esc(name)}</b>)`;
-    const more = n > 1 ? ` <b>(×${n} today)</b>` : '';
+      return `${icon} ${esc(LES.I18n.render(e.text.replace(/\s*\([^)]*\)/g, '')))} — ${LES.I18n.t('toast.casesHtml', { n, name: esc(name) })}`;
+    const more = n > 1 ? ` ${LES.I18n.t('toast.timesHtml', { n })}` : '';
     const text = LES.I18n.render(e.text); // (in another language: the sentence translated, PL-17)
     if (!p) return `${icon} ${esc(text)}${more}`;
     if (text.includes(name)) return `${icon} ${esc(text).split(esc(name)).join(`<b>${esc(name)}</b>`)}${more}`;

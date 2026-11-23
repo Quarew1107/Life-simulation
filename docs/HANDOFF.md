@@ -565,6 +565,20 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
       older saves keep their rules (no stored fingerprint changed: those tests pin their revision). Tests:
       `heldTests` (8 checks). Not done (a separate idea): events about prison or rehab life itself (visits, coming
       home, starting again).
+    - **Japanese and Korean (Nov 23 2026; machine drafts by ChatGPT, not yet reviewed):** the owner had ChatGPT
+      translate in 24 parts each (`translations/Japanese/`, `translations/Korean/`). Checked: every interface text
+      present, placeholders as in English, all 299 patterns identical to the Chinese set, every data name covered.
+      Joined into `js/i18n/ja.js` / `ja-sentences.js` and `ko.js` / `ko-sentences.js`; added to `I.LANGS`.
+      Claude added what came after the parts (rent while held, 4 new keys) and fixed what the scan found in all
+      three Asian languages: the general "… a month" money patterns caught whole newspaper lines (now only an
+      amount), law values "(emergency)", courses with a field, "moved on after N terms", "arrested for …",
+      development projects; the Government tab's "and" (`ui.and`), grouped pop-ups (`toast.casesHtml`,
+      `toast.timesHtml`, they were English), and a separator between a name and the sentence in newspaper lines
+      (`i18n.nameSep`: none in Chinese, "：" in Japanese, ": " in Korean). CSS: the Chinese rules (12px minimum,
+      no letter-spacing, UI font for headings) now cover Japanese and Korean, each with its own fonts; Korean
+      breaks lines between words (`word-break: keep-all`). Checked in every tab at 1366 px and 360 px: no overflow.
+      Test: every language in the picker is complete and translates jobs and composed sentences.
+      Spanish is next: `translations/source/` holds the 24 English parts to paste into ChatGPT.
     - For the native-speaker review: some PL-13 life-moment texts use 他 as a general "they" (common, but
       a reviewer may prefer 其 / TA); the new texts use 其 / 此人.
   - Owner requests, Nov 14 2026 (after PL-12):
