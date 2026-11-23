@@ -3080,6 +3080,62 @@
     check('Portraits, album, keepsakes and ancestor checks leave the simulation exactly as without them', strip(w) === strip(twin));
   }
 
+  // Art upgrade Phase 4: every home kind in every country (plans, looks, extras, beds and seats).
+  async function homeKindTests() {
+    print('--- Homes: 5 kinds x 4 countries x 3 plans (furniture, rooms, beds, seats) ---', 'info');
+    if (typeof document === 'undefined' || !LES.Room) { print('(browser only: skipped)'); return; }
+    const AP = LES.ArtPack, R = LES.Room, TS = 16;
+    if (!AP.ready && !AP.failed) AP.init();
+    await AP.whenReady();
+    const zoneOf = (rows, x, y) => { const z = R.zones(rows), c = Math.floor(x / TS), rr = Math.floor((y - 16) / TS); return rr >= 1 && rr < rows.length && c >= 0 && c < rows[0].length ? z[rr][c] : null; };
+    const bad = [], missing = new Set();
+    let n = 0;
+    for (const country of ['my', 'uk', 'us', 'cn']) for (const kind of ['kampung', 'flat', 'terrace', 'condo', 'bungalow']) {
+      const look = R.look(country, kind), plans = R.plansFor(kind);
+      if (plans.length < 3) bad.push(`${kind}: ${plans.length} plans`);
+      plans.forEach((rows, k) => {
+        n++;
+        const plan = R.plan(rows, { baby: true, faith: 'islam', sleepers: 5, keep: [] }, look), S = plan.spots, tag = `${country} ${kind} ${k + 1}`;
+        for (const it of plan.items) if (!AP.has(it.id)) missing.add(it.id);
+        if (!(S.bed.length >= 5 && S.seat.length >= 2 && S.cook.length === 1 && S.sofa.length === 3 && S.stand.length >= 3 && S.cot.length === 1 && S.desk.length >= 1)) bad.push(`${tag}: ${S.bed.length} beds ${S.seat.length} seats ${S.stand.length} standing ${S.cot.length} cot`);
+        for (const x of look.extras || []) {
+          const it = plan.items.find(i => i.id === x.id);
+          if (!it) continue; // a piece may not fit; it is then left out
+          const z = it.wall ? 'wall' : zoneOf(rows, it.x + it.w / 2, it.key - 2);
+          if (x.where !== 'wall' && z !== x.where) bad.push(`${tag}: ${x.id} in ${z}`);
+        }
+        const rug = plan.items.find(i => i.id === look.rug);
+        if (rug) for (const it of plan.items) if (!it.floor && !it.wall && it.key > 0 && (look.extras || []).some(x => x.id === it.id) && it.x < rug.x + rug.w && it.x + it.w > rug.x && it.key > rug.y + 2 && it.key < rug.y + rug.h) bad.push(`${tag}: ${it.id} on the rug`);
+        const cv = R.preview(plan, { id: 5 });
+        if (cv.width !== rows[0].length * TS || cv.height !== 16 + rows.length * TS) bad.push(`${tag}: canvas ${cv.width}x${cv.height}`);
+      });
+    }
+    check('All 60 home plans (5 kinds x 4 countries x 3) use art that exists', n === 60 && !missing.size, [...missing].join(', '));
+    check('Every plan has beds, a cot, seats at the table, a stove, a sofa, a desk and standing room; country pieces stay in their rooms and off the rug', !bad.length, bad.slice(0, 6).join(' | '));
+    const looks = ['my', 'uk', 'us', 'cn'].map(c => R.look(c, 'terrace').floor[0]);
+    check('The same home kind looks different in each country (floors, walls, extras)', new Set(looks).size === 4 && R.look('us', 'kampung').single[0] === 'mob.bunk' && R.look('my', 'kampung').S.S === 'home.sofa_rattan' && R.look('uk', 'condo').S.S === 'mod.sofa');
+    // A UK town: every home is drawn in its own kind's plan with the UK look, and everyone at home has a bed at night.
+    const cfg = Object.assign({}, LES.DEFAULTS, LES.Countries.get('uk').defaults || {}, { country: 'uk', seed: 'uk-homes', founders: 160 });
+    LES.Countries.ensure(cfg);
+    const w = new LES.World(cfg);
+    for (let d = 0; d < 200; d++) w.step();
+    const cv = document.createElement('canvas'); cv.style.cssText = 'position:fixed;left:0;top:0;width:800px;height:600px;visibility:hidden'; document.body.appendChild(cv);
+    const r = new LES.Renderer(cv); r.setWorld(w);
+    const homes = new Set(); for (const p of w.living) if (p.alive && p.homeId >= 0 && R.isHome(w.town.buildings[p.homeId])) homes.add(p.homeId);
+    let noBed = 0, kinds = new Set(), drawn = 0;
+    for (const h of homes) {
+      const b = w.town.buildings[h]; kinds.add(b.kind);
+      const scn = R.scene(w, r, b, (23.5 - 6) / 24, false), plan = R.plan(R.rowsOf(b), R.family(w, b), R.look('uk', b.kind)), placed = R.place(plan, scn, 0);
+      const asleep = scn.filter(s => s.act === 'sleep' || s.act === 'cot').length, inBed = placed.filter(m => m.kind === 'bed' || m.kind === 'cot').length;
+      if (inBed < asleep) noBed += asleep - inBed;
+    }
+    const me = w.living.find(p => p.alive && p.homeId >= 0 && R.isHome(w.town.buildings[p.homeId]) && r.posOf(p, (23.5 - 6) / 24, false).inside === p.homeId);
+    r.roomOn = true; r.follow = true; r.selectedId = me.id;
+    try { r.frame((23.5 - 6) / 24, false, 0); drawn = r.roomState === 'on' && r._roomPlan.plan.look === undefined ? 0 : r._roomCv.width === r._roomPlan.plan.W ? 1 : 0; } catch (e) { print(`  ${e.message}`); }
+    cv.remove();
+    check('In a UK town every home kind gets its own plan, everyone at home has a bed at night, and the inside view draws at the plan\'s size', kinds.size >= 3 && noBed === 0 && drawn === 1, `${kinds.size} kinds, ${noBed} without a bed`);
+  }
+
   async function heldTests() {
     print('--- Prison and rehab: what is paid, the home, and life events (rules revision 11) ---', 'info');
     const D = LES.DEFAULTS, CR = LES.Crime, F = LES.Finance, Pl = LES.Player, Wd = LES.World;
@@ -3227,6 +3283,7 @@
       await peopleArtTests();
       await roomTests();
       await memoryTests();
+      await homeKindTests();
       await buildingArtTests();
       await crimeRevTests();
       await wealthRevTests();
@@ -3262,6 +3319,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, roomTests, memoryTests, heldTests, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, playFlowTests, playCatalogTests, playPacingTests, playMatrixTests, i18nSentenceTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, roomTests, memoryTests, homeKindTests, heldTests, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, playFlowTests, playCatalogTests, playPacingTests, playMatrixTests, i18nSentenceTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

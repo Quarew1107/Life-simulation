@@ -248,10 +248,14 @@ def main():
         else:
             idx = nearest(flat, mask_pal).reshape(ch, cw)
             tw, th = fit_size(cw, ch, s['w'], s['h'])
-        step = (cw / tw + ch / th) / 2
-        ox, oy = phase(crop, alpha, step, 1), phase(crop, alpha, step, 0)
-        tw, th = max(1, round((cw - ox) / step)), max(1, round((ch - oy) / step))
-        small = shrink(idx, alpha, tw, th, 0.5, ox, oy)
+        if s.get('fit') == 'stretch':  # pieces that must line up exactly (wall strips, doors): stretched to size
+            tw, th = s['w'], s['h']
+            small = shrink(idx, alpha, tw, th, 0.5)
+        else:
+            step = (cw / tw + ch / th) / 2
+            ox, oy = phase(crop, alpha, step, 1), phase(crop, alpha, step, 0)
+            tw, th = max(1, round((cw - ox) / step)), max(1, round((ch - oy) / step))
+            small = shrink(idx, alpha, tw, th, 0.5, ox, oy)
         it['small'], it['size'] = small, (tw, th)
         dev = abs(th - s['h']) / s['h'] if s['type'] == 'mask' else max(abs(tw - s['w']) / s['w'], abs(th - s['h']) / s['h'])  # people: height counts (the frame is wider than the body)
         line = f"  {s['id']:<24} wanted {s['w']}x{s['h']}  got {tw}x{th}  {'OK' if dev <= 0.15 else 'SIZE OFF by %d%%' % round(dev * 100)}"

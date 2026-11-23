@@ -1,0 +1,684 @@
+{
+ "batch": "P4",
+ "fit": "box",
+ "sheets": [
+  {
+   "file": "p4-modern-1.png",
+   "rows": [
+    [
+     {
+      "id": "mod.bed_double",
+      "w": 32,
+      "h": 40,
+      "type": "art"
+     },
+     {
+      "id": "mod.bed_single_blue",
+      "w": 16,
+      "h": 36,
+      "type": "art"
+     },
+     {
+      "id": "mod.bed_single_green",
+      "w": 16,
+      "h": 36,
+      "type": "art"
+     },
+     {
+      "id": "mod.wardrobe",
+      "w": 32,
+      "h": 40,
+      "type": "art"
+     },
+     {
+      "id": "mod.desk",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "mod.office_chair",
+      "w": 12,
+      "h": 18,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "mod.sofa",
+      "w": 48,
+      "h": 28,
+      "type": "art"
+     },
+     {
+      "id": "mod.tv_stand",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "mod.tv_pic.0",
+      "w": 26,
+      "h": 14,
+      "type": "art"
+     },
+     {
+      "id": "mod.tv_pic.1",
+      "w": 26,
+      "h": 14,
+      "type": "art"
+     },
+     {
+      "id": "mod.tv_pic.2",
+      "w": 26,
+      "h": 14,
+      "type": "art"
+     },
+     {
+      "id": "mod.coffee_table",
+      "w": 32,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "mod.floor_lamp",
+      "w": 8,
+      "h": 28,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p4-modern-2.png",
+   "rows": [
+    [
+     {
+      "id": "mod.counter_hob",
+      "w": 32,
+      "h": 28,
+      "type": "art"
+     },
+     {
+      "id": "mod.sink",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "mod.fridge",
+      "w": 24,
+      "h": 36,
+      "type": "art"
+     },
+     {
+      "id": "mod.microwave",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "mod.dining_set",
+      "w": 32,
+      "h": 28,
+      "type": "art"
+     },
+     {
+      "id": "mod.dining_chair",
+      "w": 12,
+      "h": 18,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "mod.aircon",
+      "w": 28,
+      "h": 10,
+      "type": "art"
+     },
+     {
+      "id": "mod.washer",
+      "w": 16,
+      "h": 20,
+      "type": "art"
+     },
+     {
+      "id": "mod.bookshelf",
+      "w": 16,
+      "h": 32,
+      "type": "art"
+     },
+     {
+      "id": "mod.plant",
+      "w": 16,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "mod.railing",
+      "w": 16,
+      "h": 12,
+      "type": "art"
+     },
+     {
+      "id": "mod.shoe_cabinet",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p4-my.png",
+   "rows": [
+    [
+     {
+      "id": "my.floor.0",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "my.floor.1",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "my.floor_kitchen",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "my.floor_bed",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "my.wall.0",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "my.wall.1",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "my.wall_kitchen",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ],
+    [
+     {
+      "id": "my.window",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "my.window_curtain",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "my.door_front",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "my.doorway",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ],
+    [
+     {
+      "id": "my.ceiling_fan",
+      "w": 32,
+      "h": 12,
+      "type": "art"
+     },
+     {
+      "id": "my.rattan_chair",
+      "w": 16,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "my.batik",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "my.shoe_rack",
+      "w": 16,
+      "h": 12,
+      "type": "art"
+     },
+     {
+      "id": "my.kettle",
+      "w": 16,
+      "h": 12,
+      "type": "art"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p4-uk.png",
+   "rows": [
+    [
+     {
+      "id": "uk.floor.0",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "uk.floor.1",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "uk.floor_kitchen",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "uk.floor_bed",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "uk.wall.0",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "uk.wall.1",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "uk.wall_kitchen",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ],
+    [
+     {
+      "id": "uk.window",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "uk.window_curtain",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "uk.door_front",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "uk.doorway",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ],
+    [
+     {
+      "id": "uk.fireplace",
+      "w": 32,
+      "h": 32,
+      "type": "art"
+     },
+     {
+      "id": "uk.radiator",
+      "w": 16,
+      "h": 12,
+      "type": "art"
+     },
+     {
+      "id": "uk.armchair",
+      "w": 16,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "uk.tea_tray",
+      "w": 16,
+      "h": 10,
+      "type": "art"
+     },
+     {
+      "id": "uk.coat_hooks",
+      "w": 12,
+      "h": 16,
+      "type": "art"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p4-us.png",
+   "rows": [
+    [
+     {
+      "id": "us.floor.0",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "us.floor.1",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "us.floor_kitchen",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "us.floor_bed",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "us.wall.0",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "us.wall.1",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "us.wall_kitchen",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ],
+    [
+     {
+      "id": "us.window",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "us.window_curtain",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "us.door_front",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "us.doorway",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ],
+    [
+     {
+      "id": "us.island",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "us.recliner",
+      "w": 20,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "us.ceiling_light",
+      "w": 16,
+      "h": 8,
+      "type": "art"
+     },
+     {
+      "id": "us.clock",
+      "w": 12,
+      "h": 12,
+      "type": "art"
+     },
+     {
+      "id": "us.screen_door",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p4-cn.png",
+   "rows": [
+    [
+     {
+      "id": "cn.floor.0",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "cn.floor.1",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "cn.floor_kitchen",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "cn.floor_bed",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "cn.wall.0",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "cn.wall.1",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "cn.wall_kitchen",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ],
+    [
+     {
+      "id": "cn.window",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "cn.window_curtain",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "cn.door_front",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "cn.doorway",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ],
+    [
+     {
+      "id": "cn.tea_table",
+      "w": 32,
+      "h": 20,
+      "type": "art"
+     },
+     {
+      "id": "cn.lantern",
+      "w": 10,
+      "h": 14,
+      "type": "art"
+     },
+     {
+      "id": "cn.rice_cooker",
+      "w": 16,
+      "h": 14,
+      "type": "art"
+     },
+     {
+      "id": "cn.scroll",
+      "w": 12,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "cn.bamboo",
+      "w": 10,
+      "h": 18,
+      "type": "art"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p4-mobile.png",
+   "rows": [
+    [
+     {
+      "id": "mob.wall",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "mob.window",
+      "w": 24,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "mob.bunk",
+      "w": 16,
+      "h": 36,
+      "type": "art"
+     },
+     {
+      "id": "mob.table",
+      "w": 24,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "mob.chair",
+      "w": 12,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "mob.mini_fridge",
+      "w": 12,
+      "h": 16,
+      "type": "art"
+     }
+    ]
+   ]
+  }
+ ]
+}
