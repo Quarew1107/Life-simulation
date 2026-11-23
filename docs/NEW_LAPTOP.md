@@ -37,6 +37,7 @@ git checkout feature/playable-life
   next steps are in `docs/HANDOFF.md` (section 0, plus the "Playable Life Mode" item).
 - **The Play a Life design package** is in `Idea/Life simulation expansion/`. The rest of `Idea/` stays on the
   first laptop only.
-- **The preview server** for the Claude app's browser pane is in `.claude/launch.json` (called `life-sim`).
+- **The preview server** for the Claude app's browser pane is `.claude/launch.json` (called `life-sim`). It is not on
+  GitHub (Nov 2026): on a new laptop ask Claude to create it (`python -m http.server 8765 --bind 127.0.0.1`).
 - **Not on GitHub:** `Prompt for later.txt` (your private notes), the rest of `Idea/`, and Claude's own
   memory from the first laptop. The important rules from that memory are copied into `CLAUDE.md`.

@@ -12,7 +12,7 @@ await (async () => {
   const gaps = new Map();
   const add = (s, path) => {
     if (typeof s !== 'string' || !/[A-Za-z]{2}/.test(s) || /^[a-z0-9]+$/.test(s) || /^[A-Z]{2,5}$/.test(s) || /^(RM|\$|£|¥)?[\d,.]+$/.test(s)) return;
-    if (I.g(s) === s && !gaps.has(s)) gaps.set(s, path);
+    if (I.g(s) === s && !I.hasName(s) && !gaps.has(s)) gaps.set(s, path); // a name the language lists as it is (\"Barista\") is translated
   };
   const walk = (o, path, d, inOpts) => {
     if (!o || d > 9 || typeof o === 'function') return;

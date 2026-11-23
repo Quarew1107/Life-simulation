@@ -371,6 +371,8 @@ svg.ftree { width: 100%; height: auto; margin-bottom: 6px; }
 .fnode:hover rect { fill: #24323f; }
 table.cmp { width: 100%; border-collapse: collapse; font-size: 12px; }
 table.cmp td, table.cmp th { padding: 3px 6px; border-bottom: 1px dashed var(--line); text-align: left; }
+table.cmp th { overflow-wrap: anywhere; } /* a long header word (Spanish "concedidas") may break rather than push the table off the panel */
+html:lang(es) table.cmp td, html:lang(es) table.cmp th { padding: 3px 4px; }
 #overlay { width: 32px; height: 32px; padding: 0 2px; font-size: 11px; border-radius: 8px; background: rgba(22,29,37,.9); }
 #overlay:focus { width: 180px; }
 

@@ -579,6 +579,19 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
       breaks lines between words (`word-break: keep-all`). Checked in every tab at 1366 px and 360 px: no overflow.
       Test: every language in the picker is complete and translates jobs and composed sentences.
       Spanish is next: `translations/source/` holds the 24 English parts to paste into ChatGPT.
+    - **Spanish (Nov 23 2026; ChatGPT draft, not yet reviewed):** joined from `translations/Spanish/` into `js/i18n/es.js`
+      / `es-sentences.js` and added to the picker. Checked as Japanese and Korean (all keys, placeholders, patterns,
+      data names). Claude added the texts made after the parts and fixed: the "Seriously …" template (a whole
+      sentence sits inside it), "National Insurance", "Economía: …". Lookup: `I18n.hasName` (a name the language
+      lists as it is, e.g. "Barista") and ranks before such names ("Barista principal"); the audit and the tests
+      count those as translated, and the "English left" test now looks for the source's own English words (works
+      for Latin-script languages). CSS: long table headers may break (`table.cmp th`), tighter Spanish padding.
+      Checked in every tab at 1366 px and 360 px: no overflow.
+    - **GitHub clean-up (owner, Nov 23 2026: "work files only"):** no longer on GitHub, kept on this laptop and in
+      `.gitignore`: `translations/` (ChatGPT parts and English source parts), `docs/design/` (mock-ups) and `.claude/`
+      (incl. `launch.json`; `docs/NEW_LAPTOP.md` says how to recreate it). Developer files (CLAUDE.md, docs, tests,
+      tools, the Play a Life design package) stay so work can continue on another laptop. Earlier commits still
+      hold the removed files (the repository is private).
     - For the native-speaker review: some PL-13 life-moment texts use 他 as a general "they" (common, but
       a reviewer may prefer 其 / TA); the new texts use 其 / 此人.
   - Owner requests, Nov 14 2026 (after PL-12):

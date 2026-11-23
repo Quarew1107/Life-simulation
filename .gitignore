@@ -1,6 +1,5 @@
-# Local tooling (the preview server settings are shared)
-.claude/*
-!.claude/launch.json
+# Local tooling (Claude's settings and preview server)
+.claude/
 __pycache__/
 *.log
 
@@ -21,3 +20,8 @@ Prompt for later.txt
 # except the Play a Life design package (allowed by the owner, Nov 2026, for work on another laptop)
 Idea/*
 !Idea/Life simulation expansion/
+
+# Work files kept on this computer only (owner, Nov 2026: GitHub holds the game, what players read, and the
+# developer files): translation drafts and source parts (the game uses js/i18n/), design mock-ups
+translations/
+docs/design/

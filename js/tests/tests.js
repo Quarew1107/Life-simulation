@@ -2948,7 +2948,7 @@
     const KEYS = /^(name|title|label|text|short|desc|help|fx|note|tip|why|reason|role|full|long|unit|adj|plural|what|line|headline|caption|hint|blurb|item|act|noun|src|does|en|num|den|obs)$/;
     const SKIP = /^(first|firstNames|surnames|last|given|family|streets|towns|townNames|parts|prefix|suffix|names|bizNames|gangNames|male|female|m|f|stocks|ipoPool|glcStocks|money|CLANS|place)$/;
     const gaps = new Map();
-    const add = (s, path) => { if (typeof s !== 'string' || !/[A-Za-z]{2}/.test(s) || /[\u4e00-\u9fff]/.test(s) || /^[a-z0-9]+$/.test(s) || /^[A-Z]{2,5}$/.test(s) || /^(RM|\$|£|¥)?[\d,.]+$/.test(s)) return; if (I.g(s) === s && !gaps.has(s)) gaps.set(s, path); };
+    const add = (s, path) => { if (typeof s !== 'string' || !/[A-Za-z]{2}/.test(s) || /[\u4e00-\u9fff]/.test(s) || /^[a-z0-9]+$/.test(s) || /^[A-Z]{2,5}$/.test(s) || /^(RM|\$|£|¥)?[\d,.]+$/.test(s)) return; if (I.g(s) === s && !I.hasName(s) && !gaps.has(s)) gaps.set(s, path); };
     const walk = (o, path, d, inOpts) => {
       if (!o || d > 9 || typeof o === 'function') return;
       if (Array.isArray(o)) { o.forEach((v, i) => (inOpts && i === 0 && typeof v === 'string' ? null : walk(v, `${path}[${i}]`, d + 1, inOpts))); return; }
@@ -2969,8 +2969,10 @@
     for (const code of langs) {
       await new Promise(r => I.set(code, r));
       const cov = Object.entries(I.coverage(code)).filter(([ns]) => ns !== 'test').map(x => x[1]), done = cov.reduce((a, c) => a + c.done, 0), total = cov.reduce((a, c) => a + c.total, 0); // test.*: keys a test adds to English only
-      const left = parts.map(s => I.render(s)).filter(s => /[A-Za-z]{3,}/.test(s.replace(/Aina Rahman|Adam|Hafiz Rahman|Hari Raya|Aidilfitri|RM/g, '')));
-      const jobs = Object.values(LES.Countries.get('my').content.jobs).map(j => j.title).filter(t => I.g(t) === t);
+      // English left = an English word of the source (not a name) still in the result: works for Latin-script languages too
+      const NAMES = /^(Aina|Rahman|Adam|Hafiz|Hari|Raya|Aidilfitri|Head|Chief)$/;
+      const left = parts.filter(s => { const out = I.render(s); return out === s || (s.match(/[A-Za-z]{5,}/g) || []).some(wd => !NAMES.test(wd) && new RegExp(`\b${wd}\b`).test(out)); }).map(s => I.render(s));
+      const jobs = Object.values(LES.Countries.get('my').content.jobs).map(j => j.title).filter(t => I.g(t) === t && !I.hasName(t));
       langRes.push({ code, ok: I.lang() === code && !I.validate(code).length && done === total && !left.length && !jobs.length, why: `${code}: ${done}/${total} keys${I.validate(code)[0] ? `, ${I.validate(code)[0]}` : ''}${left[0] ? `, English left: ${left[0]}` : ''}${jobs[0] ? `, job: ${jobs[0]}` : ''}` });
     }
     await new Promise(r => I.set('en', r));

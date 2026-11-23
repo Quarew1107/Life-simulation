@@ -14,7 +14,7 @@
 (function (LES) {
   'use strict';
   const I = LES.I18n = {};
-  I.LANGS = [['en', 'English'], ['zh-Hans', '简体中文'], ['ja', '日本語'], ['ko', '한국어']]; // later: es
+  I.LANGS = [['en', 'English'], ['zh-Hans', '简体中文'], ['ja', '日本語'], ['ko', '한국어'], ['es', 'Español']];
   I.DEFAULT = 'en';
   const dict = { en: {} };
   const missing = new Set();
@@ -71,7 +71,7 @@
     const e = /^((?:\p{Extended_Pictographic}|\uFE0F|\u200D)+ )(.+)$/u.exec(s); // an icon in front ("😊 Stay happy...")
     if (e) { const t = tr(e[2], depth + 1); return t === e[2] ? s : e[1] + t; }
     const m = /^(Senior|Lead|Head|Chief) (.+)$/.exec(s);
-    if (m && I.has(`g:${m[1]} *`)) { const t = tr(m[2], depth + 1); if (t !== m[2]) return I.t(`g:${m[1]} *`, { title: t }); }
+    if (m && I.has(`g:${m[1]} *`)) { const t = tr(m[2], depth + 1); if (t !== m[2] || exact(m[2]) !== null) return I.t(`g:${m[1]} *`, { title: t }); } // a title the same in both languages ("Barista") still takes the rank
     for (const [re, tpl] of sentences[lang] || []) {
       const r = re.exec(s);
       if (r) return tpl.replace(/\{(\d)\}/g, (y, n) => (r[n] === undefined ? '' : tr(r[n], depth + 1)));
@@ -92,6 +92,8 @@
     return v;
   };
   I.g = look;
+  // Whether the language lists this data name itself (it may be spelt as in English: "Barista", "Halloween").
+  I.hasName = s => typeof s === 'string' && lang !== 'en' && exact(s) !== null;
   // Sentences (PL-17 step 5): the engine keeps writing plain English into its records (the fingerprints and
   // saves read that text, so it never changes). When a record is shown in another language, a table of
   // sentence patterns (js/i18n/<lang>-sentences.js) maps the English sentence to that language: each pattern
