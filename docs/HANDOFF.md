@@ -543,6 +543,12 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
         stay, without the link; other choices kept). `UI.castDelete` also serves the Leaders tab's Remove.
       - Tests: two more checks in `i18nSentenceTests` (every data name shown in four countries has Chinese;
         composed sentences read fully in Chinese).
+      - *Translation tools kept in the project (Nov 23 2026):* `tools/i18n-check.py` (`audit` and `scan`, with
+        `tools/i18n-audit.js` / `tools/i18n-scan.js`), for any language. The scan now recognises the game's own
+        English (every text, glossary name and sentence pattern, via `I18n.sources()`), so it also works for
+        languages in Latin letters (tested by scanning with nothing translated: ~96% of English lines found, the
+        rest are headings joined with their subtitles); for Chinese, Japanese and Korean it also reports Latin
+        words that are not names. Guide for a new language: `docs/TRANSLATING.md`.
     - For the native-speaker review: some PL-13 life-moment texts use 他 as a general "they" (common, but
       a reviewer may prefer 其 / TA); the new texts use 其 / 此人.
   - Owner requests, Nov 14 2026 (after PL-12):

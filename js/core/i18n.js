@@ -152,4 +152,15 @@
     for (const k of Object.keys(dict.en)) { const n = k.split('.')[0], c = ns[n] = ns[n] || { done: 0, total: 0 }; c.total++; if (I.has(k, code)) c.done++; }
     return ns;
   };
+  // For the translation tools (tools/i18n-check.py): every English text the game can show, so a screen in any
+  // language can be checked for text still in English. texts: key -> English value(s); names: the English
+  // data names some language's glossary covers; patterns: the English sentence patterns of every language.
+  I.sources = function () {
+    const names = new Set(), patterns = [];
+    for (const m of Object.values(gloss)) for (const k of Object.keys(m)) names.add(k);
+    for (const k of Object.keys(dict.en)) if (k.startsWith('g:')) names.add(k.slice(2));
+    for (const list of Object.values(sentences)) for (const [re] of list) patterns.push(re);
+    return { texts: Object.assign({}, dict.en), names: [...names], patterns };
+  };
+  I.textOf = (code, key) => (dict[code] || {})[key]; // a language's own value for a key (undefined: none)
 })(globalThis.LES = globalThis.LES || {});

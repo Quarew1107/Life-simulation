@@ -81,6 +81,8 @@ those first.
     runs the whole suite (5 to 14 minutes);
   - `await LES_TESTS.<group>()` runs one group.
   - It needs Python and the `websockets` package. Run only one headless browser at a time.
+- **Translations:** `python tools/i18n-check.py audit|scan --lang <code>` finds untranslated data names and
+  English left on screen (any language); how to add a language: `docs/TRANSLATING.md`.
 - **Previewing:** the `life-sim` server in `.claude/launch.json` (python http.server on port 8765). Scripts are
   cached, so reload them with `fetch(src, {cache: 'reload'})` before `location.reload()`.
 - **Editing a line of engine code:** never put a `//` comment in the middle of a line before more code. It
