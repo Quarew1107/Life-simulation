@@ -9,18 +9,21 @@
 (function (LES) {
   'use strict';
   const U = LES.U, C = LES.C, esc = U.esc;
-  const T = (k, p) => LES.I18n.t(k, p);
+  const T = (k, p) => LES.I18n.t(k, p), G = s => LES.I18n.g(s); // PL-17: data names through the glossary
+  const FTL = (key, en) => (LES.I18n.lang() === 'en' ? LES.Countries.fill(en) : T(key, { goal: LES.Countries.fill('{goal}') }));
   const $ = id => document.getElementById(id);
 
   // The cards: two base worlds, then the scenarios (built on Malaysia today).
   function cards() {
-    const SC = LES.Scenarios, F = LES.Countries.fill;
+    const SC = LES.Scenarios, F = LES.Countries.fill, K = LES.Countries;
+    // English: filled as before. Another language: its own text, with the country's name in that language (PL-17).
+    const FT = (key, en) => (LES.I18n.lang() === 'en' ? F(en) : T(key, { country: G(K.pack.name), adj: G(K.pack.adj), goal: F('{goal}') }));
     return [
-      { key: 'national', scenario: 'none', preset: 'national', name: LES.PRESETS.national.name, icon: 'flag', short: F('A town of strangers in today\'s {country}, calibrated to official data.'),
-        desc: F(`{adj} prices, wages, taxes, family life, religion, crime and ${LES.Gov && LES.Gov.appointed() ? 'an appointed city government' : 'an elected town government'}. Start here if this is your first world.`), watch: [F('Who reaches {goal}, and why'), 'How class, education and luck shape lives across generations', LES.Gov && LES.Gov.appointed() ? 'Appointed leaders, laws and what they change' : 'Elections, laws and what they change'] },
+      { key: 'national', scenario: 'none', preset: 'national', name: LES.PRESETS.national.name, icon: 'flag', short: FT('su.nat.short', 'A town of strangers in today\'s {country}, calibrated to official data.'),
+        desc: LES.Gov && LES.Gov.appointed() ? FT('su.nat.descA', '{adj} prices, wages, taxes, family life, religion, crime and an appointed city government. Start here if this is your first world.') : FT('su.nat.descE', '{adj} prices, wages, taxes, family life, religion, crime and an elected town government. Start here if this is your first world.'), watch: [FT('su.nat.w1', 'Who reaches {goal}, and why'), 'How class, education and luck shape lives across generations', LES.Gov && LES.Gov.appointed() ? 'Appointed leaders, laws and what they change' : 'Elections, laws and what they change'] },
       ...SC.LIST.map(s => ({ key: s.id, scenario: s.id, preset: 'national', name: s.name, icon: s.icon, short: s.short, desc: s.desc, watch: s.watch, cfg: s.cfg })),
       { key: 'classic', scenario: 'none', preset: 'classic', name: 'Classic rules', icon: 'book-open', short: 'The original engine: harsh rules, no society, crime or government.',
-        desc: 'No welfare, a higher birth rate and longer lives, a grid town, three ethnic groups, and none of the newer systems. For comparing with the original design.', watch: ['Survival without a safety net', F('The original {goal} race')] },
+        desc: 'No welfare, a higher birth rate and longer lives, a grid town, three ethnic groups, and none of the newer systems. For comparing with the original design.', watch: ['Survival without a safety net', FT('su.cl.w2', 'The original {goal} race')] },
     ];
   }
 
@@ -87,24 +90,24 @@
     const on = new Set((base.cast || []).map(s => s.id)), town = id => ((base.cast || []).find(s => s.id === id) || {}).town || 0;
     const rows = roster.map(s => {
       const fam = LES.Cast.householdOf(roster, s).filter(o => o !== s).map(o => o.first);
-      return `<label class="cast-pick"><input type="checkbox" data-id="${esc(s.id)}" ${on.has(s.id) ? 'checked' : ''}> <b>${esc(s.first)} ${esc(s.last)}</b> <span class="muted">${s.age} · ${esc(C.ETHNIC_NAMES[s.eth] || s.eth)}${fam.length ? ` · with ${esc(fam.join(', '))}` : ''}</span>
-        <select id="set-cast-town-${esc(s.id)}" class="cast-town" title="Which town (when there are several)">${[0, 1, 2].map(i => `<option value="${i}" ${town(s.id) === i ? 'selected' : ''}>Town ${i + 1}</option>`).join('')}</select></label>`;
+      return `<label class="cast-pick"><input type="checkbox" data-id="${esc(s.id)}" ${on.has(s.id) ? 'checked' : ''}> <b>${esc(s.first)} ${esc(s.last)}</b> <span class="muted">${s.age} · ${esc(G(C.ETHNIC_NAMES[s.eth] || s.eth))}${fam.length ? ` · ${esc(T('su.c.with', { names: fam.join(', ') }))}` : ''}</span>
+        <select id="set-cast-town-${esc(s.id)}" class="cast-town" title="${esc(T('su.c.town.tip'))}">${[0, 1, 2].map(i => `<option value="${i}" ${town(s.id) === i ? 'selected' : ''}>${esc(T('su.c.town', { n: i + 1 }))}</option>`).join('')}</select></label>`;
     }).join('');
-    return `<details class="set-cast" ${on.size || !roster.length ? 'open' : ''}><summary>★ My cast as founders: <b id="set-cast-sum">${on.size ? `${on.size} chosen` : 'none chosen'}</b></summary>
-      <div id="set-cast">${rows || '<p class="note">You have no saved people yet. Design your own characters (looks, abilities, personality, family) and they found the town with the strangers.</p>'}</div>
-      <div class="modal-actions" style="justify-content:flex-start"><button type="button" class="ghost" id="set-cast-new">＋ Create a person</button></div>
-      ${again ? `<label class="cast-pick"><input type="checkbox" id="set-cast-again" checked> Also bring back the ${again} ${again > 1 ? 'people' : 'person'} you added during the last run (on the same days)</label>` : ''}
-      <p class="note">Your cast lives by the same rules as everyone else. During a run you can also add or edit people in the Leaders tab → ★ My cast.</p></details>`;
+    return `<details class="set-cast" ${on.size || !roster.length ? 'open' : ''}><summary>★ ${esc(T('su.c.title'))} <b id="set-cast-sum">${esc(on.size ? T('su.c.chosen', { n: on.size }) : T('su.c.none'))}</b></summary>
+      <div id="set-cast">${rows || `<p class="note">${esc(T('su.c.empty'))}</p>`}</div>
+      <div class="modal-actions" style="justify-content:flex-start"><button type="button" class="ghost" id="set-cast-new">＋ ${esc(T('ca.create'))}</button></div>
+      ${again ? `<label class="cast-pick"><input type="checkbox" id="set-cast-again" checked> ${esc(T('su.c.again', { count: again }))}</label>` : ''}
+      <p class="note">${esc(T('su.c.note'))}</p></details>`;
   }
 
   function field(m, v) {
     let input;
     if (m.hidden) return `<input type="hidden" id="set-${m.key}" value="${esc(v)}">`;
-    if (m.type === 'select') input = `<select id="set-${m.key}">${m.options.map(([k, l]) => `<option value="${k}" ${k === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
+    if (m.type === 'select') input = `<select id="set-${m.key}">${m.options.map(([k, l]) => `<option value="${k}" ${k === v ? 'selected' : ''}>${esc(G(l))}</option>`).join('')}</select>`;
     else if (m.type === 'int' || m.type === 'num') input = `<input id="set-${m.key}" type="number" step="${m.step || 1}" min="${m.min}" max="${m.max}" value="${v}">`;
     else if (m.key === 'seed') input = `<div class="seed-row"><input id="set-${m.key}" type="text" maxlength="40" value="${esc(v)}"><button class="ghost" id="set-random" type="button" title="Pick a random seed">🎲</button></div>`;
     else input = `<input id="set-${m.key}" type="text" maxlength="40" value="${esc(v)}"${m.key === 'townName' ? ` placeholder="${esc(C.TOWN_NAME)}"` : ''}>`;
-    return `<div class="field" data-key="${m.key}"><label for="set-${m.key}">${esc(m.label)}</label>${input}${m.help ? `<div class="help">${esc(m.help)}</div>` : ''}</div>`;
+    return `<div class="field" data-key="${m.key}"><label for="set-${m.key}">${esc(G(m.label))}</label>${input}${m.help ? `<div class="help">${esc(G(m.help))}</div>` : ''}</div>`;
   }
 
   LES.Setup = {
@@ -123,11 +126,11 @@
       card.innerHTML = `
         <h1>${esc(first ? T('app.title') : T('setup.newWorld'))}</h1>
         <p class="lead">${first
-          ? F('A town of strangers, each born different, each chasing {goal}. Pick a world, set up your town, then watch who makes it, and why.')
+          ? esc(FTL('su.lead', 'A town of strangers, each born different, each chasing {goal}. Pick a world, set up your town, then watch who makes it, and why.'))
           : esc(T('setup.replace'))}</p>
         ${playCard(base)}
         <h2 class="set-step"><span>1</span> ${esc(T('setup.chooseWorld'))}</h2>
-        <div class="scn-grid" role="radiogroup" aria-label="World">${CARDS.map(c => `<button type="button" class="scn-card${c.key === 'classic' ? ' mini' : ''}" role="radio" data-card="${c.key}">${LES.icon(c.icon, 22)}<b>${esc(c.name)}</b><small>${esc(c.short)}</small></button>`).join('')}</div>
+        <div class="scn-grid" role="radiogroup" aria-label="World">${CARDS.map(c => `<button type="button" class="scn-card${c.key === 'classic' ? ' mini' : ''}" role="radio" data-card="${c.key}">${LES.icon(c.icon, 22)}<b>${esc(G(c.name))}</b><small>${esc(G(c.short))}</small></button>`).join('')}</div>
         <div class="scn-detail" id="scn-detail"></div>
         ${META.filter(m => m.hidden).map(m => field(m, base[m.key])).join('')}
         <h2 class="set-step"><span>2</span> ${esc(T('setup.yourTown'))}</h2>
@@ -158,10 +161,10 @@
         const keep = {};
         for (const el of $('scn-detail').querySelectorAll('select')) keep[el.id] = el.value;
         const opts = optsHtml(chosen);
-        $('scn-detail').innerHTML = `<div class="scn-head">${LES.icon(c.icon, 28)}<div><b>${esc(c.name)}</b><p>${esc(c.desc)}</p></div></div>
-          <div class="scn-cols"><div><h4>What to watch</h4><ul>${c.watch.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
-          ${opts ? `<div><h4>Options</h4><div class="scn-opts">${opts}</div></div>` : ''}</div>
-          ${c.cfg ? `<p class="note">Sets: ${Object.entries(c.cfg).map(([k, v]) => { const m = META.find(x => x.key === k); return m ? `${esc(m.label)} → ${esc(m.options ? (m.options.find(o => o[0] === v) || [, v])[1] : v)}` : ''; }).filter(Boolean).join(' · ')}.</p>` : ''}`;
+        $('scn-detail').innerHTML = `<div class="scn-head">${LES.icon(c.icon, 28)}<div><b>${esc(G(c.name))}</b><p>${esc(G(c.desc))}</p></div></div>
+          <div class="scn-cols"><div><h4>${esc(T('su.watch'))}</h4><ul>${c.watch.map(x => `<li>${esc(G(x))}</li>`).join('')}</ul></div>
+          ${opts ? `<div><h4>${esc(T('su.options'))}</h4><div class="scn-opts">${opts}</div></div>` : ''}</div>
+          ${c.cfg ? `<p class="note">${esc(T('su.sets', { list: Object.entries(c.cfg).map(([k, v]) => { const m = META.find(x => x.key === k); return m ? `${G(m.label)} → ${G(m.options ? (m.options.find(o => o[0] === v) || [, v])[1] : v)}` : ''; }).filter(Boolean).join(' · ') }))}</p>` : ''}`;
         for (const id in keep) if ($(id)) $(id).value = keep[id];
       };
       // A new country: its own defaults (life expectancy, leader title, term), then the form again in its words.
@@ -192,8 +195,8 @@
 
       const refresh = () => {
         const v = LES.validateConfig(readForm(base));
-        $('set-msgs').innerHTML = v.blockers.map(b => `<div class="msg block">⛔ ${esc(b)}</div>`).join('')
-          + v.warnings.map(x => `<div class="msg warn">⚠️ ${esc(x)}</div>`).join('');
+        $('set-msgs').innerHTML = v.blockers.map(b => `<div class="msg block">⛔ ${esc(LES.I18n.render(b))}</div>`).join('') // (translated by sentence patterns, PL-17)
+          + v.warnings.map(x => `<div class="msg warn">⚠️ ${esc(LES.I18n.render(x))}</div>`).join('');
         $('set-start').disabled = v.blockers.length > 0;
         $('set-start').style.opacity = v.blockers.length ? 0.5 : 1;
         return v;
@@ -215,7 +218,7 @@
         }
         if ($('set-cast')) {
           const n = card.querySelectorAll('#set-cast input[type=checkbox]:checked').length, many = (Number(($('set-towns') || {}).value) || 1) > 1;
-          $('set-cast-sum').textContent = n ? `${n} chosen` : 'none chosen';
+          $('set-cast-sum').textContent = n ? T('su.c.chosen', { n }) : T('su.c.none');
           for (const el of card.querySelectorAll('.cast-town')) el.hidden = !many;
         }
       };

@@ -114,7 +114,7 @@
     STAND: {
       hours: 2, cooldown: 30, adult: true, minAge: 21, key: () => 'stand',
       check(w, p) { return !electing(w) ? 'no_elections' : p.cr && p.cr.rec ? 'record' : w.gov.president === p.id ? 'in_office' : st(w).stand ? 'already' : null; },
-      run(w, p) { st(w).stand = true; st(w).played = true; return { code: 'ok', params: { date: U.fmtDate(w.gov.electionDay) } }; },
+      run(w, p) { st(w).stand = true; st(w).played = true; return { code: 'ok', params: { date: U.dateRec(w.gov.electionDay) } }; },
     },
     WELCOME: {
       hours: 4, cooldown: 14, adult: true, key: a => `welcome:${a.pid}`,
@@ -137,7 +137,7 @@
     if (!p.alive || p.away || p.inst || !p.adult || P.age(w, p) < 21 || (p.cr && p.cr.rec) || out.includes(p)) return out;
     if (out.length >= 4) out.pop();
     out.push(p); s.ran = w.day;
-    Pl.journal(w, { kind: 'life', key: 'civic.standing', params: { date: U.fmtDate(w.gov.electionDay) }, imp: 2 });
+    Pl.journal(w, { kind: 'life', key: 'civic.standing', params: { date: U.dateRec(w.gov.electionDay) }, imp: 2 });
     return out;
   };
 
@@ -172,7 +172,7 @@
     biz: (w, p) => { const t = viable(w, p); return { type: t ? t.name : '', capital: t ? U.fmtMoney(t.capital) : '' }; },
     myBiz: (w, p) => { const b = myBiz(w, p); return { biz: b ? b.name : '', cash: b ? U.fmtMoney(b.cash) : '' }; },
     lottery: w => ({ price: U.fmtMoney(Pl.ticket(w)), jackpot: U.fmtMoney(Pl.ticket(w) * 10000) }),
-    election: w => ({ date: U.fmtDate(w.gov.electionDay), title: LES.Gov.title(w) }),
+    election: w => ({ date: U.dateRec(w.gov.electionDay), title: LES.Gov.title(w) }),
     welfare: w => ({ count: w.living.filter(c => c.alive && c.guardian === 'WELFARE').length }),
     unemployed: (w, p) => { const t = cheapest(w, p); return { type: t ? t.name : '' }; },
     newcomer: (w, p) => { const q = newcomer(w, p); return { other: q ? P.name(q) : '', pid: q ? q.id : -1 }; },

@@ -504,6 +504,16 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
       Tests: `i18nSentenceTests` (English shown exactly as stored; >= 95% in Chinese; every pattern's groups
       exist; showing Chinese changes no hash, fingerprint or stored text). Still English: dates ("Jan Y2"), long
       data descriptions (building info, calibration labels, settings names, country notes).
+    - **Step 6 done (Nov 23 2026): dates, data descriptions, review checklist.** Dates on screen follow the
+      language (`U.fmtDate` / `U.fmtMonthYear`; 第2年2月5日); the engine's own records keep English dates
+      (`U.fmtDateEn`, the election-campaign line), and Play a Life stores a date as `U.dateRec(day)` (formatted
+      when shown, so saves stay language-neutral). A Chinese-only data glossary (`I18n.glossary`, in
+      `js/i18n/zh-Hans-sentences.js`, ~720 entries) translates settings and their help, scenario cards, building
+      descriptions (all four countries), laws, country notes, official-statistics labels, council roles and
+      worship names by exact English text. The setup screen (cards, settings, My Cast section, the settings
+      check's messages via sentence patterns) is now Chinese too. Chart year labels use `rp.yr`. Tests: two more
+      checks in `i18nSentenceTests` (dates; every setting name and building description has Chinese).
+      Review checklist for a native speaker: `docs/PL-17_REVIEW.md`. **PL-17 is complete except that review.**
     - For the native-speaker review: some PL-13 life-moment texts use 他 as a general "they" (common, but
       a reviewer may prefer 其 / TA); the new texts use 其 / 此人.
   - Owner requests, Nov 14 2026 (after PL-12):

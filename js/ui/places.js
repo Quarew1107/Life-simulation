@@ -171,7 +171,7 @@
       for (let i = from; i < len; i += step) data.push([days[i] / 365, mk.idxHist[i]]);
       series.push({ label: T('pn.ch.index', { name: LES.Countries.pack.names.exchangeShort }), color: '#57d38c', data });
     }
-    LES.Charts.line($('bursa-chart'), { series, xFmt: x => (UI.bursa.range <= 261 ? U.fmtMonthYear(Math.round(x * 365)) : `Y${Math.floor(x) + 1}`), yFmt: v => (v >= 100 ? v.toFixed(0) : v.toFixed(2)), bands: UI.regimeBands(w) });
+    LES.Charts.line($('bursa-chart'), { series, xFmt: x => (UI.bursa.range <= 261 ? U.fmtMonthYear(Math.round(x * 365)) : T('rp.yr', { n: Math.floor(x) + 1 })), yFmt: v => (v >= 100 ? v.toFixed(0) : v.toFixed(2)), bands: UI.regimeBands(w) });
     $('bursa-close').onclick = UI.closeBursa;
     $('bursa-range').onclick = e => { const bt = e.target.closest('button'); if (bt) { UI.bursa.range = Number(bt.dataset.r); UI.renderBursa(); } };
     card.querySelector('tbody').onclick = e => { const tr = e.target.closest('tr'); if (tr) { UI.bursa.stock = UI.bursa.stock === tr.dataset.tk ? null : tr.dataset.tk; UI.renderBursa(); } };

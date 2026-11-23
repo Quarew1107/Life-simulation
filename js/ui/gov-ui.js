@@ -19,7 +19,7 @@
     const w = UI.app.world, el = $('tab-gov');
     if (!w.gov) { el.innerHTML = `<div class="card"><h3>${t('gv.title')}</h3><p class="note">${T('gv.offHtml')}</p></div>`; return; }
     const g = w.gov, title = G(GV.title(w)), pres = g.president >= 0 ? w.people[g.president] : null, EVN = LES.Countries.pack.events || {};
-    const h = w.history.filter(r => r.gov), xs = x => `Y${Math.floor(x) + 1}`;
+    const h = w.history.filter(r => r.gov), xs = x => T('rp.yr', { n: Math.floor(x) + 1 });
     const last = g.elections[g.elections.length - 1];
     const changed = key => { for (let i = g.lawLog.length - 1; i >= 0; i--) if (g.lawLog[i].key === key) return g.lawLog[i]; return null; };
     const days = g.electionDay - w.day;

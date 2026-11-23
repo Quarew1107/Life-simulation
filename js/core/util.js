@@ -23,8 +23,15 @@
     const dim = U.MONTH_DAYS[m];
     return { year: y + 1, month: m, dom, doy, dim, lastOfMonth: dom === dim, lastOfYear: doy === 364 };
   };
-  U.fmtDate = day => { const d = U.dayToDate(day); return `${d.dom} ${U.MONTH_NAMES[d.month]} Y${d.year}`; };
-  U.fmtMonthYear = day => { const d = U.dayToDate(day); return `${U.MONTH_NAMES[d.month]} Y${d.year}`; };
+  // English dates (what the engine writes into its records; the fingerprints read those, PL-17).
+  U.fmtDateEn = day => { const d = U.dayToDate(day); return `${d.dom} ${U.MONTH_NAMES[d.month]} Y${d.year}`; };
+  U.fmtMonthYearEn = day => { const d = U.dayToDate(day); return `${U.MONTH_NAMES[d.month]} Y${d.year}`; };
+  // A date for a stored message: the reader's language formats it when it is shown.
+  U.dateRec = day => { const d = U.dayToDate(day); return { key: 'date.d', params: { dom: d.dom, mon: { key: `mon.${d.month}` }, year: d.year } }; };
+  // Dates on screen: in the reader's language (English: exactly as before).
+  const otherLang = () => LES.I18n && LES.I18n.lang() !== 'en';
+  U.fmtDate = day => (otherLang() ? LES.I18n.render(U.dateRec(day)) : U.fmtDateEn(day));
+  U.fmtMonthYear = day => { if (!otherLang()) return U.fmtMonthYearEn(day); const d = U.dayToDate(day); return LES.I18n.t('date.my', { mon: { key: `mon.${d.month}` }, year: d.year }); };
 
   // ---- Week and festivals (shared by the simulation and the art) ----
   // 1 Jan Year 1 is a Monday: dow 0 = Monday ... 4 = Friday, 6 = Sunday.

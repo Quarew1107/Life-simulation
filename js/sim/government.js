@@ -308,7 +308,7 @@
       P.log(w, c, `Is standing for ${GV.title(w)}${spend ? ` (campaign spending ${U.fmtMoney(spend)})` : ''}`, 'politics', 1);
       return { id: c.id, colour: COLOURS[i % COLOURS.length], platform: platform(w, c, ts, R, poll), spend, incumbent: c.id === g.president, votes: 0 };
     });
-    w.pushFeed({ day: w.day, pid: -1, text: `Election campaign: ${g.campaign.map(c => P.name(w.people[c.id])).join(' vs ')} - polling day ${U.fmtDate(g.electionDay)}`, cat: 'politics', imp: 2 });
+    w.pushFeed({ day: w.day, pid: -1, text: `Election campaign: ${g.campaign.map(c => P.name(w.people[c.id])).join(' vs ')} - polling day ${U.fmtDateEn(g.electionDay)}`, cat: 'politics', imp: 2 });
   }
 
   // Each voter's utility for each candidate (and whether they will turn out).

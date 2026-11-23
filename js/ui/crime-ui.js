@@ -25,7 +25,7 @@
       return;
     }
     const st = w.crime, k = CR.INTENSITY[w.cfg.crime], rates = CR.rates(w), h = w.history.filter(r => r.cr), last = h[h.length - 1];
-    const xs = x => `Y${Math.floor(x) + 1}`;
+    const xs = x => T('rp.yr', { n: Math.floor(x) + 1 });
     const row = (label, sim, my) => `<tr><td>${t(label)}</td><td>${f0(sim)}</td><td class="muted">${f0(my * k)}${k !== 1 ? ` <span class="muted">(${f0(my)} ×${k})</span>` : ''}</td></tr>`;
     const live = st.gangs.filter(g => g.alive);
     const prisoners = w.living.filter(p => p.alive && p.inst && p.inst.kind === 'prison'), inRehab = w.living.filter(p => p.alive && p.inst && p.inst.kind === 'rehab');

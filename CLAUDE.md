@@ -47,8 +47,8 @@ those first.
 - **PL-15 done (Nov 22 2026):** final integration matrix (`playMatrixTests`), full suite 556/556; results and the
   known issues are in HANDOFF. **Next needs the owner:** PL-16 (Vite website) needs separate approval; PL-17 (full
   Chinese) **steps 1-5 done** (all screens, the report, and the engine's sentences via display-time sentence patterns in
-  `js/i18n/zh-Hans-sentences.js`; English and fingerprints unchanged). Left: step 6 (dates, long data descriptions,
-  native-speaker review), see `docs/PL-17_PLAN.md`; merging into `main` is the owner's call. Details in the HANDOFF "Playable Life Mode" item.
+  `js/i18n/zh-Hans-sentences.js`; English and fingerprints unchanged). Step 6 (dates, data descriptions) done too;
+  **left: a native speaker's review** (`docs/PL-17_REVIEW.md`); merging into `main` is the owner's call. Details in the HANDOFF "Playable Life Mode" item.
   The notes below describe the state before PL-13.
 - **Done:** PL-00 to PL-12, the owner's extra requests, and the My life redesign (steps 1-5).
   - The redesign: view A Hub (the default), B Planner and C Story. Plans are checked before they are

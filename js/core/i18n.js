@@ -49,9 +49,12 @@
   I.missing = () => [...missing];
   // Glossary (PL-17): names that come from the game's data (strategies, lifestyle levels, weather...) are
   // translated by their exact English text, so every country pack's own names work. Unknown: the English as is.
+  const gloss = {}; // data names and descriptions by exact English text (js/i18n/<lang>-sentences.js)
+  I.glossary = (code, map) => { Object.assign(gloss[code] = gloss[code] || {}, map); };
   I.g = s => {
     if (typeof s !== 'string' || lang === 'en') return s;
     if (I.has(`g:${s}`)) return I.t(`g:${s}`);
+    if (gloss[lang] && Object.prototype.hasOwnProperty.call(gloss[lang], s)) return gloss[lang][s];
     const m = /^(Senior|Lead|Head|Chief) (.+)$/.exec(s); // a rank before a job title ("Lead Waiter")
     return m && I.has(`g:${m[2]}`) && I.has(`g:${m[1]} *`) ? I.t(`g:${m[1]} *`, { title: I.t(`g:${m[2]}`) }) : s;
   };

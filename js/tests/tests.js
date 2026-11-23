@@ -2886,6 +2886,15 @@
     const badPat = pats.filter(([re, tpl]) => { const groups = new RegExp(`${re.source}|`).exec('').length - 1; return (tpl.match(/\{(\d)\}/g) || []).some(x => Number(x[1]) > groups); });
     await new Promise(r => I.set('en', r));
     check('In Chinese at least 95% of an 8-year town\'s records read in Chinese; no unfilled {n}; every pattern\'s groups exist', ok / texts.length >= 0.95 && !shown.some(t => /\{\d\}/.test(t)) && pats.length > 100 && !badPat.length, `${ok} of ${texts.length} (${(ok / texts.length * 100).toFixed(1)}%), ${pats.length} patterns${badPat.length ? `, bad: ${badPat[0][0]}` : ''}`);
+    // Step 6: dates on screen follow the language (the engine's own records keep English dates); data names too.
+    const U = LES.U, en1 = U.fmtDate(400), enRec = I.render(U.dateRec(400));
+    await new Promise(r => I.set('zh-Hans', r));
+    const zh1 = U.fmtDate(400), zhRec = I.render(U.dateRec(400)), zhMY = U.fmtMonthYear(400), engEn = U.fmtDateEn(400);
+    const meta = LES.SETTINGS_META.filter(m => m.label), untranslated = meta.filter(m => I.g(m.label) === m.label).map(m => m.label);
+    const kinds = Object.values(LES.KIND_INFO).filter(x => I.g(x) === x);
+    await new Promise(r => I.set('en', r));
+    check('Dates: English as before ("5 Feb Y2"), Chinese on screen (第2年2月5日), English in the records the engine writes', en1 === '5 Feb Y2' && enRec === en1 && zh1 === '第2年2月5日' && zhRec === zh1 && zhMY === '第2年2月' && engEn === '5 Feb Y2', `${en1} / ${zh1} / ${zhMY}`);
+    check('Every setting name and every building description has a Chinese version', !untranslated.length && !kinds.length, untranslated.slice(0, 3).concat(kinds.slice(0, 2)).join(' | '));
     check('Showing records in Chinese changes nothing in the simulation (hash, stable fingerprint, the stored English)', w.hash() === h0 && w.stableHash() === s0 && [...w.people.flatMap(p => p.log.map(e => e.text)), ...w.feed.map(e => e.text)].join('~') === texts.join('~'));
   }
 

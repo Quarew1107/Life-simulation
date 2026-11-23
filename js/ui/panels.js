@@ -410,12 +410,12 @@
     if (cn) {
       const data = p.nwHist.map(([d, v]) => [d / 365, Math.max(0, v)]);
       if (p.alive) data.push([w.day / 365, Math.max(0, p.nw)]);
-      LES.Charts.line(cn, { series: [{ label: T('pn.chart.nw'), color: '#f2c14e', data }], logY: true, yFmt: LES.Charts.fmtAxisMoney, xFmt: x => `Y${Math.floor(x) + 1}`, bands: UI.regimeBands(w) });
+      LES.Charts.line(cn, { series: [{ label: T('pn.chart.nw'), color: '#f2c14e', data }], logY: true, yFmt: LES.Charts.fmtAxisMoney, xFmt: x => T('rp.yr', { n: Math.floor(x) + 1 }), bands: UI.regimeBands(w) });
     }
     const ca = $('chart-att');
     if (ca) {
       const cols = ['#f2c14e', '#ff6b6b', '#3ec7b5', '#b892ff', '#5aa9e6', '#57d38c'];
-      LES.Charts.line(ca, { series: C.ATTR.map((n, i) => ({ label: n, color: cols[i], width: 1.5, data: p.attHist.map(([d, a]) => [d / 365, a[i]]) })), yFmt: v => v.toFixed(0), xFmt: x => `Y${Math.floor(x) + 1}`, yMin: 0 });
+      LES.Charts.line(ca, { series: C.ATTR.map((n, i) => ({ label: n, color: cols[i], width: 1.5, data: p.attHist.map(([d, a]) => [d / 365, a[i]]) })), yFmt: v => v.toFixed(0), xFmt: x => T('rp.yr', { n: Math.floor(x) + 1 }), yMin: 0 });
     }
   };
 
@@ -662,7 +662,7 @@
     const h = w.history;
     const last = h[h.length - 1];
     const st = w.stats;
-    const xs = x => `Y${Math.floor(x) + 1}`;
+    const xs = x => T('rp.yr', { n: Math.floor(x) + 1 });
     const series = (k, label, color) => ({ label: T(label), color, data: h.map(r => [r.day / 365, r[k]]) });
     const race = w.living.filter(p => p.alive && p.adult).sort((a, b) => P.goalWorth(w, b) - P.goalWorth(w, a)).slice(0, 5);
     const scn = LES.Scenarios.current(w);

@@ -14,7 +14,7 @@
       return;
     }
     const st = w.society, h = w.history.filter(r => r.soc), last = h[h.length - 1];
-    const xs = x => `Y${Math.floor(x) + 1}`;
+    const xs = x => T('rp.yr', { n: Math.floor(x) + 1 });
     const mob = S.mobility(w), eth = S.groupStats(w, 'eth'), rel = S.groupStats(w, 'rel');
     const fest = LES.Calendar.festival(w.day), ram = LES.Calendar.ramadan(w.day);
     const relCount = last ? last.soc.rel : {};
