@@ -79,6 +79,7 @@
   };
 
   F.monthlyCost = function (w, p) {
+    if (LES.World.heldFree(w, p)) return (p.isHead ? F.tierCost(w, 'housing', p.tiers.housing) : 0) + F.careShare(w, p); // rev 11: only the rent, if they still have a home
     let c = F.tierCost(w, 'food', p.tiers.food) + F.tierCost(w, 'transport', p.tiers.transport) + F.tierCost(w, 'leisure', p.tiers.leisure);
     if (p.isHead) c += F.tierCost(w, 'housing', p.tiers.housing);
     return c + F.careShare(w, p);
@@ -129,6 +130,7 @@
   };
 
   F.payBill = function (w, p, cat) {
+    if (cat !== 'housing' && LES.World.heldFree(w, p)) return; // rev 11: no fares or outings from prison or rehab
     const L = w.ledger, amt = F.tierCost(w, cat, p.tiers[cat]);
     if (!amt) return;
     if (p.cash < amt) F.raiseCash(w, p, amt - p.cash);
@@ -712,7 +714,7 @@
     // Wealthier people consume part of their wealth (family support, luxuries,
     // donations): ~3.6%/year of net worth above RM300k (Year-1 money).
     const rich = (F.wealthRev(w) ? p.nw - F.locked(w, p) : p.nw) - w.px(3e5); // rev 9: not out of locked retirement savings
-    if (rich > 0) {
+    if (rich > 0 && !LES.World.heldFree(w, p)) { // rev 11: no luxuries in prison
       const lux = Math.round(rich * 0.003);
       if (p.cash < lux) F.raiseCash(w, p, lux - p.cash);
       L.spend(p, 'cash', 'MERCHANT', Math.min(p.cash, lux));
@@ -724,7 +726,7 @@
 
   // ---- Random luck (monthly, per adult) ----
   F.luckMonth = function (w, p) {
-    const R = w.rng.luck, L = w.ledger, age = P.age(w, p);
+    const R = w.rng.luck, L = w.ledger, age = P.age(w, p), held = LES.World.heldFree(w, p); // rev 11: held, only illness reaches them (the dice are still rolled, so nobody else's luck changes)
     // One luck roll per month; each event owns a separate slice of [0,1).
     const pIll = 0.002 * (1 + age / 50), pScam = 0.0015 * (1 + age / 50), pWin = 0.0008, pIdea = 0.0035;
     const r = R.next();
@@ -735,7 +737,7 @@
       P.log(w, p, `Fell seriously ill (-${Math.round(hp)} health, ${U.fmtMoney(bill)} medical bills)`, 'luck', 1);
       w.stats.illnesses++;
     } else if (r < pIll + pScam) {
-      if (p.cash > w.px(10000) && R.next() < 0.4 + 0.4 * p.pers.risk / 100) {
+      if (p.cash > w.px(10000) && R.next() < 0.4 + 0.4 * p.pers.risk / 100 && !held) {
         const amt = Math.round(p.cash * R.range(0.1, 0.4));
         L.spend(p, 'cash', 'LUCK', amt);
         P.log(w, p, `Lost ${U.fmtMoney(amt)} to an investment scam`, 'luck', 1);
@@ -743,20 +745,22 @@
       }
     } else if (r < pIll + pScam + pWin) {
       const amt = w.px(Math.min(2e6, Math.exp(R.normal(Math.log(20000), 1.1))));
-      L.pay('LUCK', p, 'cash', amt);
-      p.earned.luck += amt;
-      P.log(w, p, `Lucky windfall: received ${U.fmtMoney(amt)}`, 'luck', 1);
-      w.stats.windfalls++;
-    } else if (r < pIll + pScam + pWin + pIdea && p.manages < 0) {
+      if (!held) {
+        L.pay('LUCK', p, 'cash', amt);
+        p.earned.luck += amt;
+        P.log(w, p, `Lucky windfall: received ${U.fmtMoney(amt)}`, 'luck', 1);
+        w.stats.windfalls++;
+      }
+    } else if (r < pIll + pScam + pWin + pIdea && p.manages < 0 && !held) {
       p.ideaUntil = w.day + 90;
       P.log(w, p, 'Spotted a promising business opportunity', 'luck', 0);
     }
     if (R.next() < 0.06) {
       const what = R.pick(['a family emergency', 'home repairs', 'a vehicle repair', 'helping relatives', 'a wedding in the family']);
       const amt = Math.min(p.cash, w.px(R.range(300, 4000)));
-      if (amt > 0) { L.spend(p, 'cash', 'MERCHANT', amt); P.log(w, p, `Spent ${U.fmtMoney(amt)} on ${what}`, 'money', 0); }
+      if (amt > 0 && !held) { L.spend(p, 'cash', 'MERCHANT', amt); P.log(w, p, `Spent ${U.fmtMoney(amt)} on ${what}`, 'money', 0); }
     }
-    if (C.TIERS.transport[p.tiers.transport].accident && R.next() < C.TIERS.transport[p.tiers.transport].accident) {
+    if (C.TIERS.transport[p.tiers.transport].accident && R.next() < C.TIERS.transport[p.tiers.transport].accident && !held) {
       LES.Actions.catastrophe(w, p, [0, 0, 0, 0, 1, 0], 'hurt in a motorbike accident');
     }
   };

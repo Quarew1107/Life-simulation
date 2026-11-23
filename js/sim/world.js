@@ -783,6 +783,12 @@
   World.FOUNDER_REV = 10;
   // Rules revision 10: someone held in prison or rehab is fed and housed by the institution.
   World.heldCare = (w, p) => !!p.inst && w.cfg.rulesRev >= World.FOUNDER_REV;
+  // Rules revision 11 (the owner's review, Nov 2026): while held, the state pays for food, bed and health care;
+  // nobody pays bus fares, outings, festivals or luxuries from prison, and random spending, scams, windfalls and
+  // business ideas do not reach them. Rent: a partner at home takes it over; someone living alone gives up a
+  // rented home and finds the cheapest one on release (Crime.admit / release).
+  World.HELD_REV = 11;
+  World.heldFree = (w, p) => !!p.inst && w.cfg.rulesRev >= World.HELD_REV;
   // A chosen founder age range (a scenario such as Eternal Life, or startAgeMin/Max set by hand) keeps its founders.
   World.mixedFounders = w => w.cfg.rulesRev >= World.FOUNDER_REV && w.cfg.founderAges !== 'young' && !!(LES.Countries.pack.ages)
     && (w.cfg.startAgeMin === undefined || w.cfg.startAgeMin === 18) && (w.cfg.startAgeMax === undefined || w.cfg.startAgeMax === 35);

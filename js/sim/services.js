@@ -210,6 +210,7 @@
   // private (dearer, quicker). Classic engine: the patient pays the whole bill.
   SV.medicalBill = function (w, p, bill, minor, full) {
     const L = w.ledger;
+    if (LES.World.heldFree(w, p)) return 0; // rev 11: prison and rehab health care is paid by the state
     if (bill > 0 && p.cash < bill && !minor) LES.Finance.useWellbeing(w, p, bill - p.cash, 'medical bills'); // rev 9 Malaysia
     if (!w.gov) { L.spend(p, 'cash', 'HEALTH', bill); return bill; }
     const H = LES.Countries.pack.health;

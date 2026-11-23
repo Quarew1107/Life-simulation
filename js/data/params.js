@@ -71,7 +71,7 @@
     catCap: 0.02,
     shiftsPerMonth: 20,
     vacancyRate: 2.2,
-    rulesRev: 10, // rule corrections from the 2026-11 blueprint (2: catastrophe cap after the risk multiplier, C03; 3: estates in equal value, C04b; 4: founders' credentials by age and limited study places, C06; 5: Expansion 1 jobs, degrees, specialisations, goals and the research centre; 6: a lower pay ceiling for jobs that need no qualification, Labour.offerSpread; 7: more first and family names, C.namesFor; 8: crime outside Malaysia, police case capacity per country and pack crimeTuningRev8, Crime.casesPerOfficer; 9: spending from usable wealth only, EPF's three accounts, one monthly cut-back line, milestones in local money, Finance.WEALTH_REV; 10: founders are households of all ages, World.FOUNDER_REV); Classic and older saves: 1
+    rulesRev: 11, // rule corrections from the 2026-11 blueprint (2: catastrophe cap after the risk multiplier, C03; 3: estates in equal value, C04b; 4: founders' credentials by age and limited study places, C06; 5: Expansion 1 jobs, degrees, specialisations, goals and the research centre; 6: a lower pay ceiling for jobs that need no qualification, Labour.offerSpread; 7: more first and family names, C.namesFor; 8: crime outside Malaysia, police case capacity per country and pack crimeTuningRev8, Crime.casesPerOfficer; 9: spending from usable wealth only, EPF's three accounts, one monthly cut-back line, milestones in local money, Finance.WEALTH_REV; 10: founders are households of all ages, World.FOUNDER_REV; 11: people in prison or rehab pay no fares, outings, festivals, medical bills or luxuries and meet no random spending, and a household head who lives alone gives up a rented home, World.HELD_REV); Classic and older saves: 1
     econModel: 'calibrated', // calibrated: firms share a market the size of the town, wider pay spread, some jobs go to outsiders; original: the first engine
     vacancyDaysMin: 3,
     vacancyDaysMax: 30,
@@ -85,7 +85,7 @@
   // Presets fill the setup form. Classic reproduces the original engine (harsher, more
   // children, longer lives); Malaysia is calibrated to DOSM figures (tools/calibration.html).
   LES.PRESETS = {
-    national: { name: "Today's rules", values: { safetyNet: 'on', fertility: 'national', mortMult: 1.9, layout: 'varied', society: 'on', ethnicMix: 'national', crime: 'lively', government: 'on', vacancyRate: 2.2, econModel: 'calibrated', rulesRev: 10 } },
+    national: { name: "Today's rules", values: { safetyNet: 'on', fertility: 'national', mortMult: 1.9, layout: 'varied', society: 'on', ethnicMix: 'national', crime: 'lively', government: 'on', vacancyRate: 2.2, econModel: 'calibrated', rulesRev: 11 } },
     classic: { name: 'Classic (original rules)', values: { safetyNet: 'off', fertility: 'normal', mortMult: 1, layout: 'grid', society: 'off', ethnicMix: 'classic', crime: 'off', government: 'off', vacancyRate: 2.5, econModel: 'original', rulesRev: 1 } },
   };
   // Older saves and stored settings called the national option 'malaysia'.

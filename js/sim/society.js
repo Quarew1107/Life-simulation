@@ -229,7 +229,7 @@
           p.energy = Math.max(0, p.energy - 3 - 3 * r); p.stress = Math.min(100, p.stress + 0.2);
           p.happy = Math.min(100, p.happy + 0.04 * r);
         }
-        if (fest && CELEBRATES(p, fest.id) && p.isHead) { // festival spending: clothes, food, ang pow / duit raya
+        if (fest && CELEBRATES(p, fest.id) && p.isHead && !LES.World.heldFree(w, p)) { // festival spending: clothes, food, ang pow / duit raya (rev 11: not from prison)
           const want = Math.round(Math.max(0, p.incomeEMA) * 0.3 + w.px(150));
           const amt = Math.min(want, Math.max(0, p.cash - p.mcost));
           if (amt > 0) { w.ledger.spend(p, 'cash', 'MERCHANT', amt); w.society.festivalSpend += amt; }

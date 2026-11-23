@@ -224,7 +224,7 @@
     talking: (w, p) => P.age(w, p) >= 1 && !!carer(w, p),
     toddlerNear: (w, p) => !!toddler(w, p),
     moneyTight: (w, p) => { const g = carer(w, p); return !!g && g.cash < g.mcost; },
-    seekingWork: (w, p) => !p.job && !p.enrol && !p.retired && p.manages < 0 && Pl.openings(w, p, true).length > 0,
+    seekingWork: (w, p) => !p.job && !p.enrol && !p.retired && p.manages < 0 && !(p.earned.wages > 0) && Pl.openings(w, p, true).length > 0, // a first job: never worked before
   };
   // Words for an event card: the real people in it.
   Pl.PARAMS = {
@@ -272,6 +272,7 @@
     const s = st(w), p = Pl.person(w);
     if (!p || !p.alive || p.away) return;
     s.inbox = s.inbox || []; s.evCool = s.evCool || {};
+    if (p.inst) { s.inbox = []; return; } // in prison, rehab or the lock-up: no life events; open ones lapse quietly
     const age = Math.floor(P.age(w, p)), stage = Pl.stageOf(age), R = rng(w);
     const cands = [];
     for (const e of Pl.EVENTS) {

@@ -231,7 +231,7 @@
   // home, business, family, health, volunteering, donations); otherwise the character's own reaction. Revised so
   // nothing is faked: no loans or tax refunds that the books do not have, no hires the player cannot make.
   const myBiz = (w, p) => (p.manages >= 0 && w.biz[p.manages] && w.biz[p.manages].open ? w.biz[p.manages] : null);
-  const partnerOf = (w, p) => { const q = p.partnerId !== null ? w.people[p.partnerId] : null; return q && q.alive && !q.away ? q : null; };
+  const partnerOf = (w, p) => { const q = p.partnerId !== null ? w.people[p.partnerId] : null; return q && q.alive && !q.away && !q.inst ? q : null; };
   const near = q => q && q.alive && !q.away && !q.inst;
   const staffOf = (w, p) => { const b = myBiz(w, p); if (!b) return 0; let k = 0; for (const q of w.living) if (q.alive && q.job && q.job.biz >= 0 && w.biz[q.job.biz] === b) k++; return k; };
   const myKid = (w, p, lo, hi) => { const l = p.children.map(id => w.people[id]).filter(c => near(c) && P.age(w, c) >= lo && P.age(w, c) < hi && p.careOf.includes(c.id)); return l.length ? l[(w.day / 30 | 0) % l.length] : null; };

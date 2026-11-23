@@ -19,7 +19,7 @@
   const M = w => Pl.typicalPay(w);
   Pl.TRIPS = { domestic: { cost: 0.4, days: 4, stress: 15, happy: 6, sector: 'MERCHANT' }, abroad: { cost: 2, days: 10, stress: 25, happy: 12, sector: 'ABROAD' } };
   Pl.tripCost = (w, kind) => Math.round(Pl.TRIPS[kind].cost * M(w));
-  const partnerOf = (w, p) => { const q = p.partnerId !== null ? w.people[p.partnerId] : null; return q && q.alive && !q.away ? q : null; };
+  const partnerOf = (w, p) => { const q = p.partnerId !== null ? w.people[p.partnerId] : null; return q && q.alive && !q.away && !q.inst ? q : null; };
 
   Object.assign(Pl.HANDLERS, {
     SEE_DOCTOR: {

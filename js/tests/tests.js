@@ -1804,7 +1804,7 @@
     print('--- Founders of all ages (rules revision 10) ---', 'info');
     const K = LES.Countries, D = LES.DEFAULTS, P = LES.P;
     const cfgOf = (c, rev, extra) => { K.use(c); return Object.assign({}, D, LES.PRESETS.national.values, { country: c, scenario: 'none', preset: 'national', rulesRev: rev }, extra || {}); };
-    check('New worlds use rules revision 10 with founders of all ages', D.rulesRev === 10 && LES.PRESETS.national.values.rulesRev === 10 && D.founderAges === 'mixed' && LES.World.FOUNDER_REV === 10);
+    check('New worlds use rules revision 10 or later with founders of all ages', D.rulesRev >= 10 && LES.PRESETS.national.values.rulesRev === D.rulesRev && D.founderAges === 'mixed' && LES.World.FOUNDER_REV === 10);
     // The age mix of each country, pooled over a few towns.
     const res = [];
     let ok = true;
@@ -2871,6 +2871,53 @@
 
   // PL-17 step 5: the engine's records stay in English (fingerprints and saves read them); in Chinese they are
   // translated when shown, by sentence patterns.
+  // Rules revision 11 (the owner's review, Nov 2026): life in prison and rehab is paid by the state; rent goes to
+  // a partner at home or the rented home is given up; Play a Life offers no events while held.
+  async function heldTests() {
+    print('--- Prison and rehab: what is paid, the home, and life events (rules revision 11) ---', 'info');
+    const D = LES.DEFAULTS, CR = LES.Crime, F = LES.Finance, Pl = LES.Player, Wd = LES.World;
+    LES.Countries.ensure(D);
+    check('New worlds use rules revision 11 or later; Classic and older saves keep their own rules', D.rulesRev >= Wd.HELD_REV && Wd.HELD_REV === 11 && LES.PRESETS.classic.values.rulesRev === 1);
+    const mk = (seed, extra) => { const w = new LES.World(Object.assign({}, D, { seed, founders: 150 }, extra || {})); for (let d = 0; d < 400; d++) w.step(); return w; };
+    const free = (w, q) => q.alive && q.adult && !q.away && !q.inst && q.manages < 0;
+    // A household head living with a partner: the partner takes over the rent and the home.
+    const w = mk('held-a');
+    const p = w.living.find(q => free(w, q) && q.isHead && q.partnerId !== null && free(w, w.people[q.partnerId]) && q.tiers.housing > 0);
+    const q = p && w.people[p.partnerId], home = p && p.homeId, tier = p && p.tiers.housing;
+    CR.admit(w, p, 'rehab', 6, 'test'); // rehab: a couple stays together (prison may end it)
+    check('In rehab with a partner at home: the partner takes over the rent and keeps the home; the person held pays nothing a month', (q.isHead && !p.isHead && q.homeId === home && q.tiers.housing === tier && p.mcost === 0 && q.mcost >= F.tierCost(w, 'housing', tier)), `${q.isHead}/${p.isHead}/${p.mcost}`);
+    // Nothing leaves a prisoner's purse: no fares, outings, festivals, luxuries or random spending (interest still comes in).
+    const spent = [], L = w.ledger, sp = L.spend.bind(L);
+    L.spend = (who, acc, to, amt) => { if (who === p && amt > 0) spent.push(to); return sp(who, acc, to, amt); };
+    for (let d = 0; d < 170; d++) w.step();
+    L.spend = sp;
+    check('Six months held: no bills, festival, luxury or random spending at all', !spent.length && !p.log.some(e => /celebrating|Spent .* on /.test(e.text) && e.day > w.day - 170), spent.slice(0, 3).join(', '));
+    check('Medical care while held costs nothing', LES.Services.medicalBill(w, p, w.px(5000), false, w.px(5000)) === 0);
+    // A household head living alone gives up the rented home and finds the cheapest one on release.
+    const w2 = mk('held-b');
+    const a = w2.living.find(x => free(w2, x) && x.isHead && x.partnerId === null && !x.careOf.length && !w2.living.some(y => y !== x && y.alive && y.adult && y.homeId === x.homeId));
+    CR.admit(w2, a, 'rehab', 3, 'test');
+    const gave = a.inst && a.inst.gaveUpHome && !a.isHead && a.homeId === a.inst.loc && a.mcost === 0 && a.log.some(e => /^Gave up the rented/.test(e.text));
+    for (let d = 0; d < 100 && a.inst; d++) w2.step();
+    const back = !a.inst && a.isHead && a.tiers.housing === 0 && w2.town.buildings[a.homeId].home && a.log.some(e => /^Moved into an? .+ after rehab$/.test(e.text));
+    check('Living alone: the rented home is given up on admission (no rent while held) and the cheapest home found on release', gave && back, `${gave}/${back}`);
+    // Revision 10 (older saves) still bills fares while held, as before.
+    const w3 = mk('held-c', { rulesRev: 10 });
+    const b = w3.living.find(x => free(w3, x) && !x.isHead);
+    CR.admit(w3, b, 'rehab', 6, 'test');
+    check('Older saves (rules revision 10) keep their old bills while held', !Wd.heldFree(w3, b) && b.mcost > 0);
+    // Play a Life: no events while held; a first job only for someone who never worked; a held partner is not "at home".
+    const wp = new LES.World(Object.assign({}, D, { seed: 'held-play', founders: 150, play: 'random', playStage: 'adult' }));
+    Pl.begin(wp); for (let d = 0; d < 200; d++) wp.step();
+    const me = Pl.person(wp), j0 = (wp.player.journal || []).length;
+    CR.admit(wp, me, 'prison', 12, 'test');
+    for (let d = 0; d < 300; d++) wp.step();
+    const evs = (wp.player.journal || []).slice(j0).filter(j => j.kind === 'event');
+    check('Play a Life: no life events are offered while your character is in prison', me.inst && !evs.length && !(wp.player.inbox || []).length, evs.map(j => j.ev).join(', '));
+    const worked = Object.assign(Object.create(Object.getPrototypeOf(me)), me, { job: null, enrol: null, retired: false, manages: -1, inst: null, earned: Object.assign({}, me.earned, { wages: 1000 }) });
+    check('"Your first full-time job" is only for someone who never worked', !Pl.CONDITIONS.seekingWork(wp, worked));
+  }
+
   async function i18nSentenceTests() {
     print('--- Languages: the engine\'s sentences shown in Chinese (PL-17) ---', 'info');
     const I = LES.I18n, D = LES.DEFAULTS;
@@ -2980,6 +3027,7 @@
       await playCatalogTests();
       await playPacingTests();
       await playMatrixTests();
+      await heldTests();
       await i18nSentenceTests();
       await tileTests();
       await determinism();
@@ -2992,6 +3040,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, playFlowTests, playCatalogTests, playPacingTests, playMatrixTests, i18nSentenceTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, heldTests, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, playFlowTests, playCatalogTests, playPacingTests, playMatrixTests, i18nSentenceTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

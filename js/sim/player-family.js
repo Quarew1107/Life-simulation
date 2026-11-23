@@ -23,7 +23,7 @@
   const U = LES.U, C = LES.C, P = LES.P, Fa = LES.Family, Pl = LES.Player;
   const st = w => w.player;
   const M = w => Pl.typicalPay(w);
-  const partnerOf = (w, p) => { const q = p.partnerId !== null ? w.people[p.partnerId] : null; return q && q.alive ? q : null; };
+  const partnerOf = (w, p) => { const q = p.partnerId !== null ? w.people[p.partnerId] : null; return q && q.alive && !q.away && !q.inst ? q : null; }; // at home, not in prison or rehab
   const here = q => q && q.alive && !q.away && !q.inst;
   // The engine's compatibility for two people (as Family.matchSocial), times how much both want a family.
   Pl.compat = function (w, a, b) {

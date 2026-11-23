@@ -549,6 +549,22 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
         languages in Latin letters (tested by scanning with nothing translated: ~96% of English lines found, the
         rest are headings joined with their subtitles); for Chinese, Japanese and Korean it also reports Latin
         words that are not names. Guide for a new language: `docs/TRANSLATING.md`.
+    - **Prison and rehab (owner's review, Nov 23 2026; rules revision 11, `World.HELD_REV`):** the owner noticed
+      that people in rehab still paid living costs. An audit (a character sent to rehab for 12 months and prison
+      for 24; 20 played lives recording each life event with the character's situation) found: bus fares, rent,
+      festival spending, luxuries, random spending (repairs, weddings), scams, windfalls, business ideas and
+      medical bills all continued while held, and Play a Life offered 38 kinds of event in prison (a first job,
+      dating, holidays). Fixed for new worlds (`World.heldFree`): while held the state pays food, bed and health
+      care (`Services.medicalBill` returns 0), `F.payBill` charges only rent, `F.monthlyCost` shows only rent, no
+      festival spending, no luxury spending, and `F.luckMonth` lets only illness through (the dice are still
+      rolled, so nobody else's luck shifts). Rent, the owner's option 1 (`Crime.admit` → `heldHome`): a partner or
+      another adult at home takes over the rent and keeps the home; someone living alone gives up a rented home
+      (address = the institution meanwhile, not a household head) and moves into the cheapest home on release.
+      Play a Life: no events while held (open ones lapse quietly); "Your first full-time job" only for someone who
+      never worked; a partner in prison or rehab is not "at home" for partner events and commands. Classic and
+      older saves keep their rules (no stored fingerprint changed: those tests pin their revision). Tests:
+      `heldTests` (8 checks). Not done (a separate idea): events about prison or rehab life itself (visits, coming
+      home, starting again).
     - For the native-speaker review: some PL-13 life-moment texts use 他 as a general "they" (common, but
       a reviewer may prefer 其 / TA); the new texts use 其 / 此人.
   - Owner requests, Nov 14 2026 (after PL-12):

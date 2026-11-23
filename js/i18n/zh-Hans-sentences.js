@@ -1035,3 +1035,10 @@ LES.I18n.sentences('zh-Hans', [
 ]);
 
 LES.I18n.glossary('zh-Hans', {"All founders get $10,000, identical abilities (5 in every attribute), identical ageing genes and no qualifications; jobs at the start are handed out by lottery. Only personality and luck differ. Optionally, every child is born equal too.": "所有创始居民获得 $10,000、相同的能力（每项 5）、相同的衰老基因，没有学历；开始时的工作以抽签分配。只有性格和运气不同。可选：每个孩子也生而平等。", "All founders get £10,000, identical abilities (5 in every attribute), identical ageing genes and no qualifications; jobs at the start are handed out by lottery. Only personality and luck differ. Optionally, every child is born equal too.": "所有创始居民获得 £10,000、相同的能力（每项 5）、相同的衰老基因，没有学历；开始时的工作以抽签分配。只有性格和运气不同。可选：每个孩子也生而平等。", "All founders get ¥10,000, identical abilities (5 in every attribute), identical ageing genes and no qualifications; jobs at the start are handed out by lottery. Only personality and luck differ. Optionally, every child is born equal too.": "所有创始居民获得 ¥10,000、相同的能力（每项 5）、相同的衰老基因，没有学历；开始时的工作以抽签分配。只有性格和运气不同。可选：每个孩子也生而平等。"});
+
+LES.I18n.glossary('zh-Hans', {"prison": "服刑", "rehab": "戒毒"});
+LES.I18n.sentences('zh-Hans', [
+  [/^Took over the rent while (.+) is in (prison|rehab)$/, '在{1}{2}期间接手支付房租'],
+  [/^Gave up the rented (.+)$/, '退掉了租住的{1}'],
+  [/^Moved into an? (.+) after (prison|rehab)$/, '{2}后搬进了{1}'],
+]);

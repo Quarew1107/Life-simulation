@@ -226,15 +226,35 @@
       c.caregivers = c.caregivers.filter(x => x !== p.id);
       if (c.alive && !c.adult && !c.caregivers.length && c.guardian !== 'WELFARE') Fa.findGuardian(w, c, 'parent in prison');
     }
+    if (LES.World.heldFree(w, p) && p.isHead) heldHome(w, p); // rev 11: who pays the rent now
     p.mcost = F.monthlyCost(w, p);
     const yrs = months >= 12 ? `${(months / 12).toFixed(months % 12 ? 1 : 0)} years` : `${months} months`;
     P.log(w, p, kind === 'rehab' ? `Sent to drug rehabilitation for ${yrs}` : `Sentenced to ${yrs} in prison for ${why}`, 'crime', 1);
     if (kind === 'prison') st.admissions++; else st.rehabAdmissions++;
   };
 
+  // Rules revision 11 (rent, the owner's option 1): a partner or another adult at home takes over the rent and
+  // keeps the home; someone living alone gives up a rented home (the state houses them; their address is the
+  // institution meanwhile) and finds the cheapest home on release.
+  function heldHome(w, p) {
+    const at = p.homeId, mates = at < 0 ? [] : w.living.filter(q => q !== p && q.alive && q.adult && !q.away && !q.inst && q.homeId === at);
+    const heir = mates.find(q => q.id === p.partnerId) || mates.sort((a, b) => b.nw - a.nw || a.id - b.id)[0];
+    if (heir) {
+      heir.isHead = true; heir.tiers.housing = p.tiers.housing; heir.mcost = F.monthlyCost(w, heir);
+      p.isHead = false;
+      P.log(w, heir, `Took over the rent while ${P.name(p)} is ${p.inst.kind === 'rehab' ? 'in rehab' : 'in prison'}`, 'money', 0);
+      return;
+    }
+    const home = C.TIERS.housing[p.tiers.housing].name;
+    p.isHead = false; p.inst.gaveUpHome = true;
+    F.setHome(w, p, p.inst.loc);
+    P.log(w, p, `Gave up the rented ${home.toLowerCase()}`, 'money', 0);
+  }
+
   function release(w, p) {
-    const st = state(w), kind = p.inst.kind;
+    const st = state(w), kind = p.inst.kind, gaveUp = p.inst.gaveUpHome;
     p.inst = null;
+    if (gaveUp) { p.isHead = true; F.moveHome(w, p, 0, true); P.log(w, p, `Moved into a ${C.TIERS.housing[0].name.toLowerCase()} after ${kind === 'rehab' ? 'rehab' : 'prison'}`, 'money', 0); } // rev 11
     p.pendingReview = kind === 'prison' ? 'prison' : 'rehab';
     if (kind === 'prison') { p.cr.rec++; p.cr.releasedDay = w.day; st.released++; }
     else { p.cr.user = false; p.cr.addict = Math.min(p.cr.addict, 15); p.cr.clean = 0; }
