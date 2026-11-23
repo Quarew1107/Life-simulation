@@ -66,7 +66,23 @@ def find_items(bg):
         ys, xs = sl
         if (ys.stop - ys.start) * (xs.stop - xs.start) < 400: continue  # specks
         boxes.append([xs.start, ys.start, xs.stop, ys.stop])
-    return boxes
+    return merge_bits(boxes)
+
+
+def merge_bits(boxes):
+    """Loose bits (steam puffs, sparkles, motion marks) join the nearest real item: anything smaller than a
+    quarter of the typical item's area is merged into the closest bigger box."""
+    if len(boxes) < 3: return boxes
+    area = lambda b: (b[2] - b[0]) * (b[3] - b[1])
+    med = float(np.median([area(b) for b in boxes]))
+    big = [b for b in boxes if area(b) >= med * 0.25]
+    for b in boxes:
+        if area(b) >= med * 0.25: continue
+        cx, cy = (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
+        gap = lambda o: max(o[0] - cx, 0, cx - o[2]) + max(o[1] - cy, 0, cy - o[3])
+        t = min(big, key=gap)
+        t[0], t[1], t[2], t[3] = min(t[0], b[0]), min(t[1], b[1]), max(t[2], b[2]), max(t[3], b[3])
+    return big
 
 
 def rows_of(boxes):
@@ -154,7 +170,7 @@ def main():
         for r_want, r_found in zip(want, found):
             for spec, (x0, y0, x1, y1) in zip(r_want, r_found):
                 crop, cbg = im[y0:y1, x0:x1], bg[y0:y1, x0:x1]
-                items.append(dict(spec=spec, crop=crop, alpha=~cbg, box=(x0, y0, x1, y1)))
+                items.append(dict(spec=spec, crop=crop, alpha=~cbg, box=(x0, y0, x1, y1), sheet=sh['file']))
                 if spec['type'] == 'art': art_pixels.append(crop[~cbg].reshape(-1, 3))
 
     # The palette: fixed once made (tools/art/palette.json); the pilot makes it from the furniture.
@@ -166,10 +182,13 @@ def main():
     pal = np.array([hexrgb(c) for c in cols], dtype=float)
 
     # One pixel scale for the furniture of a sheet (the artist draws everything at one scale).
-    art = [it for it in items if it['spec']['type'] == 'art']
-    ratios = [((it['box'][2] - it['box'][0]) / it['spec']['w'] + (it['box'][3] - it['box'][1]) / it['spec']['h']) / 2 for it in art]
-    scale = float(np.median(ratios)) if ratios else None
-    if scale: report.append(f'furniture scale: {scale:.2f} source px per game px')
+    scales = {}
+    for sh in man['sheets']:
+        art = [it for it in items if it['spec']['type'] == 'art' and it['sheet'] == sh['file']]
+        ratios = [((it['box'][2] - it['box'][0]) / it['spec']['w'] + (it['box'][3] - it['box'][1]) / it['spec']['h']) / 2 for it in art]
+        if ratios:
+            scales[sh['file']] = float(np.median(ratios))
+            report.append(f"{sh['file']}: scale {scales[sh['file']]:.2f} source px per game px")
 
     # Pass 2: shrink and snap.
     for it in items:
@@ -178,7 +197,7 @@ def main():
         flat = crop.reshape(-1, 3).astype(float)
         if s['type'] == 'art':
             idx = nearest(flat, pal).reshape(ch, cw)
-            tw, th = fit_size(cw, ch, s['w'], s['h'], scale)
+            tw, th = fit_size(cw, ch, s['w'], s['h'], None if man.get('fit') == 'box' else scales.get(it['sheet']))
         else:
             idx = nearest(flat, mask_pal).reshape(ch, cw)
             tw, th = fit_size(cw, ch, s['w'], s['h'])

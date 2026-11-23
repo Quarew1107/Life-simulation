@@ -1,0 +1,1270 @@
+{
+ "batch": "P1B",
+ "sheets": [
+  {
+   "file": "p1b-tiles.png",
+   "rows": [
+    [
+     {
+      "id": "home.floor_wood.0",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "home.floor_wood.1",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "home.floor_wood.2",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "home.floor_wood.3",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "home.floor_kitchen.0",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "home.floor_kitchen.1",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "home.floor_tikar",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "home.wall_wood.0",
+      "w": 16,
+      "h": 32,
+      "type": "art"
+     },
+     {
+      "id": "home.wall_wood.1",
+      "w": 16,
+      "h": 32,
+      "type": "art"
+     },
+     {
+      "id": "home.wall_wood.2",
+      "w": 16,
+      "h": 32,
+      "type": "art"
+     },
+     {
+      "id": "home.wall_kitchen",
+      "w": 16,
+      "h": 32,
+      "type": "art"
+     },
+     {
+      "id": "home.doorway",
+      "w": 16,
+      "h": 32,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "home.window_nako",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "home.window_shutter",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "home.wall_edge_h",
+      "w": 16,
+      "h": 4,
+      "type": "art"
+     },
+     {
+      "id": "home.wall_edge_v",
+      "w": 4,
+      "h": 16,
+      "type": "art"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p1b-furniture-2.png",
+   "rows": [
+    [
+     {
+      "id": "home.bed_single_blue",
+      "w": 16,
+      "h": 36,
+      "type": "art"
+     },
+     {
+      "id": "home.bed_single_pink",
+      "w": 16,
+      "h": 36,
+      "type": "art"
+     },
+     {
+      "id": "home.tilam",
+      "w": 32,
+      "h": 20,
+      "type": "art"
+     },
+     {
+      "id": "home.cot",
+      "w": 16,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "home.wardrobe",
+      "w": 32,
+      "h": 40,
+      "type": "art"
+     },
+     {
+      "id": "home.drawers",
+      "w": 16,
+      "h": 24,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "home.desk",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "home.chair_front",
+      "w": 12,
+      "h": 18,
+      "type": "art"
+     },
+     {
+      "id": "home.chair_back",
+      "w": 12,
+      "h": 18,
+      "type": "art"
+     },
+     {
+      "id": "home.bookshelf",
+      "w": 16,
+      "h": 32,
+      "type": "art"
+     },
+     {
+      "id": "home.bedside",
+      "w": 12,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "home.toybox",
+      "w": 16,
+      "h": 12,
+      "type": "art"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p1b-furniture-1.png",
+   "rows": [
+    [
+     {
+      "id": "home.armchair",
+      "w": 16,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "home.coffee_table",
+      "w": 32,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "home.tv_cabinet",
+      "w": 32,
+      "h": 28,
+      "type": "art"
+     },
+     {
+      "id": "home.display_cabinet",
+      "w": 32,
+      "h": 36,
+      "type": "art"
+     },
+     {
+      "id": "home.dining_chair_front",
+      "w": 12,
+      "h": 18,
+      "type": "art"
+     },
+     {
+      "id": "home.dining_chair_back",
+      "w": 12,
+      "h": 18,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "home.sink_counter",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "home.wall_shelf",
+      "w": 32,
+      "h": 12,
+      "type": "art"
+     },
+     {
+      "id": "home.rice_cooker",
+      "w": 12,
+      "h": 14,
+      "type": "art"
+     },
+     {
+      "id": "home.rug",
+      "w": 48,
+      "h": 32,
+      "type": "art"
+     },
+     {
+      "id": "home.shoe_rack",
+      "w": 16,
+      "h": 12,
+      "type": "art"
+     },
+     {
+      "id": "home.ceiling_fan",
+      "w": 32,
+      "h": 12,
+      "type": "art"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p1b-props.png",
+   "rows": [
+    [
+     {
+      "id": "home.plant",
+      "w": 16,
+      "h": 20,
+      "type": "art"
+     },
+     {
+      "id": "home.plant_hanging",
+      "w": 12,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "home.clock",
+      "w": 8,
+      "h": 8,
+      "type": "art"
+     },
+     {
+      "id": "home.calendar",
+      "w": 8,
+      "h": 10,
+      "type": "art"
+     },
+     {
+      "id": "home.photo_small",
+      "w": 10,
+      "h": 10,
+      "type": "art"
+     },
+     {
+      "id": "home.photo_large",
+      "w": 18,
+      "h": 14,
+      "type": "art"
+     },
+     {
+      "id": "home.certificate",
+      "w": 12,
+      "h": 10,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "home.trophy",
+      "w": 8,
+      "h": 10,
+      "type": "art"
+     },
+     {
+      "id": "home.school_bag",
+      "w": 10,
+      "h": 10,
+      "type": "art"
+     },
+     {
+      "id": "home.books",
+      "w": 8,
+      "h": 8,
+      "type": "art"
+     },
+     {
+      "id": "home.laptop",
+      "w": 12,
+      "h": 8,
+      "type": "art"
+     },
+     {
+      "id": "home.ball",
+      "w": 6,
+      "h": 6,
+      "type": "art"
+     },
+     {
+      "id": "home.blocks",
+      "w": 8,
+      "h": 6,
+      "type": "art"
+     },
+     {
+      "id": "home.toy_car",
+      "w": 10,
+      "h": 6,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "home.drawing",
+      "w": 8,
+      "h": 8,
+      "type": "art"
+     },
+     {
+      "id": "home.sejadah",
+      "w": 16,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "home.altar_chinese",
+      "w": 24,
+      "h": 20,
+      "type": "art"
+     },
+     {
+      "id": "home.shelf_hindu",
+      "w": 16,
+      "h": 20,
+      "type": "art"
+     },
+     {
+      "id": "home.cross",
+      "w": 6,
+      "h": 8,
+      "type": "art"
+     },
+     {
+      "id": "home.laundry",
+      "w": 12,
+      "h": 10,
+      "type": "art"
+     },
+     {
+      "id": "home.fan_standing",
+      "w": 12,
+      "h": 22,
+      "type": "art"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p1b-anim.png",
+   "rows": [
+    [
+     {
+      "id": "anim.flame.0",
+      "w": 8,
+      "h": 6,
+      "type": "art"
+     },
+     {
+      "id": "anim.flame.1",
+      "w": 8,
+      "h": 6,
+      "type": "art"
+     },
+     {
+      "id": "anim.flame.2",
+      "w": 8,
+      "h": 6,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "anim.steam.0",
+      "w": 8,
+      "h": 10,
+      "type": "art"
+     },
+     {
+      "id": "anim.steam.1",
+      "w": 8,
+      "h": 10,
+      "type": "art"
+     },
+     {
+      "id": "anim.steam.2",
+      "w": 8,
+      "h": 10,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "anim.tv.0",
+      "w": 14,
+      "h": 10,
+      "type": "art"
+     },
+     {
+      "id": "anim.tv.1",
+      "w": 14,
+      "h": 10,
+      "type": "art"
+     },
+     {
+      "id": "anim.tv.2",
+      "w": 14,
+      "h": 10,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "anim.fan.0",
+      "w": 12,
+      "h": 12,
+      "type": "art"
+     },
+     {
+      "id": "anim.fan.1",
+      "w": 12,
+      "h": 12,
+      "type": "art"
+     },
+     {
+      "id": "anim.fan.2",
+      "w": 12,
+      "h": 12,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "anim.lamp.0",
+      "w": 12,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "anim.lamp.1",
+      "w": 12,
+      "h": 16,
+      "type": "art"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p1c-adult.png",
+   "rows": [
+    [
+     {
+      "id": "person.adult.stand",
+      "w": 16,
+      "h": 24,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.walk.0",
+      "w": 16,
+      "h": 24,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.walk.1",
+      "w": 16,
+      "h": 24,
+      "type": "mask"
+     }
+    ],
+    [
+     {
+      "id": "person.adult.eat.0",
+      "w": 16,
+      "h": 20,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.eat.1",
+      "w": 16,
+      "h": 20,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.write.0",
+      "w": 16,
+      "h": 20,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.write.1",
+      "w": 16,
+      "h": 20,
+      "type": "mask"
+     }
+    ],
+    [
+     {
+      "id": "person.adult.sofa.0",
+      "w": 16,
+      "h": 20,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.sofa.1",
+      "w": 16,
+      "h": 20,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.sleep_head.0",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin",
+       "hair"
+      ]
+     },
+     {
+      "id": "person.adult.sleep_head.1",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin",
+       "hair"
+      ]
+     }
+    ],
+    [
+     {
+      "id": "person.adult.cook.0",
+      "w": 16,
+      "h": 24,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.cook.1",
+      "w": 16,
+      "h": 24,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.baby.0",
+      "w": 16,
+      "h": 24,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.baby.1",
+      "w": 16,
+      "h": 24,
+      "type": "mask"
+     }
+    ],
+    [
+     {
+      "id": "person.adult.pray.0",
+      "w": 16,
+      "h": 20,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.pray.1",
+      "w": 16,
+      "h": 20,
+      "type": "mask"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p1c-child.png",
+   "rows": [
+    [
+     {
+      "id": "person.child.stand",
+      "w": 16,
+      "h": 20,
+      "type": "mask"
+     },
+     {
+      "id": "person.child.walk.0",
+      "w": 16,
+      "h": 20,
+      "type": "mask"
+     },
+     {
+      "id": "person.child.walk.1",
+      "w": 16,
+      "h": 20,
+      "type": "mask"
+     }
+    ],
+    [
+     {
+      "id": "person.child.eat.0",
+      "w": 16,
+      "h": 17,
+      "type": "mask"
+     },
+     {
+      "id": "person.child.eat.1",
+      "w": 16,
+      "h": 17,
+      "type": "mask"
+     },
+     {
+      "id": "person.child.write.0",
+      "w": 16,
+      "h": 17,
+      "type": "mask"
+     },
+     {
+      "id": "person.child.write.1",
+      "w": 16,
+      "h": 17,
+      "type": "mask"
+     }
+    ],
+    [
+     {
+      "id": "person.child.sofa.0",
+      "w": 16,
+      "h": 17,
+      "type": "mask"
+     },
+     {
+      "id": "person.child.sofa.1",
+      "w": 16,
+      "h": 17,
+      "type": "mask"
+     },
+     {
+      "id": "person.child.sleep_head.0",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin",
+       "hair"
+      ]
+     },
+     {
+      "id": "person.child.sleep_head.1",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin",
+       "hair"
+      ]
+     }
+    ],
+    [
+     {
+      "id": "person.child.play.0",
+      "w": 16,
+      "h": 14,
+      "type": "mask"
+     },
+     {
+      "id": "person.child.play.1",
+      "w": 16,
+      "h": 14,
+      "type": "mask"
+     },
+     {
+      "id": "person.child.pray.0",
+      "w": 16,
+      "h": 16,
+      "type": "mask"
+     },
+     {
+      "id": "person.child.pray.1",
+      "w": 16,
+      "h": 16,
+      "type": "mask"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p1c-baby.png",
+   "rows": [
+    [
+     {
+      "id": "person.baby.lie",
+      "w": 12,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "person.baby.crawl.0",
+      "w": 12,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "person.baby.crawl.1",
+      "w": 12,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "person.baby.sit",
+      "w": 12,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "person.baby.sleep",
+      "w": 12,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "person.baby.cry",
+      "w": 12,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p1c-hair.png",
+   "rows": [
+    [
+     {
+      "id": "hair.front.short",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "hair.front.long",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "hair.front.bun",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "hair.front.curly",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "hair.front.buzz",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "hair.front.ponytail",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "hair.front.braids",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "hair.front.wavy",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "hair.front.side",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "hair.front.bob",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "hair.front.tudung",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "hair.front.songkok",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "hair.front.kopiah",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "hair.front.cap",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "hair.front.turban",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     }
+    ],
+    [
+     {
+      "id": "hair.back.short",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "hair.back.long",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "hair.back.bun",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "hair.back.curly",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "hair.back.buzz",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "hair.back.ponytail",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "hair.back.braids",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "hair.back.wavy",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "hair.back.side",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "hair.back.bob",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "hair.back.tudung",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "hair.back.songkok",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "hair.back.kopiah",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "hair.back.cap",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "hair.back.turban",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p1d-portrait.png",
+   "rows": [
+    [
+     {
+      "id": "bust.adult",
+      "w": 32,
+      "h": 44,
+      "type": "mask",
+      "parts": [
+       "skin",
+       "hair"
+      ]
+     },
+     {
+      "id": "bust.child",
+      "w": 32,
+      "h": 44,
+      "type": "mask",
+      "parts": [
+       "skin",
+       "hair"
+      ]
+     },
+     {
+      "id": "bust.elder",
+      "w": 32,
+      "h": 44,
+      "type": "mask",
+      "parts": [
+       "skin",
+       "hair"
+      ]
+     },
+     {
+      "id": "bust.baby",
+      "w": 32,
+      "h": 44,
+      "type": "mask",
+      "parts": [
+       "skin",
+       "hair"
+      ]
+     }
+    ],
+    [
+     {
+      "id": "bust_hair.short",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "bust_hair.long",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "bust_hair.bun",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "bust_hair.ponytail",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "bust_hair.tudung",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "bust_hair.songkok",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p1d-faces.png",
+   "rows": [
+    [
+     {
+      "id": "face.neutral",
+      "w": 20,
+      "h": 16,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "face.happy",
+      "w": 20,
+      "h": 16,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "face.sad",
+      "w": 20,
+      "h": 16,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "face.worried",
+      "w": 20,
+      "h": 16,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "face.tired",
+      "w": 20,
+      "h": 16,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "face.excited",
+      "w": 20,
+      "h": 16,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "face.unwell",
+      "w": 20,
+      "h": 16,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "face.blink",
+      "w": 20,
+      "h": 16,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     }
+    ]
+   ]
+  }
+ ],
+ "fit": "box",
+ "note": "ChatGPT delivered the two furniture files with swapped names"
+}
