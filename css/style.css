@@ -227,7 +227,7 @@ canvas.chart.tall { height: 190px; }
 .note { color: var(--muted); font-size: 11px; margin-top: 6px; }
 
 /* Modal */
-.modal { position: fixed; inset: 0; background: rgba(5,8,12,.72); display: flex; align-items: center; justify-content: center; z-index: 20; padding: 16px; }
+.modal { position: fixed; inset: 0; background: rgba(5,8,12,.72); display: flex; align-items: center; justify-content: center; z-index: 35; padding: 16px; } /* above the phone's bottom panel (30), below the report (40) */
 .modal-card { width: min(760px, 100%); max-height: 92vh; overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px 24px; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
 .modal-card h1 { font: 700 18px var(--pixel); margin: 0 0 4px; }
 .modal-card .lead { color: var(--muted); margin: 0 0 16px; }
@@ -241,8 +241,14 @@ canvas.chart.tall { height: 190px; }
 .msg.warn { background: #3a3119; border: 1px solid #7a6526; color: #ffe2a0; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; align-items: center; }
 .modal-actions .spacer { flex: 1; }
-.set-lang { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); }
-.set-lang select { width: auto; }
+/* The language picker sits at the top right of the setup screen, beside the title (owner, Nov 2026). */
+.set-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.set-head h1 { flex: 1 1 auto; min-width: 0; font-size: 26px; line-height: 35px; margin: 0; } /* as tall as the language pill beside it */
+@media (max-width: 600px) { .set-head h1 { font-size: 20px; line-height: 28px; } } /* phones: two lines, not three */
+.set-lang { display: inline-flex; align-items: center; gap: 6px; color: var(--text); flex: none; margin-left: auto;
+  background: var(--panel-2); border: 2px solid var(--teal); border-radius: 999px; padding: 3px 4px 3px 10px; font-size: 15px; }
+.set-lang select { width: auto; border: 0; background: transparent; color: var(--text); font-weight: 600; padding: 2px 4px; cursor: pointer; }
+.set-lang:focus-within { box-shadow: 0 0 0 2px rgba(62,199,181,.35); }
 /* Interface languages (js/core/i18n.js): the pixel font has no CJK glyphs, so Chinese text uses system fonts. */
 html:lang(zh-Hans) { --ui: Inter, "Microsoft YaHei", "PingFang SC", "Noto Sans SC", system-ui, sans-serif; --pixel: "Silkscreen", "Microsoft YaHei", "PingFang SC", "Noto Sans SC", monospace; }
 html:lang(ja) { --ui: Inter, "Yu Gothic UI", "Yu Gothic", Meiryo, "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif; --pixel: "Silkscreen", "Yu Gothic UI", Meiryo, "Hiragino Sans", "Noto Sans JP", monospace; }
@@ -276,7 +282,7 @@ html:is(:lang(zh-Hans), :lang(ja), :lang(ko)) #side, html:is(:lang(zh-Hans), :la
 /* Korean writes spaces between words: break lines there, not inside a word. */
 html:lang(ko) #side, html:lang(ko) .modal-card, html:lang(ko) .toast { word-break: keep-all; }
 
-#error-banner { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); background: #3a1d1f; border: 1px solid #a33; color: #ffd0d0; padding: 10px 14px; border-radius: 10px; z-index: 30; max-width: 80vw; }
+#error-banner { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); background: #3a1d1f; border: 1px solid #a33; color: #ffd0d0; padding: 10px 14px; border-radius: 10px; z-index: 50; max-width: 80vw; }
 
 @media (max-width: 1200px) {
   .kpis { display: none; }

@@ -592,6 +592,10 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
       (incl. `launch.json`; `docs/NEW_LAPTOP.md` says how to recreate it). Developer files (CLAUDE.md, docs, tests,
       tools, the Play a Life design package) stay so work can continue on another laptop. Earlier commits still
       hold the removed files (the repository is private).
+    - **Language picker at the top right of the setup screen (owner, Nov 23 2026):** moved from the bottom button row
+      into a header row beside the title (`.set-head`, a teal "🌐" pill). Found on the phone check: the phone's bottom
+      panel (layer 30) covered dialogs (layer 20); dialogs are now layer 35 (below the report, 40) and the error
+      banner 50.
     - For the native-speaker review: some PL-13 life-moment texts use 他 as a general "they" (common, but
       a reviewer may prefer 其 / TA); the new texts use 其 / 此人.
   - Owner requests, Nov 14 2026 (after PL-12):

@@ -125,7 +125,8 @@
       let chosen = base.scenario && base.scenario !== 'none' ? base.scenario : (LES.presetOf(base) === 'classic' ? 'classic' : 'national');
       const adv = META.filter(m => !m.essential && m.group !== 'Scenario');
       card.innerHTML = `
-        <h1>${esc(first ? T('app.title') : T('setup.newWorld'))}</h1>
+        <div class="set-head"><h1>${esc(first ? T('app.title') : T('setup.newWorld'))}</h1>
+          <label class="set-lang" title="${esc(T('setup.langNote'))}">🌐 <select id="set-lang" aria-label="${esc(T('common.language'))}">${LES.I18n.LANGS.map(([k, l]) => `<option value="${k}"${k === LES.I18n.lang() ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label></div>
         <p class="lead">${first
           ? esc(FTL('su.lead', 'A town of strangers, each born different, each chasing {goal}. Pick a world, set up your town, then watch who makes it, and why.'))
           : esc(T('setup.replace'))}</p>
@@ -146,7 +147,6 @@
           <button class="ghost" id="set-load" title="${esc(G('Open a world saved with 💾 Save'))}">${esc(T('setup.load'))}</button>
           <input type="file" id="set-load-file" accept=".json,.gz,application/json,application/gzip" hidden>
           <button class="ghost" id="btn-sound-setup" title="${esc(G('Music & sound effects'))}">${LES.Audio.on ? `🔊 ${esc(G('Sound on'))}` : `🔇 ${esc(G('Sound off'))}`}</button>
-          <label class="set-lang" title="${esc(T('setup.langNote'))}">🌐 <select id="set-lang" aria-label="${esc(T('common.language'))}">${LES.I18n.LANGS.map(([k, l]) => `<option value="${k}"${k === LES.I18n.lang() ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
           <span class="spacer"></span>
           ${first ? '' : `<button class="ghost" id="set-cancel">${esc(T('setup.cancel'))}</button>`}
           <button class="primary" id="set-start">${esc(T('setup.start'))}</button>
