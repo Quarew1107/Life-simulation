@@ -99,6 +99,49 @@
     }
   }
 
+  A.overlayHead = overlay;
+  // Repaint mask colours in place with one person's look (opts.grey: elder hair).
+  A.paint = function (img, look, opts) {
+    opts = opts || {};
+    const hat = look.style === 3 ? (look.scarf || '#2a9d8f') : look.hat === 1 ? '#1b1b1b' : look.hat === 2 ? '#f4f1e8' : (look.hatColour || '#264653');
+    const col = { skin: look.skin, hair: opts.grey ? '#c9c9c9' : look.hair, top: look.shirt, bottom: look.pants, shoes: '#2b2b2b', head: hat };
+    const sh = {}; for (const k in col) sh[k] = shades(col[k]);
+    const d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const q = partOf(d, i);
+      if (!q) continue;
+      const c = sh[q[0]][q[1]];
+      d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2];
+    }
+    return img;
+  };
+  A.toCanvas = function (img) {
+    const cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height;
+    cv.getContext('2d').putImageData(img, 0, 0);
+    return cv;
+  };
+  // Bounding box of one mask part (or 'any' opaque pixel) in rows y0..y1.
+  A.box = function (img, part, y0, y1) {
+    const W = img.width, d = img.data;
+    let x0 = 1e9, x1 = -1, t = 1e9, b = -1;
+    for (let y = y0 || 0; y < Math.min(img.height, y1 === undefined ? img.height : y1); y++) for (let x = 0; x < W; x++) {
+      const pt = A.partAt(d, (y * W + x) * 4);
+      if (part === 'any' ? pt : pt === part) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); t = Math.min(t, y); b = Math.max(b, y); }
+    }
+    return x1 < 0 ? null : { x0, x1, y0: t, y1: b };
+  };
+  // Copy the pixels of `over` onto `base` at (dx, dy) where keep(overPart, basePart) says so.
+  A.stamp = function (base, over, dx, dy, keep) {
+    const W = base.width, H = base.height, d = base.data, o = over.data;
+    for (let y = 0; y < over.height; y++) for (let x = 0; x < over.width; x++) {
+      const X = x + dx, Y = y + dy, i = (y * over.width + x) * 4;
+      if (X < 0 || Y < 0 || X >= W || Y >= H || !o[i + 3]) continue;
+      const j = (Y * W + X) * 4;
+      if (!keep(A.partAt(o, i), A.partAt(d, j), X, Y)) continue;
+      d[j] = o[i]; d[j + 1] = o[i + 1]; d[j + 2] = o[i + 2]; d[j + 3] = 255;
+    }
+  };
+
   const cache = new Map();
   // A person frame repainted with one person's look. opts: { grey (elder hair), view: 'front' | 'back' | 'top' }.
   A.person = function (id, look, opts) {
@@ -111,18 +154,7 @@
     const img = A.pixels(id);
     if (!img) return null;
     if (name && name !== 'short') { const ov = A.pixels(`hair.${opts.view === 'back' ? 'back' : 'front'}.${name}`); if (ov) overlay(img, ov); }
-    const hat = look.style === 3 ? (look.scarf || '#2a9d8f') : look.hat === 1 ? '#1b1b1b' : look.hat === 2 ? '#f4f1e8' : (look.hatColour || '#264653');
-    const col = { skin: look.skin, hair: opts.grey ? '#c9c9c9' : look.hair, top: look.shirt, bottom: look.pants, shoes: '#2b2b2b', head: hat };
-    const sh = {}; for (const k in col) sh[k] = shades(col[k]);
-    const d = img.data;
-    for (let i = 0; i < d.length; i += 4) {
-      const q = partOf(d, i);
-      if (!q) continue;
-      const c = sh[q[0]][q[1]];
-      d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2];
-    }
-    cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height;
-    cv.getContext('2d').putImageData(img, 0, 0);
+    cv = A.toCanvas(A.paint(img, look, opts));
     cache.set(key, cv);
     return cv;
   };

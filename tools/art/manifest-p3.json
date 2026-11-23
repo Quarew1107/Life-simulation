@@ -1,0 +1,515 @@
+{
+ "batch": "P3",
+ "fit": "box",
+ "sheets": [
+  {
+   "file": "p3-backdrops.png",
+   "rows": [
+    [
+     {
+      "id": "photo.bg.home",
+      "w": 80,
+      "h": 56,
+      "type": "art",
+      "fit": "cover"
+     },
+     {
+      "id": "photo.bg.school",
+      "w": 80,
+      "h": 56,
+      "type": "art",
+      "fit": "cover"
+     },
+     {
+      "id": "photo.bg.stage",
+      "w": 80,
+      "h": 56,
+      "type": "art",
+      "fit": "cover"
+     },
+     {
+      "id": "photo.bg.office",
+      "w": 80,
+      "h": 56,
+      "type": "art",
+      "fit": "cover"
+     },
+     {
+      "id": "photo.bg.pelamin",
+      "w": 80,
+      "h": 56,
+      "type": "art",
+      "fit": "cover"
+     }
+    ],
+    [
+     {
+      "id": "photo.bg.hospital",
+      "w": 80,
+      "h": 56,
+      "type": "art",
+      "fit": "cover"
+     },
+     {
+      "id": "photo.bg.newhome",
+      "w": 80,
+      "h": 56,
+      "type": "art",
+      "fit": "cover"
+     },
+     {
+      "id": "photo.bg.shop",
+      "w": 80,
+      "h": 56,
+      "type": "art",
+      "fit": "cover"
+     },
+     {
+      "id": "photo.bg.townhall",
+      "w": 80,
+      "h": 56,
+      "type": "art",
+      "fit": "cover"
+     },
+     {
+      "id": "photo.bg.retire",
+      "w": 80,
+      "h": 56,
+      "type": "art",
+      "fit": "cover"
+     }
+    ],
+    [
+     {
+      "id": "photo.bg.remember",
+      "w": 80,
+      "h": 56,
+      "type": "art",
+      "fit": "cover"
+     },
+     {
+      "id": "photo.bg.birthday",
+      "w": 80,
+      "h": 56,
+      "type": "art",
+      "fit": "cover"
+     },
+     {
+      "id": "photo.bg.party",
+      "w": 80,
+      "h": 56,
+      "type": "art",
+      "fit": "cover"
+     },
+     {
+      "id": "photo.bg.park",
+      "w": 80,
+      "h": 56,
+      "type": "art",
+      "fit": "cover"
+     }
+    ]
+   ],
+   "cut": "bands"
+  },
+  {
+   "file": "p3-bust-hair.png",
+   "rows": [
+    [
+     {
+      "id": "bust_hair.curly",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "hair"
+      ]
+     },
+     {
+      "id": "bust_hair.buzz",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "hair"
+      ]
+     },
+     {
+      "id": "bust_hair.braids",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "hair"
+      ]
+     },
+     {
+      "id": "bust_hair.wavy",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "hair"
+      ]
+     },
+     {
+      "id": "bust_hair.side",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "hair"
+      ]
+     },
+     {
+      "id": "bust_hair.bob",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "hair"
+      ]
+     },
+     {
+      "id": "bust_hair.kopiah",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "head"
+      ]
+     },
+     {
+      "id": "bust_hair.cap",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "head"
+      ]
+     },
+     {
+      "id": "bust_hair.turban",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "head"
+      ]
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p3-bust-extras.png",
+   "rows": [
+    [
+     {
+      "id": "bust.glasses.1",
+      "w": 20,
+      "h": 6,
+      "type": "art"
+     },
+     {
+      "id": "bust.glasses.2",
+      "w": 20,
+      "h": 6,
+      "type": "art"
+     },
+     {
+      "id": "bust.glasses.3",
+      "w": 20,
+      "h": 6,
+      "type": "art"
+     },
+     {
+      "id": "bust.beard.1",
+      "w": 18,
+      "h": 8,
+      "type": "mask",
+      "parts": [
+       "hair"
+      ]
+     },
+     {
+      "id": "bust.beard.2",
+      "w": 18,
+      "h": 8,
+      "type": "mask",
+      "parts": [
+       "hair"
+      ]
+     },
+     {
+      "id": "bust.beard.3",
+      "w": 18,
+      "h": 10,
+      "type": "mask",
+      "parts": [
+       "hair"
+      ]
+     },
+     {
+      "id": "bust.teen",
+      "w": 32,
+      "h": 44,
+      "type": "mask",
+      "parts": [
+       "skin",
+       "hair",
+       "top"
+      ]
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p3-frames.png",
+   "rows": [
+    [
+     {
+      "id": "photo.frame.wood",
+      "w": 88,
+      "h": 64,
+      "type": "art"
+     },
+     {
+      "id": "photo.frame.white",
+      "w": 88,
+      "h": 64,
+      "type": "art"
+     },
+     {
+      "id": "photo.frame.gold",
+      "w": 88,
+      "h": 64,
+      "type": "art"
+     },
+     {
+      "id": "photo.frame.black",
+      "w": 88,
+      "h": 64,
+      "type": "art"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p3-keepsakes.png",
+   "rows": [
+    [
+     {
+      "id": "keep.cert_blue",
+      "w": 12,
+      "h": 10,
+      "type": "art"
+     },
+     {
+      "id": "keep.cert_gold",
+      "w": 12,
+      "h": 10,
+      "type": "art"
+     },
+     {
+      "id": "keep.trophy_gold",
+      "w": 8,
+      "h": 12,
+      "type": "art"
+     },
+     {
+      "id": "keep.trophy_silver",
+      "w": 8,
+      "h": 10,
+      "type": "art"
+     },
+     {
+      "id": "keep.medal",
+      "w": 6,
+      "h": 10,
+      "type": "art"
+     },
+     {
+      "id": "keep.badge",
+      "w": 6,
+      "h": 10,
+      "type": "art"
+     },
+     {
+      "id": "keep.baby_shoes",
+      "w": 8,
+      "h": 5,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "keep.frame_wedding",
+      "w": 14,
+      "h": 12,
+      "type": "art"
+     },
+     {
+      "id": "keep.frame_oval",
+      "w": 10,
+      "h": 12,
+      "type": "art"
+     },
+     {
+      "id": "keep.frame_square",
+      "w": 10,
+      "h": 10,
+      "type": "art"
+     },
+     {
+      "id": "keep.retire_clock",
+      "w": 10,
+      "h": 10,
+      "type": "art"
+     },
+     {
+      "id": "keep.vase",
+      "w": 6,
+      "h": 10,
+      "type": "art"
+     },
+     {
+      "id": "keep.candle",
+      "w": 4,
+      "h": 8,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "keep.drawing_house",
+      "w": 8,
+      "h": 8,
+      "type": "art"
+     },
+     {
+      "id": "keep.drawing_family",
+      "w": 8,
+      "h": 8,
+      "type": "art"
+     },
+     {
+      "id": "keep.drawing_cat",
+      "w": 8,
+      "h": 8,
+      "type": "art"
+     },
+     {
+      "id": "keep.doll",
+      "w": 6,
+      "h": 8,
+      "type": "art"
+     },
+     {
+      "id": "keep.kite",
+      "w": 10,
+      "h": 10,
+      "type": "art"
+     },
+     {
+      "id": "keep.books",
+      "w": 10,
+      "h": 8,
+      "type": "art"
+     },
+     {
+      "id": "keep.keyboard",
+      "w": 12,
+      "h": 6,
+      "type": "art"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p3-fx.png",
+   "rows": [
+    [
+     {
+      "id": "fx.confetti.0",
+      "w": 32,
+      "h": 32,
+      "type": "art"
+     },
+     {
+      "id": "fx.confetti.1",
+      "w": 32,
+      "h": 32,
+      "type": "art"
+     },
+     {
+      "id": "fx.confetti.2",
+      "w": 32,
+      "h": 32,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "fx.hearts.0",
+      "w": 24,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "fx.hearts.1",
+      "w": 24,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "fx.hearts.2",
+      "w": 24,
+      "h": 24,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "fx.sparkle.0",
+      "w": 24,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "fx.sparkle.1",
+      "w": 24,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "fx.sparkle.2",
+      "w": 24,
+      "h": 24,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "fx.candle.0",
+      "w": 6,
+      "h": 10,
+      "type": "art"
+     },
+     {
+      "id": "fx.candle.1",
+      "w": 6,
+      "h": 10,
+      "type": "art"
+     },
+     {
+      "id": "fx.candle.2",
+      "w": 6,
+      "h": 10,
+      "type": "art"
+     }
+    ]
+   ],
+   "cut": "bands"
+  }
+ ]
+}

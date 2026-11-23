@@ -2986,6 +2986,100 @@
     cv.remove();
   }
 
+  // Art upgrade Phase 3: portraits with expressions, the life album, keepsakes, the ancestor wall, moment cards.
+  async function memoryTests() {
+    print('--- Faces and memories: portraits, life album, keepsakes, ancestor wall (drawing only) ---', 'info');
+    if (typeof document === 'undefined' || !LES.Portrait || !LES.Album) { print('(browser only: skipped)'); return; }
+    const AP = LES.ArtPack, PT = LES.Portrait, AL = LES.Album, R = LES.Room;
+    if (!AP.ready && !AP.failed) AP.init();
+    await AP.whenReady();
+    check('Portrait, album and keepsake art is loaded', PT.available() && AL.available() && ['bust.teen', 'bust_hair.curly', 'bust.glasses.1', 'bust.beard.3', 'photo.frame.gold', 'photo.bg.pelamin', 'keep.cert_gold', 'keep.frame_oval', 'fx.hearts.0'].every(id => AP.has(id)));
+    const cfg = Object.assign({}, LES.DEFAULTS, { seed: 'memories', founders: 160, play: 'random', playStage: 'teen' });
+    const w = new LES.World(cfg);
+    LES.Player.begin(w);
+    for (let d = 0; d < 365 * 14; d++) w.step();
+    const s = w.player, me = s && w.people[s.id];
+    check('A played life of 14 years exists for the checks', !!me);
+    if (!me) return;
+    // Portraits: every person in town gets a bust with no mask colours left, and the face follows their state.
+    let masked = 0, n = 0;
+    for (const p of w.living.filter(q => q.alive).slice(0, 120)) {
+      const b = PT.bust(w, p, PT.expression(w, p)); n++;
+      if (!b) { masked++; continue; }
+      const d = b.getContext('2d').getImageData(0, 0, b.width, b.height).data;
+      for (let i = 0; i < d.length; i += 4) { const part = AP.partAt(d, i); if (part && part !== 'other') { masked++; break; } }
+    }
+    check('120 portraits (babies to elders, scarves, hats, glasses, beards) are fully painted', masked === 0 && n === 120, `${masked} with mask colours`);
+    const faces = ['bust.child', 'bust.teen', 'bust.adult', 'bust.elder'].map(id => [id, PT.features(id)]);
+    check('Every portrait kind has two eyes side by side and a mouth below them, found on its own face (expressions are drawn there)', faces.every(([, f]) => f && f.M && f.L.x1 < f.R.x0 && Math.abs(f.L.y0 - f.R.y0) <= 2 && f.M.y0 > f.L.y1), faces.filter(([, f]) => !f || !f.M).map(([id]) => id).join(','));
+    const keepStats = { health: me.health, energy: me.energy, stress: me.stress, happy: me.happy, moments: s.moments };
+    s.moments = [];
+    me.health = 20; const e1 = PT.expression(w, me);
+    me.health = 90; me.energy = 10; const e2 = PT.expression(w, me);
+    me.energy = 90; me.stress = 90; const e3 = PT.expression(w, me);
+    me.stress = 10; me.happy = 90; const e4 = PT.expression(w, me);
+    me.happy = 10; const e5 = PT.expression(w, me);
+    s.moments = [{ kind: 'married', day: w.day - 1, seq: 1 }]; me.happy = 50; const e6 = PT.expression(w, me);
+    s.moments = [{ kind: 'lost', day: w.day - 10, seq: 2 }]; const e7 = PT.expression(w, me);
+    Object.assign(me, { health: keepStats.health, energy: keepStats.energy, stress: keepStats.stress, happy: keepStats.happy }); s.moments = keepStats.moments;
+    check('The face follows real conditions: unwell, tired, worried, happy, sad, excited after a wedding, sad after a loss', [e1, e2, e3, e4, e5, e6, e7].join() === 'unwell,tired,worried,happy,sad,excited,sad', [e1, e2, e3, e4, e5, e6, e7].join());
+    const tud = w.living.find(p => p.alive && LES.Sprites.lookOf(p, LES.P.age(w, p)).style === 3 && LES.P.age(w, p) >= 18);
+    if (tud) {
+      const lk = LES.Sprites.lookOf(tud, LES.P.age(w, tud)), b = PT.bust(w, tud, 'neutral'), d = b.getContext('2d').getImageData(0, 0, b.width, b.height).data;
+      const sc = [1, 3, 5].map(i => parseInt(lk.scarf.slice(i, i + 2), 16)); let k = 0;
+      for (let i = 0; i < d.length; i += 4) if (Math.abs(d[i] - sc[0]) + Math.abs(d[i + 1] - sc[1]) + Math.abs(d[i + 2] - sc[2]) < 4) k++;
+      check('A tudung in a portrait takes her scarf colour', k > 10, `${k} pixels`);
+    }
+    // The album: one photo per recorded big moment (birthdays only at round ages), each drawable, with a caption.
+    const moments = s.journal.filter(e => e.kind === 'moment' && AL.KINDS[e.moment]);
+    const photos = AL.photos(w);
+    check('The album holds the recorded big moments of the life (no new save data)', photos.length >= 3 && photos.length === moments.filter(e => e.moment !== 'birthday' || [1, 18, 21, 30, 40, 50, 60, 70, 80, 90, 100].includes(Number(e.params.age))).length, `${photos.length} photos`);
+    const cv = document.createElement('canvas'); cv.width = 176; cv.height = 128;
+    let drawn = 0;
+    for (const ph of photos) { try { AL.draw(cv, w, ph, { kind: AL.KINDS[ph.kind][2], frame: 1 }); if (AL.caption(ph).length > 8) drawn++; } catch (e) { print(`  ${ph.kind}: ${e.message}`); } }
+    check('Every photo draws, with a date and a caption', drawn === photos.length);
+    const born = { e: { key: 'moment.born', params: { name: LES.P.name(me) } }, kind: 'born', day: me.birthDay, owner: me };
+    let ok = true; try { AL.draw(cv, w, born); } catch (e) { ok = false; }
+    check('A birth photo (the baby in a parent\'s arms, at their ages that day) draws', ok);
+    // Keepsakes follow records, in every home.
+    let wrong = 0, homes = 0;
+    const R2 = new Set();
+    for (const p of w.living) if (p.alive && p.homeId >= 0 && R.isHome(w.town.buildings[p.homeId])) R2.add(p.homeId);
+    for (const h of R2) {
+      const b = w.town.buildings[h], all = w.living.filter(p => p.alive && !p.away && !p.inst && p.homeId === h), fam = R.family(w, b), age = p => LES.P.age(w, p);
+      homes++;
+      const has = id => fam.keep.some(k => k.id === id);
+      if (has('keep.baby_shoes') !== all.some(p => age(p) < 2)) wrong++;
+      if (has('home.school_bag') !== all.some(p => age(p) >= 6 && age(p) < 18)) wrong++;
+      if (has('keep.frame_wedding') !== all.some(p => age(p) >= 18 && p.partnerId !== null && all.some(q => q.id === p.partnerId))) wrong++;
+      if (fam.keep.filter(k => /cert_/.test(k.id) && !k.ancestor).length > all.filter(p => age(p) >= 18 && p.quals && p.quals.length).length) wrong++;
+      const plan = R.plan(R.layoutOf(b), fam);
+      for (const it of plan.items) if (it.keep && it.wall && it.y + it.h > 32) wrong++;
+    }
+    check('Keepsakes match records in every home (baby shoes, school bag, wedding photo, certificates) and wall pieces hang on the wall', wrong === 0 && homes > 10, `${wrong} wrong in ${homes} homes`);
+    // The ancestor wall: earlier lives of the chain, framed, with one keepsake each (restored afterwards).
+    const keepChain = s.chain.slice(), dead = w.people.filter(p => !p.alive).slice(0, 2);
+    s.chain = [{ id: dead[0].id, day: 0 }, { id: dead[1].id, day: 1 }].concat(keepChain);
+    const mine = R.family(w, w.town.buildings[me.homeId]).keep.filter(k => k.ancestor);
+    s.chain = keepChain;
+    const deadNames = dead.map(q => LES.P.name(q)), frames = mine.filter(k => k.paint);
+    check('Playing a descendant: the earlier lives hang framed on the wall, each with a keepsake that names them', me.homeId < 0 || (mine.length === 4 && frames.map(k => k.paint[0]).join() === dead.map(q => q.id).join() && mine.every(k => deadNames.some(nm => LES.I18n.t(k.label[0], k.label[1]).includes(nm)))), mine.map(k => k.id).join(','));
+    // Moment cards: a new big moment is noticed once; nothing is shown on a page without a map.
+    const app = { world: w, view: 'town' };
+    AL.tick(app, 0);
+    s.moments.push({ kind: 'married', day: w.day, big: true, seq: (s.momentSeq || 0) + 1, params: {} }); // a pretend moment (taken back below)
+    let thrown = false; try { AL.tick(app, 0); AL.tick(app, 0); } catch (e) { thrown = true; }
+    s.moments.pop();
+    check('A new big moment is picked up once for its card, without errors', !thrown);
+    // None of it changes the simulation.
+    const twin = new LES.World(cfg);
+    LES.Player.begin(twin);
+    for (let d = 0; d < 365 * 14; d++) twin.step();
+    for (let d = 0; d < 20; d++) { AL.photos(w).forEach(ph => AL.draw(cv, w, ph)); for (const p of w.living.slice(0, 30)) PT.bust(w, p, PT.expression(w, p)); for (const h of R2) R.plan(0, R.family(w, w.town.buildings[h])); w.step(); twin.step(); }
+    const strip = x => LES.Save.toJSON(x).replace(/"saved":"[^"]*",/, '');
+    check('Portraits, album, keepsakes and ancestor checks leave the simulation exactly as without them', strip(w) === strip(twin));
+  }
+
   async function heldTests() {
     print('--- Prison and rehab: what is paid, the home, and life events (rules revision 11) ---', 'info');
     const D = LES.DEFAULTS, CR = LES.Crime, F = LES.Finance, Pl = LES.Player, Wd = LES.World;
@@ -3132,6 +3226,7 @@
       await compareTests();
       await peopleArtTests();
       await roomTests();
+      await memoryTests();
       await buildingArtTests();
       await crimeRevTests();
       await wealthRevTests();
@@ -3167,6 +3262,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, roomTests, heldTests, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, playFlowTests, playCatalogTests, playPacingTests, playMatrixTests, i18nSentenceTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, roomTests, memoryTests, heldTests, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, playFlowTests, playCatalogTests, playPacingTests, playMatrixTests, i18nSentenceTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

@@ -395,6 +395,7 @@
       else app.renderer.frame(app.dayFrac, app.fast && !app.paused, now);
       const note = app.view !== 'region' && app.renderer.roomState === 'paused';
       if (note !== app._roomNote) { app._roomNote = note; $('room-note').classList.toggle('hidden', !note); }
+      if (LES.Album) LES.Album.tick(app, now);
       UI.update(false);
     }
     if (w) UI.directorTick(now);
@@ -457,7 +458,9 @@
         tip.classList.remove('hidden');
         cv.style.cursor = 'pointer';
       } else {
-        tip.classList.add('hidden');
+        const label = LES.Room && LES.Room.pickItem(r, sx, sy); // a keepsake in the inside view: whose it is
+        if (label) { tip.textContent = label; tip.style.left = `${Math.min(sx + 14, rect.width - 240)}px`; tip.style.top = `${sy + 14}px`; tip.classList.remove('hidden'); }
+        else tip.classList.add('hidden');
         cv.style.cursor = '';
       }
     });
@@ -592,7 +595,7 @@
     app.renderer = new LES.Renderer($('map'));
     try { app.renderer.roomOn = localStorage.getItem('les-room') !== '0'; } catch (e) { app.renderer.roomOn = true; }
     $('btn-room').classList.toggle('on', app.renderer.roomOn);
-    if (LES.ArtPack) { LES.ArtPack.init(); LES.ArtPack.whenReady().then(ok => { if (!ok) $('btn-room').classList.add('hidden'); }); }
+    if (LES.ArtPack) { LES.ArtPack.init(); LES.ArtPack.whenReady().then(ok => { if (!ok) $('btn-room').classList.add('hidden'); else { UI.update(true); if (LES.Portrait) LES.Portrait.startBlinking(() => app.world); } }); }
     app.regionView = new LES.RegionView(app.renderer);
     UI.init(app);
     initInput();

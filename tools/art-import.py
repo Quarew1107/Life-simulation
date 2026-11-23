@@ -85,6 +85,45 @@ def merge_bits(boxes):
     return big
 
 
+def runs(solid_1d):
+    """Runs of True in a 1-D mask: [(start, stop)]."""
+    out, start = [], None
+    for i, v in enumerate(solid_1d):
+        if v and start is None: start = i
+        if not v and start is not None: out.append([start, i]); start = None
+    if start is not None: out.append([start, len(solid_1d)])
+    return out
+
+
+def merge_to(rs, n):
+    """Merge neighbouring runs across the smallest gaps until there are n."""
+    rs = [list(r) for r in rs]
+    while len(rs) > n:
+        k = min(range(len(rs) - 1), key=lambda i: rs[i + 1][0] - rs[i][1])
+        rs[k][1] = rs[k + 1][1]; del rs[k + 1]
+    return rs
+
+
+def cut_bands(bg, want):
+    """Cut by empty lines: rows of items, then items within a row; the smallest gaps are merged until the
+    counts match the list (for touching pictures and effects made of many loose pieces)."""
+    solid = ~bg
+    rows = merge_to(runs(solid.any(1)), len(want))
+    if len(rows) != len(want): return None
+    found = []
+    for (y0, y1), n in zip(rows, [len(r) for r in want]):
+        cols = runs(solid[y0:y1].any(0))
+        cols = [c for c in cols if c[1] - c[0] > 2] or cols
+        cols = merge_to(cols, n)
+        if len(cols) != n: return None
+        row = []
+        for x0, x1 in cols:
+            ys = np.where(solid[y0:y1, x0:x1].any(1))[0]
+            row.append([x0, y0 + ys[0], x1, y0 + ys[-1] + 1])
+        found.append(row)
+    return found
+
+
 def rows_of(boxes):
     """Group boxes into rows (vertical overlap), each row sorted left to right, rows top to bottom."""
     boxes = sorted(boxes, key=lambda b: (b[1] + b[3]) / 2)
@@ -162,8 +201,9 @@ def main():
     for sh in man['sheets']:
         im = np.array(Image.open(os.path.join(src_dir, sh['file'])).convert('RGB'))
         bg = background(im)
-        found = rows_of(find_items(bg))
         want = sh['rows']
+        found = cut_bands(bg, want) if sh.get('cut') == 'bands' else rows_of(find_items(bg))
+        if found is None: found = []
         report.append(f"{sh['file']}: {im.shape[1]}x{im.shape[0]}, rows found {len(found)} (wanted {len(want)}), items per row found {[len(r) for r in found]} (wanted {[len(r) for r in want]})")
         if [len(r) for r in found] != [len(r) for r in want]:
             report.append('  !! the items do not match the list; nothing from this sheet is used'); continue
@@ -193,6 +233,13 @@ def main():
     # Pass 2: shrink and snap.
     for it in items:
         s, crop, alpha = it['spec'], it['crop'], it['alpha']
+        if s.get('fit') == 'cover':  # crop the middle to the target shape (backdrops: a little ceiling and floor go)
+            ch, cw = alpha.shape
+            if cw / ch < s['w'] / s['h']:
+                nh = round(cw * s['h'] / s['w']); y0 = (ch - nh) // 2; crop, alpha = crop[y0:y0 + nh], alpha[y0:y0 + nh]
+            else:
+                nw = round(ch * s['w'] / s['h']); x0 = (cw - nw) // 2; crop, alpha = crop[:, x0:x0 + nw], alpha[:, x0:x0 + nw]
+            it['crop'], it['alpha'] = crop, alpha
         ch, cw = alpha.shape
         flat = crop.reshape(-1, 3).astype(float)
         if s['type'] == 'art':

@@ -164,8 +164,50 @@
       if (!t) break;
       spots.bed.push({ x: t.x + t.w / 2 - 6, y: t.y + 2, kind: 'floor', key: t.key + 0.5 }, { x: t.x + t.w / 2 + 6, y: t.y + 2, kind: 'floor', key: t.key + 0.5 });
     }
+    placeKeepsakes(rows, items, fam);
     return { rows, items, spots };
   };
+
+  // Where keepsakes go: the back wall between windows (not behind tall furniture), the top of the memory cabinet
+  // or a shelf, the desk, the rug, the fridge door and beside the cot. Pieces that find no place are left out.
+  function placeKeepsakes(rows, items, fam) {
+    const art = A(), keep = fam.keep || [];
+    if (!keep.length) return;
+    const tall = x => items.some(it => !it.floor && !it.wall && it.y < 30 && x + 12 > it.x && x < it.x + it.w);
+    const wallCols = [];
+    for (let c = 0; c < 16; c++) {
+      const near = [-1, 0, 1].some(d => rows[0][c + d] === 'W') || rows[1][c] === 'P' || 'FCKk'.includes(rows[1][c]);
+      if (rows[0][c] === '#' && !near && !tall(c * TS + 2)) wallCols.push(c);
+    }
+    const tops = items.filter(it => it.id === 'home.display_cabinet' || it.id === 'home.bookshelf').map(it => ({ it, x: it.x + 2 }));
+    const desk = items.find(it => it.id === 'home.desk'), fridge = items.find(it => it.id === 'home.fridge'), rug = items.find(it => it.id === 'home.rug'), cot = items.find(it => it.id === 'home.cot');
+    let rugN = 0, deskX = desk ? desk.x + desk.w - 2 : 0;
+    const sorted = keep.slice().sort((a, b) => (b.ancestor ? 1 : 0) - (a.ancestor ? 1 : 0)); // the ancestors first: they must not be crowded out
+    for (const k of sorted) {
+      const [w, h] = art.size(k.id);
+      let it = null;
+      if (k.where === 'wall' && wallCols.length) { const c = wallCols.shift(); it = { x: c * TS + Math.round((16 - w) / 2), y: 22 - h, wall: true, key: -1 }; }
+      else if (k.where === 'shelf') { const t = tops.find(t => t.x + w <= t.it.x + t.it.w - 1); if (t) { it = { x: t.x, y: t.it.y + 5 - h, key: t.it.key + 0.1 }; t.x += w + 1; } }
+      else if (k.where === 'desk' && desk && deskX - w > desk.x + 1) { it = { x: deskX - w, y: desk.y + 6 - h, key: desk.key + 0.1 }; deskX -= w + 1; }
+      else if (k.where === 'rug' && rug && rugN < 3) { const [rw] = art.size('home.rug'); it = { x: rug.x + 4 + rugN * Math.round((rw - 8) / 3), y: rug.y + 22 - h, key: -1 }; rugN++; }
+      else if (k.where === 'fridge' && fridge) it = { x: fridge.x + Math.round((fridge.w - w) / 2), y: fridge.y + 13, key: fridge.key + 0.1 };
+      else if (k.where === 'cot' && cot) it = { x: cot.x + cot.w + 1, y: cot.key - h, key: cot.key };
+      if (it) items.push(Object.assign({ id: k.id, w, h, label: k.label, paint: k.paint, keep: true }, it));
+    }
+  }
+
+  // Paint people into an empty photo frame: tiny busts side by side in the white middle.
+  function paintFrame(g, w, it) {
+    const ids = it.paint === 'family' ? null : it.paint, inner = { x: it.x + 2, y: it.y + 2, w: it.w - 4, h: it.h - 4 };
+    const ppl = (ids || []).map(id => w.people[id]).filter(Boolean);
+    if (!ppl.length || !LES.Portrait || !LES.Portrait.available()) return;
+    const each = Math.max(3, Math.floor(inner.w / ppl.length)), bh = Math.min(inner.h, Math.round(each * 44 / 32));
+    ppl.forEach((p, i) => {
+      const b = LES.Portrait.bust(w, p, 'happy');
+      if (b) g.drawImage(b, inner.x + i * each + Math.floor((each - Math.round(bh * 32 / 44)) / 2), inner.y + inner.h - bh, Math.round(bh * 32 / 44), bh);
+    });
+  }
+  R.paintFrame = paintFrame;
 
   // Hour of the day (0-24) from the day fraction (the game's day starts at 06:00).
   R.hour = t => (((t * 1440) + 360) % 1440) / 60;
@@ -232,8 +274,52 @@
   R.family = function (w, b) { // from everyone who lives here (not only who is home now), so the furniture stays put
     const all = w.living.filter(p => p.alive && !p.away && !p.inst && p.homeId === b.id), age = p => LES.P.age(w, p);
     const babies = all.filter(p => age(p) < 3).length, head = all.filter(p => age(p) >= 18).sort((a, c) => age(c) - age(a))[0] || all[0];
-    return { baby: babies > 0, faith: head ? head.rel || 'none' : 'none', sleepers: all.length - babies + Math.max(0, babies - 1) };
+    return { baby: babies > 0, faith: head ? head.rel || 'none' : 'none', sleepers: all.length - babies + Math.max(0, babies - 1), keep: R.keepsakes(w, all) };
   };
+
+  // Keepsakes (Phase 3.3/3.4), each earned by a real record of someone who lives here: certificates for
+  // qualifications, a trophy for a promotion or a business, a retirement clock, the wedding photo of a couple,
+  // a school bag and books while a child is at school, toys and drawings for young children, baby shoes; for
+  // the played family also a medal (elected) and a work badge, and the earlier lives of the chain on the wall
+  // with one keepsake each. [{ id, where: wall | shelf | desk | rug | fridge | cot, label, paint }]
+  R.keepsakes = function (w, all) {
+    const age = p => LES.P.age(w, p), name = p => LES.P.name(p), out = [], ids = new Set(all.map(p => p.id));
+    const adults = all.filter(p => age(p) >= 18).sort((a, c) => age(c) - age(a) || a.id - c.id);
+    const kids = all.filter(p => age(p) < 18);
+    let certs = 0;
+    for (const p of adults) if (p.quals && p.quals.length && certs < 2) { certs++; out.push({ id: p.quals.length > 1 ? 'keep.cert_gold' : 'keep.cert_blue', where: 'wall', label: ['keep.cert', { name: name(p) }] }); }
+    const couple = adults.find(p => p.partnerId !== null && p.partnerId !== undefined && ids.has(p.partnerId));
+    if (couple) out.push({ id: 'keep.frame_wedding', where: 'wall', label: ['keep.wedding', { a: name(couple), b: name(w.people[couple.partnerId]) }], paint: [couple.id, couple.partnerId] });
+    const star = adults.find(p => p.manages >= 0 || (p.job && p.job.level >= 2));
+    if (star) out.push({ id: 'keep.trophy_gold', where: 'shelf', label: ['keep.trophy', { name: name(star) }] });
+    const old = adults.find(p => p.retired);
+    if (old) out.push({ id: 'keep.retire_clock', where: 'wall', label: ['keep.keepsake', { name: name(old) }] });
+    if (kids.some(p => age(p) >= 6)) out.push({ id: 'home.school_bag', where: 'desk' }, { id: 'keep.books', where: 'desk' });
+    const small = kids.filter(p => age(p) >= 1 && age(p) < 8);
+    const TOYS = ['keep.doll', 'home.blocks', 'home.ball', 'keep.keyboard', 'home.toy_car', 'keep.kite'];
+    small.slice(0, 2).forEach((p, i) => out.push({ id: TOYS[(p.id + i) % TOYS.length], where: 'rug' }));
+    const DRAW = ['keep.drawing_house', 'keep.drawing_family', 'keep.drawing_cat'];
+    kids.filter(p => age(p) >= 4 && age(p) < 11).slice(0, 2).forEach((p, i) => out.push({ id: DRAW[(p.id + i) % 3], where: i ? 'wall' : 'fridge', label: ['keep.keepsake', { name: name(p) }] }));
+    if (kids.some(p => age(p) < 2)) out.push({ id: 'keep.baby_shoes', where: 'cot' });
+    const s = w.player;
+    if (s && ids.has(s.id)) {
+      const moments = s.moments || [];
+      if (moments.some(m => m.kind === 'elected')) out.push({ id: 'keep.medal', where: 'shelf', label: ['keep.keepsake', { name: name(w.people[s.id]) }] });
+      if (w.people[s.id].job) out.push({ id: 'keep.badge', where: 'desk' });
+      // The ancestor wall: earlier lives of the chain, framed, each with one keepsake on the shelf.
+      const before = [];
+      for (const c of s.chain || []) if (c.id !== s.id && !before.includes(c.id)) before.push(c.id);
+      before.slice(-3).forEach((id, i) => {
+        const q = w.people[id];
+        if (!q) return;
+        out.push({ id: i % 2 ? 'keep.frame_square' : 'keep.frame_oval', where: 'wall', label: ['keep.photoOf', { name: name(q) }], paint: [id], ancestor: true });
+        const kid = q.quals && q.quals.length ? 'keep.cert_gold' : q.manages >= 0 || (q.job && q.job.level >= 2) ? 'keep.trophy_silver' : 'keep.vase';
+        out.push({ id: kid, where: 'shelf', label: [kid === 'keep.cert_gold' ? 'keep.cert' : kid === 'keep.trophy_silver' ? 'keep.trophy' : 'keep.keepsake', { name: name(q) }], ancestor: true });
+      });
+    }
+    return out.filter(k => A().has(k.id));
+  };
+  R.keepSig = fam => (fam.keep || []).map(k => `${k.id}${k.paint ? k.paint.join('+') : ''}`).join(',');
 
   // Sprite and place for each activity. Children use their own frames; teens, adults and elders the adult ones.
   const FRAMES = {
@@ -303,7 +389,7 @@
   };
 
   const statics = new Map();
-  function staticLayer(b, plan, sig) {
+  function staticLayer(b, plan, sig, w) {
     const key = `${b.id}|${sig}`;
     let cv = statics.get(key);
     if (cv) return cv;
@@ -319,7 +405,7 @@
     for (let c = 0; c < 16; c++) art.draw(g, rows[1][c] === 'k' || 'FCK'.includes(rows[1][c]) ? 'home.wall_kitchen' : `home.wall_wood.${c % 5 === 2 ? 0 : 0}`, c * TS, 0);
     for (let c = 0; c < 16; c++) if (rows[0][c] === 'W') art.draw(g, (c * 7 + b.id) % 3 ? 'home.window_nako' : 'home.window_shutter', c * TS - 8, 4);
     art.draw(g, 'home.clock', 10 * TS + 4, 10);
-    for (const it of plan.items) if (it.floor || it.wall) art.draw(g, it.id, it.x, it.y);
+    for (const it of plan.items) if (it.floor || it.wall) { art.draw(g, it.id, it.x, it.y); if (it.paint && w) paintFrame(g, w, it); }
     for (let r = 1; r < rows.length; r++) for (let c = 0; c < 16; c++) { // inner walls: a thin top edge
       if (rows[r][c] === '|') art.draw(g, 'home.wall_edge_v', c * TS + 6, top(r));
       if (rows[r][c] === '-') art.draw(g, 'home.wall_edge_h', c * TS, top(r) + 10);
@@ -333,12 +419,17 @@
     const w = r.w, b = tgt.b, art = A();
     const scene = R.scene(w, r, b, t, false);
     const fam = R.family(w, b);
-    const layout = R.layoutOf(b), sig = `${layout}|${fam.baby ? 1 : 0}|${fam.faith}|${fam.sleepers}`;
-    if (!r._roomPlan || r._roomPlan.sig !== `${b.id}|${sig}`) r._roomPlan = { sig: `${b.id}|${sig}`, plan: R.plan(layout, fam) };
+    const layout = R.layoutOf(b), sig = `${layout}|${fam.baby ? 1 : 0}|${fam.faith}|${fam.sleepers}|${R.keepSig(fam)}`;
+    if (!r._roomPlan || r._roomPlan.sig !== `${b.id}|${sig}`) {
+      const plan = R.plan(layout, fam);
+      const photo = plan.items.find(it => it.id === 'home.photo_large'); // the family photo shows this family
+      if (photo) { const [pw, ph] = A().size('home.photo_large'); Object.assign(photo, { w: pw, h: ph, label: ['keep.family', {}], paint: w.living.filter(p => p.alive && !p.away && !p.inst && p.homeId === b.id).sort((x, y) => LES.P.age(w, y) - LES.P.age(w, x)).slice(0, 4).map(p => p.id) }); }
+      r._roomPlan = { sig: `${b.id}|${sig}`, plan };
+    }
     const plan = r._roomPlan.plan, hr = R.hour(t);
     const rc = r._roomCv || (r._roomCv = Object.assign(document.createElement('canvas'), { width: W, height: H }));
     const q = rc.getContext('2d'); q.imageSmoothingEnabled = false;
-    q.drawImage(staticLayer(b, plan, sig), 0, 0);
+    q.drawImage(staticLayer(b, plan, sig, w), 0, 0);
     const people = R.place(plan, scene, now), f2 = Math.floor((now || 0) / 650) % 2, f3 = Math.floor((now || 0) / 300) % 3;
     const sofaBusy = people.some(m => m.act === 'sofa'), cooking = people.some(m => m.act === 'cook'), lampOn = hr >= 19 || hr < 6.5;
     const draws = [];
@@ -382,7 +473,17 @@
     for (const s of scr) { s.x = (ox + s.rx * k) / r.dpr; s.y = (oy + s.ry * k) / r.dpr; }
     r.badges = [];
     r._roomRect = { ox, oy, k };
+    r._roomLabels = plan.items.filter(it => it.label);
     return { scene, people };
+  };
+
+  // The keepsake under a screen point (css pixels), as text, or null.
+  R.pickItem = function (r, sx, sy) {
+    const rr = r._roomRect;
+    if (r.roomState !== 'on' || !rr || !r._roomLabels) return null;
+    const x = (sx * r.dpr - rr.ox) / rr.k, y = (sy * r.dpr - rr.oy) / rr.k;
+    for (const it of r._roomLabels) if (x >= it.x - 1 && x <= it.x + it.w + 1 && y >= it.y - 1 && y <= it.y + it.h + 1) return LES.I18n.t(it.label[0], it.label[1]);
+    return null;
   };
 
   // Evening and night: darken the room, and let the lamps and windows glow.

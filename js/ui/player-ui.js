@@ -261,6 +261,7 @@
 
   function portrait(c, w, p) {
     if (!c || !p) return;
+    if (LES.Portrait && LES.Portrait.draw(c, w, p)) return; // art upgrade: painted bust with an expression
     const g = c.getContext('2d'), age = P.age(w, p);
     g.clearRect(0, 0, c.width, c.height); g.imageSmoothingEnabled = false;
     const spr = LES.Sprites.person(LES.Sprites.lookOf(p, age), age < 3 ? 'baby' : !p.adult ? 'child' : age >= 65 ? 'elder' : 'adult', 0);
@@ -273,7 +274,7 @@
     const goal = p.goal && LES.Goals ? LES.Goals.DEFS[p.goal.id] : null, prog = goal && goal.progress ? U.clamp(goal.progress(w, p, p.goal), 0, 1) : 0;
     const goals = P.age(w, p) >= 16 && Pl.goals ? Pl.goals(w, p) : [];
     return `<div class="card life-head">
-        <canvas class="portrait" id="life-portrait" width="64" height="88" aria-hidden="true"></canvas>
+        <div class="life-pic"><canvas class="portrait" id="life-portrait" width="64" height="88" aria-hidden="true"></canvas>${LES.Album && LES.Album.available() ? `<button class="ghost life-album" data-album="1" title="${esc(T('album.tip'))}">📷 ${esc(T('ui.album'))}</button>` : ''}</div>
         <div class="life-who"><div class="life-name">${esc(sm.name)}</div>
           <div class="muted">${esc(T('life.ageStage', { age: sm.age, stage: T(`life.${sm.stage}`) }))}${UI.app.region ? ` · ${esc(LES.townName(w))}` : ''}</div>
           <div>${esc(status(w, p))}</div>
@@ -415,6 +416,7 @@
       const w = where();
       if (!b || !w) return;
       const redraw = () => { UI._lifeHtml = null; UI._storyHtml = null; UI._planHtml = null; UI.update(true); };
+      if (b.dataset.album) { LES.Album.open(UI.app); return; }
       if (b.dataset.view) { UI.lifeView = b.dataset.view; UI.storyHidden = false; UI.planOpen = true; setPref('les-life-view', UI.lifeView); redraw(); if (UI.renderStory) UI.renderStory(); if (UI.renderPlanner) UI.renderPlanner(); return; }
       if (b.dataset.page) { UI.lifePage = b.dataset.page; redraw(); el.scrollTop = 0; return; }
       if (b.dataset.back) { UI.lifePage = UI.lifePage === 'school' ? UI._schoolFrom || null : null; redraw(); return; }

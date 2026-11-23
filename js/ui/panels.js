@@ -398,7 +398,7 @@
 
     // Canvases
     const portrait = $('portrait');
-    if (portrait) {
+    if (portrait && !(LES.Portrait && LES.Portrait.draw(portrait, w, p))) {
       const g = portrait.getContext('2d');
       g.imageSmoothingEnabled = false;
       const group = age < 3 ? 'baby' : !p.adult ? 'child' : age >= 65 ? 'elder' : 'adult';
