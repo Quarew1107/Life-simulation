@@ -1,0 +1,165 @@
+{
+ "batch": "P1B-R",
+ "fit": "box",
+ "sheets": [
+  {
+   "file": "p1b-floors.png",
+   "rows": [
+    [
+     {
+      "id": "home.floor_wood.0",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "home.floor_wood.1",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "home.floor_wood.2",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "home.floor_wood.3",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "home.floor_kitchen.0",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "home.floor_kitchen.1",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "home.floor_tikar",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p1c-adult-fix.png",
+   "rows": [
+    [
+     {
+      "id": "person.adult.eat.0",
+      "w": 16,
+      "h": 20,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.eat.1",
+      "w": 16,
+      "h": 20,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.write.0",
+      "w": 16,
+      "h": 20,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.write.1",
+      "w": 16,
+      "h": 20,
+      "type": "mask"
+     }
+    ],
+    [
+     {
+      "id": "person.adult.sofa.0",
+      "w": 16,
+      "h": 20,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.sofa.1",
+      "w": 16,
+      "h": 20,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.cook.0",
+      "w": 16,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "skin",
+       "hair",
+       "top",
+       "bottom"
+      ]
+     },
+     {
+      "id": "person.adult.cook.1",
+      "w": 16,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "skin",
+       "hair",
+       "top",
+       "bottom"
+      ]
+     }
+    ],
+    [
+     {
+      "id": "person.adult.baby.0",
+      "w": 16,
+      "h": 24,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.baby.1",
+      "w": 16,
+      "h": 24,
+      "type": "mask"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p1d-bust-hair-fix.png",
+   "rows": [
+    [
+     {
+      "id": "bust_hair.tudung",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "skin",
+       "head"
+      ]
+     },
+     {
+      "id": "bust_hair.songkok",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "skin",
+       "head"
+      ]
+     }
+    ]
+   ]
+  }
+ ]
+}
