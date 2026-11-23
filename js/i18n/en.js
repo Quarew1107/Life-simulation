@@ -3821,4 +3821,9 @@ LES.I18n.add('en', {
   'su.c.again': {"one": "Also bring back the {count} person you added during the last run (on the same days)", "other": "Also bring back the {count} people you added during the last run (on the same days)"},
   'su.c.note': "Your cast lives by the same rules as everyone else. During a run you can also add or edit people in the Leaders tab → ★ My cast.",
   'su.lead': "A town of strangers, each born different, each chasing {goal}. Pick a world, set up your town, then watch who makes it, and why.",
+  'ui.aria.town': "Town",
+  'ui.aria.speed': "Simulation speed",
+  'ex.age': "{n}y",
+  'su.c.del.tip': "Delete {name} from your saved people",
+  'su.c.del.ask': "Delete {name} from your saved people? This cannot be undone. Their partner and children stay saved, without the link to them.",
 });

@@ -12,7 +12,8 @@
     const wrap = document.getElementById('map-wrap');
     if (!wrap) return null;
     c = document.createElement('canvas');
-    c.id = 'minimap'; c.title = 'Mini-map: click or drag to move the view';
+    c.id = 'minimap'; c.title = LES.I18n.g('Mini-map: click or drag to move the view');
+    window.addEventListener('les-lang', () => { c.title = LES.I18n.g('Mini-map: click or drag to move the view'); });
     wrap.appendChild(c);
     const go = e => {
       const app = LES.UI && LES.UI.app, r = app && app.renderer, w = app && app.world;

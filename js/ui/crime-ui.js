@@ -12,7 +12,7 @@
     return `<div class="card"><h3>${t('cr.police')}</h3>
       <div class="grid2"><div><span class="muted">${t('cr.solved')}</span><span>${Math.round(solved * 100)}% (${esc(G(LES.Countries.pack.name))} ~${Math.round(LES.Countries.pack.calibration.clearance.target * 100)}%)</span></div><div><span class="muted">${t('cr.felt')}</span><span>${Math.round((st.certainty === undefined ? 0.5 : st.certainty) * 100)}%</span></div>
         <div><span class="muted">${t('cr.officers')}</span><span>${g ? g.officers : '–'}</span></div><div><span class="muted">${t('cr.capacity')}</span><span>${Math.round(LES.Crime.capacity(w) * 100)}%</span></div>
-        ${g ? `<div><span class="muted">Ketua Polis Daerah</span><span>${kpd ? (kpd.id >= 0 ? UI.plink(w, kpd.id) : esc(kpd.name)) + ` · ${t('cr.competence', { v: Math.round(kpd.comp * 100) })}` : t('cr.vacant')}</span></div>` : ''}
+        ${g ? `<div><span class="muted">${esc(G((LES.Council.ROLES.police || {}).title || 'Police chief'))}</span><span>${kpd ? (kpd.id >= 0 ? UI.plink(w, kpd.id) : esc(G(kpd.name))) + ` · ${t('cr.competence', { v: Math.round(kpd.comp * 100) })}` : t('cr.vacant')}</span></div>` : ''}
         <div><span class="muted">${t('cr.townUnemp')}</span><span>${Math.round((tc.unemp || 0) * 1000) / 10}% / ${(tc.gini || 0).toFixed(2)}</span></div></div>
       <canvas class="chart" id="cr-pol"></canvas>
       <div class="note">${t('cr.policeNote')}</div></div>`;
@@ -40,7 +40,7 @@
         <div class="stat"><div class="v">${st.arrests ? Math.round(st.convictions / st.arrests * 100) : 0}%</div><div class="l">${t('cr.s.conv')}</div></div>
         <div class="stat"><div class="v">${live.length}</div><div class="l">${t('cr.s.gangs')}</div></div>
       </div>
-      <div class="card"><h3>${t('cr.rates')} <small class="muted">${t('cr.ratesSub', { v: w.cfg.crime })}</small></h3>
+      <div class="card"><h3>${t('cr.rates')} <small class="muted">${t('cr.ratesSub', { v: G(w.cfg.crime) })}</small></h3>
         <table class="cmp"><tr><th></th><th>${t('cr.thisTown')}</th><th>${esc(G(LES.Countries.pack.name))}${k !== 1 ? ' ×' + k : ''}</th></tr>
           ${row('cr.r.index', rates.index, CR.REF.index)}${row('cr.r.property', rates.property, CR.REF.property)}${row('cr.r.violent', rates.violent, CR.REF.violent)}
           ${row('cr.r.murder', rates.murder, CR.REF.murder)}${row('cr.r.users', last ? last.cr.users : 0, CR.REF.users)}${row('cr.r.prison', last ? last.cr.prison : 0, CR.REF.prison)}</table>
@@ -56,13 +56,13 @@
           <div><span class="muted">${t('cr.started')}</span><span>${st.startedUsing}</span></div>
           <div><span class="muted">${t('cr.drugArrests')}</span><span>${st.drugArrests} / ${st.overdoses}</span></div>
           <div><span class="muted">${t('cr.rehab')}</span><span>${st.rehabAdmissions} (${st.voluntaryRehab})</span></div>
-          <div><span class="muted">${t('cr.policy')}</span><span>${esc((LES.SETTINGS_META.find(m => m.key === 'drugPolicy').options.find(o => o[0] === (w.policy ? w.policy.drugPolicy : w.cfg.drugPolicy)) || [, w.cfg.drugPolicy])[1])}</span></div>
+          <div><span class="muted">${t('cr.policy')}</span><span>${esc(G((LES.SETTINGS_META.find(m => m.key === 'drugPolicy').options.find(o => o[0] === (w.policy ? w.policy.drugPolicy : w.cfg.drugPolicy)) || [, w.cfg.drugPolicy])[1]))}</span></div>
         </div></div>
       <div class="card"><h3>${t('cr.victims')} <small class="muted">${t('cr.byClass')}</small></h3>
-        <div class="grid2">${['B40', 'M40', 'T20'].map(c => `<div><span class="muted">${LES.Society ? LES.Society.short(c) : c}</span><span>${Math.round((vic[c] || 0) / vicTotal * 100)}%</span></div>`).join('')}</div>
+        <div class="grid2">${['B40', 'M40', 'T20'].map(c => `<div><span class="muted">${LES.Society ? LES.Society.shortT(c) : c}</span><span>${Math.round((vic[c] || 0) / vicTotal * 100)}%</span></div>`).join('')}</div>
         <div class="note">${t('cr.victimsNote')}</div></div>
       <div class="card"><h3>${t('cr.gangs')} <small class="muted">${t('cr.gangsSub', { formed: st.gangs.length, raids: st.crackdowns, fights: st.gangFights })}</small></h3>
-        ${live.length ? `<table class="cmp"><tr><th>${t('cr.gang')}</th><th>${t('cr.leader')}</th><th>${t('cr.members')}</th><th>${t('cr.turf')}</th><th>${t('cr.funds')}</th></tr>${live.map(g => `<tr><td><span style="color:${g.colour}">■</span> ${esc(g.name)}${LES.Crime.linkText(w, g) ? `<br><small class="muted">${esc(LES.Crime.linkText(w, g))}</small>` : ''}</td><td>${UI.plink(w, g.leader)}</td><td>${g.members.length}</td><td>${t('cr.blocks', { count: g.turf.length })}</td><td>${U.fmtMoney(g.cash)}</td></tr>`).join('')}</table>` : `<p class="note">${t('cr.noGang')}</p>`}
+        ${live.length ? `<table class="cmp"><tr><th>${t('cr.gang')}</th><th>${t('cr.leader')}</th><th>${t('cr.members')}</th><th>${t('cr.turf')}</th><th>${t('cr.funds')}</th></tr>${live.map(g => `<tr><td><span style="color:${g.colour}">■</span> ${esc(G(g.name))}${LES.Crime.linkText(w, g) ? `<br><small class="muted">${esc(LES.Crime.linkText(w, g))}</small>` : ''}</td><td>${UI.plink(w, g.leader)}</td><td>${g.members.length}</td><td>${t('cr.blocks', { count: g.turf.length })}</td><td>${U.fmtMoney(g.cash)}</td></tr>`).join('')}</table>` : `<p class="note">${t('cr.noGang')}</p>`}
         <div class="note">${T('cr.gangNoteHtml', { amt: U.fmtMoney(st.protection) })}${w.region ? ` ${t('cr.gangRegion')}` : ''}</div></div>
       <p class="note">${t('cr.why')}</p>`;
     if (h.length) {
@@ -82,7 +82,7 @@
       <div><span class="muted">${t('cr.committed')}</span><span>${cr.offences}</span></div>
       <div><span class="muted">${t('cr.timesVictim')}</span><span>${cr.victim}</span></div>
       <div><span class="muted">${t('cr.temptation')}</span><span>${(cr.t * 100).toFixed(1)}%</span></div>
-      ${g ? `<div><span class="muted">${t('cr.gang')}</span><span style="color:${g.colour}">${esc(g.name)}${g.leader === p.id ? ` (${t('cr.leaderLc')})` : ''}</span></div>` : ''}
+      ${g ? `<div><span class="muted">${t('cr.gang')}</span><span style="color:${g.colour}">${esc(G(g.name))}${g.leader === p.id ? ` (${t('cr.leaderLc')})` : ''}</span></div>` : ''}
       ${cr.tie && w.region && w.region.towns[cr.tie.town] && w.region.towns[cr.tie.town].crime ? `<div><span class="muted">${t('cr.oldGang')}</span><span>${t('cr.ties', { gang: w.region.towns[cr.tie.town].crime.gangs[cr.tie.gang].name, town: LES.townName(w.region.towns[cr.tie.town]) })}</span></div>` : ''}
       ${cr.user || cr.addict ? `<div><span class="muted">${t('cr.drugs')}</span><span>${cr.user ? t('cr.using', { v: Math.round(cr.addict) }) : t('cr.clean', { count: cr.clean })}</span></div>` : ''}
     </div>${cr.rec ? `<div class="note">${t('cr.recNote')}</div>` : ''}</div>`;

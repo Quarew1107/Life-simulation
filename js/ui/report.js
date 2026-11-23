@@ -117,7 +117,7 @@
       const booms = biz.reduce((s, b) => s + b.booms, 0);
       out.paras.push(T('rp.h.winner', { name: `<b>${esc(P.name(winner))}</b>`, goal: U.fmtMoney(w.goal), year: U.dayToDate(w.winner.day).year, age: w.winner.age,
         strat: G(C.STRATEGY_NAMES[wr ? wr.strategy : winner.strategy]), later: winner.stratHist.length > 1 ? T('rp.h.later', { strat: G(C.STRATEGY_NAMES[winner.strategy]) }) : '',
-        biz: biz.length ? T('rp.h.biz', { count: biz.length, names: biz.map(b => esc(b.name)).slice(0, 3).join(', '), booms: T('rp.h.booms', { count: booms }) }) : T('rp.h.noBiz'),
+        biz: biz.length ? T('rp.h.biz', { count: biz.length, names: biz.map(b => esc(G(b.name))).slice(0, 3).join(', '), booms: T('rp.h.booms', { count: booms }) }) : T('rp.h.noBiz'),
         inherit: wr ? T('rp.h.inherit', { pct: pct(wr.inheritShare) }) : T('rp.h.noRecord') }));
     } else {
       out.paras.push(T('rp.h.nobody', { goal: U.fmtMoney(w.goal), years, name: `<b>${richest ? esc(P.name(richest.p)) : '—'}</b>`, peak: richest ? U.fmtMoney(richest.peakReal) : '—', pct: richest ? (richest.peakReal / w.goal * 100).toFixed(1) : 0 }));
@@ -257,7 +257,7 @@
     if (opts.log) y1 = Math.ceil(y1); else y1 *= 1.08;
     if (x1 === x0) x1 = x0 + 1; if (y1 === y0) y1 = y0 + 1;
     const X = x => pl + (x - x0) / (x1 - x0) * (W - pl - pr), Y = v => pt + (1 - (tf(v) - y0) / (y1 - y0)) * (H - pt - pb);
-    let svg = `<svg viewBox="0 0 ${W} ${H}" class="chart" role="img" aria-label="${esc(opts.title || 'chart')}">`;
+    let svg = `<svg viewBox="0 0 ${W} ${H}" class="chart" role="img" aria-label="${esc(opts.title || G('chart'))}">`;
     for (let i = 0; i <= 4; i++) {
       const t = y0 + (y1 - y0) * i / 4, y = pt + (1 - i / 4) * (H - pt - pb);
       const v = opts.log ? Math.pow(10, t) : t;
@@ -267,7 +267,7 @@
     let lx = pl;
     for (const s of series) {
       svg += `<polyline fill="none" stroke="${s.color}" stroke-width="2" points="${s.data.map(d => `${X(d[0]).toFixed(1)},${Y(d[1]).toFixed(1)}`).join(' ')}"/>`;
-      svg += `<rect x="${lx}" y="5" width="10" height="3" fill="${s.color}"/><text x="${lx + 14}" y="10" font-size="10" fill="currentColor">${esc(s.label)}</text>`;
+      svg += `<rect x="${lx}" y="5" width="10" height="3" fill="${s.color}"/><text x="${lx + 14}" y="10" font-size="10" fill="currentColor">${esc(G(s.label))}</text>`;
       lx += 14 + s.label.length * 6 + 16;
     }
     return svg + '</svg>';
@@ -278,12 +278,12 @@
     const S = LES.Society, SO = LES.Countries.pack.society;
     if (!w.society || !S) return '';
     const mob = S.mobility(w), st = w.society, pc = x => `${Math.round(x * 100)}%`;
-    const rows = S.CLASSES.map(a => { const r = mob.m[a], n = S.CLASSES.reduce((t, b) => t + r[b], 0); return `<tr><td>${S.short(a)}</td>${S.CLASSES.map(b => `<td>${n ? pc(r[b] / n) : '–'}</td>`).join('')}<td>${n}</td></tr>`; }).join('');
+    const rows = S.CLASSES.map(a => { const r = mob.m[a], n = S.CLASSES.reduce((t, b) => t + r[b], 0); return `<tr><td>${S.shortT(a)}</td>${S.CLASSES.map(b => `<td>${n ? pc(r[b] / n) : '–'}</td>`).join('')}<td>${n}</td></tr>`; }).join('');
     const rel = S.groupStats(w, 'rel');
     return `<section><h2>${T('rp.so.title')}</h2><div class="grid">
-<div class="card"><b>${T('so.mob')}</b> <span class="note">${T('so.mobSub')}</span><table><tr><th>${T('so.grewUp')}</th>${S.CLASSES.map(c => `<th>${S.short(c)}</th>`).join('')}<th>n</th></tr>${rows}</table>
-<p class="note">${T('rp.so.lines', { b: S.short('B40'), cut40: U.fmtMoney(st.cut40), t: S.short('T20'), cut80: U.fmtMoney(st.cut80), office: SO.statsOffice, year: SO.cutsYear, b40: U.cur(S.DOSM_B40_MAX), t20: U.cur(S.DOSM_T20_MIN), share: pc(st.t20share) })}</p></div>
-<div class="card"><b>${T('so.rel')}</b><table><tr><th></th><th>${T('so.adults')}</th><th>${T('nw.median')}</th><th>${S.short('B40')}</th></tr>${S.REL_KEYS.filter(k => rel[k]).map(k => `<tr><td>${esc(G(S.RELIGIONS[k].name))}</td><td>${rel[k].n}</td><td>${U.fmtMoney(rel[k].medNw)}</td><td>${pc(rel[k].b40 / rel[k].n)}</td></tr>`).join('')}</table>
+<div class="card"><b>${T('so.mob')}</b> <span class="note">${T('so.mobSub')}</span><table><tr><th>${T('so.grewUp')}</th>${S.CLASSES.map(c => `<th>${S.shortT(c)}</th>`).join('')}<th>n</th></tr>${rows}</table>
+<p class="note">${T('rp.so.lines', { b: S.shortT('B40'), cut40: U.fmtMoney(st.cut40), t: S.shortT('T20'), cut80: U.fmtMoney(st.cut80), office: SO.statsOffice, year: SO.cutsYear, b40: U.cur(S.DOSM_B40_MAX), t20: U.cur(S.DOSM_T20_MIN), share: pc(st.t20share) })}</p></div>
+<div class="card"><b>${T('so.rel')}</b><table><tr><th></th><th>${T('so.adults')}</th><th>${T('nw.median')}</th><th>${S.shortT('B40')}</th></tr>${S.REL_KEYS.filter(k => rel[k]).map(k => `<tr><td>${esc(G(S.RELIGIONS[k].name))}</td><td>${rel[k].n}</td><td>${U.fmtMoney(rel[k].medNw)}</td><td>${pc(rel[k].b40 / rel[k].n)}</td></tr>`).join('')}</table>
 <p class="note">${T('rp.so.rel', { zakat: U.fmtMoney(st.zakatTotal), aid: U.fmtMoney(st.aidTotal), fest: U.fmtMoney(st.festivalSpend), conv: st.conversions })}</p></div>
 </div></section>`;
   }
@@ -341,8 +341,8 @@
 <div class="card"><b>${T('rp.gv.laws')}</b><table>${GV.LAWS.map(l => `<tr><td>${esc(G(l.name))}</td><td>${esc(G(GV.optName(l.key, g.laws[l.key])))}</td></tr>`).join('')}</table>
 <p class="note">${T('rp.gv.note', { laws: g.lawLog.length, scandals: g.scandals, treasury: U.fmtMoney(g.treasury.cash), debt: U.fmtMoney(g.debt), floods: g.floods, hazes: g.hazes })}</p></div>
 ${g.last ? `<div class="card"><b>${T('rp.gv.money')}</b><table><tr><th>${T('rp.gv.in')}</th><th></th><th>${T('rp.gv.out')}</th><th></th></tr>${(() => { const a = Object.entries(g.last.rev).sort((x, y) => y[1] - x[1]), b = Object.entries(g.last.spend).sort((x, y) => y[1] - x[1]); let t = ''; for (let i = 0; i < Math.max(a.length, b.length); i++) t += `<tr><td>${a[i] ? esc(G(a[i][0])) : ''}</td><td>${a[i] ? U.fmtMoney(a[i][1]) : ''}</td><td>${b[i] ? esc(G(b[i][0])) : ''}</td><td>${b[i] ? U.fmtMoney(b[i][1]) : ''}</td></tr>`; return t; })()}</table>
-<p class="note">${T('rp.gv.fund', { fund: LES.Countries.pack.names.fund, value: U.fmtMoney(LES.Fiscal.fundValue(w)), rate: LES.Countries.pack.names.policyRate, opr: (g.opr * 100).toFixed(2), projects: g.projects || 0, trained: g.trained || 0, school: Math.round((g.eduQ || 1) * 100), health: Math.round((g.healthQ || 1) * 100) })}</p></div>` : ''}
-${g.officials ? `<div class="card"><b>${T('rp.gv.council')}</b><table>${LES.Council.ORDER.map(r => { const o = g.officials[r]; return `<tr><td>${esc(LES.Council.ROLES[r].title)}</td><td>${o ? esc(LES.Council.name(w, o)) + T('rp.gv.comp', { v: Math.round(o.comp * 100) }) : T('cr.vacant')}</td></tr>`; }).join('')}</table></div>` : ''}
+<p class="note">${T('rp.gv.fund', { fund: LES.Countries.pack.names.fund, value: U.fmtMoney(LES.Fiscal.fundValue(w)), rate: G(LES.Countries.pack.names.policyRate), opr: (g.opr * 100).toFixed(2), projects: g.projects || 0, trained: g.trained || 0, school: Math.round((g.eduQ || 1) * 100), health: Math.round((g.healthQ || 1) * 100) })}</p></div>` : ''}
+${g.officials ? `<div class="card"><b>${T('rp.gv.council')}</b><table>${LES.Council.ORDER.map(r => { const o = g.officials[r]; return `<tr><td>${esc(G(LES.Council.ROLES[r].title))}</td><td>${o ? esc(LES.Council.name(w, o)) + T('rp.gv.comp', { v: Math.round(o.comp * 100) }) : T('cr.vacant')}</td></tr>`; }).join('')}</table></div>` : ''}
 </div></section>`;
   }
 
@@ -351,7 +351,7 @@ ${g.officials ? `<div class="card"><b>${T('rp.gv.council')}</b><table>${LES.Coun
     if (!st || !CR) return '';
     const r = CR.rates(w), k = CR.INTENSITY[w.cfg.crime], tot = Object.values(st.total).reduce((a, b) => a + b, 0);
     return `<section><h2>${T('rp.cr.title')}</h2><div class="grid">
-<div class="card"><b>${T('rp.cr.crimes')}</b> <span class="note">${T('rp.cr.intensity', { v: esc(w.cfg.crime), adj: G(LES.Countries.pack.adj), k })}</span><table>${Object.keys(CR.TYPES).map(t => `<tr><td>${CR.TYPES[t].icon} ${esc(G(CR.TYPES[t].name))}</td><td>${st.total[t] || 0}</td></tr>`).join('')}<tr><td><b>${T('rp.cr.total')}</b></td><td><b>${tot}</b></td></tr></table>
+<div class="card"><b>${T('rp.cr.crimes')}</b> <span class="note">${T('rp.cr.intensity', { v: esc(G(w.cfg.crime)), adj: G(LES.Countries.pack.adj), k })}</span><table>${Object.keys(CR.TYPES).map(t => `<tr><td>${CR.TYPES[t].icon} ${esc(G(CR.TYPES[t].name))}</td><td>${st.total[t] || 0}</td></tr>`).join('')}<tr><td><b>${T('rp.cr.total')}</b></td><td><b>${tot}</b></td></tr></table>
 <p class="note">${T('rp.cr.index', { v: r.index.toFixed(0), country: G(LES.Countries.pack.name), ref: CR.REF.index })}${k !== 1 ? ' ×' + k : ''}).</p></div>
 <div class="card"><b>${T('rp.cr.justice')}</b><table>
 <tr><td>${T('rp.cr.r1')}</td><td>${st.arrests} / ${st.convictions} / ${st.acquitted}</td></tr>
@@ -368,7 +368,7 @@ ${g.officials ? `<div class="card"><b>${T('rp.gv.council')}</b><table>${LES.Coun
     const Cal = LES.Calibration, m = Cal.measure(w), rows = Object.keys(Cal.TARGETS).filter(k => Number.isFinite(m[k]));
     if (!rows.length) return '';
     if (w.day < 3650) return `<section><h2>${T('rp.of.title', { country: esc(G(LES.Countries.pack.name)) })}</h2><p class="note">${T('rp.of.wait')}</p></section>`;
-    return `<section><h2>${T('rp.of.title', { country: esc(G(LES.Countries.pack.name)) })}</h2><table><tr><th>${T('rp.of.measure')}</th><th>${T('cr.thisTown')}</th><th>${T('rp.of.official')}</th><th></th><th>${T('rp.of.source')}</th></tr>${rows.map(k => { const t = Cal.TARGETS[k], st = Cal.status(k, m[k]); return `<tr><td>${esc(G(t.label))}</td><td>${t.fmt(m[k])}${k === 'tertiary' ? ` <span class="note">(${T('rp.of.of', { a: m.tertiaryHits, b: m.tertiaryN })})</span>` : ''}</td><td>${t.fmt(t.target)}</td><td>${T(st === 'ok' ? 'rp.of.close' : st === 'warn' ? 'rp.of.off' : 'rp.of.far')}</td><td class="note">${esc(t.src || '')}${t.comparable ? '' : ` <b>${T('rp.of.notSame')}</b> ${esc(G(t.note))}`}</td></tr>`; }).join('')}</table>
+    return `<section><h2>${T('rp.of.title', { country: esc(G(LES.Countries.pack.name)) })}</h2><table><tr><th>${T('rp.of.measure')}</th><th>${T('cr.thisTown')}</th><th>${T('rp.of.official')}</th><th></th><th>${T('rp.of.source')}</th></tr>${rows.map(k => { const t = Cal.TARGETS[k], st = Cal.status(k, m[k]); return `<tr><td>${esc(G(t.label))}</td><td>${t.fmt(m[k])}${k === 'tertiary' ? ` <span class="note">(${T('rp.of.of', { a: m.tertiaryHits, b: m.tertiaryN })})</span>` : ''}</td><td>${t.fmt(t.target)}</td><td>${T(st === 'ok' ? 'rp.of.close' : st === 'warn' ? 'rp.of.off' : 'rp.of.far')}</td><td class="note">${esc(G(t.src || ''))}${t.comparable ? '' : ` <b>${T('rp.of.notSame')}</b> ${esc(G(t.note))}`}</td></tr>`; }).join('')}</table>
 <p class="note">${T('rp.of.note1')}${Number.isFinite(m.completedFert) ? T('rp.of.fert', { v: m.completedFert.toFixed(2) }) : ''}${m.revenueApprox ? T('rp.of.approx') : ''}${T('rp.of.note2')}</p></section>`;
   }
   function workSection(w) {
@@ -383,7 +383,7 @@ ${cal ? `<tr><td>${T('rp.wk.outside')}</td><td>${st.vacOutside || 0}</td></tr>` 
 <tr><td>${T('pn.ch.owners')}</td><td>${T('rp.wk.ownersOf', { n: last.owners || 0, adults: last.adults || 0 })}</td></tr></table>
 <p class="note">${T(cal ? 'rp.wk.cal' : 'rp.wk.orig')}</p></div>
 <div class="card"><b>${T('rp.wk.byKind')}</b><table><tr><th>${T('rp.wk.kind')}</th><th>${T('rp.wk.open')}</th><th>${T('rp.wk.sales')}</th>${cal ? `<th>${T('rp.wk.met')}</th>` : ''}</tr>${rows.map(([k, t]) => `<tr><td>${esc(G((types.find(x => x.id === k) || { name: k }).name))}</td><td>${t.n}</td><td>${U.fmtMoney(t.rev)}</td>${cal ? `<td>${pct(t.share / t.n)}</td>` : ''}</tr>`).join('')}</table></div>
-<div class="card"><b>${T('rp.wk.biggest')}</b><table>${big.map(b => `<tr><td>${esc(b.name)}</td><td>${T('pn.perMonth', { amt: U.fmtMoney(b.lastRevenue || 0) })}</td></tr>`).join('') || `<tr><td>${T('rp.wk.none')}</td></tr>`}</table></div></div></section>`;
+<div class="card"><b>${T('rp.wk.biggest')}</b><table>${big.map(b => `<tr><td>${esc(G(b.name))}</td><td>${T('pn.perMonth', { amt: U.fmtMoney(b.lastRevenue || 0) })}</td></tr>`).join('') || `<tr><td>${T('rp.wk.none')}</td></tr>`}</table></div></div></section>`;
   }
   function countrySection(w) {
     const L = w.living.filter(p => p.alive && p.adult), K = LES.Countries.pack, rows = [];
@@ -428,7 +428,7 @@ ${cal ? `<tr><td>${T('rp.wk.outside')}</td><td>${st.vacOutside || 0}</td></tr>` 
       ${[[T('rp.pv.winner'), prev.winner, a.awards[0] && w.winner ? esc(P.name(w.people[w.winner.pid])) : T('rp.pv.none')], [T('rp.pv.richest'), prev.richest, a.top[0] ? U.fmtMoney(a.top[0].peakReal) : '—'], [T('rp.pv.median'), prev.median, U.fmtMoney(h[h.length - 1].median)], [T('rp.pv.pop'), prev.pop, h[h.length - 1].pop], [T('rp.pv.failed'), prev.failed, w.stats.bizFailed]].map(([k, x, y]) => `<tr><td>${k}</td><td>${esc(x)}</td><td>${y}</td></tr>`).join('')}</table>
       <p class="note">${T('rp.pv.changed', { list: Object.keys(cfg).filter(k => JSON.stringify(cfg[k]) !== JSON.stringify(prev.cfg[k])).map(esc).join(', ') || T('rp.pv.onlyRandom') })}</p></section>` : '';
     const ap = LES.UI && LES.UI.app, cm = ap && ap.compare && ap.compare.seed === cfg.seed && ap.compare.day === w.day && LES.Compare ? ap.compare : null;
-    const compareNormal = cm ? `<section><h2>${T('rp.pv.with', { label: esc(cm.label) })}</h2>${LES.Compare.table(LES.Compare.summary(w), cm.base, cm.label)}</section>` : '';
+    const compareNormal = cm ? `<section><h2>${T('rp.pv.with', { label: esc(G(cm.label)) })}</h2>${LES.Compare.table(LES.Compare.summary(w), cm.base, cm.label)}</section>` : '';
     const title = T('rp.title', { town: esc(LES.townName(w)) });
     const css = `:root{--bg:#f6f3ec;--fg:#1d232b;--muted:#5d6875;--card:#fff;--line:#e3ddd0;--acc:#b8862b;--pixel:Silkscreen,'Press Start 2P',monospace;color-scheme:light}
 @media (prefers-color-scheme:dark){:root{--bg:#0f141a;--fg:#e8edf2;--muted:#8c9aab;--card:#161d25;--line:#2a3542;--acc:#f2c14e;color-scheme:dark}}
@@ -467,11 +467,11 @@ ${workSection(w)}
 ${countrySection(w)}
 <section><h2>${T('rp.charts')}</h2><div class="grid">${charts.map(([t, s]) => `<div class="card"><b>${t}</b>${s}</div>`).join('')}</div></section>
 ${paperSection(w)}
-<section><h2>${T('rp.fame')}</h2><div class="grid">${a.awards.map(x => `<div class="card award"><b>${esc(x.title)}</b><div>${esc(x.name)}</div><div class="note">${esc(x.why || '')}</div></div>`).join('')}</div></section>
+<section><h2>${T('rp.fame')}</h2><div class="grid">${a.awards.map(x => `<div class="card award"><b>${esc(G(x.title))}</b><div>${esc(G(x.name))}</div><div class="note">${esc(x.why || '')}</div></div>`).join('')}</div></section>
 <section><h2>${T('rp.bios')}</h2><div class="grid">${a.bios.map(b => `<div class="card bio"><b>${esc(P.name(b.p))}</b> <span class="note">${b.p.alive ? T('rp.yearsOld', { n: Math.floor(P.age(w, b.p)) }) : T('ca.s.died', { age: Math.floor(P.age(w, b.p)) })} · ${G(C.STRATEGY_NAMES[b.p.strategy])}${b.p.migrant ? T('rp.migrant') : ''}</span><ul>${b.events.map(e => `<li><span class="note">${T('rp.yr', { n: U.dayToDate(e.day).year })}</span> ${esc(LES.I18n.render(e.text))}</li>`).join('')}</ul></div>`).join('')}</div></section>
 <section><h2>${T('rp.goalsT')}</h2><table><tr><th>${T('rp.goal')}</th><th>${T('rp.times')}</th></tr>${(a.goals || []).map(g => `<tr><td>${LES.Goals.DEFS[g.id].icon} ${esc(G(LES.Goals.DEFS[g.id].name))}</td><td>${g.n}</td></tr>`).join('')}</table>
 <p class="note">${T('rp.goalsNote', { r: rTxt(a.moneyHappy === undefined ? null : a.moneyHappy) })}</p></section>
-<section><h2>${T('rp.factors')}</h2><table><tr><th>${T('rp.factor')}</th><th>${T('rp.factorR')}</th></tr>${(a.factors || []).map(f => `<tr><td>${esc(f.name)}</td><td>${rTxt(f.r)} (${corrWord(f.r)})</td></tr>`).join('')}</table>
+<section><h2>${T('rp.factors')}</h2><table><tr><th>${T('rp.factor')}</th><th>${T('rp.factorR')}</th></tr>${(a.factors || []).map(f => `<tr><td>${esc(G(f.name))}</td><td>${rTxt(f.r)} (${corrWord(f.r)})</td></tr>`).join('')}</table>
 <p class="note">${T('rp.factorsNote', { n: a.factorsN || 0 })}</p></section>
 ${a.strat ? `<section><h2>${T('rp.strats')}</h2><table><tr><th>${T('rp.st.h1')}</th><th>${T('so.people')}</th><th>${T('rp.st.h3')}</th><th>${T('rp.st.h4')}</th><th>${T('rp.st.h5')}</th></tr>${a.strat.map(s => `<tr><td>${G(C.STRATEGY_NAMES[s.s])}</td><td>${s.n}</td><td>${U.fmtMoney(s.med)}</td><td>${s.inTop}</td><td>${s.fail}</td></tr>`).join('')}</table></section>` : ''}
 ${castSection(w)}
@@ -547,7 +547,11 @@ ${r.head}${inApp ? '' : r.tools}${r.body}
     }
     R.cur = { w, prev };
     R.lastFocus = document.activeElement;
-    o.querySelector('.report-title').textContent = `Report · ${LES.townName(w)}`;
+    o.querySelector('.report-title').textContent = `${G('Report')} · ${LES.townName(w)}`;
+    // The bar in the reader's language (PL-17; the overlay is built once, so set its texts on every open)
+    const bar = [['#report-dl', '⬇ ', 'Download', 'Save the report as a file'], ['#report-print', '🖨 ', 'Print', 'Print or save as PDF'], ['#report-close', '✕ ', 'Close', 'Close (Esc)']];
+    for (const [id, ic, txt, tip] of bar) { const b = o.querySelector(id); b.textContent = ic + G(txt); b.title = G(tip); }
+    o.setAttribute('aria-label', G('Simulation report')); o.querySelector('iframe').title = G('Simulation report');
     o.querySelector('iframe').srcdoc = R.html(w, prev, true);
     o.classList.remove('hidden');
     o.querySelector('#report-close').focus();

@@ -252,7 +252,7 @@
         <div class="progress" title="${esc(T('pn.nextTip', { amt: U.fmtMoney(nxP.th) }))}"><i style="width:${(nxP.frac * 100).toFixed(1)}%"></i></div>
         <div class="grid2">
           <div><span class="muted">${esc(T('pn.cash'))}</span><span>${U.fmtMoney(p.cash)}</span></div>
-          <div><span class="muted">${LES.Countries.pack.names.retirement}</span><span>${U.fmtMoney(p.epf)}</span></div>
+          <div><span class="muted">${esc(G(LES.Countries.pack.names.retirement))}</span><span>${U.fmtMoney(p.epf)}</span></div>
           ${p.epfFlex || p.epfWell ? `<div title="${esc(T('pn.epf.tip', { age: LES.Countries.pack.retirement.accessAge }))}"><span class="muted">· Fleksibel / Sejahtera</span><span>${U.fmtMoney(p.epfFlex || 0)} / ${U.fmtMoney(p.epfWell || 0)}</span></div>` : ''}
           <div><span class="muted">${esc(T('pn.idx'))}</span><span>${U.fmtMoney(invIdx)}</span></div>
           <div title="${esc(holdings)}"><span class="muted">${esc(T('pn.shares'))}</span><span>${U.fmtMoney(invStk)}</span></div>
@@ -281,7 +281,7 @@
       const gd = LES.Goals.DEFS[p.goal.id];
       const done = p.goalsDone.map(x => `<li><span>${LES.Goals.DEFS[x.id].icon} ${esc(LES.I18n.render(x.text))}</span><span class="muted">${esc(T('pn.age', { age: x.age }))}</span></li>`).join('');
       html += `<div class="card"><h3>${esc(T('pn.lifeGoal'))} <small class="muted">${esc(T('pn.since', { date: U.fmtMonthYear(Math.max(0, p.goal.since)) }))}</small></h3>
-        <div class="goal-now"><span class="goal-ic">${gd.icon}</span><div><b>${esc(gd.name)}</b><div class="muted">${esc(LES.Goals.text(p.goal))}</div></div></div>
+        <div class="goal-now"><span class="goal-ic">${gd.icon}</span><div><b>${esc(G(gd.name))}</b><div class="muted">${esc(G(LES.Goals.text(p.goal)))}</div></div></div>
         <div class="progress"><i style="width:${(p.goal.progress * 100).toFixed(1)}%"></i></div>
         <div class="note">${esc(T('pn.goalNote', { pct: Math.round(p.goal.progress * 100), happy: Math.round(p.happy), avg: Math.round(p.happyAvg) }))}</div>
         ${done ? `<ul class="list-plain" style="margin-top:6px">${done}</ul>` : ''}</div>`;
@@ -328,7 +328,7 @@
       for (const x of p.xlinks || []) { const q = R.towns[x.town].people[x.id]; if (q) rows.push(`<li>${esc(T(x.rel === 'self' ? 'pn.x.from' : x.rel === 'parent' ? 'pn.x.parent' : 'pn.x.child'))} <a href="#" data-xtown="${x.town}" data-xid="${x.id}">${U.esc(LES.townName(R.towns[x.town]))}</a>${x.rel === 'self' ? '' : `: ${U.esc(P.name(q))}`}</li>`); }
       html += `<div class="card"><h3>${esc(T('pn.otherTowns'))}</h3><ul class="list-plain xlinks">${rows.join('')}</ul></div>`;
     }
-    if (p.clan && LES.Scenarios.CLAN_BY_ID[p.clan]) { const cl = LES.Scenarios.CLAN_BY_ID[p.clan]; html += `<div class="card"><h3>${esc(T('pn.clan'))} <small class="muted">${esc(T('pn.clanScn'))}</small></h3><p><span style="color:${cl.colour}">■</span> <b>${U.esc(cl.name)}</b> (${U.esc(G(cl.en))}): ${esc(T('pn.clanGift', { attr: G(C.ATTR_NAMES[cl.attr]) }))}</p></div>`; }
+    if (p.clan && LES.Scenarios.CLAN_BY_ID[p.clan]) { const cl = LES.Scenarios.CLAN_BY_ID[p.clan]; html += `<div class="card"><h3>${esc(T('pn.clan'))} <small class="muted">${esc(T('pn.clanScn'))}</small></h3><p><span style="color:${cl.colour}">■</span> <b>${U.esc(G(cl.name))}</b> (${U.esc(G(cl.en))}): ${esc(T('pn.clanGift', { attr: G(C.ATTR_NAMES[cl.attr]) }))}</p></div>`; }
     if (p.adult) {
       html += `<div class="card tiers"><h3>${esc(T('pn.lifestyle'))} <small class="muted">${esc(T('pn.lifestyleCost', { amt: U.fmtMoney(p.mcost) }))}</small></h3>
         ${C.TIER_CATS.map(cat => {
@@ -363,9 +363,9 @@
     if (owned.length || founded.length) {
       html += `<div class="card"><h3>${esc(T('pn.businesses'))}</h3><ul class="list-plain">`;
       for (const b of owned) {
-        html += `<li><span><b>${esc(b.name)}</b> <span class="muted">${esc(G(b.typeDef.name))} · ${Math.round(p.shares[b.id] * 100)}%${b.managerId === p.id ? ` · ${esc(T('pn.manager'))}` : ''}${b.booms ? ` · ${esc(T('pn.booms', { count: b.booms }))}` : ''}</span><br><span class="muted">${T('pn.revenue', { rev: U.fmtMoney(b.lastRevenue), profit: `<span class="${b.lastProfit < 0 ? 'neg' : 'pos'}">${U.fmtMoney(b.lastProfit)}</span>` })}</span></span><span>${U.fmtMoney(b.equity)}</span></li>`;
+        html += `<li><span><b>${esc(G(b.name))}</b> <span class="muted">${esc(G(b.typeDef.name))} · ${Math.round(p.shares[b.id] * 100)}%${b.managerId === p.id ? ` · ${esc(T('pn.manager'))}` : ''}${b.booms ? ` · ${esc(T('pn.booms', { count: b.booms }))}` : ''}</span><br><span class="muted">${T('pn.revenue', { rev: U.fmtMoney(b.lastRevenue), profit: `<span class="${b.lastProfit < 0 ? 'neg' : 'pos'}">${U.fmtMoney(b.lastProfit)}</span>` })}</span></span><span>${U.fmtMoney(b.equity)}</span></li>`;
       }
-      for (const b of founded.slice(-4)) html += `<li><span class="muted">${esc(b.name)} — ${esc(G(b.closeReason || 'closed'))} ${b.closedDay !== null ? U.fmtMonthYear(b.closedDay) : ''}</span><span class="muted">${esc(T('pn.peak', { amt: U.fmtMoney(b.peakEquity) }))}</span></li>`;
+      for (const b of founded.slice(-4)) html += `<li><span class="muted">${esc(G(b.name))} — ${esc(G(b.closeReason || 'closed'))} ${b.closedDay !== null ? U.fmtMonthYear(b.closedDay) : ''}</span><span class="muted">${esc(T('pn.peak', { amt: U.fmtMoney(b.peakEquity) }))}</span></li>`;
       html += '</ul></div>';
     }
 
@@ -548,6 +548,7 @@
     grip.tabIndex = 0;
     grip.title = T('pn.grip.tip');
     side.prepend(grip);
+    window.addEventListener('les-lang', () => { grip.setAttribute('aria-label', T('pn.grip')); grip.title = T('pn.grip.tip'); }); // PL-17
     const maxW = () => Math.max(SIDE_MIN, Math.min(900, window.innerWidth * 0.6));
     let raf = 0;
     const apply = (px, save) => {

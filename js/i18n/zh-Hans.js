@@ -3191,7 +3191,7 @@ LES.I18n.add('zh-Hans', {
   'nw.infl': "通胀",
   'nw.none': "还没有报纸：第一期在第一个月底出版。",
   'nw.no': "第 {n} 期",
-  'nw.month': "第 {year} 年 {month}",
+  'nw.month': "第 {year} 年 {month} 月",
   'nw.quiet': "{town}平静的一个月",
   'nw.quietFest': "{town}平静的一个月，{fest}将至",
   'nw.numbers': "本月数字",
@@ -3821,4 +3821,9 @@ LES.I18n.add('zh-Hans', {
   'su.c.again': "也带回上次运行中你加入的 {count} 人（在同样的日子）",
   'su.c.note': "你的角色和所有人遵守同样的规则。运行中也可以在 排行榜 → ★ 我的角色 中添加或编辑人物。",
   'su.lead': "一个由陌生人组成的小镇，每个人生来不同，每个人都在追求 {goal}。选择一个世界，建立你的小镇，然后看谁能成功，以及原因。",
+  'ui.aria.town': "小镇",
+  'ui.aria.speed': "模拟速度",
+  'ex.age': "{n}岁",
+  'su.c.del.tip': "从已保存的人物中删除{name}",
+  'su.c.del.ask': "要从已保存的人物中删除{name}吗？此操作无法撤销。其伴侣和子女会保留，但不再与此人关联。",
 });

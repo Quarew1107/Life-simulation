@@ -24,8 +24,13 @@ game. This page says where the text lives, what to look at, and how to fix somet
 - **Dates:** shown as 第2年2月5日 (Year 2, February 5).
 - **Numbers and money:** RM / £ / $ / ¥ with English-style digits (RM1,200).
 - **Long paragraphs:** country notes (taxes, laws, the bank), the report's analysis.
-- **Anything still English:** names of people, towns, businesses and gangs are meant to stay as they are.
-  Anything else in English is a gap: note the exact English text.
+- **Anything still English:** names of people, towns, businesses, listed companies, newspapers, gangs and the
+  town funds are meant to stay as they are. Malay office and place words are translated, sometimes with the
+  Malay in brackets (开斋节（Hari Raya）, 小镇（Pekan）). Anything else in English is a gap: note the exact text.
+- **Job and office titles:** 县警察局长 (Ketua Polis Daerah), 市财政官 (Bendahari Bandaraya), 社区发展主任
+  (Pengarah Pembangunan Masyarakat), 主席 for the Malaysian council President: are these the words readers expect?
+- **Big money:** the goal reads RM1 亿 (RM100 million); amounts elsewhere keep k / M (RM102.7k, RM1.00M).
+- **Layout:** Chinese text is at least 12px with more line spacing; check that nothing looks crowded on a phone.
 
 ## How to fix something
 - An interface text: change its value in `js/i18n/zh-Hans.js` (keep the `{placeholders}` exactly).
@@ -33,6 +38,8 @@ game. This page says where the text lives, what to look at, and how to fix somet
   (or the `g:` entry in `zh-Hans.js`).
 - An event-feed or life-story sentence: change the Chinese template of its pattern in
   `js/i18n/zh-Hans-sentences.js` (`{1}`, `{2}` are the parts taken from the English sentence).
+- A sentence's parts (a job, a goal, a reason inside it) are looked up on their own, so fixing a name in the
+  glossary fixes every sentence that contains it.
 - After changes, run `await LES_TESTS.i18nSentenceTests()` and the adult tests (they check placeholders).
 
 ## When it passes

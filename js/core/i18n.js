@@ -27,7 +27,10 @@
 
   // A parameter may itself be a message ({ key, params }), e.g. an event title inside "... passed".
   const val = v => (v && typeof v === 'object' && v.key ? I.t(v.key, v.params) : String(v));
-  const fill = (s, params) => s.replace(/\{(\w+)\}/g, (m, k) => (params && params[k] !== undefined ? val(params[k]) : m));
+  // Values that carry a data name from the game (a job, a course, a home...) are looked up in the glossary too,
+  // so "Moved into {home}" reads in the language even when the engine stored the English name (PL-17).
+  const DATA = new Set(['job', 'title', 'course', 'home', 'type', 'goal', 'office', 'festival', 'cls', 'level', 'strat', 'biz', 'what', 'club', 'trip', 'item', 'role', 'kind', 'place', 'reason', 'why', 'qual', 'sector', 'act', 'ret', 'k', 'name', 'map', 'size', 'fund', 'cause']);
+  const fill = (s, params) => s.replace(/\{(\w+)\}/g, (m, k) => (params && params[k] !== undefined ? (DATA.has(k) && typeof params[k] === 'string' ? I.g(params[k]) : val(params[k])) : m));
   function pick(v, params, code) {
     if (typeof v === 'string') return v;
     if (!v || typeof v !== 'object') return null;
@@ -50,30 +53,54 @@
   // Glossary (PL-17): names that come from the game's data (strategies, lifestyle levels, weather...) are
   // translated by their exact English text, so every country pack's own names work. Unknown: the English as is.
   const gloss = {}; // data names and descriptions by exact English text (js/i18n/<lang>-sentences.js)
-  I.glossary = (code, map) => { Object.assign(gloss[code] = gloss[code] || {}, map); };
-  I.g = s => {
-    if (typeof s !== 'string' || lang === 'en') return s;
-    if (I.has(`g:${s}`)) return I.t(`g:${s}`);
-    if (gloss[lang] && Object.prototype.hasOwnProperty.call(gloss[lang], s)) return gloss[lang][s];
-    const m = /^(Senior|Lead|Head|Chief) (.+)$/.exec(s); // a rank before a job title ("Lead Waiter")
-    return m && I.has(`g:${m[2]}`) && I.has(`g:${m[1]} *`) ? I.t(`g:${m[1]} *`, { title: I.t(`g:${m[2]}`) }) : s;
+  I.glossary = (code, map) => { Object.assign(gloss[code] = gloss[code] || {}, map); cache.clear(); };
+  // One lookup for data names and sentences: the exact text (a g: key or the glossary), a rank before a job
+  // title ("Lead Waiter"), then the sentence patterns, whose parts are looked up the same way (so "Senior
+  // Delivery Driver" or "injured in a work accident as Electrician" inside a longer sentence also read in
+  // the language). Results are cached per language; unknown text comes back as it is.
+  const cache = new Map();
+  const exact1 = s => (I.has(`g:${s}`) ? I.t(`g:${s}`) : gloss[lang] && Object.prototype.hasOwnProperty.call(gloss[lang], s) ? gloss[lang][s] : null);
+  const exact = s => { // "terrace house" or "trading company" inside a sentence: also as the data spells it
+    const x = exact1(s); if (x !== null || !/^[a-z]/.test(s)) return x;
+    const y = exact1(s[0].toUpperCase() + s.slice(1)); return y !== null ? y : exact1(s.replace(/\b[a-z]/g, c => c.toUpperCase()));
   };
+  function tr(s, depth) {
+    const x = exact(s);
+    if (x !== null) return x;
+    if (depth > 3 || !/[A-Za-z]/.test(s)) return s;
+    const e = /^((?:\p{Extended_Pictographic}|\uFE0F|\u200D)+ )(.+)$/u.exec(s); // an icon in front ("😊 Stay happy...")
+    if (e) { const t = tr(e[2], depth + 1); return t === e[2] ? s : e[1] + t; }
+    const m = /^(Senior|Lead|Head|Chief) (.+)$/.exec(s);
+    if (m && I.has(`g:${m[1]} *`)) { const t = tr(m[2], depth + 1); if (t !== m[2]) return I.t(`g:${m[1]} *`, { title: t }); }
+    for (const [re, tpl] of sentences[lang] || []) {
+      const r = re.exec(s);
+      if (r) return tpl.replace(/\{(\d)\}/g, (y, n) => (r[n] === undefined ? '' : tr(r[n], depth + 1)));
+    }
+    // A sentence in lower case after a name (the newspaper writes "Aina Rahman welcomed baby..."): the name
+    // as it is, then the sentence with a capital, as the engine first wrote it.
+    if (depth === 0) {
+      const nm = /^(\p{Lu}[\p{L}'’.\-]*(?: \p{Lu}[\p{L}'’.\-]*){0,3}) (\p{Ll}.*)$/u.exec(s);
+      if (nm) { const rest = nm[2][0].toUpperCase() + nm[2].slice(1), t = tr(rest, depth + 1); if (t !== rest) return nm[1] + t; }
+    }
+    return s;
+  }
+  const look = s => {
+    if (typeof s !== 'string' || lang === 'en' || !s) return s;
+    const k = `${lang}\u0001${s}`;
+    let v = cache.get(k);
+    if (v === undefined) { if (cache.size > 30000) cache.clear(); v = tr(s, 0); cache.set(k, v); }
+    return v;
+  };
+  I.g = look;
   // Sentences (PL-17 step 5): the engine keeps writing plain English into its records (the fingerprints and
   // saves read that text, so it never changes). When a record is shown in another language, a table of
   // sentence patterns (js/i18n/<lang>-sentences.js) maps the English sentence to that language: each pattern
   // is [RegExp, template]; {1}, {2}... in the template are the pattern's groups, each passed through the
   // glossary (names and numbers come through unchanged). No pattern: the English is shown as it is.
   const sentences = {};
-  I.sentences = (code, list) => { (sentences[code] = sentences[code] || []).push(...list); };
+  I.sentences = (code, list) => { (sentences[code] = sentences[code] || []).push(...list); cache.clear(); };
   I.sentencesOf = code => (sentences[code] || []).slice();
-  I.sentence = function (s) {
-    if (typeof s !== 'string' || lang === 'en' || !sentences[lang]) return s;
-    for (const [re, tpl] of sentences[lang]) {
-      const m = re.exec(s);
-      if (m) return tpl.replace(/\{(\d)\}/g, (x, n) => (m[n] === undefined ? '' : I.g(m[n])));
-    }
-    return I.g(s); // a short name (an activity, a place) may be in the glossary
-  };
+  I.sentence = look; // the same lookup: a sentence, or a short name (an activity, a place)
   I.ev = (eventId, part, params) => I.t(`ev.${eventId}.${part}`, params);
   // A saved text record: an old plain English string, or { key, params } written by newer code.
   I.render = rec => (rec && typeof rec === 'object' && rec.key ? I.t(rec.key, rec.params) : I.sentence(String(rec === undefined || rec === null ? '' : rec)));

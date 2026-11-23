@@ -19,6 +19,7 @@
       g.setAttribute('aria-label', LES.I18n ? LES.I18n.t(state === 'full' ? 'ui.sheet.lower' : 'ui.sheet.raise') : '');
     }
   }
+  window.addEventListener('les-lang', () => apply()); // the handle's label in the new language (PL-17)
   UI.sheet = {
     get: () => state,
     set(s) { if (!STATES.includes(s) || s === state) return; state = s; try { localStorage.setItem(KEY, s); } catch (e) { /* ignore */ } apply(); },

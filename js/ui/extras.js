@@ -5,6 +5,7 @@
   const U = LES.U, C = LES.C, P = LES.P, UI = LES.UI;
   const esc = U.esc;
   const X = LES.Extras = {};
+  const G = s => LES.I18n.g(s), T = (k, p) => LES.I18n.t(k, p); // PL-17: labels in the reader's language
 
   // ---------------- Family tree (SVG, clickable) ----------------
   X.familyTreeSvg = function (w, p) {
@@ -29,7 +30,7 @@
       row.more = row.ids.length - ids.length;
     });
     const H = ROW0 + (rows.length - 1) * rowH + nodeH / 2 + 8;
-    let svg = `<svg viewBox="0 0 ${W} ${H}" class="ftree" role="img" aria-label="Family tree">`;
+    let svg = `<svg viewBox="0 0 ${W} ${H}" class="ftree" role="img" aria-label="${esc(G('Family tree'))}">`;
     // Lines: each child to each parent present in the tree
     for (const [id, a] of pos) {
       for (const par of w.people[id].parents) {
@@ -38,7 +39,7 @@
       }
     }
     rows.forEach((row, r) => {
-      svg += `<text x="4" y="${ROW0 + r * rowH - nodeH / 2 - 6}" font-size="10" font-weight="600" fill="#8c9aab">${row.label}${row.more ? ` (+${row.more})` : ''}</text>`;
+      svg += `<text x="4" y="${ROW0 + r * rowH - nodeH / 2 - 6}" font-size="10" font-weight="600" fill="#8c9aab">${esc(G(row.label))}${row.more ? ` (+${row.more})` : ''}</text>`;
     });
     for (const [id, a] of pos) {
       const q = w.people[id];
@@ -47,7 +48,7 @@
       svg += `<g class="fnode" data-pid="${id}" transform="translate(${a.x - nodeW / 2},${a.y - nodeH / 2})">
         <rect width="${nodeW}" height="${nodeH}" rx="5" fill="${self ? '#1d3a3a' : '#1c252f'}" stroke="${self ? '#3ec7b5' : col}" stroke-width="${self ? 2 : 1}" ${q.alive ? '' : 'stroke-dasharray="3 2" opacity="0.7"'}/>
         <text x="${nodeW / 2}" y="13" text-anchor="middle" font-size="9" fill="#e8edf2">${esc(q.first.slice(0, 13))}${q.alive ? '' : ' †'}</text>
-        <text x="${nodeW / 2}" y="26" text-anchor="middle" font-size="8" fill="#8c9aab">${Math.floor(P.age(w, q))}y · ${esc(U.fmtMoney(q.alive ? q.nw : q.peakNw))}</text></g>`;
+        <text x="${nodeW / 2}" y="26" text-anchor="middle" font-size="8" fill="#8c9aab">${esc(T('ex.age', { n: Math.floor(P.age(w, q)) }))} · ${esc(U.fmtMoney(q.alive ? q.nw : q.peakNw))}</text></g>`;
     }
     return svg + '</svg>';
   };
@@ -69,14 +70,14 @@
 
   // ---------------- Compare two people ----------------
   X.compareHtml = function (w, a, b) {
-    const row = (label, f) => `<tr><td class="muted">${label}</td><td>${f(a)}</td><td>${f(b)}</td></tr>`;
+    const row = (label, f) => `<tr><td class="muted">${esc(G(label))}</td><td>${f(a)}</td><td>${f(b)}</td></tr>`;
     const better = (x, y) => (x > y ? 'pos' : x < y ? 'neg' : '');
-    const num = (label, f, fmt) => `<tr><td class="muted">${label}</td><td class="${better(f(a), f(b))}">${fmt(f(a))}</td><td class="${better(f(b), f(a))}">${fmt(f(b))}</td></tr>`;
-    return `<div class="card compare"><h3>Compare <small><button class="ghost" data-act="unpin">Stop comparing</button></small></h3>
+    const num = (label, f, fmt) => `<tr><td class="muted">${esc(G(label))}</td><td class="${better(f(a), f(b))}">${fmt(f(a))}</td><td class="${better(f(b), f(a))}">${fmt(f(b))}</td></tr>`;
+    return `<div class="card compare"><h3>${esc(G('Compare'))} <small><button class="ghost" data-act="unpin">${esc(G('Stop comparing'))}</button></small></h3>
       <table class="cmp"><tr><th></th><th>${UI.plink(w, a.id)}</th><th>${UI.plink(w, b.id)}</th></tr>
       ${row('Age', q => Math.floor(P.age(w, q)))}
-      ${row('Strategy', q => C.STRATEGY_NAMES[q.strategy])}
-      ${row('Qualifications', q => esc(q.quals.map(x => LES.P.qualName(q, x)).join(', ') || 'None'))}
+      ${row('Strategy', q => esc(G(C.STRATEGY_NAMES[q.strategy])))}
+      ${row('Qualifications', q => esc(q.quals.map(x => G(LES.P.qualName(q, x))).join(LES.I18n.lang() === 'en' ? ', ' : '、') || G('None')))}
       ${num('Net worth', q => q.nw, U.fmtMoney)}
       ${num('Peak net worth', q => q.peakNw, U.fmtMoney)}
       ${num('Wages earned', q => q.earned.wages, U.fmtMoney)}

@@ -2895,6 +2895,28 @@
     await new Promise(r => I.set('en', r));
     check('Dates: English as before ("5 Feb Y2"), Chinese on screen (第2年2月5日), English in the records the engine writes', en1 === '5 Feb Y2' && enRec === en1 && zh1 === '第2年2月5日' && zhRec === zh1 && zhMY === '第2年2月' && engEn === '5 Feb Y2', `${en1} / ${zh1} / ${zhMY}`);
     check('Every setting name and every building description has a Chinese version', !untranslated.length && !kinds.length, untranslated.slice(0, 3).concat(kinds.slice(0, 2)).join(' | '));
+    // PL-17 review: every name the game shows from its data, in all four countries, has Chinese (company
+    // names, internal ids and plain amounts excepted), and sentences built from parts read fully in Chinese.
+    await new Promise(r => I.set('zh-Hans', r));
+    const KEYS = /^(name|title|label|text|short|desc|help|fx|note|tip|why|reason|role|full|long|unit|adj|plural|what|line|headline|caption|hint|blurb|item|act|noun|src|does|en|num|den|obs)$/;
+    const SKIP = /^(first|firstNames|surnames|last|given|family|streets|towns|townNames|parts|prefix|suffix|names|bizNames|gangNames|male|female|m|f|stocks|ipoPool|glcStocks|money|CLANS|place)$/;
+    const gaps = new Map();
+    const add = (s, path) => { if (typeof s !== 'string' || !/[A-Za-z]{2}/.test(s) || /[\u4e00-\u9fff]/.test(s) || /^[a-z0-9]+$/.test(s) || /^[A-Z]{2,5}$/.test(s) || /^(RM|\$|£|¥)?[\d,.]+$/.test(s)) return; if (I.g(s) === s && !gaps.has(s)) gaps.set(s, path); };
+    const walk = (o, path, d, inOpts) => {
+      if (!o || d > 9 || typeof o === 'function') return;
+      if (Array.isArray(o)) { o.forEach((v, i) => (inOpts && i === 0 && typeof v === 'string' ? null : walk(v, `${path}[${i}]`, d + 1, inOpts))); return; }
+      if (typeof o !== 'object') { if (inOpts) add(o, path); return; }
+      for (const k of Object.keys(o)) { if (SKIP.test(k)) continue; const v = o[k]; if (typeof v === 'string') { if (KEYS.test(k) || /^(quals|options)$/.test(path.split('.').pop())) add(v, `${path}.${k}`); } else walk(v, `${path}.${k}`, d + 1, k === 'options' || inOpts); }
+    };
+    for (const c of ['my', 'uk', 'us', 'cn']) { LES.Countries.ensure({ country: c }); walk(LES.Countries.get(c), c, 0, false); walk(LES.Council.ROLES, `${c}.roles`, 0, false); walk(LES.Calibration.TARGETS, `${c}.cal`, 0, false); }
+    LES.Countries.ensure(D);
+    for (const id of LES.Goals.IDS) add(LES.Goals.DEFS[id].name, `goal.${id}`);
+    const parts = ['Senior Delivery Driver', 'Seriously injured in a work accident as Electrician: -16 health, lost 0.8 Strength', 'Aina Rahman welcomed baby Adam with Hafiz Rahman',
+      'New life goal: 🏆 Become a Head/Chief, or land a prestige job (doctor, engineer, banker...) (after achieving the last one)', 'Run my own trading company for 5 years', 'Live in a terrace house for a year', 'Vocational Cert. (Skilled Trades)', 'Spent RM900 celebrating Hari Raya Aidilfitri'];
+    const partsLeft = parts.map(s => I.render(s)).filter(s => /[A-Za-z]{3,}/.test(s.replace(/Aina Rahman|Adam|Hafiz Rahman|Hari Raya|RM/g, '')));
+    await new Promise(r => I.set('en', r));
+    check('Every data name shown in the four countries (jobs, courses, festivals, homes, laws, offices, report sources) has Chinese', !gaps.size, [...gaps].slice(0, 4).map(([s, p]) => `${p}: ${s}`).join(' | '));
+    check('Sentences built from parts (ranks, injuries, goals, the newspaper\'s name-first lines) read fully in Chinese', !partsLeft.length, partsLeft.slice(0, 2).join(' | '));
     check('Showing records in Chinese changes nothing in the simulation (hash, stable fingerprint, the stored English)', w.hash() === h0 && w.stableHash() === s0 && [...w.people.flatMap(p => p.log.map(e => e.text)), ...w.feed.map(e => e.text)].join('~') === texts.join('~'));
   }
 

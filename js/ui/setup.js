@@ -91,7 +91,8 @@
     const rows = roster.map(s => {
       const fam = LES.Cast.householdOf(roster, s).filter(o => o !== s).map(o => o.first);
       return `<label class="cast-pick"><input type="checkbox" data-id="${esc(s.id)}" ${on.has(s.id) ? 'checked' : ''}> <b>${esc(s.first)} ${esc(s.last)}</b> <span class="muted">${s.age} · ${esc(G(C.ETHNIC_NAMES[s.eth] || s.eth))}${fam.length ? ` · ${esc(T('su.c.with', { names: fam.join(', ') }))}` : ''}</span>
-        <select id="set-cast-town-${esc(s.id)}" class="cast-town" title="${esc(T('su.c.town.tip'))}">${[0, 1, 2].map(i => `<option value="${i}" ${town(s.id) === i ? 'selected' : ''}>${esc(T('su.c.town', { n: i + 1 }))}</option>`).join('')}</select></label>`;
+        <select id="set-cast-town-${esc(s.id)}" class="cast-town" title="${esc(T('su.c.town.tip'))}">${[0, 1, 2].map(i => `<option value="${i}" ${town(s.id) === i ? 'selected' : ''}>${esc(T('su.c.town', { n: i + 1 }))}</option>`).join('')}</select>
+        <button type="button" class="ghost small cast-del" data-del="${esc(s.id)}" title="${esc(T('su.c.del.tip', { name: `${s.first} ${s.last}` }))}" aria-label="${esc(T('su.c.del.tip', { name: `${s.first} ${s.last}` }))}">✕</button></label>`;
     }).join('');
     return `<details class="set-cast" ${on.size || !roster.length ? 'open' : ''}><summary>★ ${esc(T('su.c.title'))} <b id="set-cast-sum">${esc(on.size ? T('su.c.chosen', { n: on.size }) : T('su.c.none'))}</b></summary>
       <div id="set-cast">${rows || `<p class="note">${esc(T('su.c.empty'))}</p>`}</div>
@@ -105,7 +106,7 @@
     if (m.hidden) return `<input type="hidden" id="set-${m.key}" value="${esc(v)}">`;
     if (m.type === 'select') input = `<select id="set-${m.key}">${m.options.map(([k, l]) => `<option value="${k}" ${k === v ? 'selected' : ''}>${esc(G(l))}</option>`).join('')}</select>`;
     else if (m.type === 'int' || m.type === 'num') input = `<input id="set-${m.key}" type="number" step="${m.step || 1}" min="${m.min}" max="${m.max}" value="${v}">`;
-    else if (m.key === 'seed') input = `<div class="seed-row"><input id="set-${m.key}" type="text" maxlength="40" value="${esc(v)}"><button class="ghost" id="set-random" type="button" title="Pick a random seed">🎲</button></div>`;
+    else if (m.key === 'seed') input = `<div class="seed-row"><input id="set-${m.key}" type="text" maxlength="40" value="${esc(v)}"><button class="ghost" id="set-random" type="button" title="${esc(G('Pick a random seed'))}">🎲</button></div>`;
     else input = `<input id="set-${m.key}" type="text" maxlength="40" value="${esc(v)}"${m.key === 'townName' ? ` placeholder="${esc(C.TOWN_NAME)}"` : ''}>`;
     return `<div class="field" data-key="${m.key}"><label for="set-${m.key}">${esc(G(m.label))}</label>${input}${m.help ? `<div class="help">${esc(G(m.help))}</div>` : ''}</div>`;
   }
@@ -130,21 +131,21 @@
           : esc(T('setup.replace'))}</p>
         ${playCard(base)}
         <h2 class="set-step"><span>1</span> ${esc(T('setup.chooseWorld'))}</h2>
-        <div class="scn-grid" role="radiogroup" aria-label="World">${CARDS.map(c => `<button type="button" class="scn-card${c.key === 'classic' ? ' mini' : ''}" role="radio" data-card="${c.key}">${LES.icon(c.icon, 22)}<b>${esc(G(c.name))}</b><small>${esc(G(c.short))}</small></button>`).join('')}</div>
+        <div class="scn-grid" role="radiogroup" aria-label="${esc(G('World'))}">${CARDS.map(c => `<button type="button" class="scn-card${c.key === 'classic' ? ' mini' : ''}" role="radio" data-card="${c.key}">${LES.icon(c.icon, 22)}<b>${esc(G(c.name))}</b><small>${esc(G(c.short))}</small></button>`).join('')}</div>
         <div class="scn-detail" id="scn-detail"></div>
         ${META.filter(m => m.hidden).map(m => field(m, base[m.key])).join('')}
         <h2 class="set-step"><span>2</span> ${esc(T('setup.yourTown'))}</h2>
         <div class="form-grid">${META.filter(m => m.essential).map(m => field(m, base[m.key])).join('')}</div>
         ${castPicker(base)}
         <details class="set-adv"><summary>${LES.icon('sliders', 16)} ${esc(T('setup.advanced'))} <span class="muted">· ${esc(T('setup.advancedMore', { count: adv.length }))}</span></summary>
-          ${LES.SETTINGS_GROUPS.map(g => { const ms = adv.filter(m => m.group === g); return ms.length ? `<h3 class="set-group">${esc(g)}</h3><div class="form-grid">${ms.map(m => field(m, base[m.key])).join('')}</div>` : ''; }).join('')}
-          <p class="note">The engine's deeper constants (decision randomness, success curves, hiring weights) stay at the values from the design documents.</p>
+          ${LES.SETTINGS_GROUPS.map(g => { const ms = adv.filter(m => m.group === g); return ms.length ? `<h3 class="set-group">${esc(G(g))}</h3><div class="form-grid">${ms.map(m => field(m, base[m.key])).join('')}</div>` : ''; }).join('')}
+          <p class="note">${esc(G("The engine's deeper constants (decision randomness, success curves, hiring weights) stay at the values from the design documents."))}</p>
         </details>
         <div class="msgs" id="set-msgs"></div>
         <div class="modal-actions">
-          <button class="ghost" id="set-load" title="Open a world saved with 💾 Save">${esc(T('setup.load'))}</button>
+          <button class="ghost" id="set-load" title="${esc(G('Open a world saved with 💾 Save'))}">${esc(T('setup.load'))}</button>
           <input type="file" id="set-load-file" accept=".json,.gz,application/json,application/gzip" hidden>
-          <button class="ghost" id="btn-sound-setup" title="Music &amp; sound effects">${LES.Audio.on ? '🔊 Sound on' : '🔇 Sound off'}</button>
+          <button class="ghost" id="btn-sound-setup" title="${esc(G('Music & sound effects'))}">${LES.Audio.on ? `🔊 ${esc(G('Sound on'))}` : `🔇 ${esc(G('Sound off'))}`}</button>
           <label class="set-lang" title="${esc(T('setup.langNote'))}">🌐 <select id="set-lang" aria-label="${esc(T('common.language'))}">${LES.I18n.LANGS.map(([k, l]) => `<option value="${k}"${k === LES.I18n.lang() ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
           <span class="spacer"></span>
           ${first ? '' : `<button class="ghost" id="set-cancel">${esc(T('setup.cancel'))}</button>`}
@@ -256,11 +257,24 @@
           LES.Setup.open(app, first, cfg);
         });
       };
+      // Delete a saved person (asks first): the setup comes back with every other choice kept.
+      for (const b of card.querySelectorAll('#set-cast [data-del]')) b.onclick = e => {
+        e.preventDefault(); e.stopPropagation();
+        const id = b.dataset.del, s = LES.UI.castRoster().find(o => o.id === id);
+        if (!s || !confirm(T('su.c.del.ask', { name: `${s.first} ${s.last}` }))) return;
+        const cfg = readForm(base);
+        LES.UI.castDelete(id);
+        cfg.cast = (cfg.cast || []).filter(o => o.id !== id);
+        if (cfg.playCast === id) { delete cfg.playCast; cfg.play = 'random'; }
+        cfg.preset = LES.presetOf(cfg);
+        card.oninput = card.onchange = null;
+        LES.Setup.open(app, first, cfg);
+      };
       $('set-load').onclick = () => $('set-load-file').click();
       $('set-load-file').onchange = e => { const f = e.target.files[0]; if (f) app.loadWorld(f); e.target.value = ''; };
       renderDetail();
       refresh();
-      $('btn-sound-setup').onclick = () => { $('btn-sound-setup').textContent = app.toggleSound() ? '🔊 Sound on' : '🔇 Sound off'; };
+      $('btn-sound-setup').onclick = () => { $('btn-sound-setup').textContent = app.toggleSound() ? `🔊 ${G('Sound on')}` : `🔇 ${G('Sound off')}`; };
       $('set-random').onclick = () => { $('set-seed').value = `world-${Math.floor(Math.random() * 1e6)}`; refresh(); };
       if (!first) $('set-cancel').onclick = () => LES.Setup.close();
       $('set-start').onclick = () => {

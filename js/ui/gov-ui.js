@@ -56,8 +56,8 @@
     if (h.length) {
       LES.Charts.line($('gv-appr'), { series: [{ label: T('gv.ch.approval'), color: '#3ec7b5', data: h.map(r => [r.day / 365, r.gov.approval]) }], xFmt: xs, yMin: 0 });
       LES.Charts.line($('gv-q'), { series: [{ label: T('gv.ch.schools'), color: '#b892ff', data: h.map(r => [r.day / 365, (r.gov.eduQ || 1) * 100]) }, { label: T('gv.ch.health'), color: '#3ec7b5', data: h.map(r => [r.day / 365, (r.gov.healthQ || 1) * 100]) }, { label: T('gv.ch.infra'), color: '#f4a261', data: h.map(r => [r.day / 365, (r.gov.dev || 0) * 100]) }], xFmt: xs, yMin: 0 });
-      LES.Charts.line($('gv-opr'), { series: [{ label: `${LES.Countries.pack.names.policyRate} %`, color: '#5aa9e6', data: h.map(r => [r.day / 365, (r.gov.opr || LES.Fiscal.MY_OPR) * 100]) }, { label: T('gv.ch.infl'), color: '#e76f51', data: (w.inflHist || []).map(x => [x.year - 1, x.rate * 100]) }], xFmt: xs, yMin: 0 });
-      LES.Charts.line($('gv-fund'), { series: [{ label: LES.Countries.pack.names.fund, color: '#f2c14e', data: h.map(r => [r.day / 365, r.gov.fund || 0]) }, { label: T('gv.treasury'), color: '#57d38c', data: h.map(r => [r.day / 365, r.gov.treasury]) }], xFmt: xs, yMin: 0, yFmt: LES.Charts.fmtAxisMoney });
+      LES.Charts.line($('gv-opr'), { series: [{ label: `${G(LES.Countries.pack.names.policyRate)} %`, color: '#5aa9e6', data: h.map(r => [r.day / 365, (r.gov.opr || LES.Fiscal.MY_OPR) * 100]) }, { label: T('gv.ch.infl'), color: '#e76f51', data: (w.inflHist || []).map(x => [x.year - 1, x.rate * 100]) }], xFmt: xs, yMin: 0 });
+      LES.Charts.line($('gv-fund'), { series: [{ label: G(LES.Countries.pack.names.fund), color: '#f2c14e', data: h.map(r => [r.day / 365, r.gov.fund || 0]) }, { label: T('gv.treasury'), color: '#57d38c', data: h.map(r => [r.day / 365, r.gov.treasury]) }], xFmt: xs, yMin: 0, yFmt: LES.Charts.fmtAxisMoney });
       LES.Charts.line($('gv-tre'), { series: [{ label: T('gv.ch.rev'), color: '#57d38c', data: h.map(r => [r.day / 365, r.gov.rev]) }, { label: T('gv.ch.spend'), color: '#ff8c42', data: h.map(r => [r.day / 365, r.gov.spend]) }, { label: T('gv.ch.debt'), color: '#e63946', data: h.map(r => [r.day / 365, r.gov.debt]) }], xFmt: xs, yMin: 0, yFmt: LES.Charts.fmtAxisMoney });
     }
   };
@@ -70,12 +70,12 @@
       const o = g.officials[role], R = CO.ROLES[role];
       const who = !o ? `<span class="muted">${t('cr.vacant')}</span>` : o.id >= 0 ? UI.plink(w, o.id) : `${esc(o.name)} <span class="muted">(${t('gv.outside')})</span>`;
       const bar = o ? `<div class="track" style="width:90px;display:inline-block;vertical-align:middle"><i style="width:${Math.round(o.comp * 100)}%;background:${o.comp >= 0.6 ? '#57d38c' : o.comp >= 0.4 ? '#f2c14e' : '#e63946'}"></i></div> ${Math.round(o.comp * 100)}` : '';
-      return `<tr><td><b>${esc(R.title)}</b><br><span class="muted">${esc(G(R.en))}</span></td><td>${who}${o && o.crony ? ` <span class="neg">· ${t('gv.crony')}</span>` : ''}${o ? `<br><span class="muted">${t('pn.since', { date: U.fmtMonthYear(o.since) })}</span>` : ''}</td><td>${bar}</td></tr>`;
+      return `<tr><td><b>${esc(G(R.title))}</b>${G(R.en) !== G(R.title) ? `<br><span class="muted">${esc(G(R.en))}</span>` : ''}</td><td>${who}${o && o.crony ? ` <span class="neg">· ${t('gv.crony')}</span>` : ''}${o ? `<br><span class="muted">${t('pn.since', { date: U.fmtMonthYear(o.since) })}</span>` : ''}</td><td>${bar}</td></tr>`;
     }).join('');
     const log = g.offLog.slice(-8).reverse().map(e => `<li><span>${esc(LES.I18n.render(e.text))}</span><span class="muted">${U.fmtMonthYear(e.day)}</span></li>`).join('');
     return `<div class="card"><h3>${t('gv.council')} <small class="muted">${t('gv.appointedBy', { title: G(GV.title(w)) })}</small></h3>
       <table class="cmp"><tr><th>${t('gv.post')}</th><th>${t('gv.holder')}</th><th>${t('gv.competence')}</th></tr>${rows}</table>
-      <div class="note">${CO.ORDER.map(r => `<b>${esc(CO.ROLES[r].title)}</b>: ${esc(G(CO.ROLES[r].does))}`).join('<br>')}<br>${G(LES.Countries.pack.notes.council)}</div>
+      <div class="note">${CO.ORDER.map(r => `<b>${esc(G(CO.ROLES[r].title))}</b>: ${esc(G(CO.ROLES[r].does))}`).join('<br>')}<br>${G(LES.Countries.pack.notes.council)}</div>
       ${log ? `<h3 style="margin-top:8px">${t('gv.councilLog')}</h3><ul class="list-plain">${log}</ul>` : ''}</div>`;
   }
 
@@ -94,19 +94,19 @@
         <div><span class="muted">${t('gv.eis')}</span><span>${t('gv.people', { count: eis })}</span></div><div><span class="muted">${t('gv.pensioners')}</span><span>${pension}</span></div></div>
       <canvas class="chart" id="gv-q"></canvas>
       <h3 style="margin-top:8px">${t('gv.private')}</h3>
-      ${priv.length ? `<ul class="list-plain">${priv.map(b => `<li><span><b>${esc(b.name)}</b> <span class="muted">${esc(G(b.typeDef.name))} · ${T('gv.owner', { name: UI.plink(w, b.founderId) })} · ${t('gv.staff', { count: w.living.filter(p => p.alive && p.job && p.job.biz === b.id).length })}${b.type === 'privschool' ? ` · ${t('gv.pupils', { count: w.living.filter(p => p.alive && p.school === b.id).length })}` : ''}</span></span><span>${t('pn.perMonth', { amt: U.fmtMoney(b.lastRevenue) })}</span></li>`).join('')}</ul>` : `<p class="note">${t('gv.noPrivate')}</p>`}
+      ${priv.length ? `<ul class="list-plain">${priv.map(b => `<li><span><b>${esc(G(b.name))}</b> <span class="muted">${esc(G(b.typeDef.name))} · ${T('gv.owner', { name: UI.plink(w, b.founderId) })} · ${t('gv.staff', { count: w.living.filter(p => p.alive && p.job && p.job.biz === b.id).length })}${b.type === 'privschool' ? ` · ${t('gv.pupils', { count: w.living.filter(p => p.alive && p.school === b.id).length })}` : ''}</span></span><span>${t('pn.perMonth', { amt: U.fmtMoney(b.lastRevenue) })}</span></li>`).join('')}</ul>` : `<p class="note">${t('gv.noPrivate')}</p>`}
       <div class="note">${t('gv.servicesNote', { adj: G(LES.Countries.pack.adj), n: pupils })}</div></div>`;
   }
 
   // Bank Negara, the sovereign fund and government-linked companies.
   function moneyCard(w) {
     const g = w.gov, glc = w.mkt.stocks.filter(s => s.def.glc), f = g.fund;
-    return `<div class="card"><h3>${esc(LES.Countries.pack.names.centralBank)} &amp; ${esc(LES.Countries.pack.names.fund)}</h3>
+    return `<div class="card"><h3>${esc(G(LES.Countries.pack.names.centralBank))}${LES.I18n.lang() === "en" ? " &amp; " : "和"}${esc(G(LES.Countries.pack.names.fund))}</h3>
       <div class="grid2"><div><span class="muted">${t('gv.policyRate', { name: LES.Countries.pack.names.policyRate })}</span><span>${(g.opr * 100).toFixed(2)}%</span></div><div><span class="muted">${t('gv.rates')}</span><span>${(LES.Fiscal.depositRate(w) * 100).toFixed(2)}% / ${(LES.Fiscal.loanRate(w) * 100).toFixed(2)}%</span></div>
         <div><span class="muted">${t('gv.fundValue')}</span><span>${U.fmtMoney(LES.Fiscal.fundValue(w))}</span></div><div><span class="muted">${t('gv.putIn')}</span><span>${U.fmtMoney(f.invested)} / ${U.fmtMoney(f.drawn)}</span></div></div>
       <canvas class="chart" id="gv-opr"></canvas>
       <canvas class="chart" id="gv-fund"></canvas>
-      ${glc.length ? `<table class="cmp"><tr><th>${t('gv.glc')}</th><th>${t('gv.price')}</th><th>${t('gv.dividend')}</th><th>${t('gv.fundHolds')}</th></tr>${glc.map(s => `<tr><td>${esc(s.def.name)} <span class="muted">${esc(s.tk)}</span></td><td>${U.fmtPrice(s.price)}</td><td>${Math.round(s.def.div * 100)}%</td><td>${U.fmtMoney((f.glc[s.tk] || 0) * s.price)}</td></tr>`).join('')}</table>` : `<p class="note">${G(LES.Countries.pack.notes.glcLater)}</p>`}
+      ${glc.length ? `<table class="cmp"><tr><th>${t('gv.glc')}</th><th>${t('gv.price')}</th><th>${t('gv.dividend')}</th><th>${t('gv.fundHolds')}</th></tr>${glc.map(s => `<tr><td>${esc(G(s.def.name))} <span class="muted">${esc(s.tk)}</span></td><td>${U.fmtPrice(s.price)}</td><td>${Math.round(s.def.div * 100)}%</td><td>${U.fmtMoney((f.glc[s.tk] || 0) * s.price)}</td></tr>`).join('')}</table>` : `<p class="note">${G(LES.Countries.pack.notes.glcLater)}</p>`}
       <div class="note">${G(LES.Countries.pack.notes.bank)}</div></div>`;
   }
 
@@ -116,7 +116,7 @@
     return `<div class="card"><h3>${t('gv.politics')}</h3><div class="grid2">
       <div><span class="muted">${t('gv.leaning')}</span><span>${esc(lean(p))}</span></div>
       ${g.president === p.id ? `<div><span class="muted">${t('gv.office')}</span><span class="pos">${esc(G(GV.title(w)))}</span></div>` : ''}
-      ${g.officials ? Object.entries(g.officials).filter(([, o]) => o && o.id === p.id).map(([r]) => `<div><span class="muted">${t('gv.councilPost')}</span><span class="pos">${esc(LES.Council.ROLES[r].title)}</span></div>`).join('') : ''}
+      ${g.officials ? Object.entries(g.officials).filter(([, o]) => o && o.id === p.id).map(([r]) => `<div><span class="muted">${t('gv.councilPost')}</span><span class="pos">${esc(G(LES.Council.ROLES[r].title))}</span></div>`).join('') : ''}
       ${p.pension > 0 ? `<div><span class="muted">${t('gv.pension')}</span><span>${t('pn.perMonth', { amt: U.fmtMoney(p.pension) })}</span></div>` : ''}
       ${ran.length ? (ran[0].appointed ? `<div><span class="muted">${t('gv.appointedLeader')}</span><span>${ran.length}×</span></div>` : `<div><span class="muted">${t('gv.stood')}</span><span>${t('gv.won', { n: ran.length, won: ran.filter(e => e.winner === p.id).length })}</span></div>`) : ''}
       ${p.pol.voted >= 0 && p.pol.voted !== undefined ? `<div><span class="muted">${t('gv.lastVoted')}</span><span>${U.fmtMonthYear(p.pol.voted)}</span></div>` : ''}

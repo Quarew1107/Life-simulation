@@ -83,10 +83,10 @@
     if (b.kind === 'shoplot' || bizHere.length) {
       cards.push(`<div class="card"><h3>${t('pl.bizHere')}</h3>${bizHere.length ? `<ul class="list-plain">${bizHere.map(x => {
         const owners = Object.keys(x.shares).map(k => `${UI.plink(w, Number(k))} ${Math.round(x.shares[k] * 100)}%`).join(', ');
-        return `<li><span><b>${esc(x.name)}</b> <span class="muted">${esc(G(x.typeDef.name))} · ${t('pn.since', { date: U.fmtMonthYear(x.foundedDay) })}</span><br><span class="muted">${T('pl.owners', { list: owners })}</span><br><span class="muted">${T('pn.revenue', { rev: U.fmtMoney(x.lastRevenue), profit: `<span class="${x.lastProfit < 0 ? 'neg' : 'pos'}">${U.fmtMoney(x.lastProfit)}</span>` })}</span></span><span>${U.fmtMoney(x.equity)}</span></li>`;
+        return `<li><span><b>${esc(G(x.name))}</b> <span class="muted">${esc(G(x.typeDef.name))} · ${t('pn.since', { date: U.fmtMonthYear(x.foundedDay) })}</span><br><span class="muted">${T('pl.owners', { list: owners })}</span><br><span class="muted">${T('pn.revenue', { rev: U.fmtMoney(x.lastRevenue), profit: `<span class="${x.lastProfit < 0 ? 'neg' : 'pos'}">${U.fmtMoney(x.lastProfit)}</span>` })}</span></span><span>${U.fmtMoney(x.equity)}</span></li>`;
       }).join('')}</ul>` : `<p class="muted" style="margin:0">${t('pl.empty', { sign: (LES.Countries.pack.town.signs || {}).SEWA || 'SEWA' })}</p>`}</div>`);
       const past = w.biz.filter(x => !x.open && x.place === b.id).slice(-5);
-      if (past.length) cards.push(`<div class="card"><h3>${t('pl.previous')}</h3><ul class="list-plain">${past.map(x => `<li><span>${esc(x.name)} <span class="muted">${esc(G(x.closeReason || 'closed'))}</span></span><span class="muted">${U.fmtMonthYear(x.foundedDay)}–${x.closedDay !== null ? U.fmtMonthYear(x.closedDay) : ''}</span></li>`).join('')}</ul></div>`);
+      if (past.length) cards.push(`<div class="card"><h3>${t('pl.previous')}</h3><ul class="list-plain">${past.map(x => `<li><span>${esc(G(x.name))} <span class="muted">${esc(G(x.closeReason || 'closed'))}</span></span><span class="muted">${U.fmtMonthYear(x.foundedDay)}–${x.closedDay !== null ? U.fmtMonthYear(x.closedDay) : ''}</span></li>`).join('')}</ul></div>`);
     }
 
     const staff = w.living.filter(p => p.alive && p.job && p.job.place === b.id);
@@ -101,7 +101,7 @@
       cards.push(`<div class="card"><h3>${t('pl.memory')} <small class="muted">${t('pl.founders', { count: gone.length })}</small></h3><ul class="list-plain">${gone.slice(0, 60).map(p => `<li><span>${UI.plink(w, p.id)} <span class="muted">${t('pl.yrs', { age: Math.floor(P.age(w, p)) })} · ${esc(G(p.causeOfDeath || ''))}</span></span><span class="muted">${U.fmtMonthYear(p.deathDay)}</span></li>`).join('')}</ul></div>`);
     }
     if (b.kind === 'depot') {
-      cards.push(`<div class="card"><h3>${t('pl.bus')}</h3><ul class="list-plain">${w.town.busLines.map(l => `<li><span><span class="chip" style="border-color:${l.colour};color:${l.colour}">${esc(l.name)}</span> ${t('pl.stops', { count: l.stops.length })}</span><span class="muted">${t('pl.buses', { count: l.buses, min: Math.round(l.len / LES.BUS.speed / l.buses) })}</span></li>`).join('')}</ul>
+      cards.push(`<div class="card"><h3>${t('pl.bus')}</h3><ul class="list-plain">${w.town.busLines.map(l => `<li><span><span class="chip" style="border-color:${l.colour};color:${l.colour}">${esc(G(l.name))}</span> ${t('pl.stops', { count: l.stops.length })}</span><span class="muted">${t('pl.buses', { count: l.buses, min: Math.round(l.len / LES.BUS.speed / l.buses) })}</span></li>`).join('')}</ul>
         <div class="note">${t('pl.busNote')}</div></div>`);
     }
     if (b.kind === 'lot') cards.push(`<div class="card"><p class="muted" style="margin:0">${t('pl.lot')}</p></div>`);
@@ -134,7 +134,7 @@
     const rows = mk.stocks.map(s => {
       const r1 = n > 1 ? s.lastRet : 0, r1y = LES.Market.stockRet(s, 261);
       const net = s.townBuy - s.townSell;
-      return `<tr data-tk="${s.tk}" class="${UI.bursa.stock === s.tk ? 'sel' : ''}"><td><b style="color:${s.def.colour}">${s.tk}</b></td><td>${esc(s.def.name)}<div class="muted">${esc(G(s.def.sector))}</div></td>
+      return `<tr data-tk="${s.tk}" class="${UI.bursa.stock === s.tk ? 'sel' : ''}"><td><b style="color:${s.def.colour}">${s.tk}</b></td><td>${esc(G(s.def.name))}<div class="muted">${esc(G(s.def.sector))}</div></td>
         <td class="num">${U.fmtPrice(s.price)}</td><td class="num">${pct(r1)}</td><td class="num">${pct(r1y)}</td>
         <td class="num ${net < 0 ? 'neg' : 'pos'}">${net === 0 ? '–' : U.fmtMoney(net)}</td><td class="num">${holders(s.tk)}</td></tr>`;
     }).join('');

@@ -203,7 +203,7 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
   - Later: founders' degree shares come out at ~0.8 of each pack's `education.founders` table in every age band
     (the ability weighting's /1.35 normaliser assumes a mean intelligence of 5; founders average ~4.7). Older
     than revision 10; with all ages it shows more (UK 25-64: ~37% vs the table's ~47%).
-  - Full suite 403/403.
+  - Full suite 403/403.
 
 - [ ] **Playable Life Mode (Play a Life), branch `feature/playable-life`, started Nov 13 2026.** Design package
   (local, git-ignored): `Idea/Life simulation expansion/` (master report, task cards PL-00..PL-17, numeric rules,
@@ -514,6 +514,35 @@ living 56-year-old); default speed 60x (a day takes 24 real minutes); phone top 
       check's messages via sentence patterns) is now Chinese too. Chart year labels use `rp.yr`. Tests: two more
       checks in `i18nSentenceTests` (dates; every setting name and building description has Chinese).
       Review checklist for a native speaker: `docs/PL-17_REVIEW.md`. **PL-17 is complete except that review.**
+    - **Owner's review fixes (Nov 23 2026): gaps, Chinese layout, deleting saved people.**
+      - *How the gaps were found:* a scanner (headless Edge on `index.html`) started a world in Chinese for each
+        country and each life stage, opened every tab, ~90 people, every kind of building and every dialog, and
+        listed English left on screen (3,678 lines at first, ~600 after, the rest being people, company and
+        newspaper names). A data audit walked the four country packs for names with no Chinese.
+      - *Lookup (`js/core/i18n.js`):* `I.g` and `I.sentence` are now one cached lookup: exact text, then a rank
+        before a title, then the sentence patterns, whose parts are looked up the same way (so "Senior Delivery
+        Driver", "injured in a work accident as Electrician" or a goal with an icon in front read in Chinese);
+        a lower-case word also tries its capitalised forms ("terrace house", "trading company"); the
+        newspaper's "Name + sentence" lines split the name off. Text values that carry a data name (`job`,
+        `home`, `course`, `goal`, `festival`, `ret`, `name`...) are looked up when a text is filled.
+      - *Glossary:* ~800 more entries (all jobs and offices in four countries incl. the Malay council titles,
+        courses, festivals, homes and transport, gigs, sectors, laws and their options, tax and spending lines,
+        goals, report sources for $/£/¥, death causes, reasons) and ~40 patterns (goals, injuries, budgets,
+        titles with names, money "RM100 million" → RM1 亿, dates in feed lines).
+      - *Screens:* the crime tab showed the Malaysian police title in every country (now each country's own);
+        data names wrapped in the glossary in Play a Life, person, places, government, crime, report; the
+        family tree, comparison and map overlays (`js/ui/extras.js`) translated; the report bar, mini-map,
+        panel handles and speed bar labels follow a language switch; class names via `Society.shortT`
+        (screen only; the engine keeps `Society.short`); the newspaper month; council roles no longer repeat
+        a title whose explanation translates to the same words.
+      - *Chinese layout (`css/style.css`, Chinese only):* text under 12px raised to 12px (11px for tiny
+        tags), notes with more line height, headings and the date in the UI font without letter-spacing (the
+        pixel font has no Chinese, so mixed headings looked uneven). Measured in every tab at 1366 px and
+        360 px: no Chinese-only overflow (the phone speed bar scrolls sideways as in English).
+      - *Delete saved people on the setup screen:* ✕ on each saved person (asks first; partner and children
+        stay, without the link; other choices kept). `UI.castDelete` also serves the Leaders tab's Remove.
+      - Tests: two more checks in `i18nSentenceTests` (every data name shown in four countries has Chinese;
+        composed sentences read fully in Chinese).
     - For the native-speaker review: some PL-13 life-moment texts use 他 as a general "they" (common, but
       a reviewer may prefer 其 / TA); the new texts use 其 / 此人.
   - Owner requests, Nov 14 2026 (after PL-12):

@@ -6,7 +6,7 @@
 (function (LES) {
   'use strict';
   const U = LES.U, P = LES.P, UI = LES.UI, Pl = LES.Player, esc = U.esc;
-  const T = (k, p) => LES.I18n.t(k, p);
+  const T = (k, p) => LES.I18n.t(k, p), G = s => LES.I18n.g(s); // G: data names in the reader's language (PL-17)
   const $ = id => document.getElementById(id);
   UI.planCat = 'all'; UI.planOpen = true; UI._planSearch = '';
   // Who decides, for requests another person or an institution answers.
@@ -108,7 +108,7 @@
       <div class="life-cats">${cats.map(k => `<button class="${UI.planCat === k ? 'on' : ''}" data-pcat="${k}">${k === 'all' ? esc(T('plan.all')) : `${L.ICON[k]} ${esc(T(`cat.${k}`))}`}</button>`).join('')}</div>
       <input id="plan-search" type="search" class="plan-search" placeholder="${esc(T('plan.search'))}" value="${esc(UI._planSearch || '')}" autocomplete="off">
       <ul class="list-plain plan-list">${shown.map(i => { const d = DECIDER[i.kind], why = i.check.ok ? '' : LES.I18n.render(Pl.whyNot(w, i.kind, i.args, i.check));
-        return `<li class="plan-act ${i.check.ok ? '' : 'off'}" data-text="${esc(i.label.toLowerCase())}"><span class="ic">${L.ICON[L.groupOf(i.kind)] || '•'}</span><div><b>${esc(i.label)}</b><div class="plan-tags"><span>⏱ ${esc(T('queue.hours', { count: i.hours }))}</span>${i.cost ? `<span class="c">${U.fmtMoney(i.cost)}</span>` : ''}${i.note ? `<span>${esc(i.note)}</span>` : ''}${i.odds !== undefined ? `<span class="o">${esc(T('learn.chance', { pct: Math.round(i.odds * 100) }))}</span>` : ''}${d ? `<span class="o">${esc(T(`plan.who.${d}`))}</span>` : ''}</div>${why ? `<small class="neg">${esc(why)}</small>` : ''}</div><button class="ghost small teal" data-${i.attr}="${esc(i.val)}" ${i.check.ok ? '' : 'aria-disabled="true"'}>＋ ${esc(T('plan.addBtn'))}</button></li>`; }).join('')}</ul></div>`;
+        return `<li class="plan-act ${i.check.ok ? '' : 'off'}" data-text="${esc(i.label.toLowerCase())}"><span class="ic">${L.ICON[L.groupOf(i.kind)] || '•'}</span><div><b>${esc(G(i.label))}</b><div class="plan-tags"><span>⏱ ${esc(T('queue.hours', { count: i.hours }))}</span>${i.cost ? `<span class="c">${U.fmtMoney(i.cost)}</span>` : ''}${i.note ? `<span>${esc(G(i.note))}</span>` : ''}${i.odds !== undefined ? `<span class="o">${esc(T('learn.chance', { pct: Math.round(i.odds * 100) }))}</span>` : ''}${d ? `<span class="o">${esc(T(`plan.who.${d}`))}</span>` : ''}</div>${why ? `<small class="neg">${esc(why)}</small>` : ''}</div><button class="ghost small teal" data-${i.attr}="${esc(i.val)}" ${i.check.ok ? '' : 'aria-disabled="true"'}>＋ ${esc(T('plan.addBtn'))}</button></li>`; }).join('')}</ul></div>`;
   }
 
   UI.renderPlanner = function () {

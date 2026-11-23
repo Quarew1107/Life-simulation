@@ -537,8 +537,8 @@
     });
     const ov = $('overlay');
     app.fillOverlays = () => { // the class overlay names the country's classes (B40/M40/T20, Bottom 40%...)
-      const S = LES.Society, cls = S ? ` (${S.CLASSES.map(S.short).join('/')})` : '', keep = ov.value;
-      ov.innerHTML = LES.Extras.OVERLAYS.map(([k, l]) => `<option value="${k}">${l}${k === 'class' ? cls : ''}</option>`).join('');
+      const S = LES.Society, cls = S ? ` (${S.CLASSES.map(S.shortT).join('/')})` : '', keep = ov.value;
+      ov.innerHTML = LES.Extras.OVERLAYS.map(([k, l]) => `<option value="${k}">${U.esc(LES.I18n.g(l))}${k === 'class' ? cls : ''}</option>`).join('');
       if (keep) ov.value = keep;
     };
     app.fillOverlays();
@@ -577,7 +577,7 @@
 
   window.addEventListener('error', e => showError(T('err.unexpected', { msg: e.message })));
   // PL-17: a language switch redraws what code drew (the speed bar, the map hint, the panels).
-  window.addEventListener('les-lang', () => { try { renderSpeed(); const h = $('map-hint'); if (h) h.textContent = app.view === 'region' ? T('ui.regionHint') : MAP_HINT(); const sub = $('town-sub'); if (sub) sub.title = T('ui.rename.tip'); UI.update(true); } catch (e) { /* before the app is ready */ } });
+  window.addEventListener('les-lang', () => { try { renderSpeed(); if (app.fillOverlays) app.fillOverlays(); const h = $('map-hint'); if (h) h.textContent = app.view === 'region' ? T('ui.regionHint') : MAP_HINT(); const sub = $('town-sub'); if (sub) sub.title = T('ui.rename.tip'); UI.update(true); } catch (e) { /* before the app is ready */ } });
 
   function boot() {
     app.renderer = new LES.Renderer($('map'));

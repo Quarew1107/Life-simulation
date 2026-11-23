@@ -4,7 +4,7 @@
 (function (LES) {
   'use strict';
   const U = LES.U, P = LES.P, UI = LES.UI, Pl = LES.Player, esc = U.esc;
-  const T = (k, p) => LES.I18n.t(k, p);
+  const T = (k, p) => LES.I18n.t(k, p), G = s => LES.I18n.g(s); // G: data names in the reader's language (PL-17)
   const $ = id => document.getElementById(id);
   const pref = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } };
   const setPref = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* private window */ } };
@@ -54,7 +54,7 @@
     const s = w.player;
     if (p.enrol) { const c = LES.C.COURSE_BY_ID[p.enrol.course]; return `<p>${esc(T('learn.studying', { course: c ? c.name : p.enrol.course }))}</p><button class="ghost small" data-dropout="1">${esc(T('learn.drop'))}</button><p class="note">${esc(T('learn.adultNote'))}</p>`; }
     const list = Pl.courses ? Pl.courses(w, p).slice(0, 8) : [];
-    return `<h4>${esc(T('learn.courses'))}</h4>${list.length ? `<ul class="list-plain life-jobs">${list.map(c => `<li><span><b>${esc(c.name)}</b><br><small class="muted">${esc(T('learn.months', { months: c.months }))} · ${esc(T('learn.schoolFee', { fee: U.fmtMoney(c.fee) }))} · ${esc(T('learn.chance', { pct: Math.round(c.chance * 100) }))}</small></span><button class="ghost small" data-enroll="${c.id}" ${s.pending.some(x => x.kind === 'ENROLL') ? 'disabled' : ''}>${esc(T('learn.apply'))}</button></li>`).join('')}</ul>` : `<p class="muted">—</p>`}<p class="note">${esc(T('learn.adultNote'))}</p>`;
+    return `<h4>${esc(T('learn.courses'))}</h4>${list.length ? `<ul class="list-plain life-jobs">${list.map(c => `<li><span><b>${esc(G(c.name))}</b><br><small class="muted">${esc(T('learn.months', { months: c.months }))} · ${esc(T('learn.schoolFee', { fee: U.fmtMoney(c.fee) }))} · ${esc(T('learn.chance', { pct: Math.round(c.chance * 100) }))}</small></span><button class="ghost small" data-enroll="${c.id}" ${s.pending.some(x => x.kind === 'ENROLL') ? 'disabled' : ''}>${esc(T('learn.apply'))}</button></li>`).join('')}</ul>` : `<p class="muted">—</p>`}<p class="note">${esc(T('learn.adultNote'))}</p>`;
   }
   // Shares: pick a company (or the index fund) and how many shares; bought or sold at tomorrow's price.
   function sharesHtml(w, p) {
@@ -62,7 +62,7 @@
     const s = w.player, busy = (k, tk) => s.pending.some(c => c.kind === k && c.args.tk === tk), pct = r => `${r >= 0 ? '+' : ''}${(r * 100).toFixed(1)}%`;
     const name = n => (typeof n === 'object' ? T(n.key) : n), own = x => (x >= 100 ? Math.round(x).toLocaleString() : (Math.round(x * 100) / 100).toString());
     return `<details class="life-more" ${keep('shares')}><summary>${esc(T('money.shares'))}</summary><ul class="list-plain life-stocks">${Pl.market(w, p).map(m => `<li>
-        <div class="life-stock-head"><b>${esc(name(m.name))}</b> <small class="muted">${m.tk === 'idx' ? '' : esc(m.tk)}${m.sector ? ` · ${esc(m.sector)}` : ''}</small><span>${U.fmtPrice(m.price)} <small class="${m.ret >= 0 ? 'up' : 'down'}">${pct(m.ret)}</small></span></div>
+        <div class="life-stock-head"><b>${esc(name(m.name))}</b> <small class="muted">${m.tk === 'idx' ? '' : esc(m.tk)}${m.sector ? ` · ${esc(G(m.sector))}` : ''}</small><span>${U.fmtPrice(m.price)} <small class="${m.ret >= 0 ? 'up' : 'down'}">${pct(m.ret)}</small></span></div>
         <div class="life-stock-row"><small class="muted">${m.held > 0 ? esc(T('money.own', { shares: own(m.held), value: U.fmtMoney(m.held * m.price) })) : esc(T('money.ownNone'))}</small>
           <span><input type="number" min="1" step="1" id="stk-${m.tk}" value="${esc(String(typed(`stk-${m.tk}`, m.tk === 'idx' ? 100 : 10)))}" aria-label="${esc(T('money.qty'))}"><button class="ghost small" data-buystock="${m.tk}" ${busy('BUY_STOCK', m.tk) ? 'disabled' : ''}>${esc(T('money.buy'))}</button><button class="ghost small" data-sellstock="${m.tk}" ${m.held > 0 && !busy('SELL_STOCK', m.tk) ? '' : 'disabled'}>${esc(T('money.sell'))}</button>${m.held > 0 ? `<button class="link" data-sellall="${m.tk}" ${busy('SELL_STOCK', m.tk) ? 'disabled' : ''}>${esc(T('money.sellAll'))}</button>` : ''}</span></div></li>`).join('')}</ul>
       <p class="note">${esc(T('money.sharesNote'))}</p></details>`;
@@ -74,7 +74,7 @@
     return `<p>${esc(T('money.cash', { cash: U.fmtMoney(p.cash), inv: U.fmtMoney(P.invValue(w, p)), mc: U.fmtMoney(p.mcost) }))}</p>
       <div class="life-cats">${[0.1, 0.25, 0.5].map(x => `<button data-invest="${x}" ${busy('INVEST') ? 'disabled' : ''}>${esc(T('money.invest'))} ${x * 100}%</button>`).join('')}${[0.25, 0.5, 1].map(x => `<button data-sell="${x}" ${busy('SELL') ? 'disabled' : ''}>${esc(T('money.sell'))} ${x * 100}%</button>`).join('')}</div>
       <p class="note">${esc(T('money.note'))}</p>${sharesHtml(w, p)}${Pl.ticket && !s.noLottery ? `<h4>${esc(T('lotto.title'))}</h4><p class="muted">${esc(T('lotto.odds', { price: U.fmtMoney(Pl.ticket(w)), small: U.fmtMoney(Pl.ticket(w) * 2), medium: U.fmtMoney(Pl.ticket(w) * 10), jackpot: U.fmtMoney(Pl.ticket(w) * 10000) }))}</p>${s.lotto ? `<p class="muted">${esc(T('lotto.record', { tickets: s.lotto.tickets, spent: U.fmtMoney(s.lotto.spent), won: U.fmtMoney(s.lotto.won) }))}</p>` : ''}<button class="ghost small" data-ticket="1" ${busy('BUY_TICKET') ? 'disabled' : ''}>${esc(T('lotto.buy'))}</button>` : ''}<h4>${esc(T('money.home'))}</h4><p>${esc(T('money.homeNow', { home: C.TIERS.housing[cur].name, rent: U.fmtMoney(Pl.rentOf(w, cur)) }))}</p>
-      ${p.isHead ? `<ul class="list-plain life-jobs">${homes.map(t => `<li><span>${esc(C.TIERS.housing[t].name)} <small class="muted">${U.fmtMoney(Pl.rentOf(w, t))}</small></span><button class="ghost small" data-home="${t}" ${busy('MOVE_HOME') ? 'disabled' : ''}>${esc(T('money.move'))}</button></li>`).join('')}</ul>` : `<p class="muted">${esc(T('money.notHead'))}</p>`}`;
+      ${p.isHead ? `<ul class="list-plain life-jobs">${homes.map(t => `<li><span>${esc(G(C.TIERS.housing[t].name))} <small class="muted">${U.fmtMoney(Pl.rentOf(w, t))}</small></span><button class="ghost small" data-home="${t}" ${busy('MOVE_HOME') ? 'disabled' : ''}>${esc(T('money.move'))}</button></li>`).join('')}</ul>` : `<p class="muted">${esc(T('money.notHead'))}</p>`}`;
   }
   // PL-14: a relative as a card: face, relation, age, how happy they are, and one or two quick actions.
   const REL = { partner: ['kin.wife', 'kin.husband'], spouse: ['kin.wife', 'kin.husband'], child: ['kin.daughter', 'kin.son'], parent: ['kin.mother', 'kin.father'] };
@@ -84,7 +84,7 @@
     return `<div class="kin-card"><canvas class="kin-pic" data-pid="${q.id}" width="40" height="52" aria-hidden="true"></canvas><div class="kin-info"><div>${UI.plink(w, q.id)} <small class="muted">· ${esc(rel)} · ${Math.floor(P.age(w, q))}${note ? ` · ${esc(note)}` : ''}</small></div>
       <div class="life-bar kin-bar"><i style="width:${U.clamp(Math.round(q.happy), 0, 100)}%"></i></div><small class="${unwell ? 'kin-warn' : 'muted'}">${esc(T('kin.happy', { v: Math.round(q.happy) }))}${unwell ? ` · ${esc(T('kin.unwell', { v: Math.round(q.health) }))}` : ''}</small></div><div class="kin-acts">${btns}</div></div>`;
   }
-  const whatDo = (w, q) => (q.job ? q.job.title : q.retired ? T('kin.retired') : !P.isAdult(w, q) && P.age(w, q) >= 7 ? T(`schoolk.${Pl.kidTier ? Pl.kidTier(w, q) : 'public'}`) : '');
+  const whatDo = (w, q) => (q.job ? G(q.job.title) : q.retired ? T('kin.retired') : !P.isAdult(w, q) && P.age(w, q) >= 7 ? T(`schoolk.${Pl.kidTier ? Pl.kidTier(w, q) : 'public'}`) : '');
   // PL-14: the four kinds of school side by side, with this town's real fees, for your child or for yourself.
   function schoolHtml(w, p) {
     const s = w.player, self = !(UI._schoolPid >= 0), c = self ? p : w.people[UI._schoolPid];
@@ -147,8 +147,8 @@
     const big = (s.moments || []).filter(m => m.big && m.day >= (e.since || 0) && m.day <= e.day).slice(-6);
     const partner = s.married ? w.people[s.married.pid] : p.partnerId !== null ? w.people[p.partnerId] : null;
     return `<div class="card life-remember"><canvas id="life-remember-pic" width="72" height="96" aria-hidden="true"></canvas><div><h3>${esc(T('remember.title'))}</h3><div class="life-name">${esc(P.name(p))}</div>
-      <div class="muted">${esc(T('remember.years', { from: U.fmtDate(p.birthDay), to: U.fmtDate(e.day), age: e.age }))}${e.why === 'died' && p.causeOfDeath ? ` · ${esc(p.causeOfDeath)}` : ''}</div>
-      <ul class="list-plain small">${partner ? `<li>❤️ ${esc(T('remember.partner', { other: P.name(partner) }))}</li>` : ''}<li>👪 ${esc(T('remember.family', { kids, grand }))}</li>${qual ? `<li>🎓 ${esc(qual)}</li>` : ''}<li>💰 ${esc(T('remember.worth', { worth: U.fmtMoney(e.nw || 0) }))}</li></ul>
+      <div class="muted">${esc(T('remember.years', { from: U.fmtDate(p.birthDay), to: U.fmtDate(e.day), age: e.age }))}${e.why === 'died' && p.causeOfDeath ? ` · ${esc(G(p.causeOfDeath))}` : ''}</div>
+      <ul class="list-plain small">${partner ? `<li>❤️ ${esc(T('remember.partner', { other: P.name(partner) }))}</li>` : ''}<li>👪 ${esc(T('remember.family', { kids, grand }))}</li>${qual ? `<li>🎓 ${esc(G(qual))}</li>` : ''}<li>💰 ${esc(T('remember.worth', { worth: U.fmtMoney(e.nw || 0) }))}</li></ul>
       ${big.length ? `<div class="life-chips">${big.map(m => `<span class="life-chip">${esc(T(`moment.${m.kind}`, m.params))}</span>`).join('')}</div>` : ''}</div></div>`;
   }
   function successionHtml(w) {
@@ -184,7 +184,7 @@
     const s = w.player, busy = k => s.pending.some(c => c.kind === k), b = p.manages >= 0 && w.biz[p.manages] && w.biz[p.manages].open ? w.biz[p.manages] : null;
     if (b) return `<h4>${esc(T('biz.yours'))}</h4><p>${esc(T('biz.now', { biz: b.name, cash: U.fmtMoney(b.cash), value: U.fmtMoney(b.equity), debt: U.fmtMoney(b.debt) }))}</p><div class="life-cats"><button data-inject="0.25" ${busy('INJECT') ? 'disabled' : ''}>${esc(T('biz.inject'))}</button><button data-sellbiz="1" ${busy('SELL_BIZ') ? 'disabled' : ''}>${esc(T('biz.sell'))}</button><button data-closebiz="1" ${busy('CLOSE_BIZ') ? 'disabled' : ''}>${esc(T('biz.close'))}</button></div>`;
     const ts = Pl.bizTypes(w, p).slice(0, 8);
-    return `<details class="life-more" ${keep('startbiz')}><summary>${esc(T('biz.start'))}</summary><ul class="list-plain life-jobs">${ts.map(t => `<li><span><b>${esc(t.name)}</b><br><small class="muted">${esc(T('biz.capital', { capital: U.fmtMoney(t.capital) }))}${t.ok ? '' : ` · ${esc(T('learn.cost'))}`}</small></span><button class="ghost small" data-startbiz="${t.id}" ${!t.ok || busy('START_BIZ') ? 'disabled' : ''}>${esc(T('biz.go'))}</button></li>`).join('')}</ul><p class="note">${esc(T('biz.note'))}</p></details>`;
+    return `<details class="life-more" ${keep('startbiz')}><summary>${esc(T('biz.start'))}</summary><ul class="list-plain life-jobs">${ts.map(t => `<li><span><b>${esc(G(t.name))}</b><br><small class="muted">${esc(T('biz.capital', { capital: U.fmtMoney(t.capital) }))}${t.ok ? '' : ` · ${esc(T('learn.cost'))}`}</small></span><button class="ghost small" data-startbiz="${t.id}" ${!t.ok || busy('START_BIZ') ? 'disabled' : ''}>${esc(T('biz.go'))}</button></li>`).join('')}</ul><p class="note">${esc(T('biz.note'))}</p></details>`;
   }
   // Giving, volunteering, newcomers, elections.
   function communityHtml(w, p) {
@@ -203,11 +203,11 @@
     const old = P.age(w, p) >= 55 && !p.retired && Pl.HANDLERS.RETIRE ? `<div class="life-cats"><button data-retire="1" ${busy('RETIRE') ? 'disabled' : ''}>${esc(T('work.retire'))}</button>${p.job && !s.keepWorking && P.age(w, p) >= 58 ? `<button data-keep="1" ${busy('KEEP_WORKING') ? 'disabled' : ''}>${esc(T('work.keep'))}</button>` : ''}</div>` : '';
     const now = p.job ? `<p>${esc(T('work.now', { job: p.job.title, pay: U.fmtMoney(p.job.salary), date: U.fmtDate(p.job.startDay) }))}</p>${Pl.HANDLERS.ASK_RAISE && !p.job.fixedTitle ? `<button class="ghost small" data-raise="1" ${busy('ASK_RAISE') ? 'disabled' : ''}>${esc(T('work.raise'))}</button> <button class="ghost small" data-quit="1" ${busy('QUIT_JOB') ? 'disabled' : ''}>${esc(T('work.quit'))}</button>` : ''}` : '';
     const when = v => { const d = v.closeDay - w.day; return d > 0 ? T('time.inDays', { count: d }) : T('time.today'); };
-    return `${now}${old}${bizHtml(w, p)}${apps.length ? `<h4>${esc(T('jobs.yourApps'))}</h4><ul class="list-plain">${apps.map(a => `<li><span>📄 ${esc(a.title)} · ${U.fmtMoney(a.salary)}</span><span class="muted">${esc(T('jobs.decides', { when: a.closeDay > w.day ? T('time.inDays', { count: a.closeDay - w.day }) : T('time.today') }))}</span></li>`).join('')}</ul>` : ''}
+    return `${now}${old}${bizHtml(w, p)}${apps.length ? `<h4>${esc(T('jobs.yourApps'))}</h4><ul class="list-plain">${apps.map(a => `<li><span>📄 ${esc(G(a.title))} · ${U.fmtMoney(a.salary)}</span><span class="muted">${esc(T('jobs.decides', { when: a.closeDay > w.day ? T('time.inDays', { count: a.closeDay - w.day }) : T('time.today') }))}</span></li>`).join('')}</ul>` : ''}
       <h4>${esc(T('jobs.openings'))}</h4>
       ${list.length ? `<ul class="list-plain life-jobs">${list.map(v => {
         const applied = v.appSet.has(p.id), queued = waiting.includes(v.id);
-        return `<li><span><b>${esc(v.job.title)}</b> · ${U.fmtMoney(v.salary)}<br><small class="muted">${esc(T('jobs.closes', { when: when(v) }))}</small></span>
+        return `<li><span><b>${esc(G(v.job.title))}</b> · ${U.fmtMoney(v.salary)}<br><small class="muted">${esc(T('jobs.closes', { when: when(v) }))}</small></span>
           ${applied ? `<span class="muted">✓ ${esc(T('jobs.applied'))}</span>` : queued ? `<span class="muted">⏳ ${esc(T('jobs.waiting'))}</span>` : `<button class="ghost small" data-apply="${v.id}">${esc(T('jobs.apply'))}</button>`}</li>`;
       }).join('')}</ul>` : `<p class="muted">${esc(T('jobs.none'))}</p>`}
       <p class="note">${esc(T('jobs.note'))}</p>`;
@@ -281,8 +281,8 @@
           ${p.adult || p.nw > 0 ? `<div class="life-money">${esc(T('life.cash'))} <b>${U.fmtMoney(p.cash)}</b> · ${esc(T('life.worth'))} <b>${U.fmtMoney(p.nw)}</b></div>` : ''}</div>
         ${p.alive ? `<div class="life-rings">${ring(p.health, T('life.health'), 'var(--green)')}${ring(p.happy, T('life.happy'), 'var(--teal)')}${ring(p.stress, T('life.stress'), 'var(--red)')}</div>` : ''}
       </div>
-      ${goals.length && p.alive ? `<details class="card life-goal" ${keep('goal')}><summary>${goal ? `${goal.icon} <b>${esc(LES.Goals.text(p.goal))}</b><span class="life-goalbar"><i style="width:${Math.round(prog * 100)}%"></i></span>` : esc(T('goal.none'))} <small class="muted">${esc(T('goal.change'))}</small></summary>
-        <div class="life-cats">${goals.map(id => { const d = LES.Goals.DEFS[id]; return `<button data-goal="${id}" class="${goal && p.goal.id === id ? 'on' : ''}">${d.icon} ${esc(d.name)}</button>`; }).join('')}</div><p class="note">${esc(T('goal.note'))}</p></details>` : ''}`;
+      ${goals.length && p.alive ? `<details class="card life-goal" ${keep('goal')}><summary>${goal ? `${goal.icon} <b>${esc(G(LES.Goals.text(p.goal)))}</b><span class="life-goalbar"><i style="width:${Math.round(prog * 100)}%"></i></span>` : esc(T('goal.none'))} <small class="muted">${esc(T('goal.change'))}</small></summary>
+        <div class="life-cats">${goals.map(id => { const d = LES.Goals.DEFS[id]; return `<button data-goal="${id}" class="${goal && p.goal.id === id ? 'on' : ''}">${d.icon} ${esc(G(d.name))}</button>`; }).join('')}</div><p class="note">${esc(T('goal.note'))}</p></details>` : ''}`;
   }
 
   function decisionsHtml(w, p) {
@@ -347,7 +347,7 @@
       return `<div class="card life-page"><div class="life-pagehead"><button class="ghost small" data-back="1">← ${esc(T('life.back'))}</button><b>${ICON[k]} ${esc(k === 'school' ? schoolTitle(w, p) : T(`cat.${k}`))}</b></div><div class="life-cat-body">${pageHtml(w, p, k)}</div></div>`;
     }
     UI.lifePage = null;
-    return `<div class="life-tiles">${cats.map(k => { const t = tileInfo(w, p, k); return `<button class="life-tile" data-page="${k}">${t.idea ? '<span class="life-dot" title=""></span>' : ''}<span class="ic">${ICON[k]}</span><b>${esc(T(`cat.${k}`))}</b><small>${esc(t.text)}</small></button>`; }).join('')}</div>`;
+    return `<div class="life-tiles">${cats.map(k => { const t = tileInfo(w, p, k); return `<button class="life-tile" data-page="${k}">${t.idea ? '<span class="life-dot" title=""></span>' : ''}<span class="ic">${ICON[k]}</span><b>${esc(T(`cat.${k}`))}</b><small>${esc(G(t.text))}</small></button>`; }).join('')}</div>`;
   }
 
   function latestHtml(w) {

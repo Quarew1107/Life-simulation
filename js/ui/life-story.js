@@ -7,7 +7,7 @@
 (function (LES) {
   'use strict';
   const U = LES.U, P = LES.P, UI = LES.UI, Pl = LES.Player, esc = U.esc;
-  const T = (k, p) => LES.I18n.t(k, p);
+  const T = (k, p) => LES.I18n.t(k, p), G = s => LES.I18n.g(s); // G: data names in the reader's language (PL-17)
   const $ = id => document.getElementById(id);
   const STORY_SPEED = 4; // the "Story" entry of the speed bar (5 days a second)
   UI.storySheet = null;  // the "Do something" sheet: null (closed), 'suggested' or an area
@@ -22,7 +22,8 @@
     if (!wrap) return null;
     el = document.createElement('div');
     el.id = 'life-story'; el.className = 'life-story hidden';
-    el.setAttribute('aria-label', 'My life story');
+    el.setAttribute('aria-label', G('My life story'));
+    window.addEventListener('les-lang', () => el.setAttribute('aria-label', G('My life story')));
     wrap.appendChild(el);
     el.addEventListener('click', e => {
       const b = e.target.closest('button,canvas');
@@ -102,7 +103,7 @@
     let body;
     if (cur === 'suggested') {
       const sug = suggestions(w, p);
-      body = sug.length ? `<div class="story-sugs">${sug.map(x => `<button class="story-sug g-${x.group}-l" data-${x.attr}="${esc(String(x.val))}">${L.ICON[x.group] || ''} ${esc(x.label)}</button>`).join('')}</div>` : `<p class="muted">${esc(T('story.noSuggest'))}</p>`;
+      body = sug.length ? `<div class="story-sugs">${sug.map(x => `<button class="story-sug g-${x.group}-l" data-${x.attr}="${esc(String(x.val))}">${L.ICON[x.group] || ''} ${esc(G(x.label))}</button>`).join('')}</div>` : `<p class="muted">${esc(T('story.noSuggest'))}</p>`;
     } else body = `<div class="life-cat-body">${L.pageHtml(w, p, cur)}</div>`;
     return `<div class="story-sheet" role="dialog" aria-label="${esc(T('story.do'))}"><div class="story-sheet-head"><b>＋ ${esc(T('story.do'))}</b><button class="ghost small" data-sheet="close">✕</button></div><div class="life-cats">${tabs}</div>${body}</div>`;
   }
@@ -124,7 +125,7 @@
         ${p.alive ? `<div class="life-rings story-rings">${L.ring(p.health, T('life.health'), 'var(--green)')}${L.ring(p.happy, T('life.happy'), 'var(--teal)')}${L.ring(p.stress, T('life.stress'), 'var(--red)')}${L.ring(p.energy, T('story.energy'), 'var(--blue)')}</div>` : ''}
         <div class="card"><h3>${esc(T('story.people'))}</h3>${familyHtml(w, p)}</div>
         ${P.isAdult(w, p) || p.nw > 0 ? `<div class="card"><h3>${esc(T('cat.money'))}</h3><div class="story-kv"><span>${esc(T('life.cash'))}</span><b class="gold">${U.fmtMoney(p.cash)}</b></div><div class="story-kv"><span>${esc(T('story.invested'))}</span><b>${U.fmtMoney(P.invValue(w, p))}</b></div><div class="story-kv"><span>${esc(T('story.monthly'))}</span><b class="${p.incomeEMA - p.mcost >= 0 ? 'pos' : 'neg'}">${U.fmtMoney(Math.round(p.incomeEMA - p.mcost))}</b></div></div>` : ''}
-        ${goal ? `<div class="card"><h3>${esc(T('story.goal'))}</h3><div>${goal.icon} ${esc(LES.Goals.text(p.goal))}</div><span class="life-goalbar wide"><i style="width:${Math.round(prog * 100)}%"></i></span></div>` : ''}
+        ${goal ? `<div class="card"><h3>${esc(T('story.goal'))}</h3><div>${goal.icon} ${esc(G(LES.Goals.text(p.goal)))}</div><span class="life-goalbar wide"><i style="width:${Math.round(prog * 100)}%"></i></span></div>` : ''}
         <button class="story-townbtn" data-town="1" title="${esc(T('story.town'))}"><canvas class="story-pip" id="story-pip"></canvas><span>🗺 ${esc(T('story.town'))}</span></button>
       </div>`;
     const main = s.ended ? `<div class="story-main">${L.successionHtml(w)}</div>`

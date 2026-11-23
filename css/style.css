@@ -246,6 +246,31 @@ canvas.chart.tall { height: 190px; }
 /* Interface languages (js/core/i18n.js): the pixel font has no CJK glyphs, so Chinese text uses system fonts. */
 html:lang(zh-Hans) { --ui: Inter, "Microsoft YaHei", "PingFang SC", "Noto Sans SC", system-ui, sans-serif; --pixel: "Silkscreen", "Microsoft YaHei", "PingFang SC", "Noto Sans SC", monospace; }
 html:lang(zh-Hans) .card h3 { letter-spacing: 0; }
+/* Chinese layout (PL-17 review): Chinese characters are dense and hard to read below 12px, and the pixel font's
+   letter-spacing and capitals do nothing for them. English keeps its own sizes; these rules apply only in Chinese. */
+html:lang(zh-Hans) body { line-height: 1.55; }
+html:lang(zh-Hans) .card h3, html:lang(zh-Hans) .set-group, html:lang(zh-Hans) .story-year, html:lang(zh-Hans) .life-era h5,
+html:lang(zh-Hans) .cap-when { font-size: 12.5px; letter-spacing: 0; text-transform: none; font-family: var(--ui); }
+/* The pixel font has Latin letters only: next to Chinese it looks uneven, so headings and the date use the UI font. */
+html:lang(zh-Hans) #date-text, html:lang(zh-Hans) .set-step, html:lang(zh-Hans) .title, html:lang(zh-Hans) .report-bar .report-title { font-family: var(--ui); }
+html:lang(zh-Hans) .set-step, html:lang(zh-Hans) .title { letter-spacing: 0; }
+html:lang(zh-Hans) .card h3 small, html:lang(zh-Hans) .sub, html:lang(zh-Hans) .kpi .l, html:lang(zh-Hans) .goal .row,
+html:lang(zh-Hans) .chip, html:lang(zh-Hans) .glance-sec, html:lang(zh-Hans) .lb-legend, html:lang(zh-Hans) .fx,
+html:lang(zh-Hans) .lb-row .sub, html:lang(zh-Hans) .stat .l, html:lang(zh-Hans) .field .help, html:lang(zh-Hans) .infl,
+html:lang(zh-Hans) .scn-card small, html:lang(zh-Hans) .region-cmp td, html:lang(zh-Hans) .region-cmp th,
+html:lang(zh-Hans) #town-switch button, html:lang(zh-Hans) #lb-mode.seg.wrap button, html:lang(zh-Hans) .life-keys,
+html:lang(zh-Hans) .school-cmp th, html:lang(zh-Hans) .life-tile small, html:lang(zh-Hans) .toast .m { font-size: 12px; }
+html:lang(zh-Hans) .note { font-size: 12px; line-height: 1.65; }
+html:lang(zh-Hans) .toast .t, html:lang(zh-Hans) .life-ring small, html:lang(zh-Hans) .story-kin small, html:lang(zh-Hans) .plan-ticks,
+html:lang(zh-Hans) .plan-tags span, html:lang(zh-Hans) .plan-act small.neg, html:lang(zh-Hans) .life-choices button small { font-size: 11px; }
+html:lang(zh-Hans) .play-new { font-size: 10px; letter-spacing: 0; }
+html:lang(zh-Hans) #tabs button { font-size: 12px; letter-spacing: 0; }
+html:lang(zh-Hans) .life-views button, html:lang(zh-Hans) .title { font-size: 12px; }
+html:lang(zh-Hans) #side small, html:lang(zh-Hans) .modal-card small { font-size: max(11.5px, .85em); }
+html:lang(zh-Hans) .paper small { letter-spacing: 0; font-size: 11px; }
+html:lang(zh-Hans) .paper p, html:lang(zh-Hans) .paper-h { line-height: 1.6; }
+/* Mixed Chinese and English (names, RM amounts): break between characters, never in the middle of a number. */
+html:lang(zh-Hans) #side, html:lang(zh-Hans) .modal-card, html:lang(zh-Hans) .toast { line-break: strict; overflow-wrap: anywhere; }
 
 #error-banner { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); background: #3a1d1f; border: 1px solid #a33; color: #ffd0d0; padding: 10px 14px; border-radius: 10px; z-index: 30; max-width: 80vw; }
 
@@ -402,6 +427,8 @@ button.primary { border-radius: 6px; box-shadow: 3px 3px 0 #7d5f17; }
 .set-cast summary { cursor: pointer; }
 .cast-pick { display: flex; align-items: center; gap: 6px; margin: 4px 0; font-size: 13px; flex-wrap: wrap; }
 .cast-pick .cast-town { margin-left: auto; font-size: 12px; }
+.cast-pick .cast-del { padding: 2px 8px; font-size: 12px; color: var(--muted); } .cast-pick .cast-town[hidden] + .cast-del { margin-left: auto; }
+.cast-pick .cast-del:hover { color: var(--red); border-color: var(--red); }
 .cast-alerts { display: flex; align-items: center; gap: 8px; font-size: 12px; margin: 2px 0 8px; color: var(--muted); }
 
 /* Town newspaper (js/ui/news-ui.js) */

@@ -35,7 +35,7 @@
     const [lead, ...rest] = iss.stories, d = U.dayToDate(iss.day);
     const fest = LES.Calendar.festival(iss.day);
     return `<div class="paper${compact ? ' compact' : ''}">
-      <div class="paper-mast"><span>${t('nw.no', { n: iss.no })}</span><b>${esc(LES.News.name(w))}</b><span>${t('nw.month', { month: U.MONTH_NAMES[d.month], year: d.year })}</span></div>
+      <div class="paper-mast"><span>${t('nw.no', { n: iss.no })}</span><b>${esc(LES.News.name(w))}</b><span>${t('nw.month', { month: { key: `mon.${d.month}` }, year: d.year })}</span></div>
       ${lead ? `<div class="paper-lead"${link(w, lead)}><small>${kicker(lead.cat)}</small><div class="paper-h">${esc(LES.I18n.render(lead.text))}</div></div>` : `<div class="paper-lead"><small>${kicker('town')}</small><div class="paper-h">${fest ? t('nw.quietFest', { town: LES.townName(w), fest: G(fest.name) }) : t('nw.quiet', { town: LES.townName(w) })}</div></div>`}
       ${rest.length ? `<div class="paper-cols">${rest.map(s => `<div class="paper-story"${link(w, s)}><small>${kicker(s.cat)}</small><p>${esc(LES.I18n.render(s.text))}</p></div>`).join('')}</div>` : ''}
       ${compact ? '' : `<div class="paper-box"><b>${t('nw.numbers')}</b><table>${numbers(w, iss).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('')}</table></div>`}

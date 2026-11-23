@@ -16,6 +16,15 @@
   };
   const save = list => { try { localStorage.setItem(KEY, JSON.stringify(list)); } catch (e) { /* storage unavailable */ } };
   UI.castRoster = load;
+  // Delete a saved person for good; anyone linked to them (partner, children) stays, without the link.
+  UI.castDelete = function (id) {
+    const list = load(), i = list.findIndex(s => s.id === id);
+    if (i < 0) return false;
+    list.splice(i, 1);
+    for (const s of list) { if (s.partner === id) s.partner = ''; s.parents = s.parents.filter(x => x !== id); }
+    save(list);
+    return true;
+  };
 
   const RELS = [['', 'As usual for their community'], ['islam', 'Islam'], ['buddhism', 'Buddhism'], ['christianity', 'Christianity'], ['hinduism', 'Hinduism'], ['none', 'No religion']];
   const STYLES = [[0, 'Short hair'], [1, 'Long hair'], [2, 'Bun'], [3, 'Tudung (headscarf)'], [4, 'Curly hair'], [5, 'Buzz cut'], [6, 'Ponytail'], [7, 'Braids'], [8, 'Wavy hair'], [9, 'Side parting']];
@@ -182,7 +191,7 @@
       if (b.dataset.cast === 'new') UI.openCastCreator(-1);
       else if (b.dataset.cast === 'edit') UI.openCastCreator(i);
       else if (b.dataset.cast === 'add' && list[i]) UI.addCast(list[i]);
-      else if (b.dataset.cast === 'del') { list.splice(i, 1); save(list); UI.renderCast(true); }
+      else if (b.dataset.cast === 'del' && list[i]) { UI.castDelete(list[i].id); UI.renderCast(true); }
       else if (b.dataset.cast === 'export') { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(list, null, 1)], { type: 'application/json' })); a.download = 'my-cast.json'; a.click(); }
       else if (b.dataset.cast === 'import') { const f = $('cast-file'); f.onchange = async () => { try { const x = JSON.parse(await f.files[0].text()); if (Array.isArray(x)) { save(list.concat(x.filter(s => s && s.att && s.pers))); UI.renderCast(true); } } catch (err) { UI.toast(t('ca.badFile')); } }; f.click(); }
     };

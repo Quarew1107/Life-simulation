@@ -33,6 +33,7 @@
   S.CLASS_NAMES = {};
   S.CLASS_SHORT = {}; // 'B40' etc. as the country says it
   S.short = c => S.CLASS_SHORT[c] || c;
+  S.shortT = c => LES.I18n.g(S.short(c)); // on screen, in the reader's language (the engine's records keep S.short)
   S.CLASS_COLOURS = { B40: '#f4a261', M40: '#5aa9e6', T20: '#f2c14e' };
   // National household-income cut-offs (gross, per month), hardship line and zakat threshold.
   S.DOSM_B40_MAX = 0; S.DOSM_T20_MIN = 0; S.HARDSHIP_RM = 0; S.NISAB_RM = 0;
