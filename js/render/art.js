@@ -80,6 +80,7 @@
 
   // Signboard with a drop shadow.
   function sign(g, text, cx, y, bg, fg) {
+    if (SIGNS) g = SIGNS; // a picture-drawn building: only its sign is painted, onto the real map
     g.font = `8px ${FONT}`;
     const tw = Math.ceil(g.measureText(text).width);
     const x = Math.round(cx - tw / 2 - 3);
@@ -636,7 +637,8 @@
     us: ['#b23a48', '#2a6f97', '#2d6a4f', '#d08c2c', '#5c4d7d', '#3d405b'],
   };
   const US_BRICK = ['#9c5442', '#a9785a', '#c7a07a', '#8a8f94'];
-  const shopSignBox = () => (TEMPERATE() ? { y: 22, h: 12, lines: 2, style: (LES.Countries.pack.art || {}).style } : { y: 7, h: 20, lines: 3, style: 'my' });
+  const shopSignBox = () => (artHas(`town.shoplot.${CC()}`) ? { y: 29, h: 7, lines: 1, style: TEMPERATE() ? (LES.Countries.pack.art || {}).style : 'my', art: true } // the picture's own sign band
+    : TEMPERATE() ? { y: 22, h: 12, lines: 2, style: (LES.Countries.pack.art || {}).style } : { y: 7, h: 20, lines: 3, style: 'my' });
   function lantern(g, x, y) { // a red Chinese lantern with a gold tassel
     rect(g, x + 1, y - 1, 2, 1, '#c9a227'); rect(g, x, y, 4, 4, '#d62828'); rect(g, x + 1, y, 1, 4, '#ef476f'); rect(g, x + 1, y + 4, 2, 2, '#f2c14e');
     addLight(x, y, 4, 4, 1, 'rgba(255,90,60,0.95)');
@@ -867,7 +869,127 @@
     return false;
   }
 
+  // ---- Art upgrade Phase 6: building fronts, trees and street details drawn by ChatGPT (assets/art/art-P6.js) ----
+  // A building whose kind has a picture that fits its plot is drawn from it (homes: 2 versions per country,
+  // some kinds per country, the rest shared); its sign still comes from the code-drawn look below, painted on
+  // top. Lit windows at night are the picture's own windows; lying snow whitens its roof. Everything else, and
+  // everything until the pictures have loaded, keeps the code-drawn look. Drawing only.
+  let TOWNART = true, SIGNS = null;
+  const setTownArt = on => { on = !!on; if (on === TOWNART) return false; TOWNART = on; return true; };
+  const CC = () => (UKSTYLE() ? 'uk' : USSTYLE() ? 'us' : CNSTYLE() ? 'cn' : 'my');
+  const artHas = id => TOWNART && !!LES.ArtPack && LES.ArtPack.ready && LES.ArtPack.has(id);
+  const HOME_ART = new Set(['kampung', 'flat', 'terrace', 'condo', 'bungalow']);
+  function frontId(b) {
+    if (!TOWNART || !LES.ArtPack || !LES.ArtPack.ready) return null;
+    const ids = HOME_ART.has(b.kind) ? [`town.${b.kind}.${CC()}.${1 + b.id % 2}`] : [`town.${b.kind}.${CC()}`, `town.${b.kind}`];
+    const id = ids.find(i => LES.ArtPack.has(i));
+    if (!id) return null;
+    const [fw, fh] = LES.ArtPack.size(id);
+    return fw <= b.w * 16 && fh <= b.h * 16 ? id : null; // a picture bigger than the plot is not used
+  }
+  // A canvas stand-in that draws nothing (the code-drawn look is run on it to paint only the signs).
+  const NULLG = (() => { const P = new Proxy(function () {}, { get: (t, k) => (k === Symbol.toPrimitive ? () => 0 : P), set: () => true, apply: () => P }); return P; })();
+  // Per picture: its windows (lit at night), where the roof ends, and a snowy copy.
+  const fronts = new Map();
+  function frontInfo(id) {
+    let f = fronts.get(id);
+    if (f) return f;
+    const img = LES.ArtPack.pixels(id), W = img.width, H = img.height, d = img.data;
+    const glass = new Uint8Array(W * H);
+    for (let i = 0; i < W * H; i++) { const r = d[i * 4], gg = d[i * 4 + 1], bb = d[i * 4 + 2]; if (d[i * 4 + 3] && bb - r > 45 && bb >= gg && bb > 100) glass[i] = 1; }
+    let roof = Math.round(H * 0.5); // the roof ends where the first row of windows starts
+    for (let y = Math.round(H * 0.15); y < H; y++) { let n = 0; for (let x = 0; x < W; x++) n += glass[y * W + x]; if (n >= 2) { roof = Math.max(1, y - 1); break; } }
+    const lights = [], seen = new Uint8Array(W * H);
+    for (let i = 0; i < W * H; i++) {
+      if (!glass[i] || seen[i]) continue;
+      let x0 = W, y0 = H, x1 = -1, y1 = -1, n = 0;
+      const st = [i]; seen[i] = 1;
+      while (st.length) {
+        const j = st.pop(), x = j % W, y = (j - x) / W; n++;
+        x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+        for (const k of [x > 0 ? j - 1 : -1, x < W - 1 ? j + 1 : -1, y > 0 ? j - W : -1, y < H - 1 ? j + W : -1]) if (k >= 0 && glass[k] && !seen[k]) { seen[k] = 1; st.push(k); }
+      }
+      if (n >= 2 && y0 >= roof) lights.push({ x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 });
+    }
+    const sn = new ImageData(new Uint8ClampedArray(d), W, H), s = sn.data, white = [243, 246, 250];
+    for (let y = 0; y < roof; y++) for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4;
+      if (!s[i + 3] || s[i] + s[i + 1] + s[i + 2] < 150) continue; // the outline stays
+      for (let c = 0; c < 3; c++) s[i + c] = Math.round(s[i + c] * 0.3 + white[c] * 0.7);
+    }
+    f = { lights, roof, snow: LES.ArtPack.toCanvas(sn) };
+    fronts.set(id, f);
+    return f;
+  }
+  // Draw b from its picture (true), or leave it to the code-drawn look (false).
+  function artFront(g, b) {
+    const id = frontId(b);
+    if (!id) return false;
+    const X = b.x * 16, Y = b.y * 16, W = b.w * 16, H = b.h * 16, [fw, fh] = LES.ArtPack.size(id);
+    const x = X + Math.floor((W - fw) / 2), y = Y + H - fh; // a smaller picture stands at the front of its plot
+    if (!vis(x - 24, y - 24, fw + 48, fh + 48)) return true;
+    const f = frontInfo(id);
+    castShadow(g, x, y, fw, fh, 3);
+    if (SNOW) g.drawImage(f.snow, x, y); else LES.ArtPack.draw(g, id, x, y);
+    for (const r of f.lights) addLight(x + r.x, y + r.y, r.w, r.h, 0.55);
+    const keep = lightRects; lightRects = null; SIGNS = g;
+    try { drawBuilding(NULLG, b); } catch (e) { /* a sign that cannot be painted is left out */ } finally { SIGNS = null; lightRects = keep; }
+    return true;
+  }
+  // Where a picture-drawn building's roof ends (world y), for festival lights under the eaves; null otherwise.
+  const eaves = b => { const id = frontId(b); if (!id) return null; const [, fh] = LES.ArtPack.size(id); return (b.y + b.h) * 16 - fh + frontInfo(id).roof; };
+  // A street sprite with its feet at (cx, by), when the pictures are in; false otherwise.
+  function prop(g, id, cx, by) {
+    if (!artHas(id)) return false;
+    const [w, h] = LES.ArtPack.size(id), x = Math.round(cx - w / 2), y = by - h;
+    if (vis(x - 2, y - 2, w + 4, h + 4)) LES.ArtPack.draw(g, id, x, y);
+    return true;
+  }
+  // Street lamps (the night glow sits on the lamp's head, LAMP_HEAD px above where it would be without them)
+  // and small things in front of shops, stations, schools and the police station.
+  const lampHead = () => (artHas('street.lamp') ? 20 : 0);
+  const PROPS = {
+    shoplot: c => [c === 'uk' ? 'street.postbox' : c === 'us' ? 'street.hydrant' : c === 'cn' ? 'street.bikerack' : 'street.motorbike', 'street.bin', null],
+    mamak: c => [c === 'my' ? 'street.foodcart' : 'street.bench'], hawker: () => ['street.foodcart', 'street.bin'],
+    station: c => ['street.bench', c === 'uk' ? 'street.phonebox' : 'street.newsstand'], school: () => ['street.bikerack'], kolej: () => ['street.bikerack'],
+    police: () => ['street.cone', 'street.cone'], hospital: () => ['street.bench'], mall: () => ['street.bin', 'street.newsstand'],
+    office: c => [c === 'my' ? 'street.motorbike' : 'street.bikerack'], library: () => ['street.bench'],
+  };
+  function drawStreet(g, town) {
+    if (!artHas('street.lamp')) return;
+    for (const p of LES.roadPieces(town).pieces) {
+      if (p.h) { for (let x = p.x + 24; x < p.x + p.w; x += 72) prop(g, 'street.lamp', x, p.y); }
+      else for (let y = p.y + 40; y < p.y + p.h2; y += 72) prop(g, 'street.lamp', p.x - 2, y + 2);
+    }
+    const c = CC();
+    for (const b of town.buildings) {
+      const list = PROPS[b.kind] && PROPS[b.kind](c);
+      if (!list) continue;
+      const X = b.x * 16, W = b.w * 16, by = (b.y + b.h) * 16 + 13, k = b.id % list.length, id = list[k];
+      if (!id) continue;
+      prop(g, id, b.id % 2 ? X + 6 : X + W - 6, by);
+      if (list.length > 1 && b.kind !== 'shoplot') prop(g, list[(k + 1) % list.length], b.id % 2 ? X + W - 6 : X + 6, by);
+    }
+  }
+  // A tree from the pictures for a slot of the code-drawn greenery ('palm', 'banana', 'shrub', 'tree').
+  function treeArt(g, slot, px, py, R) {
+    const tropic = !TEMPERATE(), cn = CNSTYLE(), winter = SEASON === 'winter';
+    const big = winter ? 'street.wintertree' : tropic ? 'street.raintree' : (cn && R.next() < 0.3) ? 'street.raintree' : 'street.oak';
+    const id = slot === 'palm' ? (tropic ? 'street.palm' : cn ? 'street.bamboo' : 'street.pine')
+      : slot === 'banana' ? (tropic ? 'street.banana' : 'street.bush')
+      : slot === 'shrub' ? (tropic && R.next() < 0.4 ? 'street.hibiscus' : 'street.bush')
+      : big;
+    if (!artHas(id)) return false;
+    const [w] = LES.ArtPack.size(id);
+    if (w >= 24 && R.next() < 0.45) return true; // big trees are thinned out: their crowns are twice as wide
+    const cx = px + 8, by = py + 15;
+    if (vis(cx - w / 2 - 2, by - 40, w + 4, 44)) { g.fillStyle = PAL.shadow; g.beginPath(); g.ellipse(cx + 2, by, Math.max(3, w / 3), 2, 0, 0, Math.PI * 2); g.fill(); }
+    prop(g, id, cx, by + 1);
+    return true;
+  }
+
   function drawBuilding(g, b) {
+    if (!SIGNS && artFront(g, b)) return;
     const T = 16, X = b.x * T, Y = b.y * T, W = b.w * T, H = b.h * T, R = prng(`b:${b.kind}`, b.id, b.built ? 1 : 0);
     switch (b.kind) {
       case 'kampung': { // Malay house on stilts with a steep attap/zinc roof and steps (UK: a brick house of rented rooms; US: a trailer)
@@ -1749,6 +1871,7 @@
       const bl = LES.townBlockAt(town, x, y);
       const code = bl ? bl.code : '';
       const v = R.next();
+      if (artHas('street.palm')) { treeArt(g, (code === 'K' || code === 'A') ? (v < 0.5 ? 'palm' : v < 0.75 ? 'banana' : 'tree') : (x < 15 && v < 0.6) ? 'palm' : v < 0.15 ? 'shrub' : 'tree', px, py, R); continue; }
       if (code === 'K' || code === 'A') { if (v < 0.5) palm(g, px, py); else if (v < 0.75) banana(g, px, py); else rainTree(g, px, py, 0.8, R); }
       else if (x < 15 && v < 0.6) palm(g, px, py);
       else if (v < 0.15) shrub(g, px + 2, py + 6);
@@ -1766,5 +1889,5 @@
   const setSnow = on => { on = !!on; if (on === SNOW) return false; SNOW = on; return true; };
   // The date, for the builder's yard stage (only the yards' tiles are painted again when a stage moves on).
   const setDay = d => { if (d === DAY) return false; DAY = d; return true; };
-  LES.Art = { memorialMarker, shopSignBox, setSeason, setSnow, setDay, siteStage, variant, winterGround, beginLights, takeLights, PAL, rect, shade, sign, building, roof, facade, windows, door, awning, castShadow, rainTree, palm, banana, shrub, drawGround, drawBuilding, drawGreenery, setView, vis, prng };
+  LES.Art = { setTownArt, artHas, frontId, eaves, prop, lampHead, drawStreet, memorialMarker, shopSignBox, setSeason, setSnow, setDay, siteStage, variant, winterGround, beginLights, takeLights, PAL, rect, shade, sign, building, roof, facade, windows, door, awning, castShadow, rainTree, palm, banana, shrub, drawGround, drawBuilding, drawGreenery, setView, vis, prng };
 })(globalThis.LES = globalThis.LES || {});

@@ -3136,6 +3136,74 @@
     check('In a UK town every home kind gets its own plan, everyone at home has a bed at night, and the inside view draws at the plan\'s size', kinds.size >= 3 && noBed === 0 && drawn === 1, `${kinds.size} kinds, ${noBed} without a bed`);
   }
 
+  // Art upgrade Phase 6: the town drawn from ChatGPT's pictures (building fronts, trees, street things, festivals).
+  async function townArtTests() {
+    print('--- Town pictures: building fronts, street details, festivals ---', 'info');
+    if (typeof document === 'undefined' || !LES.MapTiles || !LES.Art.frontId) { print('(browser only: skipped)'); return; }
+    const AP = LES.ArtPack, Art = LES.Art, K = LES.Countries, was = K.active || 'my';
+    if (!AP.ready && !AP.failed) AP.init();
+    await AP.whenReady();
+    const town = LES.buildTown('metropolis', 'town-art', 'varied'), T = town.T;
+    // Which buildings use a picture in each country (pictures bigger than their plot are never used).
+    const skipped = new Set(), bad = [], extras = ['street.lamp', 'street.busstop', 'street.raintree', 'street.palm', 'street.oak', 'street.wintertree', 'street.pine', 'street.bamboo', 'fest.pelita', 'fest.lanterns', 'fest.kolam', 'fest.diyas', 'fest.xmastree', 'fest.bunting', 'fest.gawai', 'fest.firework.2'];
+    let used = 0;
+    for (const c of ['my', 'uk', 'us', 'cn']) {
+      K.use(c);
+      for (const b of town.buildings) {
+        const id = Art.frontId(b);
+        if (!id) { skipped.add(b.kind); continue; }
+        used++;
+        const [fw, fh] = AP.size(id);
+        if (fw > b.w * T || fh > b.h * T) bad.push(id);
+        if (['kampung', 'flat', 'terrace', 'condo', 'bungalow'].includes(b.kind) && !id.endsWith(`.${c}.${1 + b.id % 2}`)) bad.push(`${b.kind}:${id}`);
+      }
+    }
+    const fine = ['lot', 'builtlot', 'construction', 'park', 'padang', 'padi', 'golf', 'rail', 'lake', 'hill', 'forest', 'privschool', 'hq', 'bank'];
+    check('Every kind of building with a picture is drawn from it in all four countries; homes by country and version; only plots without a fitting picture keep the code look',
+      used > 200 && !bad.length && [...skipped].every(k => fine.includes(k)) && extras.every(id => AP.has(id)), `${used} drawn, kept: ${[...skipped].join(',')} ${bad.slice(0, 4).join(' ')} ${extras.filter(id => !AP.has(id)).join(',')}`);
+    // The whole town paints without errors in every country, by day, at night and in the snow; with the pictures
+    // switched off it is the code-drawn town again.
+    const paint = (x, y, w, h) => { const MT = new LES.MapTiles(); MT.setTown(town, 0); const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const g = cv.getContext('2d', { willReadFrequently: true }); const rects = MT.paintArea(g, x, y, w, h); return { g, rects, MT }; };
+    let errs = [];
+    for (const c of ['my', 'uk', 'us', 'cn']) for (const snow of [false, true]) {
+      K.use(c); Art.setSnow(snow); Art.setSeason(snow ? 'winter' : null);
+      try { paint(0, 0, town.W * T, town.H * T); } catch (e) { errs.push(`${c}${snow ? ' snow' : ''}: ${e.message}`); }
+    }
+    Art.setSnow(false); Art.setSeason(null); K.use('my');
+    const k = town.buildings.find(b => b.kind === 'kampung'), area = [k.x * T - 8, k.y * T - 8, k.w * T + 16, k.h * T + 16];
+    const on = paint(...area), onPx = on.g.getImageData(0, 0, area[2], area[3]).data;
+    Art.setTownArt(false);
+    const off = paint(...area), offPx = off.g.getImageData(0, 0, area[2], area[3]).data;
+    Art.setTownArt(true);
+    let diff = 0; for (let i = 0; i < onPx.length; i += 4) if (onPx[i] !== offPx[i] || onPx[i + 1] !== offPx[i + 1]) diff++;
+    check('The whole town paints in all four countries, with and without snow; switching the pictures off brings back the code-drawn look', !errs.length && diff > 300, errs.join('; ') || `${diff} pixels differ`);
+    // Lit windows come from the pictures' own windows; the sign of a picture-drawn building is still painted.
+    const of = town.buildings.find(b => b.kind === 'office'), homeLights = paint(of.x * T, of.y * T, of.w * T, of.h * T).rects.filter(r => r.x >= of.x * T && r.x < (of.x + of.w) * T && r.y >= of.y * T && r.y < (of.y + of.h) * T).length; // (the kampung house has wooden shutters, no glass)
+    const sch = town.buildings.find(b => b.kind === 'school'), sa = [sch.x * T, sch.y * T, sch.w * T, sch.h * T];
+    const withSign = paint(...sa).g.getImageData(0, 0, sa[2], sa[3]).data;
+    const realSign = Art.sign; let signs = 0;
+    const cv2 = document.createElement('canvas'); cv2.width = sa[2]; cv2.height = sa[3];
+    const g2 = cv2.getContext('2d', { willReadFrequently: true }); g2.translate(-sa[0], -sa[1]); AP.draw(g2, Art.frontId(sch), sch.x * T, sch.y * T + sch.h * T - AP.size(Art.frontId(sch))[1]);
+    const bare = g2.getImageData(0, 0, sa[2], sa[3]).data;
+    for (let i = 0; i < bare.length; i += 4) if (bare[i + 3] && (bare[i] !== withSign[i] || bare[i + 1] !== withSign[i + 1])) signs++;
+    check('A picture-drawn office tower lights its own windows at night, and a picture-drawn school still carries its name sign', homeLights >= 2 && signs > 40 && realSign === Art.sign, `${homeLights} windows, ${signs} sign pixels`);
+    // No seams: a tile painted alone matches the same square of a bigger painting (trees, lamps and props cross tile edges).
+    const TILE = LES.MapTiles.TILE, a = paint(TILE, TILE, TILE, TILE).g.getImageData(0, 0, TILE, TILE).data, big = paint(TILE - 256, TILE - 256, TILE + 512, TILE + 512).g.getImageData(256, 256, TILE, TILE).data;
+    let n = 0, far = 0; for (let i = 0; i < a.length; i++) { const d = Math.abs(a[i] - big[i]); if (d) n++; if (d > 32) far++; }
+    check('With the pictures, a map tile painted on its own matches the same area of a bigger painting (no seams)', far === 0 && n < TILE * TILE * 4 * 0.001, `${n}/${far} values differ`);
+    // Speed: painting the town with the pictures is not slower than the code-drawn town (it is far fewer rectangles).
+    const time = () => { const t0 = performance.now(); for (let r = 0; r < 3; r++) paint(0, 0, 2048, 1536); return (performance.now() - t0) / 3; };
+    time(); const tOn = time(); Art.setTownArt(false); const tOff = time(); Art.setTownArt(true);
+    check('Painting the map with the pictures takes no more than 10% longer than without them', tOn <= tOff * 1.1 + 5, `${tOn.toFixed(1)} ms with, ${tOff.toFixed(1)} ms without (a 2048x1536 area)`);
+    // Drawing only: a world painted every day ends exactly like one that is never drawn.
+    const w = new LES.World(Object.assign({}, LES.DEFAULTS, { seed: 'town-art', founders: 120 })), twin = new LES.World(Object.assign({}, LES.DEFAULTS, { seed: 'town-art', founders: 120 }));
+    const MT = new LES.MapTiles(); MT.setTown(w.town, 0);
+    for (let d = 0; d < 30; d++) { w.step(); twin.step(); if (d % 10 === 0) { const cv = document.createElement('canvas'); cv.width = 512; cv.height = 512; MT.paintArea(cv.getContext('2d'), (d * 97) % 1024, 0, 512, 512); } }
+    const strip = x => LES.Save.toJSON(x).replace(/"saved":"[^"]*",/, '');
+    check('Painting the town from the pictures leaves the simulation exactly as without it', strip(w) === strip(twin));
+    K.use(was);
+  }
+
   // Art upgrade Phase 5A: inside schools, offices, shops, food places, hospitals and the welfare office.
   async function publicRoomTests() {
     print('--- Inside public buildings (learning, office, shops, food, health): plans, staff and visitors ---', 'info');
@@ -3338,6 +3406,7 @@
       await memoryTests();
       await homeKindTests();
       await publicRoomTests();
+      await townArtTests();
       await buildingArtTests();
       await crimeRevTests();
       await wealthRevTests();
@@ -3373,6 +3442,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, roomTests, memoryTests, homeKindTests, publicRoomTests, heldTests, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, playFlowTests, playCatalogTests, playPacingTests, playMatrixTests, i18nSentenceTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, roomTests, memoryTests, homeKindTests, publicRoomTests, townArtTests, heldTests, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, playFlowTests, playCatalogTests, playPacingTests, playMatrixTests, i18nSentenceTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

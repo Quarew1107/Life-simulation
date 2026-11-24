@@ -122,9 +122,11 @@
       for (const b of this.order) if (Art.vis(b.x * T - MARGIN, b.y * T - MARGIN, b.w * T + 2 * MARGIN, b.h * T + 2 * MARGIN)) Art.drawBuilding(g, b);
       Art.winterGround(g, x0, y0, w, h); // frost and lying snow on grass and lawns (only in those weeks), before the trees
       Art.drawGreenery(g, town, this.busy);
+      Art.drawStreet(g, town); // street lamps and small things in front of shops (art pictures only)
       // Bus stops (shelter on the sidewalk) and the town gateway arch.
       for (const line of town.busLines) for (const st of line.stops) {
         const sx = st.pt.x + 18, sy = st.pt.y - 26;
+        if (Art.prop(g, 'street.busstop', sx + 6, sy + 10)) { Art.rect(g, sx - 9, sy - 2, 3, 12, line.colour); continue; }
         Art.rect(g, sx, sy, 12, 3, '#3d5a80'); Art.rect(g, sx + 1, sy + 3, 1, 7, '#666'); Art.rect(g, sx + 10, sy + 3, 1, 7, '#666');
         Art.rect(g, sx - 3, sy - 4, 3, 14, line.colour);
       }

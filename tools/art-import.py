@@ -220,6 +220,15 @@ def main():
         report.append(f'palette: made {len(cols)} colours -> {pal_path}')
     cols = json.load(open(pal_path))['colours']
     pal = np.array([hexrgb(c) for c in cols], dtype=float)
+    # "colours": "own" (manifest): pictures keep their own colours instead of snapping to the game palette
+    # (the town's buildings: blue windows, painted walls; ChatGPT already limits each sheet's colours).
+    own = man.get('colours') == 'own'
+    if own:
+        allp = np.concatenate(art_pixels).astype(np.int64) if art_pixels else np.zeros((0, 3), np.int64)
+        packed = np.unique((allp[:, 0] << 16) | (allp[:, 1] << 8) | allp[:, 2])
+        base = len(cols)
+        cols = cols + ['#%06X' % int(v) for v in packed]
+        report.append(f'colours: the pictures keep their own {len(packed)} colours')
 
     # One pixel scale for the furniture of a sheet (the artist draws everything at one scale).
     scales = {}
@@ -242,7 +251,11 @@ def main():
             it['crop'], it['alpha'] = crop, alpha
         ch, cw = alpha.shape
         flat = crop.reshape(-1, 3).astype(float)
-        if s['type'] == 'art':
+        if s['type'] == 'art' and own:
+            c = crop.reshape(-1, 3).astype(np.int64)
+            idx = (base + np.minimum(np.searchsorted(packed, (c[:, 0] << 16) | (c[:, 1] << 8) | c[:, 2]), len(packed) - 1)).reshape(ch, cw)
+            tw, th = fit_size(cw, ch, s['w'], s['h'], None if man.get('fit') == 'box' else scales.get(it['sheet']))
+        elif s['type'] == 'art':
             idx = nearest(flat, pal).reshape(ch, cw)
             tw, th = fit_size(cw, ch, s['w'], s['h'], None if man.get('fit') == 'box' else scales.get(it['sheet']))
         else:

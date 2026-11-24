@@ -790,7 +790,7 @@
       g.textBaseline = 'top';
       // Malaysia: the sign covers the shophouse's upper floor; elsewhere it is a fascia above the shop window.
       const box = LES.Art.shopSignBox(), signs = LES.Countries.pack.town.signs, vacant = (signs && signs.SEWA) || 'SEWA';
-      const VACANT = { uk: ['#ffffff', '#c1121f'], us: ['#c1121f', '#ffffff'], cn: ['#d62828', '#ffd166'] }[box.style];
+      const VACANT = { uk: ['#ffffff', '#c1121f'], us: ['#c1121f', '#ffffff'], cn: ['#d62828', '#ffd166'] }[box.style] || (box.art ? ['#f4f1e8', '#7a2e1e'] : null);
       const vx0 = this.cx - 80, vy0 = this.cy - 60, vx1 = this.cx + this.vw / this.z + 20, vy1 = this.cy + this.vh / this.z + 20, detail = this.z >= 0.8;
       for (const id of this.town.shoplots) {
         const b = this.town.buildings[id], X = b.x * T, Y = b.y * T;
@@ -800,7 +800,7 @@
           // Empty shops (review task 5): a rent banner on about one in three; the others have their shutters
           // down, old posters on the shutters or window, or a clean empty front. Fixed per shop by its id.
           const look = vacantLook(id);
-          if (look !== 'banner') { if (detail) drawVacant(g, b, X, Y, b.w * T, b.h * T, box.style, look); continue; }
+          if (look !== 'banner') { if (detail && !box.art) drawVacant(g, b, X, Y, b.w * T, b.h * T, box.style, look); continue; }
           if (!VACANT) {
             rect(g, X + 14, Y + 12, 36, 10, '#e8e4da');
             g.font = `8px ${FONT}`; g.fillStyle = '#7a2e1e'; g.fillText(vacant, X + 20, Y + 13);
@@ -815,8 +815,8 @@
         }
         const biz = w.biz[bizId];
         const col = biz.type === 'restaurant' ? '#b23a48' : biz.type === 'workshop' ? '#3d5a80' : biz.type === 'retail' ? '#2a9d8f' : '#6a4c93';
-        if (detail) shopAwning(g, X, Y, b.w * T, box.style, biz.type, col);
-        if (box.style !== 'my') { // fascia board: UK gold-lined with cream letters, China gold-lined with yellow, US plain
+        if (detail && !box.art) shopAwning(g, X, Y, b.w * T, box.style, biz.type, col); // the shop pictures have their own awnings
+        if (box.style !== 'my' || box.art) { // fascia board: UK gold-lined with cream letters, China gold-lined with yellow, US plain
           const edge = box.style === 'us' ? 'rgba(255,255,255,0.4)' : '#c9a227';
           rect(g, X + 2, Y + box.y, 60, box.h, edge); rect(g, X + 3, Y + box.y + 1, 58, box.h - 2, col);
           g.font = `6px ${FONT}`; g.fillStyle = box.style === 'uk' ? '#f2e8cf' : box.style === 'cn' ? '#ffe066' : '#ffffff';

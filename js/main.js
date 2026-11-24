@@ -595,7 +595,7 @@
     app.renderer = new LES.Renderer($('map'));
     try { app.renderer.roomOn = localStorage.getItem('les-room') !== '0'; } catch (e) { app.renderer.roomOn = true; }
     $('btn-room').classList.toggle('on', app.renderer.roomOn);
-    if (LES.ArtPack) { LES.ArtPack.init(); LES.ArtPack.whenReady().then(ok => { if (!ok) $('btn-room').classList.add('hidden'); else { UI.update(true); if (LES.Portrait) LES.Portrait.startBlinking(() => app.world); } }); }
+    if (LES.ArtPack) { LES.ArtPack.init(); LES.ArtPack.whenReady().then(ok => { if (!ok) $('btn-room').classList.add('hidden'); else { if (app.renderer.tiles) app.renderer.tiles.reset(); UI.update(true); if (LES.Portrait) LES.Portrait.startBlinking(() => app.world); } }); }
     app.regionView = new LES.RegionView(app.renderer);
     UI.init(app);
     initInput();

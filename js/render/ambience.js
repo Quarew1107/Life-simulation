@@ -47,7 +47,7 @@
   const OUTFITS = [['raya', { eth: 'malay' }, 'bajuMelayu', 'kurung'], ['deepavali', { eth: 'indian' }, 'kurta', 'saree'], ['cny', { eth: 'chinese' }, 'cny', 'cny'],
     ['gawai', { eth: 'bumi' }, 'gawai', 'gawai'], ['christmas', { rel: 'christianity' }, 'office', 'office']];
   const FLAG = { stripes: ['#ffffff', '#d62828'], canton: '#1d3557', star: '#ffd166' }; // Jalur Gemilang colours
-  const DECOR = { raya: 'homeLights', cny: 'lanterns', deepavali: 'diyas', christmas: 'mallTree', merdeka: 'flags' };
+  const DECOR = { raya: 'homeLights', cny: 'lanterns', deepavali: 'diyas', christmas: 'mallTree', merdeka: 'flags', gawai: 'gawai' };
   // Sunrise and sunset (hours): Malaysia near the equator barely changes; packs with a latitude get
   // the real day length, and summer time (an hour later) between the given days of the year.
   A.sun = function (day) {
@@ -149,9 +149,10 @@
       g.fillStyle = gr; g.fillRect(x - 14, y - 14, 28, 28);
       g.fillStyle = '#fff3c4'; g.fillRect(x - 1, y - 1, 2, 2);
     };
+    const lh = LES.Art.lampHead(); // with the lamp pictures, the glow is on the lamp's head
     for (const p of LES.roadPieces(town).pieces) {
-      if (p.h) { if (p.y < y0 - 20 || p.y > y1 + 20) continue; for (let x = p.x + 24; x < p.x + p.w; x += 72) glow(x, p.y - 2); }
-      else { if (p.x < x0 - 20 || p.x > x1 + 20) continue; for (let y = p.y + 40; y < p.y + p.h2; y += 72) glow(p.x - 2, y); }
+      if (p.h) { if (p.y < y0 - 40 || p.y > y1 + 40) continue; for (let x = p.x + 24; x < p.x + p.w; x += 72) glow(x, p.y - 2 - lh); }
+      else { if (p.x < x0 - 20 || p.x > x1 + 20) continue; for (let y = p.y + 40; y < p.y + p.h2; y += 72) glow(p.x - 2, y - lh); }
     }
   };
 
@@ -196,11 +197,12 @@
     if (fest) {
       const blink = Math.floor(sec * 2) % 2;
       const deco = (ART().decor || DECOR)[fest.id];
-      if (deco === 'homeLights') for (const id of town.kinds.kampung || []) { const b = town.buildings[id]; for (let i = 0; i < 6; i++) { g.fillStyle = (i + blink) % 2 ? '#ffb703' : '#fb8500'; g.fillRect(b.x * T + 2 + i * 8, (b.y + b.h) * T + 2, 2, 3); } }
-      if (deco === 'lanterns') { const ly = LES.Art.shopSignBox().style === 'my' ? 29 : 35; for (const id of town.shoplots) { const b = town.buildings[id]; for (let i = 0; i < 3; i++) { g.fillStyle = '#d62828'; g.fillRect(b.x * T + 8 + i * 20, b.y * T + ly, 5, 6); g.fillStyle = '#ffd166'; g.fillRect(b.x * T + 10 + i * 20, b.y * T + ly + 6, 1, 3); } } }
-      if (deco === 'pumpkins') for (const tier of [0, 1, 2]) for (const id of town.homesByTier[tier] || []) { const b = town.buildings[id]; for (let i = 0; i < 2; i++) { const x = b.x * T + 6 + i * 9, y = (b.y + b.h) * T - 6; g.fillStyle = '#f77f00'; g.fillRect(x, y, 4, 3); g.fillStyle = '#386641'; g.fillRect(x + 1, y - 1, 1, 1); if (blink) { g.fillStyle = '#ffd166'; g.fillRect(x + 1, y + 1, 1, 1); } } }
-      if (deco === 'diyas') for (const tier of [1, 2]) for (const id of town.homesByTier[tier]) { const b = town.buildings[id]; for (let i = 0; i < 5; i++) { g.fillStyle = ['#ff006e', '#ffbe0b', '#3a86ff', '#8338ec', '#fb5607'][(i + blink) % 5]; g.fillRect(b.x * T + 4 + i * 6, (b.y + b.h) * T + 3, 3, 3); } }
-      if (deco === 'mallTree') for (const id of town.kinds.mall || []) { // a lit tree outside each mall
+      const drawn = LES.Art.artHas('fest.pelita') && festArt(g, w, town, T, deco, blink); // drawn from the festival pictures
+      if (!drawn && deco === 'homeLights') for (const id of town.kinds.kampung || []) { const b = town.buildings[id]; for (let i = 0; i < 6; i++) { g.fillStyle = (i + blink) % 2 ? '#ffb703' : '#fb8500'; g.fillRect(b.x * T + 2 + i * 8, (b.y + b.h) * T + 2, 2, 3); } }
+      if (!drawn && deco === 'lanterns') { const ly = LES.Art.shopSignBox().style === 'my' ? 29 : 35; for (const id of town.shoplots) { const b = town.buildings[id]; for (let i = 0; i < 3; i++) { g.fillStyle = '#d62828'; g.fillRect(b.x * T + 8 + i * 20, b.y * T + ly, 5, 6); g.fillStyle = '#ffd166'; g.fillRect(b.x * T + 10 + i * 20, b.y * T + ly + 6, 1, 3); } } }
+      if (!drawn && deco === 'pumpkins') for (const tier of [0, 1, 2]) for (const id of town.homesByTier[tier] || []) { const b = town.buildings[id]; for (let i = 0; i < 2; i++) { const x = b.x * T + 6 + i * 9, y = (b.y + b.h) * T - 6; g.fillStyle = '#f77f00'; g.fillRect(x, y, 4, 3); g.fillStyle = '#386641'; g.fillRect(x + 1, y - 1, 1, 1); if (blink) { g.fillStyle = '#ffd166'; g.fillRect(x + 1, y + 1, 1, 1); } } }
+      if (!drawn && deco === 'diyas') for (const tier of [1, 2]) for (const id of town.homesByTier[tier]) { const b = town.buildings[id]; for (let i = 0; i < 5; i++) { g.fillStyle = ['#ff006e', '#ffbe0b', '#3a86ff', '#8338ec', '#fb5607'][(i + blink) % 5]; g.fillRect(b.x * T + 4 + i * 6, (b.y + b.h) * T + 3, 3, 3); } }
+      if (!drawn && deco === 'mallTree') for (const id of town.kinds.mall || []) { // a lit tree outside each mall
         const b = town.buildings[id], x = (b.x + b.w) * T - 14, y = (b.y + b.h) * T - 2;
         g.fillStyle = '#6b4226'; g.fillRect(x + 4, y - 3, 2, 3);
         g.fillStyle = '#2d6a4f'; for (let r = 0; r < 4; r++) g.fillRect(x + 4 - r, y - 6 - (3 - r) * 3, 2 + 2 * r, 3);
@@ -226,6 +228,29 @@
       g.beginPath(); g.ellipse(cx + 70, cy + 15, 80, 35, 0, 0, Math.PI * 2); g.fill();
     }
   };
+
+  // Festival decorations from the Phase 6 pictures (assets/art/art-P6.js); false = none for this festival.
+  function festArt(g, w, town, T, deco, blink) {
+    const Art = LES.Art, P = (id, cx, by) => Art.prop(g, id, cx, by), B = id => town.buildings[id];
+    const front = b => (b.y + b.h) * T, glowDot = (x, y) => { if (blink) { g.fillStyle = 'rgba(255,214,120,0.9)'; g.fillRect(x, y, 2, 2); } };
+    if (deco === 'homeLights') { // Hari Raya: oil lamps (pelita) at the steps, a ketupat by the door
+      for (const id of town.kinds.kampung || []) { const b = B(id), X = b.x * T, W = b.w * T; P('fest.pelita', X + 4, front(b) + 12); P('fest.pelita', X + W - 4, front(b) + 12); glowDot(X + 3, front(b) + 1); glowDot(X + W - 5, front(b) + 1); const e = Art.eaves(b); if (e !== null) P('fest.ketupat', X + W / 2 + 8, e + 9); }
+      return true;
+    }
+    if (deco === 'gawai') { for (const id of town.kinds.kampung || []) { const b = B(id), e = Art.eaves(b); P('fest.gawai', b.x * T + b.w * T / 2 - 9, (e !== null ? e : b.y * T + 20) + 12); } return true; }
+    if (deco === 'lanterns') { for (const id of town.shoplots) { const b = B(id), e = Art.eaves(b); P('fest.lanterns', b.x * T + 32, (e !== null ? e : b.y * T + 26) + 9); } return true; }
+    if (deco === 'diyas') { // Deepavali: a kolam on the ground and a row of oil lamps in front of terraces and flats
+      for (const tier of [1, 2]) for (const id of town.homesByTier[tier] || []) { const b = B(id), X = b.x * T, W = b.w * T; P('fest.kolam', X + W / 2, front(b) + 15); P('fest.diyas', X + 12, front(b) + 5); P('fest.diyas', X + W - 12, front(b) + 5); glowDot(X + 6 + (blink ? 4 : 8), front(b) + 1); }
+      return true;
+    }
+    if (deco === 'mallTree') { // Christmas: a tree outside each mall, lights under the eaves of terraces and houses
+      for (const id of town.kinds.mall || []) { const b = B(id); P('fest.xmastree', (b.x + b.w) * T - 10, front(b) - 1); }
+      for (const tier of [2, 4]) for (const id of town.homesByTier[tier] || []) { const b = B(id), e = Art.eaves(b); if (e === null) continue; for (let x = b.x * T + 18; x < (b.x + b.w) * T - 10; x += 64) P('fest.xmaslights', x, e + 5); }
+      return true;
+    }
+    if (deco === 'flags' && !ART().flag) { for (const id of town.shoplots) { const b = B(id), e = Art.eaves(b); P('fest.bunting', b.x * T + 32, (e !== null ? e : b.y * T + 20) + 1); } return false; } // bunting on the shops (Jalur Gemilang), and the flags on poles too
+    return false;
+  }
 
   // Activity bubble above a person (only when zoomed in).
   A.bubble = function (g, x, y, icon) {
@@ -279,6 +304,13 @@
     if (fest && (ART().fireworks || ['newyear', 'merdeka']).includes(fest.id) && night > 0.5) {
       for (let k = 0; k < 3; k++) {
         const ph = (sec * 0.6 + k / 3) % 1, cx = cw * (0.2 + 0.3 * k), cy = ch * (0.25 + 0.1 * k);
+        const fw = `fest.firework.${Math.min(2, Math.floor(ph * 3))}`;
+        if (LES.Art.artHas(fw)) { // the burst pictures, three frames, scaled up like the map's pixels
+          const [iw, ih] = LES.ArtPack.size(fw), s = 3 * r.dpr;
+          g.globalAlpha = Math.max(0, 1 - ph * 0.7); g.imageSmoothingEnabled = false;
+          const f = LES.ArtPack.frames.get(fw); g.drawImage(f.img, f.x, f.y, f.w, f.h, Math.round(cx - iw * s / 2), Math.round(cy - ih * s / 2), iw * s, ih * s);
+          g.globalAlpha = 1; continue;
+        }
         const col = ['#ff006e', '#ffbe0b', '#3a86ff'][k];
         for (let a = 0; a < 12; a++) {
           const ang = a / 12 * Math.PI * 2, rr = ph * 60 * r.dpr;

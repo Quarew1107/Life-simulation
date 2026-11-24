@@ -1,0 +1,1219 @@
+{
+ "batch": "P6",
+ "fit": "box",
+ "colours": "own",
+ "sheets": [
+  {
+   "file": "p6-kampung-1.png",
+   "rows": [
+    [
+     {
+      "id": "town.kampung.my.1",
+      "w": 48,
+      "h": 48,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.kampung.uk.1",
+      "w": 48,
+      "h": 48,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.kampung.us.1",
+      "w": 48,
+      "h": 48,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.kampung.cn.1",
+      "w": 48,
+      "h": 48,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-kampung-2.png",
+   "rows": [
+    [
+     {
+      "id": "town.kampung.my.2",
+      "w": 48,
+      "h": 48,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.kampung.uk.2",
+      "w": 48,
+      "h": 48,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.kampung.us.2",
+      "w": 48,
+      "h": 48,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.kampung.cn.2",
+      "w": 48,
+      "h": 48,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-flat-1.png",
+   "rows": [
+    [
+     {
+      "id": "town.flat.my.1",
+      "w": 80,
+      "h": 144,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.flat.uk.1",
+      "w": 80,
+      "h": 144,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.flat.us.1",
+      "w": 80,
+      "h": 144,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.flat.cn.1",
+      "w": 80,
+      "h": 144,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-flat-2.png",
+   "rows": [
+    [
+     {
+      "id": "town.flat.my.2",
+      "w": 80,
+      "h": 144,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.flat.uk.2",
+      "w": 80,
+      "h": 144,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.flat.us.2",
+      "w": 80,
+      "h": 144,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.flat.cn.2",
+      "w": 80,
+      "h": 144,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-terrace-1.png",
+   "rows": [
+    [
+     {
+      "id": "town.terrace.my.1",
+      "w": 192,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.terrace.uk.1",
+      "w": 192,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ],
+    [
+     {
+      "id": "town.terrace.us.1",
+      "w": 192,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.terrace.cn.1",
+      "w": 192,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-terrace-2.png",
+   "rows": [
+    [
+     {
+      "id": "town.terrace.my.2",
+      "w": 192,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.terrace.uk.2",
+      "w": 192,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ],
+    [
+     {
+      "id": "town.terrace.us.2",
+      "w": 192,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.terrace.cn.2",
+      "w": 192,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-condo-1.png",
+   "rows": [
+    [
+     {
+      "id": "town.condo.my.1",
+      "w": 48,
+      "h": 144,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.condo.uk.1",
+      "w": 48,
+      "h": 144,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.condo.us.1",
+      "w": 48,
+      "h": 144,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.condo.cn.1",
+      "w": 48,
+      "h": 144,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-condo-2.png",
+   "rows": [
+    [
+     {
+      "id": "town.condo.my.2",
+      "w": 48,
+      "h": 144,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.condo.uk.2",
+      "w": 48,
+      "h": 144,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.condo.us.2",
+      "w": 48,
+      "h": 144,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.condo.cn.2",
+      "w": 48,
+      "h": 144,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-bungalow-1.png",
+   "rows": [
+    [
+     {
+      "id": "town.bungalow.my.1",
+      "w": 80,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.bungalow.uk.1",
+      "w": 80,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.bungalow.us.1",
+      "w": 80,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.bungalow.cn.1",
+      "w": 80,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-bungalow-2.png",
+   "rows": [
+    [
+     {
+      "id": "town.bungalow.my.2",
+      "w": 80,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.bungalow.uk.2",
+      "w": 80,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.bungalow.us.2",
+      "w": 80,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.bungalow.cn.2",
+      "w": 80,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-shoplot.png",
+   "rows": [
+    [
+     {
+      "id": "town.shoplot.my",
+      "w": 64,
+      "h": 48,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.shoplot.uk",
+      "w": 64,
+      "h": 48,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.shoplot.us",
+      "w": 64,
+      "h": 48,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.shoplot.cn",
+      "w": 64,
+      "h": 48,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-mamak.png",
+   "rows": [
+    [
+     {
+      "id": "town.mamak.my",
+      "w": 80,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.mamak.uk",
+      "w": 80,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.mamak.us",
+      "w": 80,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.mamak.cn",
+      "w": 80,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-hawker.png",
+   "rows": [
+    [
+     {
+      "id": "town.hawker.my",
+      "w": 112,
+      "h": 80,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.hawker.uk",
+      "w": 112,
+      "h": 80,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.hawker.us",
+      "w": 112,
+      "h": 80,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.hawker.cn",
+      "w": 112,
+      "h": 80,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-karaoke.png",
+   "rows": [
+    [
+     {
+      "id": "town.karaoke.my",
+      "w": 96,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.karaoke.uk",
+      "w": 96,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.karaoke.us",
+      "w": 96,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.karaoke.cn",
+      "w": 96,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-townhall.png",
+   "rows": [
+    [
+     {
+      "id": "town.townhall.my",
+      "w": 128,
+      "h": 128,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.townhall.uk",
+      "w": 128,
+      "h": 128,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ],
+    [
+     {
+      "id": "town.townhall.us",
+      "w": 128,
+      "h": 128,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.townhall.cn",
+      "w": 128,
+      "h": 128,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-school.png",
+   "rows": [
+    [
+     {
+      "id": "town.school.my",
+      "w": 80,
+      "h": 128,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.school.uk",
+      "w": 80,
+      "h": 128,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.school.us",
+      "w": 80,
+      "h": 128,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.school.cn",
+      "w": 80,
+      "h": 128,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-police.png",
+   "rows": [
+    [
+     {
+      "id": "town.police.my",
+      "w": 64,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.police.uk",
+      "w": 64,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.police.us",
+      "w": 64,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.police.cn",
+      "w": 64,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-station.png",
+   "rows": [
+    [
+     {
+      "id": "town.station.my",
+      "w": 144,
+      "h": 80,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.station.uk",
+      "w": 144,
+      "h": 80,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ],
+    [
+     {
+      "id": "town.station.us",
+      "w": 144,
+      "h": 80,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.station.cn",
+      "w": 144,
+      "h": 80,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-shared-1.png",
+   "rows": [
+    [
+     {
+      "id": "town.mall",
+      "w": 96,
+      "h": 144,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.lounge",
+      "w": 64,
+      "h": 160,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.office",
+      "w": 64,
+      "h": 160,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.techhub",
+      "w": 64,
+      "h": 160,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-shared-2.png",
+   "rows": [
+    [
+     {
+      "id": "town.hospital",
+      "w": 112,
+      "h": 128,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.privhosp",
+      "w": 112,
+      "h": 128,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.masjid",
+      "w": 112,
+      "h": 144,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-shared-3.png",
+   "rows": [
+    [
+     {
+      "id": "town.privschool",
+      "w": 80,
+      "h": 128,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.memorial",
+      "w": 96,
+      "h": 128,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ],
+    [
+     {
+      "id": "town.library",
+      "w": 96,
+      "h": 80,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.kolej",
+      "w": 96,
+      "h": 80,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-shared-4.png",
+   "rows": [
+    [
+     {
+      "id": "town.university",
+      "w": 208,
+      "h": 144,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.researchcentre",
+      "w": 192,
+      "h": 128,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-shared-5.png",
+   "rows": [
+    [
+     {
+      "id": "town.factory",
+      "w": 192,
+      "h": 128,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.prison",
+      "w": 144,
+      "h": 96,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-shared-6.png",
+   "rows": [
+    [
+     {
+      "id": "town.court",
+      "w": 96,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.finedine",
+      "w": 96,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ],
+    [
+     {
+      "id": "town.workshop",
+      "w": 96,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.warehouse",
+      "w": 96,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-shared-7.png",
+   "rows": [
+    [
+     {
+      "id": "town.depot",
+      "w": 96,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.bowling",
+      "w": 96,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ],
+    [
+     {
+      "id": "town.spa",
+      "w": 96,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.hall",
+      "w": 96,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-shared-8.png",
+   "rows": [
+    [
+     {
+      "id": "town.cinema",
+      "w": 96,
+      "h": 80,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.futsal",
+      "w": 96,
+      "h": 80,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ],
+    [
+     {
+      "id": "town.gym",
+      "w": 80,
+      "h": 96,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.rehab",
+      "w": 64,
+      "h": 96,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-shared-9.png",
+   "rows": [
+    [
+     {
+      "id": "town.bank",
+      "w": 64,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.jail",
+      "w": 48,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ],
+    [
+     {
+      "id": "town.welfare",
+      "w": 96,
+      "h": 48,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.bursa",
+      "w": 112,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-shared-10.png",
+   "rows": [
+    [
+     {
+      "id": "town.tokong",
+      "w": 80,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "town.kuil",
+      "w": 80,
+      "h": 64,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ],
+    [
+     {
+      "id": "town.gereja",
+      "w": 80,
+      "h": 48,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-street-1.png",
+   "px": 3,
+   "rows": [
+    [
+     {
+      "id": "street.lamp",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "street.bench",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "street.busstop",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "street.bin",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "street.postbox",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "street.hydrant",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "street.bikerack",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "street.motorbike",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "street.foodcart",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "street.newsstand",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "street.cone",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "street.phonebox",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p6-street-2.png",
+   "px": 3,
+   "rows": [
+    [
+     {
+      "id": "street.palm",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "street.raintree",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "street.oak",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "street.wintertree",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "street.pine",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "street.bamboo",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "street.bush",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "street.flowerbed",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "street.hedge",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "street.banana",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "street.hibiscus",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "street.doorplant",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     }
+    ]
+   ],
+   "cut": "bands"
+  },
+  {
+   "file": "p6-festival.png",
+   "px": 3,
+   "rows": [
+    [
+     {
+      "id": "fest.lanterns",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "fest.pelita",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "fest.ketupat",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "fest.kolam",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "fest.diyas",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "fest.xmastree",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "fest.xmaslights",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "fest.bunting",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "fest.gawai",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "fest.firework.0",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "fest.firework.1",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "fest.firework.2",
+      "w": 16,
+      "h": 16,
+      "type": "art"
+     }
+    ]
+   ],
+   "cut": "bands"
+  }
+ ]
+}
