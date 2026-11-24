@@ -202,7 +202,9 @@ def main():
         im = np.array(Image.open(os.path.join(src_dir, sh['file'])).convert('RGB'))
         bg = background(im)
         want = sh['rows']
-        found = cut_bands(bg, want) if sh.get('cut') == 'bands' else rows_of(find_items(bg))
+        if sh.get('boxes'):  # the artist's own boxes (x, y, w, h), in list order: exact cuts, nothing guessed
+            it_ = iter(sh['boxes']); found = [[(lambda q: [q[0], q[1], q[0] + q[2], q[1] + q[3]])(next(it_)) for _ in r] for r in want]
+        else: found = cut_bands(bg, want) if sh.get('cut') == 'bands' else rows_of(find_items(bg))
         if found is None: found = []
         report.append(f"{sh['file']}: {im.shape[1]}x{im.shape[0]}, rows found {len(found)} (wanted {len(want)}), items per row found {[len(r) for r in found]} (wanted {[len(r) for r in want]})")
         if [len(r) for r in found] != [len(r) for r in want]:

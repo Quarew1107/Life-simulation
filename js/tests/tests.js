@@ -3187,6 +3187,12 @@
     const bare = g2.getImageData(0, 0, sa[2], sa[3]).data;
     for (let i = 0; i < bare.length; i += 4) if (bare[i + 3] && (bare[i] !== withSign[i] || bare[i + 1] !== withSign[i + 1])) signs++;
     check('A picture-drawn office tower lights its own windows at night, and a picture-drawn school still carries its name sign', homeLights >= 2 && signs > 40 && realSign === Art.sign, `${homeLights} windows, ${signs} sign pixels`);
+    // Phase 7: the ground, pavements, markings, fences, yards and parked cars come from the street pictures, per country.
+    const p7 = ['g.grass', 'g.asphalt', 'g.river', 'd.tuft', 'y.guardhouse', 'c.down.0', 'w.bridge'].concat(...['my', 'uk', 'us', 'cn'].map(c => [`r.${c}.pN`, `r.${c}.zebra`, `r.${c}.dash`]), ...['picket', 'terrace', 'ukbrick', 'uspicket', 'cnwall'].map(k => [`f.${k}.front`, `f.${k}.side`, `f.${k}.gate`]));
+    const road = town.roadsY[1] * T, ra = [T * 20, road - 16, 256, 64];
+    const roadOn = paint(...ra).g.getImageData(0, 0, ra[2], ra[3]).data; Art.setTownArt(false); const roadOff = paint(...ra).g.getImageData(0, 0, ra[2], ra[3]).data; Art.setTownArt(true);
+    let rd = 0; for (let i = 0; i < roadOn.length; i += 4) if (roadOn[i] !== roadOff[i]) rd++;
+    check('Roads, pavements, fences and yards are drawn from the Phase 7 street pictures (all four countries have their road kit)', p7.every(id => AP.has(id)) && AP.frames.size > 0 && rd > 2000, `${p7.filter(id => !AP.has(id)).join(',')} ${rd} road pixels differ`);
     // No seams: a tile painted alone matches the same square of a bigger painting (trees, lamps and props cross tile edges).
     const TILE = LES.MapTiles.TILE, a = paint(TILE, TILE, TILE, TILE).g.getImageData(0, 0, TILE, TILE).data, big = paint(TILE - 256, TILE - 256, TILE + 512, TILE + 512).g.getImageData(256, 256, TILE, TILE).data;
     let n = 0, far = 0; for (let i = 0; i < a.length; i++) { const d = Math.abs(a[i] - big[i]); if (d) n++; if (d > 32) far++; }

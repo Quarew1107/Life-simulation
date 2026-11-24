@@ -372,10 +372,70 @@
   // Ground surface of each district block, before buildings are drawn on it.
   const PAVED = new Set(['O', 'H', 'S', 'M', 'D', 'X', 'V', 'Y', 'N', 'j', 'g']);
   const INDUSTRIAL = new Set(['I', 'W', 'G']);
+  // ---- Art upgrade Phase 7: ground textures, pavements, road markings, fences, yards and parked cars from ChatGPT's
+  // pictures (assets/art/art-P7.js). Each helper returns null / false without the pictures, and the code look stays.
+  const P7 = new Map();
+  const p7canvas = (id, turn) => { // a frame as its own canvas (turn: rotated a quarter turn clockwise)
+    const k = `${id}|${turn ? 1 : 0}`; let cv = P7.get(k);
+    if (cv) return cv;
+    const f = LES.ArtPack.frames.get(id); cv = smallCanvas(turn ? f.h : f.w, turn ? f.w : f.h);
+    const q = cv.getContext('2d'); q.imageSmoothingEnabled = false;
+    if (turn) { q.translate(f.h, 0); q.rotate(Math.PI / 2); }
+    q.drawImage(f.img, f.x, f.y, f.w, f.h, 0, 0, f.w, f.h);
+    P7.set(k, cv); return cv;
+  };
+  // A repeating texture from a picture (anchored to the map, so tiles painted apart still meet).
+  function tex(g, id) {
+    if (!artHas(id)) return null;
+    const k = `pat|${id}`; let p = P7.get(k);
+    if (!p) { p = g.createPattern(p7canvas(id), 'repeat'); P7.set(k, p); }
+    return p;
+  }
+  const put = (g, id, x, y, turn) => { if (!artHas(id)) return false; const cv = p7canvas(id, turn); if (vis(x - 2, y - 2, cv.width + 4, cv.height + 4)) g.drawImage(cv, Math.round(x), Math.round(y)); return true; };
+  const ROADKIT = () => `r.${CC()}`;
+  const PAVE = { my: 'g.pave.my', uk: 'g.pave.uk', us: 'g.pave.us', cn: 'g.pave.cn' };
+  const grassTex = g => tex(g, TEMPERATE() ? 'g.lawn.cool' : 'g.grass');
+  // Fences round the plots of a block: [kit] by block code and country (null = no fence).
+  const FENCE = {
+    my: { K: 'picket', T: 'terrace', B: 'bungalow', C: 'condo', Q: 'mesh', e: 'mesh', E: 'hedge', U: 'hedge', I: 'chainlink', W: 'chainlink', r: 'chainlink' },
+    uk: { K: 'ukbrick', T: 'ukrail', B: 'ukhedge', C: 'ukrail', Q: 'ukrail', e: 'ukrail', E: 'ukhedge', U: 'ukhedge', I: 'chainlink', W: 'chainlink', r: 'chainlink' },
+    us: { K: 'uspicket', T: 'uspicket', B: 'usstone', C: 'usstone', Q: 'uschain', e: 'uschain', E: 'hedge', U: 'hedge', I: 'uschain', W: 'uschain', r: 'uschain' },
+    cn: { K: 'cnwall', T: 'cnwall', B: 'cnwall', C: 'cnrail', Q: 'cnrail', e: 'cnrail', E: 'hedge', U: 'hedge', I: 'chainlink', W: 'chainlink', r: 'chainlink' },
+  };
+  function fences(g, town, bl, bi) {
+    const kit = (FENCE[CC()] || {})[bl.code];
+    if (!kit || !artHas(`f.${kit}.front`)) return;
+    if (bl.code === 'K' && CC() === 'my' && bi % 2) { if (artHas('f.bamboo.front')) return fencesKit(g, bl, 'bamboo'); }
+    fencesKit(g, bl, kit);
+  }
+  function fencesKit(g, bl, kit) {
+    const T = 16, X = bl.x * T, Y = bl.y * T, gate = 6;
+    if (!vis(X - 16, Y - 16, 14 * T + 32, 11 * T + 32)) return;
+    for (let c = 0; c < 14; c++) put(g, `f.${kit}.front`, X + c * T, Y); // the back fence
+    for (let r = 1; r < 10; r++) { put(g, `f.${kit}.side`, X, Y + r * T); put(g, `f.${kit}.side`, X + 13 * T, Y + r * T); }
+    for (let c = 0; c < 14; c++) if (c !== gate && c !== gate + 1) put(g, `f.${kit}.front`, X + c * T, Y + 10 * T); // the front, with a gate
+    put(g, `f.${kit}.gate`, X + gate * T, Y + 10 * T);
+    if (bl.code === 'C') put(g, 'y.guardhouse', X + (gate + 2) * T, Y + 8 * T); // the condo's guardhouse and barrier
+  }
+  // Small things lying about: on grass, paving, kampung yards and roads (fixed by place).
+  const DECALS = { grass: ['d.tuft', 'd.flowers', 'd.worn', 'd.stones', 'd.leaves', 'd.tuft'], pave: ['d.crackpave', 'd.puddle', 'd.paper', 'd.oil', 'd.grate'], yard: ['d.stones', 'd.leaves', 'd.worn', 'd.tuft'], road: ['d.crackroad', 'd.manhole', 'd.oil', 'd.tyres', 'd.puddle2'] };
+  function decals(g, kind, X, Y, W, H, seed, n) {
+    if (!artHas('d.tuft')) return;
+    const R = prng(`decal:${kind}`, seed, X ^ Y), list = DECALS[kind];
+    for (let i = 0; i < n; i++) { const id = R.pick(list), x = X + R.int(0, Math.max(0, W - 16)), y = Y + R.int(0, Math.max(0, H - 16)); put(g, id, x, y); }
+  }
+  // Kampung yards: a laundry pole and a water tank between the houses.
+  function kampungYard(g, bl, bi) {
+    if (!artHas('y.laundry')) return;
+    const X = bl.x * 16, Y = bl.y * 16, R = prng('kyard', bi);
+    put(g, TEMPERATE() ? 'y.wheelie' : 'y.laundry', X + (R.next() < 0.5 ? 4 : 8) * 16, Y + 4 * 16);
+    if (!TEMPERATE()) put(g, 'y.tank', X + (R.next() < 0.5 ? 8 : 12) * 16, Y + 4 * 16 + 2);
+  }
+
   const FLOWER_CELL = 60; // one flower per 900 px on average: 4 per 60x60 cell
   function drawGround(g, town) {
     const T = town.T, W = town.W * T, H = town.H * T;
-    g.fillStyle = grassPattern(g);
+    g.fillStyle = grassTex(g) || grassPattern(g);
     if (VIEW) g.fillRect(Math.max(0, VX0), Math.max(0, VY0), Math.min(W, VX1) - Math.max(0, VX0), Math.min(H, VY1) - Math.max(0, VY0)); else g.fillRect(0, 0, W, H);
     const c0 = VIEW ? Math.max(0, Math.floor(VX0 / FLOWER_CELL)) : 0, c1 = Math.ceil((VIEW ? Math.min(W, VX1) : W) / FLOWER_CELL);
     const r0 = VIEW ? Math.max(0, Math.floor(VY0 / FLOWER_CELL)) : 0, r1 = Math.ceil((VIEW ? Math.min(H, VY1) : H) / FLOWER_CELL);
@@ -389,17 +449,21 @@
       const X = (bl.px !== undefined ? bl.px : bl.x) * T, Y = (bl.py !== undefined ? bl.py : bl.y) * T;
       const BW = (bl.pw || 14) * T, BH = (bl.ph || 11) * T;
       if (!vis(X - 22, Y - 12, BW + 44, BH + 24)) return;
-      if (PAVED.has(bl.code)) { g.fillStyle = pave; g.fillRect(X + 2, Y + 2, BW - 4, BH - 4); }
-      else if (INDUSTRIAL.has(bl.code)) { g.fillStyle = grav; g.fillRect(X + 2, Y + 2, BW - 4, BH - 4); }
+      if (PAVED.has(bl.code)) { g.fillStyle = tex(g, PAVE[CC()]) || pave; g.fillRect(X + 2, Y + 2, BW - 4, BH - 4); decals(g, 'pave', X + 4, Y + 4, BW - 8, BH - 8, bi, 5); }
+      else if (INDUSTRIAL.has(bl.code)) { g.fillStyle = tex(g, 'g.gravel') || grav; g.fillRect(X + 2, Y + 2, BW - 4, BH - 4); decals(g, 'pave', X + 4, Y + 4, BW - 8, BH - 8, bi, 4); }
       else if (bl.code === 'K' || bl.code === 'A') { // kampung: sandy yards and footpaths
         const R = prng('yard', bi);
-        if (TEMPERATE()) { rect(g, X + 4, Y + 4, BW - 8, BH - 8, PAL.lawn); rect(g, X + BW / 2 - 2, Y, 4, BH, PAL.pave); } // UK and US: gardens and a paved path
-        else for (let i = 0; i < 14; i++) { g.fillStyle = dirt; g.beginPath(); g.ellipse(X + R.int(10, BW - 10), Y + R.int(10, BH - 10), R.int(10, 22), R.int(6, 12), 0, 0, Math.PI * 2); g.fill(); }
-        if (!TEMPERATE()) rect(g, X + BW / 2 - 3, Y, 6, BH, PAL.dirt);
+        const sand = tex(g, 'g.sand'), earth = tex(g, 'g.earth'), lawnT = tex(g, 'g.lawn.cool');
+        if (TEMPERATE()) { rect(g, X + 4, Y + 4, BW - 8, BH - 8, lawnT || PAL.lawn); rect(g, X + BW / 2 - 2, Y, 4, BH, tex(g, PAVE[CC()]) || PAL.pave); } // UK and US: gardens and a paved path
+        else for (let i = 0; i < 14; i++) { g.fillStyle = sand || dirt; g.beginPath(); g.ellipse(X + R.int(10, BW - 10), Y + R.int(10, BH - 10), R.int(10, 22), R.int(6, 12), 0, 0, Math.PI * 2); g.fill(); }
+        if (!TEMPERATE()) rect(g, X + BW / 2 - 3, Y, 6, BH, earth || PAL.dirt);
+        decals(g, 'yard', X + 8, Y + 8, BW - 16, BH - 16, bi, 6); kampungYard(g, bl, bi);
       } else if (bl.code === 'T' || bl.code === 'B' || bl.code === 'C') { // tidy lawns
-        rect(g, X + 4, Y + 4, BW - 8, BH - 8, PAL.lawn);
-        for (let y = Y + 4; y < Y + BH - 4; y += 8) rect(g, X + 4, y, BW - 8, 4, PAL.lawnStripe);
-      }
+        const lawn = tex(g, TEMPERATE() ? 'g.lawn.cool' : 'g.lawn');
+        rect(g, X + 4, Y + 4, BW - 8, BH - 8, lawn || PAL.lawn);
+        if (!lawn) for (let y = Y + 4; y < Y + BH - 4; y += 8) rect(g, X + 4, y, BW - 8, 4, PAL.lawnStripe);
+      } else if (!PAVED.has(bl.code)) decals(g, 'grass', X + 8, Y + 8, BW - 16, BH - 16, bi, 5);
+      if (bl.code !== 'L') fences(g, town, bl, bi);
     });
     // Roads: built from the pieces that exist (varied towns drop some, a river replaces one).
     const { pieces, nodes } = LES.roadPieces(town);
@@ -408,13 +472,18 @@
     if (L) drawPlotExtras(g, town);
     if (L && L.river >= 0) drawRiver(g, town);
     if (L) drawGreenways(g, town);
-    const asph = noisePattern(g, PAL.asphalt, PAL.asphaltDark, PAL.asphaltLight, 260);
-    const walk = tiledPattern(g, PAL.pave, PAL.paveLine, 6, false);
+    const asph = tex(g, 'g.asphalt') || noisePattern(g, PAL.asphalt, PAL.asphaltDark, PAL.asphaltLight, 260);
+    const walk = tiledPattern(g, PAL.pave, PAL.paveLine, 6, false), K = ROADKIT(), kit = artHas(`${K}.pN`);
     const RW = 2 * T, ext = T + 8; // pavements run on through junctions; asphalt covers them where roads cross
     const pvis = p => (p.h ? vis(p.x - 30, p.y - 30, p.w + 60, 2 * T + 60) : vis(p.x - 30, p.y - 30, 2 * T + 60, p.h2 + 60));
     for (const p of pieces) { // pavements and drains on both sides
       if (!pvis(p)) continue;
       g.fillStyle = walk;
+      if (kit) { // the country's pavement strips: kerb, pavement and (Malaysia) the monsoon drain, in one picture
+        if (p.h) { const x0 = p.x - (p.edge ? 0 : ext), w = p.w + (p.edge ? ext : 2 * ext); g.fillStyle = tex(g, `${K}.pN`); g.fillRect(x0, p.y - 8, w, 8); g.fillStyle = tex(g, `${K}.pS`); g.fillRect(x0, p.y + RW, w, 8); }
+        else { const y0 = p.y - (p.edge ? 0 : ext), h = p.h2 + (p.edge ? ext : 2 * ext); g.fillStyle = tex(g, `${K}.pW`); g.fillRect(p.x - 8, y0, 8, h); g.fillStyle = tex(g, `${K}.pE`); g.fillRect(p.x + RW, y0, 8, h); }
+        continue;
+      }
       if (p.h) {
         const x0 = p.x - (p.edge ? 0 : ext), w = p.w + (p.edge ? ext : 2 * ext);
         g.fillRect(x0, p.y - 6, w, 6); g.fillRect(x0, p.y + RW, w, 6);
@@ -431,16 +500,21 @@
     for (const p of pieces) { // kerbs and lane markings
       if (!pvis(p)) continue;
       if (p.h) {
+        if (kit) { for (let x = p.x + 4; x < p.x + p.w - 7; x += 14) put(g, `${K}.dash`, x, p.y + T - 1); decals(g, 'road', p.x, p.y + 2, p.w, RW - 4, p.y, Math.floor(p.w / 120)); continue; }
         rect(g, p.x, p.y, p.w, 1, PAL.kerb); rect(g, p.x, p.y + RW - 1, p.w, 1, PAL.kerb);
         for (let x = p.x + 4; x < p.x + p.w - 7; x += 14) rect(g, x, p.y + T - 1, 7, 2, PAL.laneY);
       } else {
+        if (kit) { for (let y = p.y + 4; y < p.y + p.h2 - 7; y += 14) put(g, `${K}.dash`, p.x + T - 1, y, true); decals(g, 'road', p.x + 2, p.y, RW - 4, p.h2, p.x, Math.floor(p.h2 / 120)); continue; }
         rect(g, p.x, p.y, 1, p.h2, PAL.kerb); rect(g, p.x + RW - 1, p.y, 1, p.h2, PAL.kerb);
         for (let y = p.y + 4; y < p.y + p.h2 - 7; y += 14) rect(g, p.x + T - 1, y, 2, 7, PAL.laneY);
       }
     }
     for (const n of nodes) {
       if (!vis(n.x - 20, n.y - 20, RW + 40, RW + 40)) continue;
-      if (n.deg >= 3) for (let i = 0; i < 4; i++) { // zebra crossings on every arm of a junction
+      if (n.deg >= 3 && kit) { // the country's zebra crossings
+        if (n.W) put(g, `${K}.zebra`, n.x - 11, n.y, true); if (n.E) put(g, `${K}.zebra`, n.x + RW + 3, n.y, true);
+        if (n.N) put(g, `${K}.zebra`, n.x, n.y - 11); if (n.S) put(g, `${K}.zebra`, n.x, n.y + RW + 3);
+      } else if (n.deg >= 3) for (let i = 0; i < 4; i++) { // zebra crossings on every arm of a junction
         if (n.W) rect(g, n.x - 11, n.y + 2 + i * 8, 8, 4, PAL.laneW);
         if (n.E) rect(g, n.x + RW + 3, n.y + 2 + i * 8, 8, 4, PAL.laneW);
         if (n.N) rect(g, n.x + 2 + i * 8, n.y - 11, 4, 8, PAL.laneW);
@@ -463,10 +537,11 @@
         g.fillStyle = asph; g.beginPath(); g.arc(cx, cy, 20, 0, Math.PI * 2); g.fill();
         g.strokeStyle = PAL.laneW; g.lineWidth = 1; g.setLineDash([3, 3]); g.beginPath(); g.arc(cx, cy, 14, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
         // A small central island (kept clear of the lanes vehicles drive in): kerb, grass, a shrub and flowers.
+        if (put(g, `${ROADKIT()}.island`, cx - 12, cy - 12)) { /* the island picture */ } else {
         g.fillStyle = '#d9d2c3'; g.beginPath(); g.arc(cx, cy, 6, 0, Math.PI * 2); g.fill();
         g.fillStyle = '#7fbf5a'; g.beginPath(); g.arc(cx, cy, 5, 0, Math.PI * 2); g.fill();
         g.fillStyle = '#3c7d3a'; g.beginPath(); g.arc(cx, cy - 1, 3, 0, Math.PI * 2); g.fill();
-        for (const f of [[-4, 1, '#f28482'], [3, 1, '#ffd166'], [-1, 3, '#ffffff']]) rect(g, cx + f[0], cy + f[1], 1, 1, f[2]);
+        for (const f of [[-4, 1, '#f28482'], [3, 1, '#ffd166'], [-1, 3, '#ffffff']]) rect(g, cx + f[0], cy + f[1], 1, 1, f[2]); }
         const teeth = (x, y, dx, dy) => { for (let k = 0; k < 3; k++) rect(g, x + dx * k * 5, y + dy * k * 5, 3, 3, PAL.laneW); };
         if (n.W) teeth(n.x - 4, n.y + T + 2, 0, 1); if (n.E) teeth(n.x + RW + 1, n.y + 2, 0, 1); // give way to traffic on the roundabout (left-hand traffic)
         if (n.N) teeth(n.x + 2, n.y - 4, 1, 0); if (n.S) teeth(n.x + T + 2, n.y + RW + 1, 1, 0);
@@ -489,7 +564,7 @@
       rect(g, mid - half - 10, y0, 2 * half + 20, y1 - y0, PAL.grass[2]);
       rect(g, mid - half - 9, y0, 7, y1 - y0, PAL.dirt); // towpath
       rect(g, mid - half - 2, y0, 2, y1 - y0, '#8d8f8a'); rect(g, mid + half, y0, 2, y1 - y0, '#8d8f8a'); // stone edges
-      rect(g, mid - half, y0, 2 * half, y1 - y0, '#3d6e7a');
+      rect(g, mid - half, y0, 2 * half, y1 - y0, tex(g, 'g.river') || '#3d6e7a');
       for (let y = y0 - (y0 % 12); y < y1; y += 12) rect(g, mid - half / 2 + (y % 24 ? 4 : -4), y, 6, 1, '#5d8f9a');
       for (let y = 30; y < H - 40; y += 170) { // narrowboats
         if (y + 34 < y0 || y > y1) continue;
@@ -501,9 +576,10 @@
     const at = y => mid + Math.sin(y / 70 + ph) * T * 0.55 + Math.sin(y / 23 + ph * 2) * 3;
     for (let y = VIEW ? Math.max(0, (VY0 & ~1) - 2) : 0; y < (VIEW ? Math.min(H, VY1 + 2) : H); y += 2) {
       const cx = at(y), half = T * 1.35 + Math.sin(y / 41 + ph) * 3;
-      rect(g, cx - half - 4, y, 2 * half + 8, 2, PAL.sand);
-      rect(g, cx - half, y, 2 * half, 2, '#3f8fb5');
-      rect(g, cx - half + 3, y, 2 * half - 6, 2, '#4a9cc2');
+      const water = tex(g, 'g.river');
+      rect(g, cx - half - 4, y, 2 * half + 8, 2, tex(g, 'g.mud') || PAL.sand);
+      rect(g, cx - half, y, 2 * half, 2, water || '#3f8fb5');
+      if (!water) rect(g, cx - half + 3, y, 2 * half - 6, 2, '#4a9cc2');
       if (y % 10 === 0) rect(g, cx - half / 2 + Math.sin(y) * half / 2, y, 5, 1, '#7cc3e0');
     }
     for (let i = 0; i < H / 40; i++) { const y = R.int(0, H - 6), side = R.next() < 0.5 ? -1 : 1, x = at(y) + side * (T * 1.35 + 3); rect(g, x, y, 1, 4, '#5f8f43'); rect(g, x + 2, y + 1, 1, 3, '#6fa34b'); }
@@ -562,12 +638,18 @@
     });
   }
   function carPark(g, X, Y, W, H, R) {
-    rect(g, X, Y, W, H, '#5a5e66'); rect(g, X, Y, W, 1, PAL.kerb); rect(g, X, Y + H - 1, W, 1, PAL.kerb);
-    const across = W >= H;
-    if (across) for (let x = X + 2; x + 14 < X + W; x += 16) { rect(g, x, Y + 2, 1, Math.min(10, H - 4), '#e8e4da'); if (R.next() < 0.6) car(g, x + 2, Y + 3, R.pick(['#e63946', '#457b9d', '#f1faee', '#2a9d8f', '#e9c46a', '#14141a'])); }
+    rect(g, X, Y, W, H, tex(g, 'g.carpark') || '#5a5e66'); rect(g, X, Y, W, 1, PAL.kerb); rect(g, X, Y + H - 1, W, 1, PAL.kerb);
+    const across = W >= H, cars = artHas('c.down.0') && H >= 20;
+    if (across) for (let x = X + 2; x + 14 < X + W; x += 16) { rect(g, x, Y + 2, 1, Math.min(cars ? 17 : 10, H - 4), '#e8e4da'); if (R.next() < 0.6) { const col = R.pick(['#e63946', '#457b9d', '#f1faee', '#2a9d8f', '#e9c46a', '#14141a']); if (cars) put(g, `c.down.${R.int(0, 5)}`, x + 2, Y + 2); else car(g, x + 2, Y + 3, col); } }
     else for (let y = Y + 2; y + 9 < Y + H; y += 10) { rect(g, X + 2, y, Math.min(16, W - 4), 1, '#e8e4da'); if (R.next() < 0.6) car(g, X + 3, y + 2, R.pick(['#e63946', '#457b9d', '#f1faee', '#2a9d8f', '#e9c46a'])); }
   }
   function playground(g, X, Y, W, H) {
+    if (artHas('y.swings') && W >= 36 && H >= 18) { // the playground pictures on sand
+      rect(g, X, Y, W, H, tex(g, 'g.sand'));
+      const items = ['y.swings', 'y.slide', 'y.climb', 'y.sandpit', 'y.seesaw'];
+      let x = X + 2; for (const id of items) { const [w, h] = LES.ArtPack.size(id); if (x + w > X + W - 2 || h > H - 2) break; put(g, id, x, Y + Math.floor((H - h) / 2)); x += w + 3; }
+      return;
+    }
     rect(g, X, Y, W, H, '#e3c98f'); rect(g, X + 1, Y + 1, W - 2, H - 2, '#ead6a3');
     const cx = X + Math.min(W, 40) / 2, cy = Y + Math.min(H, 30) / 2;
     rect(g, cx - 8, cy - 6, 2, 10, '#e63946'); rect(g, cx + 6, cy - 6, 2, 10, '#e63946'); rect(g, cx - 8, cy - 7, 16, 2, '#e63946'); // swings
@@ -575,7 +657,8 @@
     if (W > 44 || H > 34) { const sx = X + W - 22, sy = Y + H - 18; rect(g, sx, sy, 4, 12, '#f4a261'); for (let i = 0; i < 10; i++) rect(g, sx + 4 + i, sy + 2 + i, 2, 1, '#3a86ff'); } // slide
   }
   function garden(g, X, Y, W, H, R) {
-    rect(g, X, Y, W, H, '#7fbf5a');
+    rect(g, X, Y, W, H, tex(g, TEMPERATE() ? 'g.lawn.cool' : 'g.lawn') || '#7fbf5a');
+    if (artHas('y.pond') && W >= 48 && H >= 30) { put(g, 'y.pond', X + W - 36, Y + 4); put(g, 'y.bench', X + 6, Y + H - 12); put(g, 'y.pots', X + 6, Y + 4); return; }
     for (let i = 0; i < Math.max(2, W * H / 500); i++) shrub(g, X + R.int(0, Math.max(1, W - 10)), Y + R.int(0, Math.max(1, H - 8)), R.pick(['#4f9441', '#d65a8a', '#f4a261', '#4f9441']));
     if (W >= 20 && H >= 10) { rect(g, X + W / 2 - 5, Y + H / 2, 10, 2, PAL.wood); rect(g, X + W / 2 - 5, Y + H / 2 + 2, 1, 2, PAL.woodDark); rect(g, X + W / 2 + 4, Y + H / 2 + 2, 1, 2, PAL.woodDark); }
   }
@@ -593,8 +676,8 @@
       const span = (east ? W : H) - d;
       const bandRect = (from, size, col) => east ? rect(g, from, k, size, 2, col) : rect(g, k, from, 2, size, col);
       if (e.kind === 'sea') {
-        bandRect(d - 8, 8 + 18, PAL.sand);
-        bandRect(d + 18, span, '#3a8fc0');
+        bandRect(d - 8, 8 + 18, tex(g, 'g.beach') || PAL.sand);
+        bandRect(d + 18, span, tex(g, 'g.sea') || '#3a8fc0');
         bandRect(d + 18, 4, '#d7f0f7');
         if (k % 6 === 0) bandRect(d + 30 + (k * 7) % 40, 1, '#62aad2');
       } else {
