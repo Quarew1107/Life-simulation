@@ -46,7 +46,7 @@
       },
     },
     REST: {
-      hours: 8, cooldown: 7, adult: true, key: () => 'rest',
+      hours: 8, cooldown: 7, minAge: 3, key: () => 'rest', // any age from 3 (children too, Nov 2026)
       check() { return null; },
       run(w, p) { p.stress = Math.max(0, p.stress - 8); p.energy = Math.min(100, p.energy + 20); st(w).played = true; return { code: 'ok', params: {} }; },
     },

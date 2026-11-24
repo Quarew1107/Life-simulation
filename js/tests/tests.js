@@ -3294,6 +3294,14 @@
       w.player.traits = keepT; w.player.rep = keepR;
       check('Traits matter a little: brave (level 3) + careful (2) + standing 75 make a raise about 7% likelier and a date about 7% likelier; studying hard teaches more if studious, less if sociable; nobody else is affected', Math.abs(brave - (0.09 - 0.04 + 0.02)) < 1e-9 && Math.abs(date - (0.09 - 0.04 + 0.02)) < 1e-9 && other === 0 && learnUp > 1.29 && learnDown < 0.91, JSON.stringify({ brave, date, learnUp, learnDown }));
     }
+    // Children and teens recover energy at night too (before Nov 2026 only adults did, so a played child stayed tired).
+    {
+      const kw = new LES.World(Object.assign({}, LES.DEFAULTS, { seed: 'kid-energy', founders: 80, play: 'random', playStage: 'child' })); Pl.begin(kw);
+      kw.step(); const kid = Pl.person(kw);
+      kid.energy = 20; kw.step(); const night = kid.energy;
+      const rest = Pl.HANDLERS.REST.minAge <= 3 && !Pl.HANDLERS.REST.adult;
+      check('A played child or teen recovers energy overnight and can ask to rest', !LES.P.isAdult(kw, kid) && night >= 55 && rest, `energy 20 -> ${night}`);
+    }
     // Answering a moment: the journal line has the result and the changes; the request is still made.
     const e = Pl.eventById('AD-002'), item = { uid: 'mt-1', ev: 'AD-002', day: w.day, expires: w.day + 9, params: { job: 'Clerk' } };
     w.player.inbox.push(item);

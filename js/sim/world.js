@@ -415,6 +415,7 @@
           LES.Goals.daily(this, p);
         } else {
           p.health += p.health < 90 ? 0.05 : 0;
+          if (p.energy < 100) p.energy = Math.min(100, p.energy + 40); // children sleep it off too (only a played child ever spends energy)
         }
         A.clampNeeds(p);
         if (p.health <= 0) { this.die(p, p.hunger > 50 ? 'starvation' : 'poor health'); continue; }
