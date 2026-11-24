@@ -108,7 +108,7 @@
     else if (m.type === 'int' || m.type === 'num') input = `<input id="set-${m.key}" type="number" step="${m.step || 1}" min="${m.min}" max="${m.max}" value="${v}">`;
     else if (m.key === 'seed') input = `<div class="seed-row"><input id="set-${m.key}" type="text" maxlength="40" value="${esc(v)}"><button class="ghost" id="set-random" type="button" title="${esc(G('Pick a random seed'))}">🎲</button></div>`;
     else input = `<input id="set-${m.key}" type="text" maxlength="40" value="${esc(v)}"${m.key === 'townName' ? ` placeholder="${esc(C.TOWN_NAME)}"` : ''}>`;
-    return `<div class="field" data-key="${m.key}"><label for="set-${m.key}">${esc(G(m.label))}</label>${input}${m.help ? `<div class="help">${esc(G(m.help))}</div>` : ''}</div>`;
+    return `<div class="field" data-key="${m.key}"${m.showIf ? ' data-showif="1"' : ''}><label for="set-${m.key}">${esc(G(m.label))}</label>${input}${m.help ? `<div class="help">${esc(G(m.help))}</div>` : ''}</div>`;
   }
 
   LES.Setup = {
@@ -195,7 +195,9 @@
       };
 
       const refresh = () => {
-        const v = LES.validateConfig(readForm(base));
+        const cfgNow = readForm(base);
+        for (const m of META) if (m.showIf) { const row = card.querySelector(`.field[data-key="${m.key}"]`); if (row) row.style.display = m.showIf(cfgNow) ? '' : 'none'; } // e.g. children per woman only for "A number"
+        const v = LES.validateConfig(cfgNow);
         $('set-msgs').innerHTML = v.blockers.map(b => `<div class="msg block">⛔ ${esc(LES.I18n.render(b))}</div>`).join('') // (translated by sentence patterns, PL-17)
           + v.warnings.map(x => `<div class="msg warn">⚠️ ${esc(LES.I18n.render(x))}</div>`).join('');
         $('set-start').disabled = v.blockers.length > 0;

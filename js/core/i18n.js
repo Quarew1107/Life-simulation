@@ -122,7 +122,10 @@
     if (code === 'en' || I.loaded(code) || typeof document === 'undefined') { finish(); return; }
     const s = document.createElement('script');
     s.src = `js/i18n/${code}.js`;
-    s.onload = () => { const s2 = document.createElement('script'); s2.src = `js/i18n/${code}-sentences.js`; s2.onload = finish; s2.onerror = finish; document.head.appendChild(s2); }; // and its sentence patterns
+    s.onload = () => { // then its sentence patterns, then the life moments' texts (js/i18n/<code>-moments.js)
+      const more = (src, next) => { const s2 = document.createElement('script'); s2.src = src; s2.onload = next; s2.onerror = next; document.head.appendChild(s2); };
+      more(`js/i18n/${code}-sentences.js`, () => more(`js/i18n/${code}-moments.js`, finish));
+    };
     s.onerror = () => { code = I.DEFAULT; finish(); };
     document.head.appendChild(s);
   };

@@ -101,10 +101,24 @@
     w.castN = (w.castN || 0) + 1;
     const R = new LES.RNG(`${w.cfg.seed}|cast|${w.castN}|${w.day}`), made = new Map();
     const born = s => w.day - Math.round(s.age) * 365;
-    // A child needs a cast parent at least 12 years older in the same household; otherwise
-    // they come as a young adult.
+    // A child needs a cast parent at least 12 years older in the same household; a child without one joins a
+    // family already in town (a resident 20-45 years older, and their partner), at the age chosen. Only when the
+    // town has no such family do they come as a young adult.
     const parentsOf = s => specs.filter(q => (s.parents || []).includes(q.id) && q.age >= ADULT && born(q) < born(s) - 12 * 365);
-    const isChild = s => s.age < ADULT && parentsOf(s).length > 0;
+    const hosts = new Map(); // child spec -> town parents
+    for (const s of specs) {
+      if (!(s.age < ADULT) || parentsOf(s).length) continue;
+      const age = Math.max(0, Math.round(s.age)), eth = C.NAMES[s.eth] ? s.eth : null;
+      const ok = q => q.alive && q.adult && !q.away && !q.inst && !q.custom && q.homeId >= 0 && P.age(w, q) >= age + 20 && P.age(w, q) <= Math.min(age + 45, 60);
+      let pool = w.people.filter(q => ok(q) && (!eth || q.eth === eth));
+      if (!pool.length) pool = w.people.filter(ok);
+      if (!pool.length) continue;
+      pool.sort((a, b) => ((b.partnerId !== null) - (a.partnerId !== null)) || (a.id - b.id)); // couples first
+      const couples = pool.filter(q => q.partnerId !== null), from = couples.length ? couples : pool;
+      const q = from[Math.floor(R.next() * from.length)], pt = q.partnerId !== null ? w.people[q.partnerId] : null;
+      hosts.set(s, pt && pt.alive && !pt.away && !pt.inst ? [q, pt] : [q]);
+    }
+    const isChild = s => s.age < ADULT && (parentsOf(s).length > 0 || hosts.has(s));
     for (const s of specs) if (!isChild(s)) made.set(s, makeAdult(w, R, Object.assign({}, s, { age: Math.max(ADULT, s.age) }), founder));
     // Couples: partners in the household (a man and a woman, as for every couple in town).
     for (const s of specs) {
@@ -129,9 +143,10 @@
     }
     for (const s of specs) {
       if (!isChild(s)) continue;
-      const ps = parentsOf(s).map(t => made.get(t));
+      const ps = hosts.has(s) ? hosts.get(s) : parentsOf(s).map(t => made.get(t));
       const c = makeChild(w, R, s, ps, founder), home = ps.find(q => q.isHead) || ps[0];
       F.setHome(w, c, home.homeId);
+      if (hosts.has(s)) { c.last = s.last || c.last; c.first = s.first || c.first; P.log(w, c, `Joined the ${ps[0].last} family`, 'life', 1); } // your own name, a town family
       made.set(s, c);
     }
     for (const p of made.values()) if (p.adult) { p.mcost = F.monthlyCost(w, p); p.nw = P.netWorth(w, p); p.peakNw = p.nw; }

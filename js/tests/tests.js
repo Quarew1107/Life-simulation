@@ -680,6 +680,10 @@
   // ---- My Cast: founders, households and replays ----
   async function castTests() {
     print('--- My Cast ---', 'info');
+    // A child you create without a parent in your cast joins a family already in town at the age you chose (it used
+    // to arrive as an 18-year-old), and can be played at that age.
+    const kids = [1, 5].map(age => { const spec = Object.assign(LES.Cast.blank(), { id: `lone${age}`, first: 'Kecil', last: 'Ujian', age }); const w = new LES.World(Object.assign({}, LES.DEFAULTS, { seed: `lone-${age}`, founders: 80, play: 'cast', playCast: `lone${age}`, cast: [spec] })); LES.Player.begin(w); const p = LES.Player.person(w); return { age, got: p ? Math.floor(LES.P.age(w, p)) : -1, ok: !!p && p.custom && p.first === 'Kecil' && (p.caregivers || []).length > 0 && p.homeId >= 0 && p.parents.length > 0 && !p.adult }; });
+    check('A 1- or 5-year-old you create on their own stays that age, joins a town family (carers, home) and is the one you play', kids.every(k => k.ok && k.got === k.age), JSON.stringify(kids));
     const spec = o => Object.assign(LES.Cast.blank(), o);
     const mum = spec({ id: 'm', first: 'Siti', sex: 'F', age: 34, partner: 'd', cash: 20000 }), dad = spec({ id: 'd', first: 'Ali', sex: 'M', age: 36, partner: 'm', att: [8, 5, 5, 5, 5, 5] });
     const kid = spec({ id: 'k', first: 'Adam', sex: 'M', age: 6, parents: ['m', 'd'], att: [9, 9, 9, 9, 9, 9] });
@@ -1052,9 +1056,12 @@
     }
     check("Firms of a kind never sell more than their market (it grows with the town)", months > 100 && over === 0, `${over} months over, ${months} months`);
     check('Some openings go to people from outside town', (w.stats.vacOutside || 0) > 0 && w.stats.hires > w.stats.vacOutside, `${w.stats.vacOutside} outside, ${w.stats.hires} hires`);
-    const pay = w.living.filter(p => p.job).map(p => Math.log(p.job.salary / LES.C.JOB_BY_ID[p.job.jobId].salary / w.price / 100)), m = pay.reduce((a, x) => a + x, 0) / pay.length;
-    const sd = Math.sqrt(pay.reduce((a, x) => a + (x - m) * (x - m), 0) / pay.length);
-    check('Pay within a job varies like real pay (log spread 0.25-0.6)', sd > 0.25 && sd < 0.6, sd.toFixed(2));
+    // Averaged over four towns: one town's spread swings by +-0.03 with its history (measured Nov 2026).
+    const spread = x => { const pay = x.living.filter(p => p.job).map(p => Math.log(p.job.salary / LES.C.JOB_BY_ID[p.job.jobId].salary / x.price / 100)), m = pay.reduce((a, v) => a + v, 0) / pay.length; return Math.sqrt(pay.reduce((a, v) => a + (v - m) * (v - m), 0) / pay.length); };
+    const sds = [spread(w)];
+    for (const seed of ['mk-2', 'mk-3', 'mk-4']) { const x = new LES.World(Object.assign({}, LES.DEFAULTS, { seed, founders: 120 })); for (let d = 0; d < 365 * 12; d++) { x.step(); if (d % 1500 === 0) await yieldUI(); } sds.push(spread(x)); }
+    const sd = sds.reduce((a, v) => a + v, 0) / sds.length;
+    check('Pay within a job varies like real pay (log spread 0.25-0.6, four towns)', sd > 0.25 && sd < 0.6, sds.map(v => v.toFixed(2)).join(', '));
     const top = w.biz.filter(b => b.open).map(b => b.lastRevenue / w.price / 100).sort((a, b) => b - a)[0] || 0;
     check('No firm grows beyond what a small town can buy', top < 2e6, `biggest monthly sales ${Math.round(top)}`);
     check('Classic rules keep the original unlimited markets', LES.PRESETS.classic.values.econModel === 'original' && LES.upgradeConfig({}).econModel === 'original' && w.cfg.econModel === 'calibrated');
@@ -1852,6 +1859,15 @@
   // and towns of all ages that keep roughly their size with each country's births, deaths and migration.
   async function populationTests() {
     print('--- Population balance (rules revision 10) ---', 'info');
+    // Birth rate as a number (plan part 1): the multiplier scales the national rate by the TFR asked for; very low or
+    // high numbers warn, out-of-range ones block; a town with more children per woman really has more births.
+    {
+      const D = LES.DEFAULTS, nat = LES.fertMultOf(Object.assign({}, D)), dbl = LES.fertMultOf(Object.assign({}, D, { fertility: 'custom', tfr: 3.2 }));
+      const vLow = LES.validateConfig(Object.assign({}, D, { fertility: 'custom', tfr: 1.0 })), vHigh = LES.validateConfig(Object.assign({}, D, { fertility: 'custom', tfr: 3.5 })), vBad = LES.validateConfig(Object.assign({}, D, { fertility: 'custom', tfr: 9 })), vOk = LES.validateConfig(Object.assign({}, D, { fertility: 'custom', tfr: 2 }));
+      const births = tfr => { let n = 0; for (const seed of ['tfr-a', 'tfr-b']) { const w = new LES.World(Object.assign({}, D, { seed, founders: 300, fertility: 'custom', tfr })); for (let d = 0; d < 365 * 15; d++) w.step(); n += LES.Calibration.periodTfr(w, 12).tfr / 2; } return +n.toFixed(2); };
+      const lo = births(1.0), hi = births(3.2);
+      check('Birth rate as a number: twice the national TFR doubles the rate; below 1.3 and above 3 warn, outside 0.3-6 blocks; more children per woman means more births', Math.abs(dbl - 2 * nat) < 1e-9 && vLow.warnings.some(x => /very low/.test(x)) && vHigh.warnings.some(x => /very high/.test(x)) && vBad.blockers.length > 0 && !vOk.warnings.some(x => /children per woman/.test(x)) && hi > lo * 2.2 && hi > 2.6, `children per woman measured ${lo} (asked 1.0) vs ${hi} (asked 3.2)`);
+    }
     const K = LES.Countries, D = LES.DEFAULTS, CR = LES.Crime, P = LES.P;
     const cfgOf = (c, rev, extra) => { K.use(c); return Object.assign({}, D, LES.PRESETS.national.values, { country: c, scenario: 'none', preset: 'national', rulesRev: rev }, extra || {}); };
     const at = (rev, crime) => CR.harm({ cfg: { rulesRev: rev, crime } });
@@ -2009,7 +2025,7 @@
       const b = make('pl4-a'); b.player.freq = 'important';
       for (let d = 0; d < 31; d++) b.step();
       check('"Important only" leaves out small moments; balanced shows them', !!item && !b.player.inbox.some(x => x.ev === 'ZZ-TEST'));
-      check('Journal lines read as sentences: a new decision and what you chose', I.render(a.player.journal.find(e => e.kind === 'event')).includes('New decision') && I.t('evt.chose', { choice: { key: 'ev.AD-001.ambitious' } }) === 'You chose: Go for the best-paid opening');
+      check('Journal lines read as sentences: a new decision and what you chose', I.render(a.player.journal.find(e => e.kind === 'event')).includes('New decision') && I.t('evt.chose', { choice: { key: 'ev.AD-001.ambitious' } }) === `You chose: ${I.t('ev.AD-001.ambitious')}` && I.t('ev.AD-001.ambitious') !== 'ev.AD-001.ambitious');
     } finally { Pl.EVENTS.splice(0, Pl.EVENTS.length, ...saved); }
     // Already applied by your character's own routine: the reply names the job and when it is decided.
     const c = make('pl4-c'), p = Pl.person(c);
@@ -2757,7 +2773,7 @@
       return { v, p, stops, quiet, allowed, always };
     };
     // Balanced: never more stops than the budget allows (crises always stop), and the budget really bites.
-    const a = live('pace-a', 'adult', 20);
+    let a; for (const seed of ['pace-a', 'pace-b', 'pace-c', 'pace-d']) { a = live(seed, 'adult', 20); if (!a.v.player.ended) break; } // a life that lasts the 20 years (one may leave town or die early)
     check('Balanced: over 20 adult years, important stops stay within the yearly budget (crises always stop)', a.stops <= Math.ceil(a.allowed) + a.always && a.stops >= 10 && a.v.checkInvariants().length === 0, `${a.stops} stops (budget ${a.allowed.toFixed(1)} + ${a.always} crises), ${a.quiet} decided quietly`);
     // The rule itself: one stop in hand; a second the same day is over budget; a crisis always stops but uses budget;
     // a year at 1.5 a year brings the budget back (never more than 1.5 saved up).
@@ -3210,6 +3226,174 @@
     K.use(was);
   }
 
+  // The redesigned life moments (Nov 2026, js/sim/player-moments.js): visible effects, traits, closeness, memories and callbacks.
+  async function momentTests() {
+    print('--- Life moments: effects, traits, memories and callbacks ---', 'info');
+    const Pl = LES.Player, I = LES.I18n;
+    const orig = Pl.EVENTS.filter(e => !e.callback && !e.fresh && !e.id.startsWith('FR-') && !e.id.startsWith('CP-')), cbs = Pl.EVENTS.filter(e => e.callback && !e.fresh), fresh = Pl.EVENTS.filter(e => e.fresh);
+    let noFx = [], noText = [];
+    for (const e of Pl.EVENTS) {
+      e.choices.forEach(c => { if (!Pl.effectsOf(e.id, c.id)) noFx.push(`${e.id}.${c.id}`); for (const k of [`ev.${e.id}.${c.id}`, `ev.${e.id}.${c.id}.res`]) if (I.t(k) === k) noText.push(k); });
+      for (const k of [`ev.${e.id}.title`, `ev.${e.id}.body`]) if (I.t(k) === k) noText.push(k);
+    }
+    check('All 320 moments and 40 callbacks have effects and English texts (title, situation, choices, results)', orig.length === 320 && cbs.length === 40 && !noFx.length && !noText.length, `${noFx.slice(0, 5)} ${noText.slice(0, 5)}`);
+    const per = {}; for (const e of fresh) { const k = e.id.slice(0, 2); per[k] = (per[k] || 0) + 1; }
+    const weak = fresh.filter(e => e.choices.some(c => { const f = Pl.effectsOf(e.id, c.id) || {}; return !(c.cmd || f.trait || f.bond || f.rep || f.grow || f.their || f.susp || f.cost || f.mem); })).map(e => e.id);
+    check('The new moments: at least 10 for each stage, 20 for adults and 10 about affairs (mature stories only), each choice with a real effect besides mood', per.BA >= 10 && per.CH >= 10 && per.TE >= 10 && per.AD >= 20 && per.SE >= 10 && per.AF >= 10 && fresh.filter(e => e.id.startsWith('AF')).every(e => e.mature) && fresh.every(e => Pl.CONDITIONS[e.when] || !e.when) && !weak.length, JSON.stringify(per) + weak.join(','));
+    check('Every callback borrows a real situation and needs its memory', cbs.every(e => Pl.CONDITIONS[e.when] && (Pl.CALLBACKS.find(c => c.id === e.id) || {}).mem === e.callback));
+    // Balance: the mood the reactions add stays close to the old reactions, stage by stage (per choice, on average).
+    const stageOf = id => id.slice(0, 2), sums = {};
+    for (const e of orig) e.choices.forEach(c => { const k = stageOf(e.id), x = sums[k] = sums[k] || { n: 0, oh: 0, os: 0, nh: 0, ns: 0 }, f = c.story && c.fx ? Pl.FX[c.fx] || {} : {}, n = Pl.effectsOf(e.id, c.id) || {}; x.n++; x.oh += f.happy || 0; x.os += f.stress || 0; x.nh += n.happy || 0; x.ns += n.stress || 0; });
+    const off = Object.entries(sums).filter(([, x]) => Math.abs(x.nh - x.oh) / x.n > 0.5 || Math.abs(x.ns - x.os) / x.n > 0.5).map(([k]) => k);
+    check('Balance: on average the new choices change happiness and stress by about as much as the old ones (within 0.5 a choice)', !off.length, off.join(',') + JSON.stringify(sums.AD));
+    // Effects are applied, limited and shown; children grow, adults do not; closeness and memories are kept.
+    const w = new LES.World(Object.assign({}, LES.DEFAULTS, { seed: 'moments', founders: 80, play: 'random', playStage: 'adult' })); Pl.begin(w);
+    for (let d = 0; d < 5; d++) w.step();
+    const p = Pl.person(w);
+    if (!p) { check('A played life to test with', false); return; }
+    p.happy = 99; p.stress = 50;
+    const got = Pl.applyEffects(w, p, { happy: 4, stress: -3, trait: ['kind', 'kind'], rep: 2, mem: 'test_memory', grow: 'INT' }, {});
+    const txt = I.render(Pl.fxText(got));
+    check('A choice changes mood (within limits), traits, standing and memories, and says exactly what changed', p.happy === 100 && p.stress === 47 && w.player.traits.kind === 2 && w.player.rep === 52 && w.player.memories.test_memory === w.day && /happiness \+1/.test(txt) && /stress -3/.test(txt) && /Kind/.test(txt) && (LES.P.isAdult(w, p) ? !got.some(g => g[0] === 'grow') : got.some(g => g[0] === 'grow')), txt);
+    const q = w.living.find(x => x !== p && x.alive && !x.away);
+    Pl.applyEffects(w, p, { bond: [['other', 6]] }, { other: LES.P.name(q), pid: q.id });
+    check('Closeness grows with the person the moment named', w.player.bonds[q.id] === 36 && Pl.character(w, p).bonds[0][0] === q);
+    // A callback can only come once its memory exists.
+    const cb = cbs.find(e => ['always', 'sAny', 'teenAny', 'aCivic'].includes(Pl.eventById((Pl.CALLBACKS.find(c => c.id === e.id) || {}).from).when));
+    const was = Object.assign({}, w.player.memories); w.player.memories = {};
+    const before = !!Pl.CONDITIONS[cb.when](w, p); w.player.memories[cb.callback] = w.day; const after = !!Pl.CONDITIONS[cb.when](w, p); w.player.memories = was;
+    check('A callback moment waits for the memory of the earlier choice', !before && after, cb.id);
+    // Affairs (mature stories): suspicion grows with choices; at 100 the partner finds out and decides; confessing is a request.
+    const pt = w.living.find(x => x !== p && x.adult && x.sex !== p.sex && x.alive && !x.away && !x.inst && x.partnerId === null), lover = w.living.find(x => x !== p && x !== pt && x.adult && x.alive && !x.away);
+    if (pt && lover) {
+
+      p.partnerId = pt.id; pt.partnerId = p.id; w.player.mature = true; w.player.affair = { pid: lover.id, since: w.day - 200, susp: 30 };
+      const on = Pl.CONDITIONS.affairOn(w, p) && Pl.CONDITIONS.affairLong(w, p) && !Pl.CONDITIONS.affairSuspect(w, p);
+      const g1 = Pl.applyEffects(w, p, { susp: 15, their: [['partner', 'stress', 3]] }, Pl.PARAMS.affair(w, p));
+      const sus = Pl.CONDITIONS.affairSuspect(w, p) && g1.some(x => x[0] === 'susp') && g1.some(x => x[0] === 'their');
+      Pl.applyEffects(w, p, { susp: 60 }, Pl.PARAMS.affair(w, p));
+      const out = !w.player.affair && Pl.CONDITIONS.affairFound(w, p) && Pl.CONDITIONS.affairOver(w, p);
+      check('Affairs: suspicion rises with choices, the suspicious moments open at 40, at 100 the partner finds out; the moods of other people change and show', on && sus && out, JSON.stringify({ on, sus, out }));
+      w.player.affair = { pid: lover.id, since: w.day, susp: 0 };
+      if (p.partnerId === null) { p.partnerId = pt.id; pt.partnerId = p.id; }
+      const conf = Pl.HANDLERS.CONFESS, ok = !conf.check(w, p), r2 = ok ? conf.run(w, p) : null;
+      check('Confessing ends the affair and the partner decides whether to stay', ok && r2 && ['left', 'stayed'].includes(r2.code) && !w.player.affair && I.t(`cmd.CONFESS.${r2.code}`, r2.params).length > 10);
+      w.player.mature = false;
+    }
+    const langs = ['ja', 'ko', 'es'], miss = [];
+    for (const l of langs) { await new Promise(r => I.set(l, r)); for (const e of fresh) if (I.t(`ev.${e.id}.title`) === I.t(`ev.${e.id}.title`) && !I.has(`ev.${e.id}.title`, l)) miss.push(`${l}:${e.id}`); }
+    await new Promise(r => I.set('en', r));
+    check('The new moments are written in all five languages', !miss.length, miss.slice(0, 5).join(','));
+    // Plan part 3: traits and standing move the odds a little, with a downside for each trait; only for the played character.
+    {
+      const keepT = w.player.traits, keepR = w.player.rep;
+      w.player.traits = { brave: 10, careful: 5 }; w.player.rep = 75;
+      const brave = Pl.traitOdds(w, p, 'ASK_RAISE'), date = Pl.traitOdds(w, p, 'ASK_DATE'), other = Pl.traitOdds(w, q, 'ASK_RAISE');
+      const s0 = p.stress = 50; Pl.MONTHLY.forEach(f => { try { f(w, p); } catch (e) { /* other monthly work */ } });
+      w.player.traits = { studious: 5 }; const learnUp = Pl.traitLearn(w); w.player.traits = { sociable: 2 }; const learnDown = Pl.traitLearn(w);
+      w.player.traits = keepT; w.player.rep = keepR;
+      check('Traits matter a little: brave (level 3) + careful (2) + standing 75 make a raise about 7% likelier and a date about 7% likelier; studying hard teaches more if studious, less if sociable; nobody else is affected', Math.abs(brave - (0.09 - 0.04 + 0.02)) < 1e-9 && Math.abs(date - (0.09 - 0.04 + 0.02)) < 1e-9 && other === 0 && learnUp > 1.29 && learnDown < 0.91, JSON.stringify({ brave, date, learnUp, learnDown }));
+    }
+    // Answering a moment: the journal line has the result and the changes; the request is still made.
+    const e = Pl.eventById('AD-002'), item = { uid: 'mt-1', ev: 'AD-002', day: w.day, expires: w.day + 9, params: { job: 'Clerk' } };
+    w.player.inbox.push(item);
+    const r = Pl.choose(w, 'mt-1', e.choices[1].id), last = w.player.journal[w.player.journal.length - 1];
+    check('Choosing shows the result and what changed in the journal and the pop-up', r && r.shown && last.key === 'evt.choseRes' && I.render(last).length > 20, I.render(last));
+  }
+
+  // Play a Life plan part 4: friends for every age (js/sim/player-friends.js).
+  async function friendTests() {
+    print('--- Friends: closeness, meeting people, help, drifting apart ---', 'info');
+    const Pl = LES.Player, P = LES.P, I = LES.I18n;
+    const w = new LES.World(Object.assign({}, LES.DEFAULTS, { seed: 'friends', founders: 150, play: 'random', playStage: 'adult' })); Pl.begin(w);
+    for (let d = 0; d < 3; d++) w.step();
+    const p = Pl.person(w), H = Pl.HANDLERS;
+    const pool = w.living.filter(q => q !== p && q.alive && !q.away && !q.inst && Pl.friendAgeOk(w, p, q) && q.id !== p.partnerId && !p.parents.includes(q.id) && !p.children.includes(q.id));
+    const kid = w.living.find(q => !P.isAdult(w, q) && q.alive);
+    check('Adults can make friends with adults within 12 years (not with children), up to 12 friends', pool.length > 3 && !H.MAKE_FRIEND.check(w, p, { pid: pool[0].id }) && H.MAKE_FRIEND.check(w, p, { pid: kid.id }) === 'not_found' && Pl.FRIENDS_MAX === 12);
+    const [a, b, c] = pool;
+    Pl.addFriend(w, a, 'met', 40); Pl.addFriend(w, b, 'online', 20); Pl.addFriend(w, c, 'met', 75);
+    let r = null; for (let k = 0; k < 20 && !(r && r.code === 'ok'); k++) r = H.HANG_OUT.run(w, p, { pid: a.id });
+    check('Spending time together brings you closer and lifts both moods (the friend can be busy)', r.code === 'ok' && w.player.bonds[a.id] === 48 && I.t(`cmd.HANG_OUT.${r.code}`, r.params).includes(P.name(a)));
+    // Drifting: a friend you have not seen for two months loses closeness; one below 10 ends; close friends ease stress.
+    const fb = w.player.friends.find(f => f.id === b.id); fb.seen = w.day - 90; w.player.bonds[b.id] = 11;
+    const fa = w.player.friends.find(f => f.id === a.id); fa.seen = w.day;
+    p.stress = 50; const before = w.player.bonds[a.id];
+    const sameAB = p.homeId === b.homeId || (p.job && b.job && p.job.place === b.job.place);
+    Pl.MONTHLY.forEach(f => { try { f(w, p); } catch (e) { /* other monthly work */ } });
+    check('Friends you do not see drift apart (one below closeness 10 ends, in the journal); close friends ease stress', (sameAB || !Pl.isFriend(w, b)) && w.player.bonds[a.id] === before && p.stress < 50 && (sameAB || w.player.journal.some(e => e.key === 'fr.drifted')));
+    // A loan from a friend moves real money and is paid back automatically.
+    c.cash = Math.max(c.cash, w.px(20000)); const cash0 = p.cash; let lr = null;
+    for (let k = 0; k < 30 && !(lr && lr.code === 'ok_money'); k++) { w.player.loans = []; lr = H.ASK_HELP.run(w, p, { pid: c.id, kind: 'money' }); }
+    const owed = (w.player.loans || [])[0];
+    check('A close friend can lend you money (real cash), paid back over six months', lr.code === 'ok_money' && owed && p.cash > cash0 && owed.monthly * 6 >= owed.amt);
+    // A friend's word with their employer counts a little, only for the played character.
+    const v = { id: 999999 }; w.player.referral = { vac: v.id, pid: c.id };
+    check('A friend’s recommendation counts a little with their employer, and only for you', Pl.referralFor(w, p, v) === 0.06 && Pl.referralFor(w, a, v) === 0);
+    w.player.introduced = { pid: b.id, day: w.day, by: a.id };
+    check('A date with someone a friend introduced you to is a little likelier', Pl.introBonus(w, b) === 0.1 && Pl.introBonus(w, c) === 0);
+    const fev = ['FR-001', 'FR-002', 'FR-003'].map(id => Pl.eventById(id));
+    const miss = [];
+    for (const code of ['en', 'zh-Hans', 'ja', 'ko', 'es']) { await new Promise(res => I.set(code, res)); for (const e of fev) for (const ch of e.choices) for (const k of [`ev.${e.id}.${ch.id}`, `ev.${e.id}.${ch.id}.res`]) if (!I.has(k, code)) miss.push(`${code}:${k}`); for (const k of ['act.HANG_OUT', 'cmd.ASK_HELP.ok_money', 'fr.note']) if (!I.has(k, code)) miss.push(`${code}:${k}`); }
+    await new Promise(res => I.set('en', res));
+    check('Friends come to you (an invitation, a friend in trouble, good news), every choice with an effect, in all five languages', fev.every(e => e && e.choices.every(ch => Pl.effectsOf(e.id, ch.id))) && !miss.length, miss.slice(0, 4).join(','));
+  }
+
+  // Play a Life plan part 5: closeness with your partner (js/sim/player-couple.js).
+  async function coupleTests() {
+    print('--- Couples: closeness, date nights, breakups, couple moments ---', 'info');
+    const Pl = LES.Player, P = LES.P, I = LES.I18n;
+    let w = null, p = null, q = null;
+    for (const seed of ['couple-a', 'couple-b', 'couple-c', 'couple-d']) {
+      w = new LES.World(Object.assign({}, LES.DEFAULTS, { seed, founders: 150, play: 'random', playStage: 'adult' })); Pl.begin(w);
+      for (let d = 0; d < 3; d++) w.step();
+      p = Pl.person(w); q = p && p.partnerId !== null ? w.people[p.partnerId] : null;
+      if (q && q.alive && !q.away && !q.inst) break;
+    }
+    if (!q) { check('A played adult with a partner to test with', false); return; }
+    const other = w.living.find(x => x.partnerId !== null && x.id !== p.id && x.id !== q.id), oq = w.people[other.partnerId];
+    check('A couple starts at closeness 60; the breakup chance is x1 at 60, x0.5 at 90, x2 at 30, and every other couple is unchanged', Pl.partnerBond(w, q) === 60 && Pl.coupleMul(w, p, q) === 1 && Pl.coupleMul(w, other, oq) === 1
+      && ((w.player.bonds = Object.assign(w.player.bonds || {}, { [q.id]: 90 })), Pl.coupleMul(w, q, p) === 0.5) && ((w.player.bonds[q.id] = 30), Pl.coupleMul(w, p, q) === 2));
+    // Each month: time together and a marriage help; stress and neglect hurt.
+    w.player.bonds[q.id] = 60; w.player.coupleTime = w.day - 90; p.stress = 80; q.stress = 80;
+    Pl.MONTHLY.forEach(f => { try { f(w, p); } catch (e) { /* other monthly work */ } });
+    const cold = Pl.partnerBond(w, q);
+    let r = null; p.energy = 100; for (let k = 0; k < 30 && !(r && r.code === 'ok'); k++) r = Pl.HANDLERS.DATE_NIGHT.run(w, p, {});
+    check('Stress and no time together push you apart; a date night brings you closer (the partner decides)', cold === 57 && r.code === 'ok' && Pl.partnerBond(w, q) === cold + 6 && I.t(`cmd.DATE_NIGHT.${r.code}`, r.params).includes(P.name(q)));
+    const cps = ['CP-001', 'CP-002', 'CP-003', 'CP-004'].map(id => Pl.eventById(id)), miss = [];
+    for (const code of ['en', 'zh-Hans', 'ja', 'ko', 'es']) { await new Promise(res => I.set(code, res)); for (const e of cps) for (const ch of e.choices) for (const k of [`ev.${e.id}.${ch.id}`, `ev.${e.id}.${ch.id}.res`]) if (!I.has(k, code)) miss.push(`${code}:${k}`); for (const k of ['act.DATE_NIGHT', 'love.closeNote', 'love.cold']) if (!I.has(k, code)) miss.push(`${code}:${k}`); }
+    await new Promise(res => I.set('en', res));
+    check('Your partner comes to you (more time together, an anniversary, an argument, a bigger home), every choice with an effect, in all five languages', cps.every(e => e && e.choices.every(ch => Pl.effectsOf(e.id, ch.id))) && !miss.length, miss.slice(0, 4).join(','));
+  }
+
+  // Play a Life plan part 6: every president's law changes go to the council (government.js), and a played
+  // president can propose changes and meet officials (js/sim/player-politics.js).
+  async function councilVoteTests() {
+    print('--- The council votes on law changes ---', 'info');
+    const Pl = LES.Player, GV = LES.Gov, I = LES.I18n;
+    const w = new LES.World(Object.assign({}, LES.DEFAULTS, { seed: 'council', founders: 200, play: 'random', playStage: 'adult' })); Pl.begin(w);
+    for (let d = 0; d < 365 * 12; d++) w.step();
+    const votes = w.gov.votes || [], kinds = new Set(votes.map(v => v.why));
+    check('Presidents’ law changes go to the council: each vote is recorded with every official’s yes or no and reason', votes.length > 3 && votes.every(v => v.votes.length <= 3 && v.pass === (v.yes >= v.no)) && kinds.has('platform'), `${votes.length} votes: ${[...kinds].join(',')}`);
+    const passed = votes.filter(v => v.pass).length, laws = w.gov.lawLog.filter(l => ['platform', 'emergency', 'surplus'].includes(l.why)).length;
+    check('Only changes the council passes become law (rejected ones are in the news)', laws === passed && (votes.length === passed || w.feed.some(f => /The council rejected/.test(f.text))), `${passed} passed, ${laws} changed`);
+    // A played president: propose a change, meet an official first.
+    const p = Pl.person(w);
+    if (!p || !p.alive) { check('A played adult to test the presidency with', false); return; }
+    w.gov.president = p.id; LES.Council.reshuffle(w);
+    const law = GV.LAWS.find(l => l.options.length > 1), to = law.options.find(o => String(o[0]) !== String(w.gov.laws[law.key]))[0];
+    const lean = Pl.lawLean(w, law.key, to);
+    let met = null; for (let k = 0; k < 20 && !(met && met.code === 'ok'); k++) met = Pl.HANDLERS.MEET_OFFICIAL.run(w, p, { role: 'treasurer' });
+    const before = GV.councilLean(w, 'treasurer', w.gov.officials.treasurer, law.key, to, 'player', GV.townStats(w)).score;
+    w.player.persuaded.treasurer = w.day - 100; const after = GV.councilLean(w, 'treasurer', w.gov.officials.treasurer, law.key, to, 'player', GV.townStats(w)).score;
+    w.player.persuaded.treasurer = w.day;
+    const ok = !Pl.HANDLERS.PROPOSE_LAW.check(w, p, { key: law.key, v: String(to) }), r = Pl.HANDLERS.PROPOSE_LAW.run(w, p, { key: law.key, v: String(to) });
+    const lines = w.player.journal.filter(e => e.key === 'vote.line');
+    check('A played president proposes a change: the council votes, the journal lists each vote and why; meeting an official first wins them over for 60 days', lean.length === 3 && met.code === 'ok' && before - after > 0.5 && ok && ['passed', 'rejected'].includes(r.code) && (r.code === 'passed') === (String(w.gov.laws[law.key]) === String(to)) && lines.length >= 1 && I.render(lines[0]).length > 10, `${r.code} ${I.render(lines[0] || {})}`);
+    const other = Pl.HANDLERS.PROPOSE_LAW.check(w, w.living.find(x => x.id !== p.id && x.adult), { key: law.key, v: String(to) });
+    check('Only the head of the town can propose', other === 'not_president');
+  }
+
   // Art upgrade Phase 5A: inside schools, offices, shops, food places, hospitals and the welfare office.
   async function publicRoomTests() {
     print('--- Inside public buildings (learning, office, shops, food, health): plans, staff and visitors ---', 'info');
@@ -3413,6 +3597,10 @@
       await homeKindTests();
       await publicRoomTests();
       await townArtTests();
+      await momentTests();
+      await friendTests();
+      await coupleTests();
+      await councilVoteTests();
       await buildingArtTests();
       await crimeRevTests();
       await wealthRevTests();
@@ -3448,6 +3636,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, roomTests, memoryTests, homeKindTests, publicRoomTests, townArtTests, heldTests, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, playFlowTests, playCatalogTests, playPacingTests, playMatrixTests, i18nSentenceTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, roomTests, memoryTests, homeKindTests, publicRoomTests, townArtTests, momentTests, friendTests, coupleTests, councilVoteTests, heldTests, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, playFlowTests, playCatalogTests, playPacingTests, playMatrixTests, i18nSentenceTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

@@ -50,7 +50,7 @@
         const g = carer(w, p), R = Pl.rng(w);
         const yes = U.clamp(0.25 + 0.45 * g.pers.resp / 100 + 0.15 * p.att[C.CHA] / 10 + (LEARNING.has(a.club) && g.strategy === 'EDU' ? 0.15 : 0), 0.05, 0.9);
         const params = { carer: name(g), club: { key: `club.${a.club}` }, fee: U.fmtMoney(Pl.clubFee(w)) };
-        if (R.next() >= yes) return { code: 'refused', params };
+        if (R.next() >= yes + Pl.traitOdds(w, p, 'ASK_CLUB')) return { code: 'refused', params };
         st(w).club = { id: a.club, payer: g.id, since: w.day };
         st(w).played = true;
         return { code: 'ok', params };
@@ -71,7 +71,7 @@
       run(w, p, a) {
         const g = carer(w, p), R = Pl.rng(w), params = { carer: name(g), amt: U.fmtMoney(Pl.allowanceAmt(w)) };
         const yes = U.clamp(0.2 + 0.4 * g.pers.resp / 100 + (a.chores ? 0.2 : 0) + 0.1 * p.att[C.CHA] / 10, 0.05, 0.9);
-        if (R.next() >= yes) return { code: 'refused', params };
+        if (R.next() >= yes + Pl.traitOdds(w, p, 'ASK_ALLOWANCE')) return { code: 'refused', params };
         st(w).allowance = { payer: g.id, amt: Pl.allowanceAmt(w), chores: !!a.chores, since: w.day };
         st(w).played = true;
         return { code: a.chores ? 'ok_chores' : 'ok', params };
@@ -82,20 +82,20 @@
       run(w) { st(w).club = null; st(w).allowance = null; return { code: 'ok', params: {} }; },
     },
     MAKE_FRIEND: {
-      hours: 2, cooldown: 7, minAge: 3, maxAge: 17, key: a => `friend:${a.pid}`,
+      hours: 2, cooldown: 7, minAge: 3, key: a => `friend:${a.pid}`, // any age since plan part 4 (player-friends.js)
       check(w, p, a) {
         const q = w.people[a.pid], s = st(w);
-        if (!q || !q.alive || q.away || q === p || P.isAdult(w, q) || Math.abs(P.age(w, q) - P.age(w, p)) > 2.5) return 'not_found';
+        if (!q || !q.alive || q.away || q === p || !(Pl.friendAgeOk ? Pl.friendAgeOk(w, p, q) : !P.isAdult(w, q) && Math.abs(P.age(w, q) - P.age(w, p)) <= 2.5)) return 'not_found';
         if ((s.friends || []).some(f => f.id === q.id)) return 'already_friend';
-        return (s.friends || []).length >= 6 ? 'too_many' : null;
+        return (s.friends || []).length >= (Pl.FRIENDS_MAX || 6) ? 'too_many' : null;
       },
       params(w, p, a) { const q = w.people[a.pid]; return { other: q ? name(q) : '' }; },
       run(w, p, a) {
         const q = w.people[a.pid], R = Pl.rng(w), s = st(w);
         const sim = 1 - C.PERS.reduce((t, k) => t + Math.abs(p.pers[k] - q.pers[k]), 0) / (100 * C.PERS.length);
         const yes = U.clamp(0.2 + 0.4 * sim + 0.25 * p.att[C.CHA] / 10, 0.1, 0.85);
-        if (R.next() >= yes) return { code: 'refused', params: { other: name(q) } };
-        (s.friends = s.friends || []).push({ id: q.id, since: w.day });
+        if (R.next() >= yes + Pl.traitOdds(w, p, 'MAKE_FRIEND')) return { code: 'refused', params: { other: name(q) } };
+        if (Pl.addFriend) Pl.addFriend(w, q, a.how || 'met', 40); else (s.friends = s.friends || []).push({ id: q.id, since: w.day });
         p.happy = Math.min(90, p.happy + 5); s.played = true;
         return { code: 'ok', params: { other: name(q) } };
       },
@@ -122,7 +122,7 @@
       }
     }
     if (P.age(w, p) >= 6) {
-      if (s.effort === 'hard') { boost(w, p, C.INT, 0.003); p.happy = Math.max(25, p.happy - 1); }
+      if (s.effort === 'hard') { boost(w, p, C.INT, 0.003 * (Pl.traitLearn ? Pl.traitLearn(w) : 1)); p.happy = Math.max(25, p.happy - 1); }
       else if (s.effort === 'relaxed') { boost(w, p, C.INT, -0.0015); p.happy = Math.min(90, p.happy + 1); }
     }
     s.friends = (s.friends || []).filter(f => { const q = w.people[f.id]; return q && q.alive && !q.away; }); // moved away or died

@@ -334,6 +334,7 @@
       u -= 0.5 * (Math.abs(p.pol.econ - cand.pol.econ) + Math.abs(p.pol.soc - cand.pol.soc));
       u += idW * (0.25 * (p.eth === cand.eth ? 1 : 0) + 0.25 * (p.rel && p.rel === cand.rel ? 1 : 0));
       u += 0.08 * (cand.att[C.CHA] - 5) + 0.22 * Math.log10(1 + c.spend / w.px(5000));
+      if (w.player && w.player.id === cand.id && w.player.rep !== undefined) u += 0.3 * (w.player.rep - 50) / 50; // Play a Life: the played candidate's standing in town
       if (c.incumbent) u += 0.4 + (g.approval - 50) / 22; // name recognition, plus the record
       u += -Math.log(-Math.log(Math.max(1e-9, R.next()))); // Gumbel noise: a logit choice
       if (u > best) { second = best; best = u; choice = i; } else if (u > second) second = u;
@@ -381,11 +382,13 @@
     while (g.agenda && g.agenda.length) {
       const { key, v } = g.agenda.shift();
       if (g.laws[key] === v) continue;
-      setLaw(w, key, v, 'platform');
+      propose(w, key, v, 'platform');
       return;
     }
+    const i = (g.retry || []).findIndex(r => r.day <= w.day); // a rejected platform law, tried once more
+    if (i >= 0) { const r = g.retry.splice(i, 1)[0]; if (g.laws[r.key] !== r.v && r.by === g.president) propose(w, r.key, r.v, 'platform', true); }
   }
-  function setLaw(w, key, v, why) {
+  function setLaw(w, key, v, why, vote) {
     const g = w.gov, old = g.laws[key];
     if (g.frozen) return; // laws held fixed (experiments, tests)
     g.laws[key] = v;
@@ -393,8 +396,60 @@
     g.lawLog.push({ day: w.day, key, from: old, to: v, by: g.president, why });
     if (g.lawLog.length > 200) g.lawLog.shift();
     const pres = g.president >= 0 ? w.people[g.president] : null;
-    w.pushFeed({ day: w.day, pid: pres ? pres.id : -1, text: `${pres ? `${GV.title(w)} ${P.name(pres)}` : 'The town council'} changed the law: ${GV.LAW_BY_KEY[key].name} → ${GV.optName(key, v)}${why === 'austerity' ? ' (the treasury is deep in debt)' : why === 'emergency' ? ' (emergency)' : why === 'surplus' ? ' (the treasury has money to spare)' : ''}`, cat: 'politics', imp: 2 });
+    w.pushFeed({ day: w.day, pid: pres ? pres.id : -1, text: `${pres ? `${GV.title(w)} ${P.name(pres)}` : 'The town council'} changed the law: ${GV.LAW_BY_KEY[key].name} → ${GV.optName(key, v)}${vote && vote.votes.length ? ` (council ${vote.yes}-${vote.no})` : ''}${why === 'austerity' ? ' (the treasury is deep in debt)' : why === 'emergency' ? ' (emergency)' : why === 'surplus' ? ' (the treasury has money to spare)' : ''}`, cat: 'politics', imp: 2 });
   }
+
+  // ---- The council votes (plan part 6, Nov 2026) ----
+  // A law change the president wants (their platform, an emergency, a budget surplus, or a played president's
+  // proposal) goes to the three officials. It passes with at least as many yes as no among those in post (an empty
+  // council lets it through). Each official weighs their own politics against the change, their job (the treasurer
+  // the cost and the debt; the police chief policing; the community director aid and services), loyalty to the
+  // president who appointed them (more for a relative), caution, how popular the president is, urgency, and some
+  // chance. A rejected platform law may be tried once more after six months. Austerity (forced by debt) and
+  // scenario rules are not voted on. Tuned so presidents get about 80% of their changes through.
+  GV.COUNCIL_REV = 12; // rules revision 12; older worlds and saves change laws as before (no vote)
+  const VOTED = new Set(['platform', 'emergency', 'surplus', 'player']);
+  const POLICE_KEYS = new Set(['police', 'drugPolicy', 'recordCheck', 'barBan']), CARE_KEYS = new Set(['cashAid', 'ubi', 'schools', 'health', 'affirm', 'uniFees', 'fuelSubsidy']);
+  // An official's leaning on a change, without the chance part: { score, yes, no } (yes / no: the main reason).
+  GV.councilLean = function (w, role, o, key, v, why, ts) {
+    const g = w.gov, law = GV.LAW_BY_KEY[key], cur = g.laws[key], p = o.id >= 0 ? w.people[o.id] : null;
+    const pol = (p && p.pol) || { econ: 0, soc: 0 }, resp = p ? p.pers.resp : 50, pres = g.president >= 0 ? w.people[g.president] : null;
+    const dE = axis(law, v, 'econ') - axis(law, cur, 'econ'), dS = axis(law, v, 'soc') - axis(law, cur, 'soc');
+    const parts = { politics: 0.9 * (dE * pol.econ + dS * pol.soc), loyal: 0.47 + (o.crony ? 0.4 : 0), job: 0, caution: -0.4 * Math.max(0, (resp - 50) / 50), mood: (g.approval - 50) / 80, urgent: why === 'emergency' ? 0.8 : 0, persuaded: 0 };
+    if (role === 'treasurer') { const b = ts ? GV.burden(w, key, v, ts) : 0; parts.job = -3 * b - (g.debt > 0 && b > 0 ? 0.4 : 0); }
+    else if (role === 'police' && POLICE_KEYS.has(key)) parts.job = key === 'police' ? (Number(v) > Number(cur) ? 0.6 : -0.6) : -0.5 * dS;
+    else if (role === 'community' && CARE_KEYS.has(key)) parts.job = dE < 0 ? 0.5 : dE > 0 ? -0.5 : 0;
+    const s = w.player, pr = s && pres && s.id === pres.id && s.persuaded && s.persuaded[role];
+    if (pr && w.day - pr <= 60) parts.persuaded = 0.6; // the played president met them
+    const score = Object.values(parts).reduce((a, b) => a + b, 0);
+    const pos = Object.entries(parts).filter(([k, x]) => x > 0 && k !== 'loyal').sort((a, b) => b[1] - a[1]), neg = Object.entries(parts).filter(([, x]) => x < 0).sort((a, b) => a[1] - b[1]);
+    return { score, yes: pos.length ? pos[0][0] : 'loyal', no: neg.length ? neg[0][0] : 'politics' };
+  };
+  GV.councilVote = function (w, key, v, why) {
+    const g = w.gov, ts = townStats(w), R = new LES.RNG(`${w.cfg.seed}|council|${w.townIdx || 0}|${w.day}|${key}|${v}`), votes = []; // its own dice: a vote that passes changes nothing else
+    for (const role of LES.Council.ORDER) {
+      const o = g.officials && g.officials[role];
+      if (!o) continue;
+      const l = GV.councilLean(w, role, o, key, v, why, ts), yes = l.score + R.normal(0, 0.45) > 0;
+      votes.push({ role, id: o.id, name: LES.Council.name(w, o), yes, reason: yes ? l.yes : l.no });
+    }
+    const yes = votes.filter(x => x.yes).length;
+    return { pass: yes >= votes.length - yes, yes, no: votes.length - yes, votes };
+  };
+  function propose(w, key, v, why, again) {
+    const g = w.gov;
+    if (g.frozen || g.laws[key] === v) return { pass: false, same: true };
+    if (!VOTED.has(why) || GV.noCouncil || !(w.cfg.rulesRev >= GV.COUNCIL_REV) || !LES.Council || !g.officials) { setLaw(w, key, v, why); return { pass: true, votes: [] }; } // (noCouncil: for comparisons in tests only)
+    const r = GV.councilVote(w, key, v, why), from = g.laws[key];
+    (g.votes = g.votes || []).push({ day: w.day, key, from, to: v, why, pass: r.pass, yes: r.yes, no: r.no, by: g.president, votes: r.votes.map(x => [x.role, x.id, x.yes ? 1 : 0, x.reason]) });
+    if (g.votes.length > 120) g.votes.shift();
+    if (r.pass) { setLaw(w, key, v, why, r); return r; }
+    const pres = g.president >= 0 ? w.people[g.president] : null, no = r.votes.filter(x => !x.yes).map(x => x.name).join(', ');
+    w.pushFeed({ day: w.day, pid: pres ? pres.id : -1, text: `The council rejected ${pres ? `${GV.title(w)} ${P.name(pres)}'s` : 'a'} change: ${GV.LAW_BY_KEY[key].name} → ${GV.optName(key, v)} (${r.yes}-${r.no}; against: ${no})`, cat: 'politics', imp: 2 });
+    if (why === 'platform' && !again) (g.retry = g.retry || []).push({ key, v, day: w.day + 180, by: g.president });
+    return r;
+  }
+  GV.propose = propose;
 
   // ---- Monthly finances: js/sim/fiscal.js; staffing: js/sim/services.js ----
   function policeFactorOf(w, ts) {
@@ -448,8 +503,8 @@
     const g = w.gov, pres = g.president >= 0 ? w.people[g.president] : null;
     if (!pres || R.next() > 0.25) return;
     const EM = LES.Countries.pack.gov.emergency, aid = EM.aid[1][g.laws[EM.aid[0]]], cops = EM.police[1][g.laws[EM.police[0]]]; // [law, { current: new }]
-    if (w.regime === 'recession' && aid && pres.pol.econ < 0.4) setLaw(w, EM.aid[0], aid, 'emergency');
-    if (w.crime && LES.Crime.rates(w).index > 1.6 * LES.Crime.REF.index * (LES.Crime.INTENSITY[w.cfg.crime] || 1) && cops) setLaw(w, EM.police[0], cops, 'emergency');
+    if (w.regime === 'recession' && aid && pres.pol.econ < 0.4) propose(w, EM.aid[0], aid, 'emergency');
+    if (w.crime && LES.Crime.rates(w).index > 1.6 * LES.Crime.REF.index * (LES.Crime.INTENSITY[w.cfg.crime] || 1) && cops) propose(w, EM.police[0], cops, 'emergency');
     void ts;
   }
 

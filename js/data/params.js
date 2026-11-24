@@ -20,7 +20,8 @@
     safetyNet: 'on',          // on = welfare/guardians (Malaysia has JKM welfare), off = Original harsh rules
     genetics: 'evolution',    // original (floor of parents' average) | evolution
     strategyMode: 'adaptive', // adaptive | fixed
-    fertility: 'national',    // national | low | normal | high
+    fertility: 'national',    // national | low | normal | high | custom (a number: tfr)
+    tfr: 2.0,                 // children per woman when fertility is 'custom'
     horizonYears: 120,
     goalRM: 100000000,
     goalMode: 'real',         // real (Year-1 money) | nominal
@@ -71,7 +72,7 @@
     catCap: 0.02,
     shiftsPerMonth: 20,
     vacancyRate: 2.2,
-    rulesRev: 11, // rule corrections from the 2026-11 blueprint (2: catastrophe cap after the risk multiplier, C03; 3: estates in equal value, C04b; 4: founders' credentials by age and limited study places, C06; 5: Expansion 1 jobs, degrees, specialisations, goals and the research centre; 6: a lower pay ceiling for jobs that need no qualification, Labour.offerSpread; 7: more first and family names, C.namesFor; 8: crime outside Malaysia, police case capacity per country and pack crimeTuningRev8, Crime.casesPerOfficer; 9: spending from usable wealth only, EPF's three accounts, one monthly cut-back line, milestones in local money, Finance.WEALTH_REV; 10: founders are households of all ages, World.FOUNDER_REV; 11: people in prison or rehab pay no fares, outings, festivals, medical bills or luxuries and meet no random spending, and a household head who lives alone gives up a rented home, World.HELD_REV); Classic and older saves: 1
+    rulesRev: 12, // rule corrections from the 2026-11 blueprint (2: catastrophe cap after the risk multiplier, C03; 3: estates in equal value, C04b; 4: founders' credentials by age and limited study places, C06; 5: Expansion 1 jobs, degrees, specialisations, goals and the research centre; 6: a lower pay ceiling for jobs that need no qualification, Labour.offerSpread; 7: more first and family names, C.namesFor; 8: crime outside Malaysia, police case capacity per country and pack crimeTuningRev8, Crime.casesPerOfficer; 9: spending from usable wealth only, EPF's three accounts, one monthly cut-back line, milestones in local money, Finance.WEALTH_REV; 10: founders are households of all ages, World.FOUNDER_REV; 11: people in prison or rehab pay no fares, outings, festivals, medical bills or luxuries and meet no random spending, and a household head who lives alone gives up a rented home, World.HELD_REV; 12: the council votes on law changes, Gov.COUNCIL_REV); Classic and older saves: 1
     econModel: 'calibrated', // calibrated: firms share a market the size of the town, wider pay spread, some jobs go to outsiders; original: the first engine
     vacancyDaysMin: 3,
     vacancyDaysMax: 30,
@@ -85,7 +86,7 @@
   // Presets fill the setup form. Classic reproduces the original engine (harsher, more
   // children, longer lives); Malaysia is calibrated to DOSM figures (tools/calibration.html).
   LES.PRESETS = {
-    national: { name: "Today's rules", values: { safetyNet: 'on', fertility: 'national', mortMult: 1.9, layout: 'varied', society: 'on', ethnicMix: 'national', crime: 'lively', government: 'on', vacancyRate: 2.2, econModel: 'calibrated', rulesRev: 11 } },
+    national: { name: "Today's rules", values: { safetyNet: 'on', fertility: 'national', mortMult: 1.9, layout: 'varied', society: 'on', ethnicMix: 'national', crime: 'lively', government: 'on', vacancyRate: 2.2, econModel: 'calibrated', rulesRev: 12 } },
     classic: { name: 'Classic (original rules)', values: { safetyNet: 'off', fertility: 'normal', mortMult: 1, layout: 'grid', society: 'off', ethnicMix: 'classic', crime: 'off', government: 'off', vacancyRate: 2.5, econModel: 'original', rulesRev: 1 } },
   };
   // Older saves and stored settings called the national option 'malaysia'.
@@ -152,7 +153,8 @@
     { group: 'Economy & prices', key: 'marketInfluenceCap', label: 'Max town influence on prices (%)', type: 'int', min: 0, max: 100 },
     { group: 'People & families', key: 'founderAges', sinceRev: 10, label: "Founders' ages", type: 'select', options: [['mixed', 'Households of all ages (national age mix)'], ['young', 'Young adults only (18-35, as before)']], help: 'All ages: the founders are singles, couples and families with children, with as many children and elderly people as in the country today. Under rules revision 10 or later (today’s rules).' },
     { group: 'People & families', key: 'safetyNet', label: 'Social safety net', type: 'select', options: [['off', 'Off - original harsh rules'], ['on', 'On - welfare food & child guardians']] },
-    { group: 'People & families', key: 'fertility', label: 'Birth rate', type: 'select', options: [['national', 'National rate today'], ['low', 'Low'], ['normal', 'Normal (original, ~2.5)'], ['high', 'High']] },
+    { group: 'People & families', key: 'fertility', label: 'Birth rate', type: 'select', options: [['national', 'National rate today'], ['low', 'Low'], ['normal', 'Normal (original, ~2.5)'], ['high', 'High'], ['custom', 'A number (children per woman)']] },
+    { group: 'People & families', key: 'tfr', label: 'Children per woman', type: 'num', min: 0.3, max: 6, step: 0.1, showIf: cfg => cfg.fertility === 'custom', help: 'The average number of children a woman has in her life. Today: Malaysia 1.6, UK 1.4, USA 1.6, China 1.0. About 2.1 keeps a population steady.' },
     { group: 'People & families', key: 'mortMult', label: 'Old-age mortality multiplier', type: 'num', min: 0, max: 5, step: 0.1, help: '1 = original engine (~80-year lives). 0 = nobody dies of old age.' },
     { group: 'People & families', key: 'migration', label: 'Migration in/out of town', type: 'select', options: [['off', 'Off'], ['low', 'Low (default)'], ['normal', 'Normal'], ['high', 'High']], help: 'Crowding and rent push people out; jobs pull newcomers in.' },
     { group: 'People & families', key: 'migInMult', label: 'Move-in rate multiplier', type: 'num', min: 0, max: 20, step: 0.1 },
@@ -196,10 +198,30 @@
     cm.options = LES.Countries.order.map(c => [c, LES.Countries.get(c).name]);
   });
 
+  // The birth-rate multiplier. 'national' is tuned so the town's births match the country's official TFR; a number
+  // (custom) scales that by the TFR asked for: 3.2 children per woman in Malaysia (TFR 1.6) = twice the national rate.
+  LES.fertMultOf = function (cfg) {
+    const D = LES.Countries.pack.demography, national = (cfg.rulesRev >= 10 && D.fertMultRev10) || D.fertMult;
+    if (cfg.fertility === 'custom') {
+      const target = ((LES.Countries.pack.calibration || {}).tfr || {}).target || 1.6, tfr = Number(cfg.tfr);
+      return national * (Number.isFinite(tfr) ? Math.min(6, Math.max(0.3, tfr)) : 2) / target;
+    }
+    return { national, low: 0.6, normal: 1, high: 1.6 }[cfg.fertility];
+  };
+
+  // Couples stop at the family they want, so a number above today's rate also raises that wish (measured: a shift of
+  // 1.7 x ln(asked / today) gives the TFR asked for; below today's rate the multiplier alone matches it). 0 otherwise.
+  LES.fertShiftOf = function (cfg) {
+    if (cfg.fertility !== 'custom') return 0;
+    const target = ((LES.Countries.pack.calibration || {}).tfr || {}).target || 1.6, tfr = Math.min(6, Math.max(0.3, Number(cfg.tfr) || 2));
+    return tfr > target ? 1.7 * Math.log(tfr / target) : 0;
+  };
+
   LES.derive = function (cfg) {
     return {
       eduMult: { free: 0, subsidised: 1, expensive: 2.5 }[cfg.education],
-      fertMult: { national: (cfg.rulesRev >= 10 && LES.Countries.pack.demography.fertMultRev10) || LES.Countries.pack.demography.fertMult, low: 0.6, normal: 1, high: 1.6 }[cfg.fertility], // rev 10: tuned to the official TFR with founders of all ages
+      fertMult: LES.fertMultOf(cfg), // rev 10: tuned to the official TFR with founders of all ages
+      fertShift: LES.fertShiftOf(cfg), // a birth rate above today's, set as a number: couples also want more children
       goal: Math.round(cfg.goalRM * 100 / LES.Countries.scale()), // the goal is typed in real money
       horizonDays: cfg.horizonYears * 365,
       welfare: cfg.safetyNet === 'on',
@@ -237,6 +259,7 @@
     if (!Array.isArray(hw) || hw.length !== 3 || hw.some(x => !isNum(x) || x < 0) || Math.abs(hw[0] + hw[1] + hw[2] - 1) > 1e-6) blockers.push('Hiring weights must be 3 non-negative numbers summing to 1.');
     if (cfg.shiftsPerMonth > 28) blockers.push('Work shifts per month cannot exceed 28 (shortest month).');
     if (isNum(cfg.inflMin) && isNum(cfg.inflMax) && cfg.inflMin > cfg.inflMax) blockers.push('Inflation min must be <= inflation max.');
+    if (cfg.fertility === 'custom' && !(cfg.tfr >= 0.3 && cfg.tfr <= 6)) blockers.push('Children per woman must be a number from 0.3 to 6.');
     const totalFounders = LES.regionFounders ? LES.regionFounders(cfg).reduce((a, b) => a + b, 0) : cfg.founders;
     if (cfg.towns !== '1' && cfg.removeLimits !== 'yes' && totalFounders > 1500) blockers.push(`All towns together would start with ${totalFounders} people; the limit is 1,500 (lower the population or turn on "Remove population limits").`);
 
@@ -250,6 +273,8 @@
       if (cfg.founders > 1500) warnings.push('Very large populations run slower (120 years can take 10-15 minutes at MAX); people are drawn as dots when zoomed out.');
       else if (cfg.founders > 300) warnings.push('Large populations can grow past 1,000 people and slow down the visual mode.');
       if (cfg.fertility === 'high' && cfg.horizonYears > 150) warnings.push('High birth rate over a long horizon may produce a very large population.');
+      if (cfg.fertility === 'custom' && cfg.tfr < 1.3) warnings.push(`${cfg.tfr} children per woman is very low: the town will age and shrink, and may empty out over a few generations.`);
+      if (cfg.fertility === 'custom' && cfg.tfr > 3) warnings.push(`${cfg.tfr} children per woman is very high: the population will grow fast, homes will be crowded and the game will slow down.`);
       if (cfg.safetyNet === 'off') warnings.push('Harsh rules: abandoned children and people who cannot afford food can die.');
       if (cfg.horizonYears > 200) warnings.push('Very long runs use more memory for life histories.');
       const msz = LES.MAP_SIZES[LES.MAP_ALIASES[cfg.mapSize] || cfg.mapSize];

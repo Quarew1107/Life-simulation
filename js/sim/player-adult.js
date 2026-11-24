@@ -78,7 +78,7 @@
         const job = p.job, R = Pl.rng(w), m = w.macro();
         const pr = U.clamp(0.04 + 0.3 * (perfOf(p) - 0.6) + 0.025 * p.xp[job.cat], 0.01, 0.35) * m.promoMult * 1.5;
         st(w).played = true;
-        if (R.next() >= pr) { p.stress = Math.min(100, p.stress + 3); return { code: 'refused', params: { job: job.title } }; }
+        if (R.next() >= pr + Pl.traitOdds(w, p, 'ASK_RAISE')) { p.stress = Math.min(100, p.stress + 3); return { code: 'refused', params: { job: job.title } }; }
         job.level++;
         job.salary = Math.round(job.salary * L.promoRaise(w, C.JOB_BY_ID[job.jobId]) / 1000) * 1000;
         P.log(w, p, `Promoted to ${L.title(job)} (${U.fmtMoney(job.salary)}/mo) after asking`, 'career', 1);
@@ -130,7 +130,7 @@
         const q = p.partnerId !== null ? w.people[p.partnerId] : null, R = Pl.rng(w), home = C.TIERS.housing[a.tier].name;
         if (q && q.alive && !q.away && P.isAdult(w, q)) { // the partner has a say
           const yes = a.tier > p.tiers.housing ? 0.55 + 0.3 * (q.pers.risk / 100) : 0.35 + 0.4 * (q.pers.resp / 100);
-          if (R.next() >= yes) return { code: 'partner_no', params: { partner: P.name(q), home } };
+          if (R.next() >= yes + Pl.traitOdds(w, p, 'MOVE_HOME')) return { code: 'partner_no', params: { partner: P.name(q), home } };
         }
         F.moveHome(w, p, a.tier);
         for (const h of household(w, p)) h.mcost = F.monthlyCost(w, h);

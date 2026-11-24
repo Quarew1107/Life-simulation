@@ -344,8 +344,14 @@
     if (!ch.story && !args) return { error: 'no_target' }; // nothing to do that with now: the decision stays open (PL-14)
     if (!ch.story && Pl.check) { const r = Pl.check(w, ch.cmd, args); if (!r.ok) return { error: r.code, why: Pl.whyNot(w, ch.cmd, args, r) }; }
     s.inbox = s.inbox.filter(x => x !== item);
-    if (!auto) journal(w, { kind: 'choice', ev: e.id, choice: ch.id, key: 'evt.chose', params: { choice: { key: `ev.${e.id}.${ch.id}`, params: item.params || {} } } });
-    if (ch.story) { if (ch.fx && Pl.applyFx) Pl.applyFx(w, p, ch.fx); return { story: true }; } // the character's own reaction (PL-13)
-    return Pl.request(w, ch.cmd, args);
+    // The redesigned moments (player-moments.js): every choice has visible effects, shown with its result.
+    const eff = Pl.effectsOf ? Pl.effectsOf(e.id, ch.id) : null, choice = { key: `ev.${e.id}.${ch.id}`, params: item.params || {} };
+    let shown = null;
+    if (eff) shown = { key: 'evt.choseRes', params: { choice, result: { key: `ev.${e.id}.${ch.id}.res`, params: item.params || {} }, fx: Pl.fxText(Pl.applyEffects(w, p, eff, item.params || {})) } };
+    if (!auto) journal(w, Object.assign({ kind: 'choice', ev: e.id, choice: ch.id }, shown || { key: 'evt.chose', params: { choice } }));
+    if (ch.story) { if (!eff && ch.fx && Pl.applyFx) Pl.applyFx(w, p, ch.fx); return { story: true, shown }; } // the character's own reaction (PL-13)
+    const r = Pl.request(w, ch.cmd, args);
+    if (r && shown) r.shown = shown;
+    return r;
   };
 })(globalThis.LES = globalThis.LES || {});

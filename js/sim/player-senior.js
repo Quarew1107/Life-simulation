@@ -39,7 +39,7 @@
   Pl.keepsWorking = (w, p, age, statutory) => !!(w.player && w.player.id === p.id && w.player.keepWorking && !statutory && age < 70);
 
   // ---- The end of a life, and who comes next ----
-  const LIFE_KEYS = ['dating', 'married', 'coupled', 'lastPartner', 'babyWish', 'affair', 'school', 'schoolBoost', 'boost', 'club', 'allowance', 'friends', 'effort',
+  const LIFE_KEYS = ['traits', 'bonds', 'rep', 'memories', 'loans', 'introduced', 'referral', 'persuaded', 'dating', 'married', 'coupled', 'lastPartner', 'babyWish', 'affair', 'school', 'schoolBoost', 'boost', 'club', 'allowance', 'friends', 'effort',
     'plan', 'homeTier', 'stand', 'ran', 'hadJob', 'jobLost', 'quitDay', 'noJobSince', 'idxPeak', 'kidSchools', 'kidBoost', 'askedSchool', 'carers', 'volunteered',
     'trip', 'exercise', 'snap', 'yearStart', 'lowMonths', 'stressMonths', 'keepWorking', 'evCool', 'cool', 'hours', 'hoursDay'];
   Pl.endLife = function (w, p) {

@@ -746,3 +746,38 @@ button.teal { border-color: var(--teal); color: var(--teal); }
 .life-choices .key { display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-right: 6px; border-radius: 4px; background: #0f141a; border: 1px solid var(--line); font-size: 10px; color: var(--muted); }
 .life-keys { display: block; margin-top: 6px; font-size: 11px; }
 .life-tile:focus-visible, .life-choices button:focus-visible, .kin-acts button:focus-visible, .story-kin:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+/* Play a Life: character traits, standing and closest people (player-moments.js) */
+.life-head:has(.life-char) { flex-wrap: wrap; }
+.life-char { flex: 1 1 100%; display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
+.life-traits { display: flex; flex-wrap: wrap; gap: 4px; }
+.life-trait { font-size: 11px; padding: 1px 6px; border-radius: 999px; background: rgba(42,157,143,0.15); border: 1px solid rgba(42,157,143,0.4); }
+.life-trait i { font-style: normal; letter-spacing: -1px; color: var(--teal); }
+.life-susp { color: var(--red); }
+/* Day planner, cleaner layout (Nov 2026): one column; the profile and decisions stay in the side panel. */
+.plan-cols { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+.plan-cols > div { overflow: visible; min-height: auto; }
+.plan-decide { display: none; }
+.plan-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.plan-head h3 { margin: 0; font-size: 14px; }
+.plan-meta { color: var(--muted); font-size: 12px; flex: 1; }
+.plan-fold { padding: 1px 8px; }
+.plan-track { height: 54px; margin-top: 4px; }
+.plan-free { position: absolute; top: 6px; bottom: 6px; display: flex; align-items: center; padding: 0 8px; font-size: 11px; color: var(--muted); border: 1px dashed var(--line); border-radius: 7px; box-sizing: border-box; overflow: hidden; white-space: nowrap; }
+.plan-filter { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.plan-filter .life-cats { margin: 0; }
+.plan-add { font-weight: 700; font-size: 13px; }
+.plan-filter .plan-search { flex: 1; min-width: 140px; width: auto; margin: 0; }
+.plan-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px; margin-top: 6px; }
+.plan-act { grid-template-columns: 1fr auto; margin: 0; }
+.plan-notnow { margin-top: 6px; }
+.plan-notnow summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+@media (max-width: 760px) { .plan-decide { display: block; } }
+/* People page (plan part 4) */
+.fr-list { display: flex; flex-direction: column; gap: 6px; }
+.fr-card { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel-2); }
+.fr-card > div:first-child { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.fr-bar { display: inline-block; width: 70px; height: 6px; border-radius: 3px; background: #0f141a; border: 1px solid var(--line); overflow: hidden; }
+.fr-bar i { display: block; height: 100%; background: var(--teal); }
+.fr-acts { display: flex; flex-wrap: wrap; gap: 4px; }
+.love-close { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } /* closeness with your partner (plan part 5) */

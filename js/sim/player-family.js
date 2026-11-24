@@ -57,7 +57,7 @@
         const was = s.dating && s.dating.pid === q.id ? s.dating.dates : 0;
         const yes = U.clamp((0.05 + 0.3 * Pl.compat(w, p, q) + 0.08 * was) * ex, 0.05, 0.8);
         s.played = true;
-        if (R.next() >= yes) { p.stress = Math.min(100, p.stress + 2); return { code: 'refused', params: { other: P.name(q) } }; }
+        if (R.next() >= yes + Pl.traitOdds(w, p, 'ASK_DATE') + (Pl.introBonus ? Pl.introBonus(w, q) : 0)) { p.stress = Math.min(100, p.stress + 2); return { code: 'refused', params: { other: P.name(q) } }; }
         const cost = Math.round(0.05 * M(w));
         pay(w, p, cost);
         s.dating = { pid: q.id, dates: was + 1, since: was ? s.dating.since : w.day };
@@ -79,7 +79,7 @@
         const q = w.people[a.pid], s = st(w), R = Pl.rng(w);
         const yes = U.clamp(0.15 + 0.08 * s.dating.dates + 0.25 * Pl.compat(w, p, q), 0.1, 0.9);
         s.played = true;
-        if (R.next() >= yes) return { code: 'refused', params: { other: P.name(q) } };
+        if (R.next() >= yes + Pl.traitOdds(w, p, 'ASK_PARTNER')) return { code: 'refused', params: { other: P.name(q) } };
         Fa.formCouple(w, p, q);
         s.dating = null;
         return { code: 'ok', params: { other: P.name(q) } };
@@ -99,7 +99,7 @@
         const q = partnerOf(w, p), s = st(w), R = Pl.rng(w), cost = Math.round((a.kind === 'civil' ? 0.5 : 1.5) * M(w));
         const yes = U.clamp(0.35 + 0.4 * q.famDesire / 100 + 0.1 * togetherYears(w, p) - (q.stress > 70 ? 0.2 : 0), 0.1, 0.92);
         s.played = true;
-        if (!here(q) || R.next() >= yes) return { code: 'refused', params: { other: P.name(q) } };
+        if (!here(q) || R.next() >= yes + Pl.traitOdds(w, p, 'PROPOSE')) return { code: 'refused', params: { other: P.name(q) } };
         pay(w, p, cost);
         s.married = { pid: q.id, day: w.day };
         p.happy = Math.min(100, p.happy + 8); q.happy = Math.min(100, q.happy + 8);
@@ -125,7 +125,7 @@
       run(w, p) {
         const q = partnerOf(w, p), R = Pl.rng(w), cost = Math.round(0.05 * M(w));
         st(w).played = true;
-        if (!here(q) || R.next() >= 0.4 + 0.4 * q.pers.resp / 100) return { code: 'refused', params: { other: P.name(q) } };
+        if (!here(q) || R.next() >= 0.4 + 0.4 * q.pers.resp / 100 + Pl.traitOdds(w, p, 'COUNSEL')) return { code: 'refused', params: { other: P.name(q) } };
         pay(w, p, cost);
         for (const x of [p, q]) x.stress = Math.max(0, x.stress - 12);
         return { code: 'ok', params: { other: P.name(q), cost: U.fmtMoney(cost) } };
@@ -191,7 +191,7 @@
       hours: 1, cooldown: 30, adult: true, key: a => `gift:${a.pid}`,
       check(w, p, a) {
         const q = w.people[a.pid];
-        if (!q || !(family(w, p).includes(q) || q === partnerOf(w, p))) return 'not_family';
+        if (!q || !(family(w, p).includes(q) || q === partnerOf(w, p) || (Pl.isFriend && Pl.isFriend(w, q) && here(q)))) return 'not_family'; // and friends (plan part 4)
         return !(a.share > 0 && a.share <= 0.5) ? 'bad_args' : Math.round((p.cash - 2 * p.mcost) * a.share) < w.px(100) ? 'too_little' : null;
       },
       params(w, p, a) { const q = w.people[a.pid]; return { other: q ? P.name(q) : '' }; },
@@ -224,7 +224,7 @@
     END_AFFAIR: {
       hours: 1, cooldown: 0, adult: true, key: () => 'endaffair',
       check(w) { return st(w).affair ? null : 'no_affair'; },
-      run(w) { const q = w.people[st(w).affair.pid]; st(w).affair = null; return { code: 'ok', params: { other: q ? P.name(q) : '' } }; },
+      run(w) { const q = w.people[st(w).affair.pid]; st(w).affairOver = { day: w.day, pid: q ? q.id : -1 }; st(w).affair = null; return { code: 'ok', params: { other: q ? P.name(q) : '' } }; },
     },
   });
   const togetherYears = (w, p) => { const s = st(w); return s.coupled && s.coupled.pid === p.partnerId ? (w.day - s.coupled.day) / 365 : 0; };
@@ -264,21 +264,37 @@
         kidBoost(w, c, C.INT, 0.006 * (k.tier === 'prestige' ? 0.4 : 0.3) * (0.5 + U.clamp((c.pot[C.INT] - 4) / 4, 0, 1)));
       }
     }
-    // An affair can come to light; the partner then decides whether to stay.
+    // An affair can come to light: the partner's suspicion grows by itself each month (choices in the affair
+    // moments move it too), the chance of finding out is suspicion / 400 a month (about the old 12% on average
+    // over an affair) and at 100 they find out. The partner then decides whether to stay.
     if (s.affair) {
       const q = w.people[s.affair.pid], pt = partnerOf(w, p), R = Pl.rng(w);
-      if (!here(q) || !pt || q.partnerId !== null) { s.affair = null; return; }
-      if (R.next() < 0.12) {
-        s.affair = null;
-        pt.stress = Math.min(100, pt.stress + 25); p.stress = Math.min(100, p.stress + 15); pt.happy = Math.max(0, pt.happy - 15);
-        if (R.next() < 0.45 + 0.3 * (1 - pt.pers.resp / 100)) {
-          Fa.separate(w, p, pt, 'breakup');
-          s.coupled = null; s.married = null; s.babyWish = null;
-          Pl.journal(w, { kind: 'life', key: 'love.foundLeft', params: { other: P.name(pt) }, imp: 2 });
-        } else Pl.journal(w, { kind: 'life', key: 'love.foundStayed', params: { other: P.name(pt) }, imp: 2 });
-      }
+      if (!here(q) || !pt || q.partnerId !== null) { s.affairOver = { day: w.day, pid: q ? q.id : -1 }; s.affair = null; return; }
+      const sp = s.affair.susp = Math.min(100, (s.affair.susp || 0) + 8);
+      if (sp >= 100 || R.next() < sp / 400) Pl.affairComesOut(w, p, 'found');
     }
   });
+  // The affair comes to light (found out, or confessed): the partner is hurt and decides whether to stay; how close
+  // the two are (w.player.bonds) and a confession make staying more likely. Returns true when they leave.
+  Pl.affairComesOut = function (w, p, how) {
+    const s = st(w), a = s.affair, q = a ? w.people[a.pid] : null, pt = partnerOf(w, p), R = Pl.rng(w);
+    s.affair = null;
+    s.affairOver = { day: w.day, pid: q ? q.id : -1 };
+    if (!pt) return false;
+    s.affairFound = { day: w.day, pid: q ? q.id : -1 };
+    pt.stress = Math.min(100, pt.stress + 25); p.stress = Math.min(100, p.stress + 15); pt.happy = Math.max(0, pt.happy - 15);
+    const b = Pl.partnerBond ? Pl.partnerBond(w, pt) : (s.bonds && s.bonds[pt.id] !== undefined ? s.bonds[pt.id] : 30), close = (b - 30) / 70;
+    if (s.bonds) s.bonds[pt.id] = Math.max(0, b - 25);
+    const leave = U.clamp(0.45 + 0.3 * (1 - pt.pers.resp / 100) - 0.3 * close - (how === 'confess' ? 0.15 : 0), 0.05, 0.95);
+    if (R.next() < leave) {
+      Fa.separate(w, p, pt, 'breakup');
+      s.coupled = null; s.married = null; s.babyWish = null;
+      if (how !== 'confess') Pl.journal(w, { kind: 'life', key: 'love.foundLeft', params: { other: P.name(pt) }, imp: 2 });
+      return true;
+    }
+    if (how !== 'confess') Pl.journal(w, { kind: 'life', key: 'love.foundStayed', params: { other: P.name(pt) }, imp: 2 });
+    return false;
+  };
   const KID_MAX = 0.5;
   function kidBoost(w, c, a, d) {
     const s = st(w), all = s.kidBoost = s.kidBoost || {}, b = all[c.id] = all[c.id] || [0, 0, 0, 0, 0, 0];

@@ -222,7 +222,9 @@
     }
     // Floor mattresses (tilam) for extra sleepers: in the children's room, else the parents' room, never the kitchen.
     // Only a very big household (bedrooms full) also sleeps on mattresses in the living room.
-    for (let k = 0; k < 8 && fam.sleepers > spots.bed.length; k++) {
+    // Without a couple the double bed sleeps one (the eldest adult), so its other half does not count.
+    const usable = () => spots.bed.length - (fam.couple === false ? Math.max(0, spots.bed.filter(b => b.kind === 'double').length - 1) : 0);
+    for (let k = 0; k < 8 && fam.sleepers > usable(); k++) {
       const kid = spots.bed.find(b => b.kind === 'single');
       const t = (kid && fit('home.tilam', kid.x + 20, kid.key + 6, null, 0, 'kids')) || fit('home.tilam', W / 4, top(3), null, 0, 'parents') || fit('home.tilam', 40, H - 40, null, 0, 'living');
       if (!t) break;
@@ -339,7 +341,8 @@
   R.family = function (w, b) { // from everyone who lives here (not only who is home now), so the furniture stays put
     const all = w.living.filter(p => p.alive && !p.away && !p.inst && p.homeId === b.id), age = p => LES.P.age(w, p);
     const babies = all.filter(p => age(p) < 3).length, head = all.filter(p => age(p) >= 18).sort((a, c) => age(c) - age(a))[0] || all[0];
-    return { baby: babies > 0, faith: head ? head.rel || 'none' : 'none', sleepers: all.length - babies + Math.max(0, babies - 1), keep: R.keepsakes(w, all) };
+    const couple = all.some(p => p.partnerId !== null && p.partnerId !== undefined && all.some(q => q.id === p.partnerId && age(q) >= 18 && age(p) >= 18));
+    return { baby: babies > 0, couple, faith: head ? head.rel || 'none' : 'none', sleepers: all.length - babies + Math.max(0, babies - 1), keep: R.keepsakes(w, all) };
   };
 
   // Keepsakes (Phase 3.3/3.4), each earned by a real record of someone who lives here: certificates for

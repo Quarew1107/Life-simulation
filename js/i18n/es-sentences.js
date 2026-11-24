@@ -139,6 +139,8 @@ LES.I18n.sentences('es', [
   [/^Elected (.+?) of (.+?) with (\d+) votes$/, 'Fue elegido {1} de {2} con {3} votos'],
   [/^(.+?) was re-elected as (.+?) \((.+)\)$/, '{1} fue reelegido como {2} ({3})'],
   [/^(.+?) won the election as (.+?) \((.+)\)$/, '{1} ganó las elecciones para {2} ({3})'],
+  [/^(.+?) changed the law: (.+?) → (.+?) \(council (\d+)-(\d+)\)$/, '{1} modificó la ley: {2} → {3} (consejo {4}-{5})'],
+  [/^The council rejected (.+?)'s change: (.+?) → (.+?) \((\d+)-(\d+); against: (.+)\)$/, 'El consejo rechazó el cambio de {1}: {2} → {3} ({4}-{5}; en contra: {6})'],
   [/^(.+?) changed the law: (.+?) → (.+)$/, '{1} modificó la ley: {2} → {3}'],
   [/^Corruption scandal: caught taking (.+?) from the treasury \((.+?) recovered\)$/, 'Escándalo de corrupción: se detectó un desvío de {1} de la tesorería (recuperados {2})'],
   [/^Scandal! (.+?) took (.+?) of public money$/, '¡Escándalo! {1} sustrajo {2} de dinero público'],
@@ -1795,3 +1797,6 @@ LES.I18n.sentences('es', [
   [/^arrested for (.+)$/, 'detención por {1}'],
   [/^(.+) \(([A-Z][^()]*)\)$/, '{1} ({2})'], // a course with its field, a business with its type (last: other patterns first)
 ]);
+// Birth rate as a number (Play a Life plan part 1, Nov 2026)
+LES.I18n.glossary("es", {"A number (children per woman)": "Un número (hijos por mujer)", "Children per woman": "Hijos por mujer", "The average number of children a woman has in her life. Today: Malaysia 1.6, UK 1.4, USA 1.6, China 1.0. About 2.1 keeps a population steady.": "El número medio de hijos que una mujer tiene en su vida. Hoy: Malasia 1,6, Reino Unido 1,4, EE. UU. 1,6, China 1,0. Unos 2,1 mantienen la población estable."});
+LES.I18n.sentences("es", [[/^([\d.]+) children per woman is very low: the town will age and shrink, and may empty out over a few generations\.$/, "{1} hijos por mujer es muy bajo: el pueblo envejecerá y se reducirá, y podría quedar vacío en unas generaciones."], [/^([\d.]+) children per woman is very high: the population will grow fast, homes will be crowded and the game will slow down\.$/, "{1} hijos por mujer es muy alto: la población crecerá rápido, las viviendas estarán llenas y el juego irá más lento."], [/^Children per woman must be a number from 0\.3 to 6\.$/, "El número de hijos por mujer debe estar entre 0,3 y 6."]]);

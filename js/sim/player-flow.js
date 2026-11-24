@@ -27,6 +27,7 @@
     BUY_STOCK: (w, p, a) => (Pl.unitPrice(w, a.tk) && a.shares > 0 ? Pl.buyCost(w, a.tk, a.shares) : 0),
     BUY_TICKET: w => Pl.ticket(w),
     DONATE: (w, p, a) => (a.amt > 0 ? Math.round(a.amt) : 0),
+    HANG_OUT: (w, p) => (P.isAdult(w, p) ? Math.round(0.02 * M(w)) : 0), // a meal or a drink out (player-friends.js)
   };
   Pl.costOf = (w, p, kind, args) => (COSTS[kind] ? COSTS[kind](w, p, args || {}) : 0);
   const busyHours = s => s.pending.reduce((t, c) => t + ((Pl.HANDLERS[c.kind] || {}).hours || 0), 0);

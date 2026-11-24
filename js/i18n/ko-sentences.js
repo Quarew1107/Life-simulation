@@ -139,6 +139,8 @@ LES.I18n.sentences('ko', [
   [/^Elected (.+?) of (.+?) with (\d+) votes$/, '{3}표로 {2}의 {1}에 당선됐다'],
   [/^(.+?) was re-elected as (.+?) \((.+)\)$/, '{1}이(가) {2}에 재선됐다({3})'],
   [/^(.+?) won the election as (.+?) \((.+)\)$/, '{1}이(가) 선거에서 승리해 {2}가 됐다({3})'],
+  [/^(.+?) changed the law: (.+?) → (.+?) \(council (\d+)-(\d+)\)$/, '{1}이(가) 법률을 변경했다: {2} → {3} (의회 {4}대{5} 통과)'],
+  [/^The council rejected (.+?)'s change: (.+?) → (.+?) \((\d+)-(\d+); against: (.+)\)$/, '의회가 {1}의 변경안을 부결했다: {2} → {3} ({4}대{5}, 반대: {6})'],
   [/^(.+?) changed the law: (.+?) → (.+)$/, '{1}이(가) 법률을 변경했다: {2} → {3}'],
   [/^Corruption scandal: caught taking (.+?) from the treasury \((.+?) recovered\)$/, '부패 추문: 국고에서 {1}을(를) 챙긴 것이 발각됐다({2} 회수)'],
   [/^Scandal! (.+?) took (.+?) of public money$/, '추문! {1}이(가) 공금 {2}을(를) 빼돌렸다'],
@@ -1795,3 +1797,6 @@ LES.I18n.sentences('ko', [
   [/^arrested for (.+)$/, '{1} 혐의로 체포됨'],
   [/^(.+) \(([A-Z][^()]*)\)$/, '{1}({2})'], // a course with its field, a business with its type (last: other patterns first)
 ]);
+// Birth rate as a number (Play a Life plan part 1, Nov 2026)
+LES.I18n.glossary("ko", {"A number (children per woman)": "숫자로 지정 (여성 1명당 자녀 수)", "Children per woman": "여성 1명당 자녀 수", "The average number of children a woman has in her life. Today: Malaysia 1.6, UK 1.4, USA 1.6, China 1.0. About 2.1 keeps a population steady.": "여성 한 명이 평생 낳는 평균 자녀 수입니다. 현재: 말레이시아 1.6, 영국 1.4, 미국 1.6, 중국 1.0. 약 2.1이면 인구가 유지됩니다."});
+LES.I18n.sentences("ko", [[/^([\d.]+) children per woman is very low: the town will age and shrink, and may empty out over a few generations\.$/, "여성 1명당 {1}명은 매우 낮습니다. 마을이 고령화되고 줄어들어 몇 세대 뒤에는 텅 빌 수 있습니다."], [/^([\d.]+) children per woman is very high: the population will grow fast, homes will be crowded and the game will slow down\.$/, "여성 1명당 {1}명은 매우 높습니다. 인구가 빠르게 늘고 집이 붐비며 게임이 느려집니다."], [/^Children per woman must be a number from 0\.3 to 6\.$/, "여성 1명당 자녀 수는 0.3에서 6 사이의 숫자여야 합니다."]]);

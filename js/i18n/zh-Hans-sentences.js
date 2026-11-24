@@ -146,6 +146,8 @@ LES.I18n.sentences('zh-Hans', [
   [/^Elected (.+?) of (.+?) with (\d+) votes$/, '以 {3} 票当选{2}{1}'],
   [/^(.+?) was re-elected as (.+?) \((.+)\)$/, '{1}连任{2}（{3}）'],
   [/^(.+?) won the election as (.+?) \((.+)\)$/, '{1}赢得选举，成为{2}（{3}）'],
+  [/^(.+?) changed the law: (.+?) → (.+?) \(council (\d+)-(\d+)\)$/, '{1}修改了法律：{2} → {3}（议会 {4}比{5}通过）'],
+  [/^The council rejected (.+?)'s change: (.+?) → (.+?) \((\d+)-(\d+); against: (.+)\)$/, '议会否决了{1}的修改：{2} → {3}（{4}比{5}；反对：{6}）'],
   [/^(.+?) changed the law: (.+?) → (.+)$/, '{1}修改了法律：{2} → {3}'],
   [/^Corruption scandal: caught taking (.+?) from the treasury \((.+?) recovered\)$/, '贪污丑闻：被发现从财政拿走 {1}（追回 {2}）'],
   [/^Scandal! (.+?) took (.+?) of public money$/, '丑闻！{1}拿走了 {2} 公款'],
@@ -1053,3 +1055,6 @@ LES.I18n.sentences('zh-Hans', [
   [/^arrested for (.+)$/, '因{1}被捕'],
   [/^(.+) \(([A-Z][^()]*)\)$/, '{1}（{2}）'], // a course with its field, a business with its type (last: other patterns first)
 ]);
+// Birth rate as a number (Play a Life plan part 1, Nov 2026)
+LES.I18n.glossary("zh-Hans", {"A number (children per woman)": "指定数字（每名女性的子女数）", "Children per woman": "每名女性的子女数", "The average number of children a woman has in her life. Today: Malaysia 1.6, UK 1.4, USA 1.6, China 1.0. About 2.1 keeps a population steady.": "一名女性一生平均生育的子女数。目前：马来西亚 1.6，英国 1.4，美国 1.6，中国 1.0。约 2.1 可使人口保持稳定。"});
+LES.I18n.sentences("zh-Hans", [[/^([\d.]+) children per woman is very low: the town will age and shrink, and may empty out over a few generations\.$/, "每名女性 {1} 个子女非常低：小镇会老龄化并萎缩，几代之后可能人去镇空。"], [/^([\d.]+) children per woman is very high: the population will grow fast, homes will be crowded and the game will slow down\.$/, "每名女性 {1} 个子女非常高：人口会迅速增长，住房拥挤，游戏也会变慢。"], [/^Children per woman must be a number from 0\.3 to 6\.$/, "每名女性的子女数必须是 0.3 到 6 之间的数字。"]]);

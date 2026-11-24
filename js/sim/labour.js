@@ -57,7 +57,7 @@
       const a = U.clamp(LES.Actions.attrScore(p, v.job.w) / 10, 0, 1);
       const e = U.clamp(p.xp[v.job.cat] / 5, 0, 1);
       const q = U.clamp(P.extraQuals(p, v.job.req) / 2, 0, 1);
-      const referral = p.netMonth > 0 ? 0.04 : 0; // contacts made at the golf club / lounge
+      const referral = (p.netMonth > 0 ? 0.04 : 0) + (w.player && LES.Player.referralFor ? LES.Player.referralFor(w, p, v) : 0); // contacts made at the golf club / lounge; a friend's word (Play a Life)
       const fit = v.job.pref && p.specs && v.job.pref.some(s => p.specs.VOC === s || p.specs.MASTER === s) ? 0.05 : 0; // Expansion 1: the right specialisation helps a little
       const hm = w.sys.hireWeight.length ? w.sysMul('hireWeight', p, v) : 1; // e.g. a criminal record
       cands.push({ p, score: (hw[0] * a + hw[1] * e + hw[2] * q + referral + fit) * hm, tie: w.rng.jobs.next() });

@@ -86,7 +86,7 @@
   // FSD 8.7: each partner independently decides; both must want a child.
   Fa.desire = function (w, p) {
     const fd = (p.famDesire - 50) / 50, st = (p.stress - 50) / 50;
-    return U.sigmoid(-0.5 + 2.2 * fd + 0.8 * resourceScore(p.nw) - 0.7 * minorChildren(w, p) - 1.2 * Math.max(0, st) + LES.Goals.familyBoost(p));
+    return U.sigmoid(-0.5 + 2.2 * fd + 0.8 * resourceScore(p.nw) - 0.7 * minorChildren(w, p) - 1.2 * Math.max(0, st) + LES.Goals.familyBoost(p) + (w.derived.fertShift || 0)); // fertShift: birth rate set as a number (0 otherwise)
   };
 
   Fa.monthCouples = function (w) {
@@ -96,7 +96,7 @@
       const q = w.people[p.partnerId];
       // Breakups
       const avgStress = (p.stress + q.stress) / 200;
-      if (R.next() < (0.0012 + 0.008 * avgStress * avgStress) * w.sysMul('breakupWeight', p, q) * (w.player && LES.Player.marriedPair && LES.Player.marriedPair(w, p, q) ? 0.6 : 1)) { Fa.separate(w, p, q, 'breakup'); continue; } // (x0.6: the Play a Life player's own marriage)
+      if (R.next() < (0.0012 + 0.008 * avgStress * avgStress) * w.sysMul('breakupWeight', p, q) * (w.player && LES.Player.marriedPair && LES.Player.marriedPair(w, p, q) ? 0.6 : 1) * (w.player && LES.Player.coupleMul ? LES.Player.coupleMul(w, p, q) : 1)) { Fa.separate(w, p, q, 'breakup'); continue; } // (x0.6: the Play a Life player's own marriage)
       // Conception
       if (p.pregnancy || p.inst || q.inst || w.day - p.lastBirthDay < w.cfg.birthSpacingDays || P.age(w, q) > 65) continue;
       const fert = fertility(P.age(w, p));

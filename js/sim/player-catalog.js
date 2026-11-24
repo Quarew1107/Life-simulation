@@ -39,7 +39,7 @@
     run(w, p) {
       const g = Pl.carerOf(w, p), R = Pl.rng(w);
       const yes = U.clamp(0.45 + 0.45 * g.pers.resp / 100 + (p.health < 60 ? 0.2 : 0), 0.1, 0.97);
-      if (R.next() >= yes || g.cash < w.px(60)) return { code: 'busy', params: { carer: P.name(g) } };
+      if (R.next() >= yes + Pl.traitOdds(w, p, 'ASK_CLINIC') || g.cash < w.px(60)) return { code: 'busy', params: { carer: P.name(g) } };
       const paid = w.gov ? LES.Services.medicalBill(w, g, w.px(60), true) >= 0 : w.ledger.spend(g, 'cash', 'HEALTH', w.px(60));
       if (!paid) return { code: 'busy', params: { carer: P.name(g) } };
       p.health = Math.min(100, p.health + 12); g.energy -= 4; st(w).played = true;

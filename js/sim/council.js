@@ -243,7 +243,7 @@
       const order = econ > 0.15 ? cuts.concat(spends) : econ < -0.15 ? spends.concat(cuts) : (R.next() < 0.5 ? cuts : spends).concat(R.next() < 0.5 ? spends : cuts);
       for (const [key, map] of order) {
         const to = map[g.laws[key]];
-        if (to) { LES.Gov.setLaw(w, key, to, 'surplus'); CO.log(w, 'treasurer', o ? o.id : -1, `Surplus: ${LES.Gov.LAW_BY_KEY[key].name} changed to ${LES.Gov.optName(key, to)}`); break; }
+        if (to) { const r = LES.Gov.propose(w, key, to, 'surplus'); CO.log(w, 'treasurer', o ? o.id : -1, `Surplus: ${LES.Gov.LAW_BY_KEY[key].name} ${r.pass ? 'changed' : 'proposed (rejected by the council)'} to ${LES.Gov.optName(key, to)}`); break; }
       }
     }
     // MACC investigations.

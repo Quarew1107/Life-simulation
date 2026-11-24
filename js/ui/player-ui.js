@@ -30,7 +30,7 @@
 
   // Categories by life stage: only Work does something so far; the others say so honestly.
   const CATS = ['work', 'learn', 'money', 'love', 'health', 'community'];
-  const catsFor = stage => (stage === 'baby' ? ['care'] : stage === 'child' || stage === 'teen' ? ['care', 'learn', 'friends'] : CATS);
+  const catsFor = stage => (stage === 'baby' ? ['care'] : stage === 'child' || stage === 'teen' ? ['care', 'learn', 'friends'] : CATS.concat('friends')); // adults have friends too (plan part 4)
   // Children and teens: study pace, a club, pocket money (carers decide and pay).
   function learnHtml(w, p) {
     const s = w.player, eff = s.effort || 'steady', g = Pl.carerOf(w, p), waiting = k => s.pending.some(c => c.kind === k);
@@ -115,6 +115,7 @@
     if (q && q.alive) {
       const married = s.married && s.married.pid === q.id;
       h += `<h4>${esc(T('love.partnerH'))}</h4>${kinCard(w, q, relOf(q, 'partner', married), whatDo(w, q), btn('data-counsel="1"', T('love.counsel'), busy('COUNSEL')))}<div class="life-cats">${married ? '' : btn('data-propose="wedding"', T('love.wedding', { cost: U.fmtMoney(Math.round(1.5 * M)) }), busy('PROPOSE')) + btn('data-propose="civil"', T('love.civil', { cost: U.fmtMoney(Math.round(0.5 * M)) }), busy('PROPOSE'))}${btn('data-separate="1"', T('love.separate'), busy('SEPARATE'))}</div>`;
+      if (Pl.partnerBond) { const c = Pl.partnerBond(w, q); h += `<p class="love-close"><span>${esc(T('love.closeness', { n: c }))}</span><span class="fr-bar"><i style="width:${c}%;background:${c < 30 ? 'var(--red)' : 'var(--teal)'}"></i></span>${btn('data-datenight="1"', T('love.dateNight', { cost: U.fmtMoney(Math.round(0.05 * M)) }), busy('DATE_NIGHT'))}${s.affair && s.mature ? btn('data-confess="1"', T('love.confess'), busy('CONFESS')) : ''}</p><p class="note">${esc(T('love.closeNote'))}</p>`; }
       h += `<h4>${esc(T('love.babyTitle'))}</h4><div class="life-cats" role="group">${['auto', 'yes', 'later', 'no'].map(k => `<button class="${(s.babyWish || 'auto') === k ? 'on' : ''}" data-baby="${k}" aria-pressed="${(s.babyWish || 'auto') === k}">${esc(T(`baby.${k}`))}</button>`).join('')}</div>`;
       if (s.affair) { const a = w.people[s.affair.pid]; h += `<p class="muted">${esc(T('love.affair', { other: a ? P.name(a) : '' }))}</p>${btn('data-endaffair="1"', T('love.endAffair'), busy('END_AFFAIR'))}`; }
     } else {
@@ -162,12 +163,22 @@
       ${s.spectator ? '' : `<button class="link" data-spectate="1">${esc(T('succ.spectate'))}</button>`}</div>
       <div class="card"><h3>${esc(T('succ.lives'))}</h3><ol class="life-lives">${s.chain.map((c, i) => { const q = w.people[c.id], end = s.chain[i + 1] ? s.chain[i + 1].day : e.day; return `<li>${UI.plink(w, c.id)} <small class="muted">${esc(T(`succ.how.${c.how}`))} · ${U.fmtDate(c.day)} – ${U.fmtDate(end)}${q && !q.alive ? ` · ${esc(T('succ.diedAt', { age: Math.floor(P.age(w, q)) }))}` : ''}</small></li>`; }).join('')}</ol></div>`;
   }
+  // The People page (plan part 4): your friends, how close you are and what you can do together; people you
+  // could get to know where you are; meeting someone online. Every request is answered by the other person.
   function friendsHtml(w, p) {
-    const s = w.player, mine = (s.friends || []).map(f => [w.people[f.id], f.since]).filter(x => x[0]);
-    const near = w.living.filter(q => q.alive && q !== p && !q.away && !P.isAdult(w, q) && Math.abs(P.age(w, q) - P.age(w, p)) <= 2 && !mine.some(x => x[0] === q)).slice(0, 5);
-    return `${mine.length ? `<ul class="list-plain">${mine.map(([q, d]) => `<li><span>${UI.plink(w, q.id)}</span><small class="muted">${esc(T('friends.since', { date: U.fmtDate(d) }))}</small></li>`).join('')}</ul>` : `<p class="muted">${esc(T('friends.none'))}</p>`}
-      ${near.length ? `<h4>${esc(T('friends.suggest'))}</h4><ul class="list-plain">${near.map(q => `<li><span>${UI.plink(w, q.id)} <small class="muted">${Math.floor(P.age(w, q))}</small></span><button class="ghost small" data-friend="${q.id}" ${s.pending.some(c => c.kind === 'MAKE_FRIEND' && c.args.pid === q.id) ? 'disabled' : ''}>${esc(T('friends.ask'))}</button></li>`).join('')}</ul>` : ''}
-      <p class="note">${esc(T('friends.note'))}</p>`;
+    const s = w.player, adult = P.isAdult(w, p), list = Pl.friendList ? Pl.friendList(w) : [], near = Pl.nearby ? Pl.nearby(w, p) : { work: [], school: [], home: [] };
+    const busy2 = (kind, pid) => s.pending.some(c => c.kind === kind && c.args.pid === pid);
+    const b = (attr, v, label, kind) => `<button class="ghost small" data-${attr}="${v}" ${busy2(kind, v) ? 'disabled' : ''}>${esc(label)}</button>`;
+    const bar = c => `<span class="fr-bar" title="${esc(T('fr.closeness', { n: c }))}"><i style="width:${c}%"></i></span>`;
+    const card = ({ f, q, c }) => `<li class="fr-card"><div><b>${UI.plink(w, q.id)}</b> <small class="muted">${Math.floor(P.age(w, q))} · ${esc(T(`fr.how.${f.how || 'met'}`))}${c >= 70 ? ` · ${esc(T('fr.close'))}` : ''}</small>${bar(c)}<small class="muted">${esc(T('fr.seen', { date: U.fmtDate(f.seen || f.since) }))}</small></div>
+      <div class="fr-acts">${b('hang', q.id, T('fr.hang'), 'HANG_OUT')}${b('helpfr', q.id, T('fr.help'), 'HELP_FRIEND')}${adult ? b('askjob', q.id, T('fr.askJob'), 'ASK_HELP') + b('askmoney', q.id, T('fr.askMoney'), 'ASK_HELP') + (p.partnerId === null ? b('intro', q.id, T('fr.intro'), 'INTRODUCE') : '') + b('gift', q.id, T('love.gift'), 'GIFT') : ''}</div></li>`;
+    const meet = (k, people) => people.length ? `<h5>${esc(T(`fr.where.${k}`))}</h5><ul class="list-plain">${people.map(q => `<li><span>${UI.plink(w, q.id)} <small class="muted">${Math.floor(P.age(w, q))}</small></span><button class="ghost small" data-friend="${q.id}" ${busy2('MAKE_FRIEND', q.id) ? 'disabled' : ''}>${esc(T('friends.ask'))}</button></li>`).join('')}</ul>` : '';
+    const loans = (s.loans || []).map(l => { const q = w.people[l.pid]; return q ? `<li>${esc(T('fr.owe', { other: P.name(q), amt: U.fmtMoney(l.left) }))}</li>` : ''; }).join('');
+    return `${list.length ? `<ul class="list-plain fr-list">${list.map(card).join('')}</ul>` : `<p class="muted">${esc(T('friends.none'))}</p>`}
+      ${loans ? `<ul class="list-plain note">${loans}</ul>` : ''}
+      <h4>${esc(T('fr.meet'))}</h4>${meet('work', near.work)}${meet('school', near.school)}${meet('home', near.home)}
+      ${P.age(w, p) >= 13 ? `<p><button class="ghost small teal" data-online="1" ${s.pending.some(c => c.kind === 'MEET_ONLINE') ? 'disabled' : ''}>🌐 ${esc(T('fr.online'))}</button></p>` : ''}
+      <p class="note">${esc(T('fr.note'))}</p>`;
   }
   // Babies and children: who looks after them, and reaching for them (the carer decides).
   function careHtml(w, p) {
@@ -187,12 +198,27 @@
     return `<details class="life-more" ${keep('startbiz')}><summary>${esc(T('biz.start'))}</summary><ul class="list-plain life-jobs">${ts.map(t => `<li><span><b>${esc(G(t.name))}</b><br><small class="muted">${esc(T('biz.capital', { capital: U.fmtMoney(t.capital) }))}${t.ok ? '' : ` · ${esc(T('learn.cost'))}`}</small></span><button class="ghost small" data-startbiz="${t.id}" ${!t.ok || busy('START_BIZ') ? 'disabled' : ''}>${esc(T('biz.go'))}</button></li>`).join('')}</ul><p class="note">${esc(T('biz.note'))}</p></details>`;
   }
   // Giving, volunteering, newcomers, elections.
+  // A played president: the council (meet an official before a vote) and every law, with what each official would
+  // probably say to each option (plan part 6).
+  function lawHtml(w, p) {
+    const g = w.gov, s = w.player, CO = LES.Council, GVx = LES.Gov, mark = { yes: '✔', maybe: '?', no: '✖', vacant: '–' };
+    const busy = (k, key) => s.pending.some(c => c.kind === k && (key === undefined || c.args.key === key || c.args.role === key));
+    const council = CO.ORDER.map(role => { const o = g.officials && g.officials[role], met = s.persuaded && s.persuaded[role] !== undefined && w.day - s.persuaded[role] <= 60;
+      return `<li><span><b>${esc(G(CO.ROLES[role].en))}</b> <small class="muted">${o ? esc(CO.name(w, o)) : esc(T('gov.vacant'))}${met ? ` · ${esc(T('gov.met'))}` : ''}</small></span>${o ? `<button class="ghost small" data-meetoff="${role}" ${busy('MEET_OFFICIAL', role) ? 'disabled' : ''}>${esc(T('gov.meet'))}</button>` : ''}</li>`; }).join('');
+    const laws = GVx.LAWS.map(law => { const cur = g.laws[law.key];
+      const opts = law.options.filter(o => String(o[0]) !== String(cur)).map(o => { const lean = Pl.lawLean(w, law.key, o[0]);
+        return `<li><span>→ ${esc(G(o[1]))} <small class="law-lean" title="${esc(lean.map(x => `${G(CO.ROLES[x.role].en)}: ${T(`gov.lean.${x.lean}`)}`).join(' · '))}">${lean.map(x => mark[x.lean]).join(' ')}</small></span><button class="ghost small teal" data-law="${esc(`${law.key}|${o[0]}`)}" ${busy('PROPOSE_LAW', law.key) ? 'disabled' : ''}>${esc(T('gov.propose'))}</button></li>`; }).join('');
+      return `<details class="life-more" ${keep(`law-${law.key}`)}><summary>${esc(G(law.name))} <small class="muted">${esc(T('gov.now', { item: GVx.optName(law.key, cur) }))}</small></summary><ul class="list-plain">${opts}</ul></details>`; }).join('');
+    return `<h4>${esc(T('gov.council'))}</h4><ul class="list-plain">${council}</ul><h4>${esc(T('gov.changeLaw'))}</h4>${laws}<p class="note">${esc(T('gov.lawNote'))}</p>`;
+  }
+
   function communityHtml(w, p) {
     const s = w.player, busy = k => s.pending.some(c => c.kind === k), g = w.gov, elect = g && LES.Gov && !LES.Gov.appointed();
     const newcomers = w.living.filter(q => q.alive && !q.away && q.migrant && P.isAdult(w, q) && q.arrivedDay !== null && q.arrivedDay > w.day - 90).slice(0, 4);
     const amt = Math.max(w.px(20), Math.round(0.02 * Pl.typicalPay(w)));
     return `<div class="life-cats"><button data-volunteer="1" ${busy('VOLUNTEER') ? 'disabled' : ''}>${esc(T('com.volunteer'))}</button><button data-donate="${amt}" ${busy('DONATE') ? 'disabled' : ''}>${esc(T('com.donate', { amt: U.fmtMoney(amt) }))}</button></div>
       ${elect ? `<h4>${esc(T('com.election'))}</h4><p>${esc(T('com.next', { date: U.fmtDate(g.electionDay), title: LES.Gov.title(w) }))}</p>${s.stand ? `<p class="muted">${esc(T('com.standing'))}</p>` : `<button class="ghost small" data-stand="1" ${busy('STAND') || P.age(w, p) < 21 ? 'disabled' : ''}>${esc(T('com.stand'))}</button>`}` : ''}
+      ${Pl.isPresident && Pl.isPresident(w, p) ? lawHtml(w, p) : ''}
       ${newcomers.length ? `<h4>${esc(T('com.newcomers'))}</h4><ul class="list-plain">${newcomers.map(q => `<li><span>${UI.plink(w, q.id)}</span><button class="ghost small" data-welcome="${q.id}">${esc(T('com.welcome'))}</button></li>`).join('')}</ul>` : ''}
       <p class="note">${esc(T('com.note'))}</p>`;
   }
@@ -220,10 +246,11 @@
   const GROUP = { // the colour of a planned request in the day bar
     work: ['APPLY_JOB', 'ASK_RAISE', 'QUIT_JOB', 'START_BIZ', 'INJECT', 'SELL_BIZ', 'CLOSE_BIZ', 'RETIRE', 'KEEP_WORKING'],
     money: ['INVEST', 'SELL', 'BUY_STOCK', 'SELL_STOCK', 'MOVE_HOME', 'BUY_TICKET'],
-    love: ['ASK_DATE', 'ASK_PARTNER', 'PROPOSE', 'SEPARATE', 'COUNSEL', 'BABY_WISH', 'CARE_CHILD', 'CHOOSE_SCHOOL', 'VISIT', 'GIFT', 'AFFAIR', 'END_AFFAIR', 'MAKE_FRIEND', 'ASK_CARE'],
+    love: ['DATE_NIGHT', 'ASK_DATE', 'ASK_PARTNER', 'PROPOSE', 'SEPARATE', 'COUNSEL', 'BABY_WISH', 'CARE_CHILD', 'CHOOSE_SCHOOL', 'VISIT', 'GIFT', 'AFFAIR', 'END_AFFAIR', 'CONFESS', 'ASK_CARE'],
+    friends: ['MAKE_FRIEND', 'MEET_ONLINE', 'HANG_OUT', 'HELP_FRIEND', 'ASK_HELP', 'INTRODUCE'],
     health: ['SEE_DOCTOR', 'COUNSELLING', 'REST', 'SET_EXERCISE', 'TRAVEL'],
     learn: ['ENROLL', 'DROP_OUT', 'SET_EFFORT', 'ASK_CLUB', 'QUIT_CLUB', 'ASK_SCHOOL', 'SET_PLAN', 'ASK_ALLOWANCE', 'STOP_SPENDING', 'SET_GOAL'],
-    community: ['DONATE', 'VOLUNTEER', 'STAND', 'WELCOME'],
+    community: ['DONATE', 'VOLUNTEER', 'STAND', 'WELCOME', 'PROPOSE_LAW', 'MEET_OFFICIAL'],
   };
   const groupOf = k => Object.keys(GROUP).find(g => GROUP[g].includes(k)) || 'work';
   const name1 = p => (p ? p.first.split(' ')[0] : '');
@@ -245,6 +272,8 @@
     date: ['ASK_DATE', v => ({ pid: num(v) })], partner: ['ASK_PARTNER', v => ({ pid: num(v) })], propose: ['PROPOSE', v => ({ kind: v })], counsel: ['COUNSEL', () => ({})],
     separate: ['SEPARATE', () => ({}), 'love.sure'], baby: ['BABY_WISH', v => ({ wish: v })], endaffair: ['END_AFFAIR', () => ({})], carekid: ['CARE_CHILD', v => ({ pid: num(v) })],
     visit: ['VISIT', v => ({ pid: num(v) })], gift: ['GIFT', v => ({ pid: num(v), share: 0.1 })], goal: ['SET_GOAL', v => ({ goal: v })],
+    datenight: ['DATE_NIGHT', () => ({})], meetoff: ['MEET_OFFICIAL', v => ({ role: v })], law: ['PROPOSE_LAW', v => { const i = v.indexOf('|'); return { key: v.slice(0, i), v: v.slice(i + 1) }; }], online: ['MEET_ONLINE', () => ({})], hang: ['HANG_OUT', v => ({ pid: num(v) })], helpfr: ['HELP_FRIEND', v => ({ pid: num(v) })], askjob: ['ASK_HELP', v => ({ pid: num(v), kind: 'job' })],
+    askmoney: ['ASK_HELP', v => ({ pid: num(v), kind: 'money' })], intro: ['INTRODUCE', v => ({ pid: num(v) })], confess: ['CONFESS', () => ({}), 'love.sure'],
   };
   const actionOf = b => { for (const k of Object.keys(ACTIONS)) if (b.dataset[k] !== undefined && b.dataset[k] !== '') return [k, ACTIONS[k]]; return null; };
   const whyText = (w, kind, args, r) => LES.I18n.render(Pl.whyNot(w, kind, args, r));
@@ -270,6 +299,15 @@
   }
   const ring = (v, label, colour) => `<div class="life-ring" style="--v:${U.clamp(Math.round(v), 0, 100)};--c:${colour}"><b>${Math.round(v)}</b><small>${esc(label)}</small></div>`;
 
+  // Character (the redesigned moments): traits with their level, standing in town, the closest people.
+  function charHtml(w, p) {
+    const c = Pl.character(w, p), dots = n => '●'.repeat(n) + '○'.repeat(3 - n);
+    const tr = c.traits.length ? c.traits.map(x => `<span class="life-trait" title="${esc(T('life.traitPts', { count: x.pts }))}: ${esc(T(`traitfx.${x.t}`))}">${esc(T(`trait.${x.t}`))} <i>${dots(x.level)}</i></span>`).join('') : `<span class="muted">${esc(T('life.noTraits'))}</span>`;
+    const close = c.bonds.length ? ` · ${esc(T('life.closest', { names: c.bonds.map(([q, v]) => `${q.first} ${Math.round(v)}`).join(', ') }))}` : '';
+    const susp = c.susp !== null ? ` · <span class="life-susp">${esc(T('life.susp', { n: c.susp }))}</span>` : '';
+    return `<div class="life-char"><div class="life-traits">${tr}</div><small class="muted">${esc(T('life.rep', { n: Math.round(c.rep) }))}${close}${susp}</small></div>`;
+  }
+
   function headHtml(w, p, sm) {
     const goal = p.goal && LES.Goals ? LES.Goals.DEFS[p.goal.id] : null, prog = goal && goal.progress ? U.clamp(goal.progress(w, p, p.goal), 0, 1) : 0;
     const goals = P.age(w, p) >= 16 && Pl.goals ? Pl.goals(w, p) : [];
@@ -281,6 +319,7 @@
           ${p.alive ? `<div class="life-mood">“${esc(LES.I18n.render(Pl.mood(w, p)))}”</div>` : ''}
           ${p.adult || p.nw > 0 ? `<div class="life-money">${esc(T('life.cash'))} <b>${U.fmtMoney(p.cash)}</b> · ${esc(T('life.worth'))} <b>${U.fmtMoney(p.nw)}</b></div>` : ''}</div>
         ${p.alive ? `<div class="life-rings">${ring(p.health, T('life.health'), 'var(--green)')}${ring(p.happy, T('life.happy'), 'var(--teal)')}${ring(p.stress, T('life.stress'), 'var(--red)')}</div>` : ''}
+        ${p.alive && Pl.character ? charHtml(w, p) : ''}
       </div>
       ${goals.length && p.alive ? `<details class="card life-goal" ${keep('goal')}><summary>${goal ? `${goal.icon} <b>${esc(G(LES.Goals.text(p.goal)))}</b><span class="life-goalbar"><i style="width:${Math.round(prog * 100)}%"></i></span>` : esc(T('goal.none'))} <small class="muted">${esc(T('goal.change'))}</small></summary>
         <div class="life-cats">${goals.map(id => { const d = LES.Goals.DEFS[id]; return `<button data-goal="${id}" class="${goal && p.goal.id === id ? 'on' : ''}">${d.icon} ${esc(G(d.name))}</button>`; }).join('')}</div><p class="note">${esc(T('goal.note'))}</p></details>` : ''}`;
@@ -336,7 +375,7 @@
         : { text: `${T(`school.${Pl.currentTier ? Pl.currentTier(w, p) : 'public'}`)}${s.club ? ` · ${T(`club.${s.club.id}`)}` : ''}`, idea: !s.club && P.age(w, p) >= 4 };
       case 'community': { const g = w.gov, el = g && LES.Gov && !LES.Gov.appointed(); return { text: el ? T('tile.election', { date: U.fmtDate(g.electionDay) }) : T('tile.volunteered', { count: s.volunteered || 0 }), idea: el && !s.stand && g.electionDay - w.day < 200 && P.age(w, p) >= 21 && g.president !== p.id }; }
       case 'care': { const g = Pl.carerOf(w, p); return { text: g ? T('tile.carer', { carer: name1(g) }) : p.guardian === 'WELFARE' ? T('care.welfare') : '—', idea: false }; }
-      case 'friends': return { text: T('tile.friends', { count: (s.friends || []).length }), idea: !(s.friends || []).length };
+      case 'friends': { const n = Pl.friendList ? Pl.friendList(w).length : (s.friends || []).length, close = Pl.friendList ? Pl.friendList(w).filter(x => x.c >= 70).length : 0; return { text: close ? T('tile.friendsClose', { count: n, close }) : T('tile.friends', { count: n }), idea: !n }; }
       default: return { text: '', idea: false };
     }
   }
@@ -398,7 +437,7 @@
     if (w.player.waiting) { el.innerHTML = `<div class="card life-head"><div><div class="life-name">👶 ${esc(T('play.waiting'))}</div><p>${esc(T('life.waiting'))}</p></div></div>`; UI._lifeHtml = null; return; }
     const p = Pl.person(w), sm = Pl.summary(w), s = w.player, cats = catsFor(sm.stage);
     const html = `${viewsHtml()}${headHtml(w, p, sm)}
-      ${s.ended ? successionHtml(w) : !p.alive ? `<div class="card"><p>${esc(T('life.dead', { name: sm.name }))}</p></div>` : `${decisionsHtml(w, p)}${tomorrowHtml(w, p)}${areasHtml(w, p, cats)}`}
+      ${s.ended ? successionHtml(w) : !p.alive ? `<div class="card"><p>${esc(T('life.dead', { name: sm.name }))}</p></div>` : `${decisionsHtml(w, p)}${UI.lifeView === 'B' && UI.planOpen ? '' : tomorrowHtml(w, p)}${areasHtml(w, p, cats)}`}
       ${latestHtml(w)}${settingsHtml(w)}`;
     if (html === UI._lifeHtml && el.firstElementChild) return; // nothing changed: leave the page alone
     el.innerHTML = html; UI._lifeHtml = html;
@@ -409,7 +448,7 @@
   };
 
   // Clicks in the tab (one listener; the tab is redrawn often).
-  const say = r => { if (r && r.error) UI.toast(esc(r.why ? LES.I18n.render(r.why) : T(`cmd.error.${r.error}`))); else if (r && r.command) UI.toast(esc(T('jobs.queued'))); UI._lifeHtml = null; UI._storyHtml = null; UI._planHtml = null; UI.update(true); };
+  const say = r => { if (r && r.error) UI.toast(esc(r.why ? LES.I18n.render(r.why) : T(`cmd.error.${r.error}`))); else if (r && r.shown) UI.toast(esc(LES.I18n.render(r.shown))); else if (r && r.command) UI.toast(esc(T('jobs.queued'))); UI._lifeHtml = null; UI._storyHtml = null; UI._planHtml = null; UI.update(true); };
   // One handler for every My life button, in the side panel and in the story view.
   function onLifeClick(e, el) {
       const b = e.target.closest('button');

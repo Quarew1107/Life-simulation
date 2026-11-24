@@ -139,6 +139,8 @@ LES.I18n.sentences('ja', [
   [/^Elected (.+?) of (.+?) with (\d+) votes$/, '{3}票を得て{2}の{1}に当選した'],
   [/^(.+?) was re-elected as (.+?) \((.+)\)$/, '{1}が{2}に再選された（{3}）'],
   [/^(.+?) won the election as (.+?) \((.+)\)$/, '{1}が選挙に勝ち、{2}になった（{3}）'],
+  [/^(.+?) changed the law: (.+?) → (.+?) \(council (\d+)-(\d+)\)$/, '{1}が法律を変更した：{2} → {3}（議会 {4}対{5}で可決）'],
+  [/^The council rejected (.+?)'s change: (.+?) → (.+?) \((\d+)-(\d+); against: (.+)\)$/, '議会が{1}の変更を否決した：{2} → {3}（{4}対{5}、反対：{6}）'],
   [/^(.+?) changed the law: (.+?) → (.+)$/, '{1}が法律を変更した：{2} → {3}'],
   [/^Corruption scandal: caught taking (.+?) from the treasury \((.+?) recovered\)$/, '汚職事件：国庫から{1}を着服したことが発覚（{2}を回収）'],
   [/^Scandal! (.+?) took (.+?) of public money$/, '不祥事！{1}が公金{2}を着服した'],
@@ -1795,3 +1797,6 @@ LES.I18n.sentences('ja', [
   [/^arrested for (.+)$/, '{1}で逮捕された'],
   [/^(.+) \(([A-Z][^()]*)\)$/, '{1}（{2}）'], // a course with its field, a business with its type (last: other patterns first)
 ]);
+// Birth rate as a number (Play a Life plan part 1, Nov 2026)
+LES.I18n.glossary("ja", {"A number (children per woman)": "数値で指定（女性1人あたりの子ども数）", "Children per woman": "女性1人あたりの子ども数", "The average number of children a woman has in her life. Today: Malaysia 1.6, UK 1.4, USA 1.6, China 1.0. About 2.1 keeps a population steady.": "女性が生涯に産む子どもの平均数。現在：マレーシア 1.6、イギリス 1.4、アメリカ 1.6、中国 1.0。約 2.1 で人口が安定します。"});
+LES.I18n.sentences("ja", [[/^([\d.]+) children per woman is very low: the town will age and shrink, and may empty out over a few generations\.$/, "女性1人あたり {1} 人はとても少なく、町は高齢化して縮み、数世代で人がいなくなるかもしれません。"], [/^([\d.]+) children per woman is very high: the population will grow fast, homes will be crowded and the game will slow down\.$/, "女性1人あたり {1} 人はとても多く、人口が急増して住宅が混み、ゲームが遅くなります。"], [/^Children per woman must be a number from 0\.3 to 6\.$/, "女性1人あたりの子ども数は 0.3 から 6 の数値にしてください。"]]);
