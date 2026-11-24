@@ -1,0 +1,522 @@
+{
+ "batch": "P5A",
+ "fit": "box",
+ "sheets": [
+  {
+   "file": "p5a-poses.png",
+   "rows": [
+    [
+     {
+      "id": "person.adult.type.0",
+      "w": 16,
+      "h": 20,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.type.1",
+      "w": 16,
+      "h": 20,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.serve.0",
+      "w": 16,
+      "h": 24,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.serve.1",
+      "w": 16,
+      "h": 24,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.talk.0",
+      "w": 16,
+      "h": 24,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.talk.1",
+      "w": 16,
+      "h": 24,
+      "type": "mask"
+     }
+    ],
+    [
+     {
+      "id": "person.adult.sitback.0",
+      "w": 16,
+      "h": 20,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.sitback.1",
+      "w": 16,
+      "h": 20,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.watch.0",
+      "w": 16,
+      "h": 20,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.watch.1",
+      "w": 16,
+      "h": 20,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.bed",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin",
+       "hair"
+      ]
+     }
+    ],
+    [
+     {
+      "id": "person.child.sitback.0",
+      "w": 16,
+      "h": 17,
+      "type": "mask"
+     },
+     {
+      "id": "person.child.sitback.1",
+      "w": 16,
+      "h": 17,
+      "type": "mask"
+     },
+     {
+      "id": "person.child.hand.0",
+      "w": 16,
+      "h": 17,
+      "type": "mask"
+     },
+     {
+      "id": "person.child.hand.1",
+      "w": 16,
+      "h": 17,
+      "type": "mask"
+     },
+     {
+      "id": "person.child.bed",
+      "w": 16,
+      "h": 12,
+      "type": "mask",
+      "parts": [
+       "skin",
+       "hair"
+      ]
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p5a-floors.png",
+   "rows": [
+    [
+     {
+      "id": "pub.floor.class",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "pub.floor.office",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "pub.floor.shop",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "pub.floor.hospital",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "pub.floor.terrazzo",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "pub.floor.wood",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "pub.wall.cream",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "pub.wall.green",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "pub.wall.grey",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "pub.wall.shop",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p5a-learning.png",
+   "rows": [
+    [
+     {
+      "id": "pub.whiteboard",
+      "w": 48,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "pub.blackboard",
+      "w": 48,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "pub.teacher_desk",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "pub.student_desk",
+      "w": 16,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "pub.lab_bench",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "pub.podium",
+      "w": 16,
+      "h": 24,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "pub.bookshelf",
+      "w": 32,
+      "h": 32,
+      "type": "art"
+     },
+     {
+      "id": "pub.reading_table",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "pub.globe",
+      "w": 12,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "pub.screen",
+      "w": 48,
+      "h": 28,
+      "type": "art"
+     },
+     {
+      "id": "pub.lockers",
+      "w": 32,
+      "h": 32,
+      "type": "art"
+     },
+     {
+      "id": "pub.artboard",
+      "w": 32,
+      "h": 20,
+      "type": "art"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p5a-office.png",
+   "rows": [
+    [
+     {
+      "id": "pub.office_desk",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "pub.cubicle",
+      "w": 32,
+      "h": 20,
+      "type": "art"
+     },
+     {
+      "id": "pub.meeting_table",
+      "w": 48,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "pub.office_chair",
+      "w": 12,
+      "h": 18,
+      "type": "art"
+     },
+     {
+      "id": "pub.cooler",
+      "w": 10,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "pub.filing",
+      "w": 12,
+      "h": 24,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "pub.bank_counter",
+      "w": 48,
+      "h": 28,
+      "type": "art"
+     },
+     {
+      "id": "pub.atm",
+      "w": 16,
+      "h": 28,
+      "type": "art"
+     },
+     {
+      "id": "pub.trading",
+      "w": 48,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "pub.server",
+      "w": 16,
+      "h": 32,
+      "type": "art"
+     },
+     {
+      "id": "pub.reception",
+      "w": 48,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "pub.office_plant",
+      "w": 12,
+      "h": 24,
+      "type": "art"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p5a-food-shop.png",
+   "rows": [
+    [
+     {
+      "id": "pub.shelf.0",
+      "w": 32,
+      "h": 32,
+      "type": "art"
+     },
+     {
+      "id": "pub.shelf.1",
+      "w": 32,
+      "h": 32,
+      "type": "art"
+     },
+     {
+      "id": "pub.checkout",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "pub.drinks",
+      "w": 16,
+      "h": 32,
+      "type": "art"
+     },
+     {
+      "id": "pub.clothes",
+      "w": 32,
+      "h": 28,
+      "type": "art"
+     },
+     {
+      "id": "pub.baskets",
+      "w": 12,
+      "h": 10,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "pub.stall",
+      "w": 32,
+      "h": 28,
+      "type": "art"
+     },
+     {
+      "id": "pub.roti",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "pub.court_table",
+      "w": 32,
+      "h": 20,
+      "type": "art"
+     },
+     {
+      "id": "pub.rest_table",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "pub.menu",
+      "w": 32,
+      "h": 20,
+      "type": "art"
+     },
+     {
+      "id": "pub.coffee",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p5a-health.png",
+   "rows": [
+    [
+     {
+      "id": "pub.hosp_bed",
+      "w": 16,
+      "h": 36,
+      "type": "art"
+     },
+     {
+      "id": "pub.curtain",
+      "w": 32,
+      "h": 28,
+      "type": "art"
+     },
+     {
+      "id": "pub.wait_chairs",
+      "w": 48,
+      "h": 20,
+      "type": "art"
+     },
+     {
+      "id": "pub.hosp_reception",
+      "w": 48,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "pub.iv",
+      "w": 8,
+      "h": 28,
+      "type": "art"
+     },
+     {
+      "id": "pub.med_cabinet",
+      "w": 16,
+      "h": 28,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "pub.wheelchair",
+      "w": 16,
+      "h": 18,
+      "type": "art"
+     },
+     {
+      "id": "pub.couch",
+      "w": 32,
+      "h": 20,
+      "type": "art"
+     },
+     {
+      "id": "pub.doctor_desk",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "pub.welfare_counter",
+      "w": 48,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "pub.number",
+      "w": 24,
+      "h": 10,
+      "type": "art"
+     },
+     {
+      "id": "pub.play_mat",
+      "w": 32,
+      "h": 20,
+      "type": "art"
+     }
+    ]
+   ]
+  }
+ ]
+}

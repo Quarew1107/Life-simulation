@@ -87,15 +87,15 @@
   R.rowsOf = b => R.plansFor(b.kind)[R.layoutOf(b)];
 
   // Furniture rectangles of a plan: each run of one letter becomes one piece.
-  function rects(rows) {
+  function rects(rows, letters) {
     const seen = new Set(), out = [];
     const cols = rows[0].length;
     for (let r = 1; r < rows.length; r++) for (let c = 0; c < cols; c++) {
       const ch = rows[r][c];
-      if (!'BwdFCKTSsMbP'.includes(ch)) continue;
+      if (!(letters || 'BwdFCKTSsMbP').includes(ch)) continue;
       if (seen.has(`${r},${c}`)) continue;
       let c1 = c, r1 = r;
-      if (ch !== 'b') while (c1 + 1 < cols && rows[r][c1 + 1] === ch) c1++;
+      if (ch !== 'b' || letters) while (c1 + 1 < cols && rows[r][c1 + 1] === ch) c1++;
       while (r1 + 1 < rows.length && rows[r1 + 1][c] === ch) r1++;
       for (let y = r; y <= r1; y++) for (let x = c; x <= c1; x++) seen.add(`${y},${x}`);
       out.push({ ch, c0: c, c1, r0: r, r1 });
@@ -448,7 +448,7 @@
     if (!p || !p.alive || p.away || p.inst) return null;
     const pos = r.posOf(p, t, fast);
     const b = pos.inside !== undefined ? r.town.buildings[pos.inside] : null;
-    if (!b || !R.isHome(b) || p.homeId !== b.id) return null;
+    if (!b || (R.isHome(b) ? p.homeId !== b.id : !(R.publicGroup && R.publicGroup(b)))) return null;
     if (fast) return { b, paused: true }; // 1 day per second and faster: rooms would flash several times a second
     return { b, paused: false };
   };
@@ -485,7 +485,8 @@
 
   // Draw the inside of home `b` onto a 256 x 192 canvas, then onto the map canvas, scaled to fit.
   R.draw = function (r, g, tgt, t, now) {
-    const w = r.w, b = tgt.b, art = A();
+    if (!R.isHome(tgt.b)) return R.drawPublic(r, g, tgt, t, now); // schools, offices, shops, clinics (public-room.js)
+    const w = r.w, b = tgt.b;
     const scene = R.scene(w, r, b, t, false);
     const fam = R.family(w, b);
     const country = (w.cfg && w.cfg.country) || 'my', layout = R.layoutOf(b);
@@ -496,11 +497,18 @@
       if (photo) { const [pw, ph] = A().size('home.photo_large'); Object.assign(photo, { w: pw, h: ph, label: ['keep.family', {}], paint: w.living.filter(p => p.alive && !p.away && !p.inst && p.homeId === b.id).sort((x, y) => LES.P.age(w, y) - LES.P.age(w, x)).slice(0, 4).map(p => p.id) }); }
       r._roomPlan = { sig: `${b.id}|${sig}`, plan };
     }
-    const plan = r._roomPlan.plan, hr = R.hour(t), W = plan.W, H = plan.H;
+    const plan = r._roomPlan.plan;
+    return R._render(r, g, b, plan, sig, R.place(plan, scene, now), scene, t, now);
+  };
+
+  // Draw a planned room with its people onto the room canvas, then onto the map canvas, scaled to fit. `people`
+  // are placed people ({ p, s, act, frame, x, y, key, view, mat, uniform }); `more` = people in the building not shown.
+  R._render = function (r, g, b, plan, sig, people, scene, t, now, more) {
+    const w = r.w, art = A(), hr = R.hour(t), W = plan.W, H = plan.H;
     const rc = r._roomCv && r._roomCv.width === W && r._roomCv.height === H ? r._roomCv : (r._roomCv = Object.assign(document.createElement('canvas'), { width: W, height: H }));
     const q = rc.getContext('2d'); q.imageSmoothingEnabled = false;
     q.drawImage(staticLayer(b, plan, sig, w), 0, 0);
-    const people = R.place(plan, scene, now), f2 = Math.floor((now || 0) / 650) % 2, f3 = Math.floor((now || 0) / 300) % 3;
+    const f3 = Math.floor((now || 0) / 300) % 3;
     const sofaBusy = people.some(m => m.act === 'sofa'), cooking = people.some(m => m.act === 'cook'), lampOn = hr >= 19 || hr < 6.5;
     const draws = [];
     for (const it of plan.items) {
@@ -516,7 +524,7 @@
     const scr = r.screenPos = [];
     const marks = [];
     for (const m of people) {
-      const age = LES.P.age(w, m.p), look = LES.Sprites.lookOf(m.p, age);
+      const age = LES.P.age(w, m.p), own = LES.Sprites.lookOf(m.p, age), look = m.uniform ? Object.assign({}, own, m.uniform) : own; // staff and pupils in uniform
       const spr = art.person(m.frame, look, { grey: m.s.elder && look.style !== 3, view: m.view });
       if (!spr) continue;
       const x = Math.round(m.x - spr.width / 2), y = m.view === 'top' ? m.y : Math.round(m.y - spr.height);
@@ -534,6 +542,13 @@
       q.fillStyle = '#f2c14e'; q.fillRect(k.x - 2, k.y - 6, 5, 1); q.fillRect(k.x - 1, k.y - 5, 3, 1); q.fillRect(k.x, k.y - 4, 1, 1);
     }
     nightTint(q, plan, hr, lampOn);
+    if (more > 0) { // people in the building who are not in this room
+      const text = `+${more}`;
+      q.font = '7px monospace'; q.textBaseline = 'top';
+      const tw = Math.ceil(q.measureText(text).width);
+      q.fillStyle = 'rgba(16,20,26,0.85)'; q.fillRect(W - tw - 8, 3, tw + 6, 10);
+      q.fillStyle = '#f4f1e8'; q.fillText(text, W - tw - 5, 4);
+    }
     // Onto the map canvas: as big as fits, whole-number scale when it is 2x or more.
     const cw = r.cv.width, ch = r.cv.height, fit = Math.min(cw / W, ch / H), k = fit >= 2 ? Math.floor(fit) : fit;
     const ox = Math.round((cw - W * k) / 2), oy = Math.round((ch - H * k) / 2);
@@ -547,6 +562,8 @@
     r._roomLabels = plan.items.filter(it => it.label);
     return { scene, people };
   };
+
+  R._rects = rects; R._static = staticLayer; R._hash = hash; R._top = top;
 
   // A still picture of a plan (furniture, no people), for checks and previews.
   R.preview = function (plan, b) {

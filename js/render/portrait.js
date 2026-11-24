@@ -106,6 +106,27 @@
     else for (let x = mx - 1; x <= mx + 1; x++) put(x, my, 'line'); // tired, unwell: a flat mouth
   }
   PT.features = id => { const img = A().pixels(id); return img ? features(img, (A().box(img, 'top') || { y0: img.height }).y0) : null; }; // for the tests
+  // The redesign has a whole head for each expression, drawn like the busts. Its eyes, brows, cheeks and mouth
+  // (the band from the brows to below the mouth, inside the face) are copied onto the bust, lined up on the eyes,
+  // only where the bust has face (skin or a feature), so the person's own head, hair and ears stay.
+  function transplant(img, f, expr) {
+    if (!expr || expr === 'neutral' || !A().has(`face.${expr}`)) return expr === 'neutral';
+    const fi = A().pixels(`face.${expr}`), ff = features(fi, fi.height);
+    if (!ff) return false;
+    const art = A(), W = img.width, d = img.data, o = fi.data, fw = fi.width;
+    const dx = Math.round((f.L.x0 + f.R.x1) / 2 - (ff.L.x0 + ff.R.x1) / 2), dy = Math.min(f.L.y0, f.R.y0) - Math.min(ff.L.y0, ff.R.y0);
+    const y0 = Math.min(ff.L.y0, ff.R.y0) - 3, y1 = ff.M ? ff.M.y1 + 2 : Math.max(ff.L.y1, ff.R.y1) + 7;
+    for (let y = Math.max(0, y0); y <= Math.min(fi.height - 1, y1); y++) for (let x = ff.face.x0 + 1; x < ff.face.x1; x++) {
+      const i = (y * fw + x) * 4, pt = art.partAt(o, i);
+      if (pt !== 'skin' && pt !== 'other') continue;
+      const X = x + dx, Y = y + dy;
+      if (X <= f.face.x0 || X >= f.face.x1 || Y < 0 || Y >= img.height) continue;
+      const j = (Y * W + X) * 4, bp = art.partAt(d, j);
+      if (bp !== 'skin' && bp !== 'other') continue;
+      d[j] = o[i]; d[j + 1] = o[i + 1]; d[j + 2] = o[i + 2]; d[j + 3] = 255;
+    }
+    return true;
+  }
   const mix = (a, b, t) => '#' + [1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, '0')).join('');
 
   const cache = new Map();
@@ -119,7 +140,19 @@
     if (cache.size > 400) cache.clear();
     const art = A(), img = art.pixels(art.has(`bust.${g}`) ? `bust.${g}` : 'bust.adult');
     if (!img) return null;
-    const shoulders = (art.box(img, 'top') || { y0: img.height }).y0, f = features(img, shoulders);
+    const shoulders = (art.box(img, 'top') || { y0: img.height }).y0;
+    // Teens and adults: the whole head of the chosen expression (drawn like the busts) sits on the bust's shoulders.
+    const fid = blink ? 'face.blink' : `face.${expr || 'neutral'}`;
+    if ((g === 'adult' || g === 'teen') && art.has(fid)) {
+      const head = art.pixels(fid), hb = art.box(head, 'any'), own = art.box(img, 'skin', 0, shoulders);
+      if (hb && own) {
+        const d = img.data, W = img.width;
+        for (let y = 0; y < shoulders - 1; y++) for (let x = 0; x < W; x++) d[(y * W + x) * 4 + 3] = 0; // the old head goes
+        const dx = Math.round((own.x0 + own.x1) / 2 - (hb.x0 + hb.x1) / 2), dy = shoulders + 1 - hb.y1;
+        art.stamp(img, head, dx, dy, (o, bp, X, Y) => Y < shoulders + 1 || !bp);
+      }
+    }
+    const f = features(img, shoulders);
     // Hair or headwear: the bust's own short hair goes and the overlay sits on top of the head. Plain hair never
     // covers the eyes or the face below the brows; a headscarf is lined up on the face and frames it.
     const name = art.overlayFor(look);
@@ -143,7 +176,7 @@
         art.stamp(img, ov, dx, dy, (o, b, X, Y) => (o === 'hair' || o === 'head' || (o === 'other' && (!b || b === 'other'))) && (big || !(X > face.x0 && X < face.x1 && Y >= brow)));
       }
     }
-    if (f && g !== 'baby') expression(img, f, expr, blink);
+    // children and elders keep their own face (the expression heads are drawn for grown-up faces)
     if (f && g !== 'baby' && g !== 'child') {
       const ex = Math.round((f.L.x0 + f.R.x1) / 2), ey = Math.round((f.L.y0 + f.L.y1) / 2);
       if (look.beard) { // stubble, moustache or full beard round the mouth
@@ -164,7 +197,7 @@
   // Draw person p's portrait into canvas c (any size; whole-number scale when it fits). false = no art.
   // Switched off on the owner's request (Nov 23 2026): the panels keep the old portrait until the busts are
   // refined at the end of the art upgrade. The art and this code stay; set PT.enabled = true to try them.
-  PT.enabled = false;
+  PT.enabled = true; // the redesigned busts (Nov 24 2026)
   PT.draw = function (c, w, p, opts) {
     if (!PT.enabled || !c || !p || !PT.available()) return false;
     const expr = (opts && opts.expr) || PT.expression(w, p);

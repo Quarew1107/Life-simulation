@@ -1,0 +1,359 @@
+{
+ "batch": "PR",
+ "sheets": [
+  {
+   "file": "pr-busts.png",
+   "px": 10,
+   "rows": [
+    [
+     {
+      "id": "bust.adult",
+      "w": 32,
+      "h": 44,
+      "type": "mask",
+      "parts": [
+       "skin",
+       "hair",
+       "top"
+      ]
+     },
+     {
+      "id": "bust.child",
+      "w": 32,
+      "h": 44,
+      "type": "mask",
+      "parts": [
+       "skin",
+       "hair",
+       "top"
+      ]
+     },
+     {
+      "id": "bust.elder",
+      "w": 32,
+      "h": 44,
+      "type": "mask",
+      "parts": [
+       "skin",
+       "hair",
+       "top"
+      ]
+     },
+     {
+      "id": "bust.baby",
+      "w": 32,
+      "h": 44,
+      "type": "mask",
+      "parts": [
+       "skin",
+       "hair"
+      ]
+     }
+    ],
+    [
+     {
+      "id": "bust_hair.short",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "bust_hair.long",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "bust_hair.bun",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "bust_hair.ponytail",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "bust_hair.tudung",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "bust_hair.songkok",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     }
+    ]
+   ]
+  },
+  {
+   "file": "pr-hair.png",
+   "px": 10,
+   "rows": [
+    [
+     {
+      "id": "bust_hair.curly",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "bust_hair.buzz",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "bust_hair.braids",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "bust_hair.wavy",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "bust_hair.side",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "bust_hair.bob",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "bust_hair.kopiah",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "bust_hair.cap",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     },
+     {
+      "id": "bust_hair.turban",
+      "w": 32,
+      "h": 24,
+      "type": "mask",
+      "parts": [
+       "skin"
+      ]
+     }
+    ]
+   ]
+  },
+  {
+   "file": "pr-faces.png",
+   "px": 12,
+   "rows": [
+    [
+     {
+      "id": "face.neutral",
+      "w": 32,
+      "h": 44,
+      "type": "mask",
+      "parts": [
+       "skin",
+       "hair"
+      ]
+     },
+     {
+      "id": "face.happy",
+      "w": 32,
+      "h": 44,
+      "type": "mask",
+      "parts": [
+       "skin",
+       "hair"
+      ]
+     },
+     {
+      "id": "face.sad",
+      "w": 32,
+      "h": 44,
+      "type": "mask",
+      "parts": [
+       "skin",
+       "hair"
+      ]
+     },
+     {
+      "id": "face.worried",
+      "w": 32,
+      "h": 44,
+      "type": "mask",
+      "parts": [
+       "skin",
+       "hair"
+      ]
+     },
+     {
+      "id": "face.tired",
+      "w": 32,
+      "h": 44,
+      "type": "mask",
+      "parts": [
+       "skin",
+       "hair"
+      ]
+     },
+     {
+      "id": "face.excited",
+      "w": 32,
+      "h": 44,
+      "type": "mask",
+      "parts": [
+       "skin",
+       "hair"
+      ]
+     },
+     {
+      "id": "face.unwell",
+      "w": 32,
+      "h": 44,
+      "type": "mask",
+      "parts": [
+       "skin",
+       "hair"
+      ]
+     },
+     {
+      "id": "face.blink",
+      "w": 32,
+      "h": 44,
+      "type": "mask",
+      "parts": [
+       "skin",
+       "hair"
+      ]
+     }
+    ]
+   ],
+   "remap": {
+    "head": "skin"
+   }
+  },
+  {
+   "file": "pr-extras.png",
+   "px": 11,
+   "rows": [
+    [
+     {
+      "id": "bust.glasses.1",
+      "w": 20,
+      "h": 6,
+      "type": "art"
+     },
+     {
+      "id": "bust.glasses.2",
+      "w": 20,
+      "h": 6,
+      "type": "art"
+     },
+     {
+      "id": "bust.glasses.3",
+      "w": 20,
+      "h": 6,
+      "type": "art"
+     },
+     {
+      "id": "bust.beard.1",
+      "w": 18,
+      "h": 8,
+      "type": "mask",
+      "parts": [
+       "hair"
+      ]
+     },
+     {
+      "id": "bust.beard.2",
+      "w": 18,
+      "h": 8,
+      "type": "mask",
+      "parts": [
+       "hair"
+      ]
+     },
+     {
+      "id": "bust.beard.3",
+      "w": 18,
+      "h": 10,
+      "type": "mask",
+      "parts": [
+       "hair"
+      ]
+     },
+     {
+      "id": "bust.teen",
+      "w": 32,
+      "h": 44,
+      "type": "mask",
+      "parts": [
+       "skin",
+       "hair",
+       "top"
+      ]
+     }
+    ]
+   ],
+   "remap": {
+    "head": "skin"
+   }
+  }
+ ]
+}

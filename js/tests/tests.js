@@ -2961,9 +2961,9 @@
       const placed = R.place(R.plan(0, { baby: true, faith: 'islam', sleepers: cpl.scn.length }), cpl.scn, 0);
       check('A couple who are both home share the double bed', cpl.two[0].p.partnerId === cpl.two[1].p.id && placed.filter(m => cpl.two.includes(m.s)).every(m => m.kind === 'bed' && m.y < 80));
     }
-    const worker = w.living.find(p => p.alive && !p.away && p.plan && p.plan[0] && p.plan[0].act === 'WORK' && p.plan[0].loc !== p.homeId);
+    const worker = w.living.find(p => p.alive && !p.away && p.plan && p.plan[0] && p.plan[0].act === 'WORK' && p.plan[0].loc !== p.homeId && !R.isHome(w.town.buildings[p.plan[0].loc]) && !R.publicGroup(w.town.buildings[p.plan[0].loc]));
     const keep = r.selectedId; r.selectedId = worker.id;
-    check('At work (not at home): the town is shown', R.target(r, at(11), false) === null);
+    check('At work in a building with no inside view yet (factory, park...): the town is shown', R.target(r, at(11), false) === null);
     r.selectedId = keep;
 
     // Drawing the room and the town; the simulation must not notice (same save, step by step).
@@ -3136,6 +3136,59 @@
     check('In a UK town every home kind gets its own plan, everyone at home has a bed at night, and the inside view draws at the plan\'s size', kinds.size >= 3 && noBed === 0 && drawn === 1, `${kinds.size} kinds, ${noBed} without a bed`);
   }
 
+  // Art upgrade Phase 5A: inside schools, offices, shops, food places, hospitals and the welfare office.
+  async function publicRoomTests() {
+    print('--- Inside public buildings (learning, office, shops, food, health): plans, staff and visitors ---', 'info');
+    if (typeof document === 'undefined' || !LES.Room || !LES.Room.planPublic) { print('(browser only: skipped)'); return; }
+    const AP = LES.ArtPack, R = LES.Room;
+    if (!AP.ready && !AP.failed) AP.init();
+    await AP.whenReady();
+    const names = ['class', 'class:black', 'lab', 'lecture', 'library', 'library:m', 'open', 'open:m', 'bank', 'trade', 'shop', 'shop:m', 'food', 'cafe', 'ward', 'clinic', 'welfare'];
+    const bad = [], missing = new Set();
+    for (const n of names) {
+      const plan = R.planPublic(n), S = plan.spots;
+      for (const it of plan.items) if (!AP.has(it.id)) missing.add(it.id);
+      const staff = S.teach.length + S.counter.length + S.desk.length + S.nurse.length, visit = S.student.length + S.bench.length + S.table.length + S.wait.length + S.bed.length + S.browse.length + S.front.length;
+      if (staff < 1 || visit < 4 || S.stand.length < 4) bad.push(`${n}: ${staff} staff, ${visit} visitor places`);
+    }
+    check('All public room plans use existing art and have places for staff and visitors', !missing.size && !bad.length, [...missing].concat(bad).join(', '));
+    const w = new LES.World(Object.assign({}, LES.DEFAULTS, { seed: 'public-rooms', founders: 220 }));
+    for (let d = 0; d < 500; d++) w.step();
+    const cv = document.createElement('canvas'); cv.style.cssText = 'position:fixed;left:0;top:0;width:800px;height:600px;visibility:hidden'; document.body.appendChild(cv);
+    const r = new LES.Renderer(cv); r.setWorld(w);
+    const t = (10 - 6) / 24;
+    let checked = 0, wrong = 0, staffOk = 0, staffAll = 0, pupils = 0, pupilsAtDesks = 0;
+    for (const b of w.town.buildings) {
+      if (!R.publicGroup(b)) continue;
+      const plan = R.planPublic(R.publicPlanName(b)), scene = R.publicScene(w, r, b, t), placed = R.placePublic(w, plan, scene, -1, 0);
+      checked++;
+      for (const m of placed.people) {
+        const pos = r.posOf(m.p, t, false);
+        if (!(pos.inside === b.id || pos.at === b.id)) wrong++; // only people really in this building
+        if (m.staff) { staffAll++; if (['teach', 'counter', 'desk', 'nurse'].includes(m.kind) || m.kind === 'stand') staffOk++; }
+        else if (['counter', 'desk', 'teach', 'nurse'].includes(m.kind)) wrong++; // visitors never take a staff place
+        if (!m.staff && plan.group === 'learn' && LES.P.age(w, m.p) < 18) { pupils++; if (['student', 'bench', 'table'].includes(m.kind)) pupilsAtDesks++; }
+        if (!AP.has(m.frame)) wrong++;
+      }
+      if (placed.people.length + placed.more !== scene.length) wrong++;
+    }
+    check('In every public building at 10:00 only people really inside are shown, visitors never take staff places, and the rest are counted', checked > 10 && wrong === 0, `${wrong} wrong in ${checked} buildings`);
+    check('Staff work at the board, counter, desk or by the beds', staffAll > 5 && staffOk === staffAll, `${staffOk}/${staffAll}`);
+    check('Pupils sit at desks, benches or tables', pupils > 5 && pupilsAtDesks >= pupils * 0.6, `${pupilsAtDesks}/${pupils}`);
+    const kid = w.living.find(p => p.alive && p.plan && p.plan[0] && p.plan[0].act === 'SCHOOL' && r.posOf(p, t, false).inside === p.plan[0].loc && R.publicGroup(w.town.buildings[p.plan[0].loc]));
+    r.roomOn = true; r.follow = true; r.selectedId = kid.id;
+    const tg = R.target(r, t, false);
+    let ok = true; try { r.frame(t, false, 0); } catch (e) { ok = false; print(`  ${e.message}`); }
+    const shown = (r.screenPos || []).some(s => s.id === kid.id);
+    check('Following a pupil to school shows the classroom with the pupil in it', !!tg && ok && r.roomState === 'on' && shown);
+    const twin = new LES.World(Object.assign({}, LES.DEFAULTS, { seed: 'public-rooms', founders: 220 }));
+    for (let d = 0; d < 500; d++) twin.step();
+    for (let d = 0; d < 10; d++) { for (const h of [8.5, 10, 14, 18]) r.frame((h - 6) / 24, false, d * 100); w.step(); twin.step(); }
+    const strip = x => LES.Save.toJSON(x).replace(/"saved":"[^"]*",/, '');
+    check('Drawing public rooms leaves the simulation exactly as without it', strip(w) === strip(twin));
+    cv.remove();
+  }
+
   async function heldTests() {
     print('--- Prison and rehab: what is paid, the home, and life events (rules revision 11) ---', 'info');
     const D = LES.DEFAULTS, CR = LES.Crime, F = LES.Finance, Pl = LES.Player, Wd = LES.World;
@@ -3284,6 +3337,7 @@
       await roomTests();
       await memoryTests();
       await homeKindTests();
+      await publicRoomTests();
       await buildingArtTests();
       await crimeRevTests();
       await wealthRevTests();
@@ -3319,6 +3373,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, roomTests, memoryTests, homeKindTests, heldTests, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, playFlowTests, playCatalogTests, playPacingTests, playMatrixTests, i18nSentenceTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, roomTests, memoryTests, homeKindTests, publicRoomTests, heldTests, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, playFlowTests, playCatalogTests, playPacingTests, playMatrixTests, i18nSentenceTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

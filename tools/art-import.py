@@ -210,7 +210,7 @@ def main():
         for r_want, r_found in zip(want, found):
             for spec, (x0, y0, x1, y1) in zip(r_want, r_found):
                 crop, cbg = im[y0:y1, x0:x1], bg[y0:y1, x0:x1]
-                items.append(dict(spec=spec, crop=crop, alpha=~cbg, box=(x0, y0, x1, y1), sheet=sh['file']))
+                items.append(dict(spec=spec, crop=crop, alpha=~cbg, box=(x0, y0, x1, y1), sheet=sh['file'], px=sh.get('px'), remap=sh.get('remap')))
                 if spec['type'] == 'art': art_pixels.append(crop[~cbg].reshape(-1, 3))
 
     # The palette: fixed once made (tools/art/palette.json); the pilot makes it from the furniture.
@@ -247,8 +247,17 @@ def main():
             tw, th = fit_size(cw, ch, s['w'], s['h'], None if man.get('fit') == 'box' else scales.get(it['sheet']))
         else:
             idx = nearest(flat, mask_pal).reshape(ch, cw)
+            for src, dst in (it.get('remap') or {}).items():  # e.g. skin drawn in natural colours: orange -> skin
+                si = [k for k, (part, _, _) in enumerate(mask_cols) if part == src]
+                di = [k for k, (part, _, _) in enumerate(mask_cols) if part == dst]
+                for a_, b_ in zip(si, di): idx[idx == a_] = b_
             tw, th = fit_size(cw, ch, s['w'], s['h'])
-        if s.get('fit') == 'stretch':  # pieces that must line up exactly (wall strips, doors): stretched to size
+        if it.get('px'):  # the sheet's own pixel size is known: keep the artist's exact size
+            tw, th = max(1, round(cw / it['px'])), max(1, round(ch / it['px']))
+            ox, oy = phase(crop, alpha, it['px'], 1), phase(crop, alpha, it['px'], 0)
+            tw, th = max(1, round((cw - ox) / it['px'])), max(1, round((ch - oy) / it['px']))
+            small = shrink(idx, alpha, tw, th, 0.5, ox, oy)
+        elif s.get('fit') == 'stretch':  # pieces that must line up exactly (wall strips, doors): stretched to size
             tw, th = s['w'], s['h']
             small = shrink(idx, alpha, tw, th, 0.5)
         else:
