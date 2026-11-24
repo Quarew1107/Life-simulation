@@ -1,0 +1,612 @@
+{
+ "batch": "P5B",
+ "fit": "box",
+ "sheets": [
+  {
+   "file": "p5b-poses.png",
+   "rows": [
+    [
+     {
+      "id": "person.adult.repair.0",
+      "w": 16,
+      "h": 18,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.repair.1",
+      "w": 16,
+      "h": 18,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.lift.0",
+      "w": 16,
+      "h": 24,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.lift.1",
+      "w": 16,
+      "h": 24,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.run.0",
+      "w": 16,
+      "h": 24,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.run.1",
+      "w": 16,
+      "h": 24,
+      "type": "mask"
+     }
+    ],
+    [
+     {
+      "id": "person.adult.sing.0",
+      "w": 16,
+      "h": 24,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.sing.1",
+      "w": 16,
+      "h": 24,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.praystand.0",
+      "w": 16,
+      "h": 24,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.praystand.1",
+      "w": 16,
+      "h": 24,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.carry.0",
+      "w": 16,
+      "h": 24,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.carry.1",
+      "w": 16,
+      "h": 24,
+      "type": "mask"
+     }
+    ],
+    [
+     {
+      "id": "person.adult.bowl.0",
+      "w": 16,
+      "h": 24,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.bowl.1",
+      "w": 16,
+      "h": 24,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.massage.0",
+      "w": 16,
+      "h": 24,
+      "type": "mask"
+     },
+     {
+      "id": "person.adult.massage.1",
+      "w": 16,
+      "h": 24,
+      "type": "mask"
+     }
+    ],
+    [
+     {
+      "id": "person.child.praystand.0",
+      "w": 16,
+      "h": 20,
+      "type": "mask"
+     },
+     {
+      "id": "person.child.praystand.1",
+      "w": 16,
+      "h": 20,
+      "type": "mask"
+     },
+     {
+      "id": "person.child.cheer.0",
+      "w": 16,
+      "h": 20,
+      "type": "mask"
+     },
+     {
+      "id": "person.child.cheer.1",
+      "w": 16,
+      "h": 20,
+      "type": "mask"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p5b-floors.png",
+   "rows": [
+    [
+     {
+      "id": "pub.floor.factory",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "pub.floor.workshop",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "pub.floor.cell",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "pub.floor.court",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "pub.floor.prayer",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "pub.floor.temple",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "pub.floor.gym",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "pub.floor.cinema",
+      "w": 16,
+      "h": 16,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "pub.wall.metal",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "pub.wall.concrete",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "pub.wall.red",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     },
+     {
+      "id": "pub.wall.woodpanel",
+      "w": 16,
+      "h": 32,
+      "type": "art",
+      "fit": "stretch"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p5b-industry.png",
+   "rows": [
+    [
+     {
+      "id": "pub.workbench",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "pub.machine",
+      "w": 32,
+      "h": 28,
+      "type": "art"
+     },
+     {
+      "id": "pub.conveyor",
+      "w": 48,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "pub.crates",
+      "w": 16,
+      "h": 20,
+      "type": "art"
+     },
+     {
+      "id": "pub.rack",
+      "w": 32,
+      "h": 32,
+      "type": "art"
+     },
+     {
+      "id": "pub.forklift",
+      "w": 24,
+      "h": 24,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "pub.car_lift",
+      "w": 48,
+      "h": 32,
+      "type": "art"
+     },
+     {
+      "id": "pub.toolboard",
+      "w": 32,
+      "h": 20,
+      "type": "art"
+     },
+     {
+      "id": "pub.tyres",
+      "w": 12,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "pub.bus_repair",
+      "w": 48,
+      "h": 32,
+      "type": "art"
+     },
+     {
+      "id": "pub.cone",
+      "w": 8,
+      "h": 10,
+      "type": "art"
+     },
+     {
+      "id": "pub.control",
+      "w": 16,
+      "h": 24,
+      "type": "art"
+     }
+    ]
+   ],
+   "cut": "bands"
+  },
+  {
+   "file": "p5b-justice.png",
+   "rows": [
+    [
+     {
+      "id": "pub.police_desk",
+      "w": 48,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "pub.cell",
+      "w": 32,
+      "h": 32,
+      "type": "art"
+     },
+     {
+      "id": "pub.bunk",
+      "w": 16,
+      "h": 36,
+      "type": "art"
+     },
+     {
+      "id": "pub.steel_table",
+      "w": 32,
+      "h": 20,
+      "type": "art"
+     },
+     {
+      "id": "pub.judge",
+      "w": 48,
+      "h": 28,
+      "type": "art"
+     },
+     {
+      "id": "pub.witness",
+      "w": 16,
+      "h": 24,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "pub.court_bench",
+      "w": 48,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "pub.circle",
+      "w": 32,
+      "h": 32,
+      "type": "art"
+     },
+     {
+      "id": "pub.counsel",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "pub.gate",
+      "w": 16,
+      "h": 32,
+      "type": "art"
+     },
+     {
+      "id": "pub.lockers_grey",
+      "w": 32,
+      "h": 32,
+      "type": "art"
+     },
+     {
+      "id": "pub.notice",
+      "w": 32,
+      "h": 20,
+      "type": "art"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p5b-worship.png",
+   "rows": [
+    [
+     {
+      "id": "pub.mihrab",
+      "w": 32,
+      "h": 32,
+      "type": "art"
+     },
+     {
+      "id": "pub.sejadah",
+      "w": 16,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "pub.rehal",
+      "w": 10,
+      "h": 8,
+      "type": "art"
+     },
+     {
+      "id": "pub.altar_cn",
+      "w": 48,
+      "h": 28,
+      "type": "art"
+     },
+     {
+      "id": "pub.lanterns",
+      "w": 24,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "pub.shrine_hindu",
+      "w": 32,
+      "h": 32,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "pub.pew",
+      "w": 48,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "pub.altar_church",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "pub.candles",
+      "w": 12,
+      "h": 20,
+      "type": "art"
+     },
+     {
+      "id": "pub.hall_table",
+      "w": 48,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "pub.stage",
+      "w": 48,
+      "h": 28,
+      "type": "art"
+     },
+     {
+      "id": "pub.wreath",
+      "w": 24,
+      "h": 24,
+      "type": "art"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p5b-leisure.png",
+   "rows": [
+    [
+     {
+      "id": "pub.cinema_seats",
+      "w": 48,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "pub.cinema_screen",
+      "w": 64,
+      "h": 32,
+      "type": "art"
+     },
+     {
+      "id": "pub.lane",
+      "w": 16,
+      "h": 48,
+      "type": "art"
+     },
+     {
+      "id": "pub.ball_rack",
+      "w": 24,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "pub.karaoke",
+      "w": 48,
+      "h": 28,
+      "type": "art"
+     },
+     {
+      "id": "pub.mic",
+      "w": 6,
+      "h": 20,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "pub.treadmill",
+      "w": 24,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "pub.weights",
+      "w": 32,
+      "h": 20,
+      "type": "art"
+     },
+     {
+      "id": "pub.dumbbells",
+      "w": 24,
+      "h": 16,
+      "type": "art"
+     },
+     {
+      "id": "pub.massage_bed",
+      "w": 32,
+      "h": 20,
+      "type": "art"
+     },
+     {
+      "id": "pub.bar",
+      "w": 48,
+      "h": 28,
+      "type": "art"
+     },
+     {
+      "id": "pub.bottles",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     }
+    ]
+   ]
+  },
+  {
+   "file": "p5b-country.png",
+   "rows": [
+    [
+     {
+      "id": "uk.pub_bar",
+      "w": 48,
+      "h": 28,
+      "type": "art"
+     },
+     {
+      "id": "uk.pub_table",
+      "w": 48,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "us.booth",
+      "w": 32,
+      "h": 28,
+      "type": "art"
+     },
+     {
+      "id": "us.diner_counter",
+      "w": 48,
+      "h": 24,
+      "type": "art"
+     }
+    ],
+    [
+     {
+      "id": "cn.noodle_counter",
+      "w": 48,
+      "h": 28,
+      "type": "art"
+     },
+     {
+      "id": "cn.round_table",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     },
+     {
+      "id": "my.mamak_table",
+      "w": 32,
+      "h": 20,
+      "type": "art"
+     },
+     {
+      "id": "my.tehtarik",
+      "w": 32,
+      "h": 24,
+      "type": "art"
+     }
+    ]
+   ]
+  }
+ ]
+}

@@ -3143,15 +3143,15 @@
     const AP = LES.ArtPack, R = LES.Room;
     if (!AP.ready && !AP.failed) AP.init();
     await AP.whenReady();
-    const names = ['class', 'class:black', 'lab', 'lecture', 'library', 'library:m', 'open', 'open:m', 'bank', 'trade', 'shop', 'shop:m', 'food', 'cafe', 'ward', 'clinic', 'welfare'];
+    const names = Object.keys(R.PUBLIC_PLANS).flatMap(n => [n, `${n}:m`]); // every plan, also mirrored
     const bad = [], missing = new Set();
     for (const n of names) {
-      const plan = R.planPublic(n), S = plan.spots;
+      const plan = R.planPublic(n, ['my', 'uk', 'us', 'cn'][names.indexOf(n) % 4]), S = plan.spots;
       for (const it of plan.items) if (!AP.has(it.id)) missing.add(it.id);
-      const staff = S.teach.length + S.counter.length + S.desk.length + S.nurse.length, visit = S.student.length + S.bench.length + S.table.length + S.wait.length + S.bed.length + S.browse.length + S.front.length;
-      if (staff < 1 || visit < 4 || S.stand.length < 4) bad.push(`${n}: ${staff} staff, ${visit} visitor places`);
+      const staff = ['teach', 'counter', 'desk', 'nurse', 'work', 'line'].reduce((n, k) => n + S[k].length, 0), visit = ['student', 'bench', 'table', 'wait', 'bed', 'browse', 'front', 'audience', 'cell', 'bunk', 'circle', 'altar', 'pray', 'lane', 'sing', 'run', 'lift', 'massage'].reduce((n, k) => n + S[k].length, 0);
+      if (staff + visit < 3 || (plan.group === 'industry' ? staff < 2 : visit < 3) || S.stand.length < 4) bad.push(`${n}: ${staff} staff, ${visit} visitor places`);
     }
-    check('All public room plans use existing art and have places for staff and visitors', !missing.size && !bad.length, [...missing].concat(bad).join(', '));
+    check('All public room plans (5A and 5B, also mirrored, with country pieces) use existing art and have places for staff and visitors', !missing.size && !bad.length, [...missing].concat(bad).join(', '));
     const w = new LES.World(Object.assign({}, LES.DEFAULTS, { seed: 'public-rooms', founders: 220 }));
     for (let d = 0; d < 500; d++) w.step();
     const cv = document.createElement('canvas'); cv.style.cssText = 'position:fixed;left:0;top:0;width:800px;height:600px;visibility:hidden'; document.body.appendChild(cv);
@@ -3160,13 +3160,13 @@
     let checked = 0, wrong = 0, staffOk = 0, staffAll = 0, pupils = 0, pupilsAtDesks = 0;
     for (const b of w.town.buildings) {
       if (!R.publicGroup(b)) continue;
-      const plan = R.planPublic(R.publicPlanName(b)), scene = R.publicScene(w, r, b, t), placed = R.placePublic(w, plan, scene, -1, 0);
+      const plan = R.planPublic(R.publicPlanName(b, 'my'), 'my'), scene = R.publicScene(w, r, b, t), placed = R.placePublic(w, plan, scene, -1, 0);
       checked++;
       for (const m of placed.people) {
         const pos = r.posOf(m.p, t, false);
         if (!(pos.inside === b.id || pos.at === b.id)) wrong++; // only people really in this building
-        if (m.staff) { staffAll++; if (['teach', 'counter', 'desk', 'nurse'].includes(m.kind) || m.kind === 'stand') staffOk++; }
-        else if (['counter', 'desk', 'teach', 'nurse'].includes(m.kind)) wrong++; // visitors never take a staff place
+        if (m.staff) { staffAll++; if (['teach', 'counter', 'desk', 'nurse', 'work', 'line'].includes(m.kind) || m.kind === 'stand') staffOk++; }
+        else if (['counter', 'desk', 'teach', 'nurse', 'work', 'line'].includes(m.kind)) wrong++; // visitors never take a staff place
         if (!m.staff && plan.group === 'learn' && LES.P.age(w, m.p) < 18) { pupils++; if (['student', 'bench', 'table'].includes(m.kind)) pupilsAtDesks++; }
         if (!AP.has(m.frame)) wrong++;
       }
