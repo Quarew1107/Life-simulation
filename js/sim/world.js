@@ -612,7 +612,7 @@
       if (p.job) Lb.endJob(this, p, 'died', true);
       p.enrol = null; p.pregnancy = null; p.plan = null;
       if (p.inst) p.inst = null;
-      if (p.own) LES.Housing.onDeath(this, p); // rev 13: the partner keeps the home, or it is sold for the estate
+      if (p.own || p.lets) LES.Housing.onDeath(this, p); // rev 13: the partner keeps the home, or it is sold for the estate
       if (p.partnerId !== null) {
         const q = this.people[p.partnerId];
         q.partnerId = null; p.partnerId = null;

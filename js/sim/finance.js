@@ -131,6 +131,7 @@
 
   F.payBill = function (w, p, cat) {
     if (cat === 'housing' && p.own) { LES.Housing.payMonth(w, p); return; } // rev 13: home owners
+    if (cat === 'housing' && p.lord !== undefined && LES.Housing.payRent(w, p)) return; // rev 13: a tenant pays the landlord
     if (cat !== 'housing' && LES.World.heldFree(w, p)) return; // rev 11: no fares or outings from prison or rehab
     const L = w.ledger, amt = F.tierCost(w, cat, p.tiers[cat]);
     if (!amt) return;
@@ -716,7 +717,7 @@
     F.debtMonth(w, p);
     // Wealthier people consume part of their wealth (family support, luxuries,
     // donations): ~3.6%/year of net worth above RM300k (Year-1 money).
-    const rich = (F.wealthRev(w) ? p.nw - F.locked(w, p) : p.nw) - (p.own ? LES.Housing.equity(w, p) : 0) - w.px(3e5); // (rev 13: not out of the home they live in) // rev 9: not out of locked retirement savings
+    const rich = (F.wealthRev(w) ? p.nw - F.locked(w, p) : p.nw) - (p.own || p.lets ? LES.Housing.wealth(w, p) : 0) - w.px(3e5); // (rev 13: not out of homes) // rev 9: not out of locked retirement savings
     if (rich > 0 && !LES.World.heldFree(w, p)) { // rev 11: no luxuries in prison
       const lux = Math.round(rich * 0.003);
       if (p.cash < lux) F.raiseCash(w, p, lux - p.cash);

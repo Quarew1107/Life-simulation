@@ -200,6 +200,7 @@
   // A death (World.die, before the partner link is cleared): a partner living in the home keeps it, with the loan;
   // otherwise the home is sold and the money goes into the estate.
   H.onDeath = function (w, p) {
+    if (p.lets) H.sellAllLets(w, p, 'estate'); // let homes are sold for the estate
     if (!p.own) return;
     const q = p.partnerId !== null ? w.people[p.partnerId] : null;
     if (q && q.alive && !q.away && !q.inst && q.homeId === p.own.home && !q.own) {
@@ -255,6 +256,7 @@
       if (H.quote(w, p, tier).ok) H.buy(w, p, tier);
       else if (tier > 0 && H.quote(w, p, tier - 1).ok && R.next() < 0.3) H.buy(w, p, tier - 1); // a smaller home they can afford
     }
+    landlordsMonth(w, R); // step 3
   };
 
   // Parents with savings to spare may give an adult child the rest of a deposit (each keeps six months of their own
@@ -310,6 +312,117 @@
     return buyers * (lost + grant) / w.price / 100;
   };
 
+  // ---- Step 3 (Nov 2026): landlords ----
+  // An owner aged 30-70 with savings to spare may buy another unit to let (at most H.LETS_MAX), with a buy-to-let
+  // loan (a deposit of at least 25%, 30% in China; the UK adds a 5% surcharge to stamp duty on extra homes). A
+  // renting household that lives in that building becomes the tenant and pays its rent to the landlord instead of to
+  // the market; the landlord pays that home's loan, upkeep and property tax. A landlord who cannot pay, leaves
+  // town or dies sells the let home (the tenant stays, renting from the market again). p.lets: [{ tier, home, paid,
+  // day, debt, rate, monthly, end, tenant }]; a tenant has p.lord (the landlord's id).
+  H.LETS_MAX = 3;
+  H.LET_DEPOSIT = { cn: 0.3 };
+  H.EXTRA_TAX = { uk: 0.05 }; // the UK's higher rates for additional dwellings (5 points from Oct 2024)
+  const letDeposit = w => Math.max(0.25, H.LET_DEPOSIT[LES.Countries.of(w.cfg)] || 0);
+  const letValue = (w, l) => H.price(w, l.tier);
+  H.letsValue = (w, p) => (p.lets || []).reduce((a, l) => a + letValue(w, l) - l.debt, 0);
+  H.wealth = (w, p) => H.equity(w, p) + (p.lets && p.lets.length ? H.letsValue(w, p) : 0); // a home's and let homes' value minus their loans
+  const letCost = (w, l) => (l.debt > 0 ? Math.min(l.monthly, Math.round(l.debt * (1 + l.rate / 12))) : 0) + Math.round(letValue(w, l) * (H.UPKEEP + (H.tax(w).yearly || 0)) / 12);
+  const loans = (w, p) => (p.mort && p.debt.mortgage > 0 ? p.mort.monthly : 0) + (p.lets || []).reduce((a, l) => a + (l.debt > 0 ? l.monthly : 0), 0);
+  // Could this owner buy a home of this level to let? (Rent expected at 70% of the market rent counts as income.)
+  H.letQuote = function (w, p, tier) {
+    const RU = H.rules(w), price = H.price(w, tier), age = P.age(w, p), years = Math.min(RU.term, RU.endAge - age, 25);
+    const deposit = Math.round(price * letDeposit(w)), loan = price - deposit, rate = H.rateNow(w) + 0.005, monthly = H.payment(loan, rate, years);
+    const tax = bandTax(w, price, H.tax(w).buy) + Math.round(price * (H.EXTRA_TAX[LES.Countries.of(w.cfg)] || 0)), rent = LES.Finance.tierCost(w, 'housing', tier);
+    const out = { ok: false, price, deposit, loan, monthly, years, rate, tax, rent };
+    if (!p.own || !p.adult || p.away || p.inst) out.why = 'not_owner';
+    else if ((p.lets || []).length >= H.LETS_MAX) out.why = 'enough';
+    else if (p.noLoanUntil > w.day || (p.mort && p.mort.missed)) out.why = 'no_credit';
+    else if (years < 10) out.why = 'too_old';
+    else if (LES.Finance.liquid(w, p) < deposit + tax + 6 * Math.max(p.mcost, w.px(500))) out.why = 'no_deposit';
+    else if (loans(w, p) + monthly > RU.dsr * (income(w, p) + 0.7 * rent)) out.why = 'income';
+    else if (freeHome(w, tier) < 0) out.why = 'none_for_sale';
+    else out.ok = true;
+    return out;
+  };
+  H.buyLet = function (w, p, tier) {
+    const q = H.letQuote(w, p, tier);
+    if (!q.ok) return q;
+    const L = w.ledger, home = freeHome(w, tier);
+    if (p.cash < q.deposit + q.tax) LES.Finance.raiseCash(w, p, q.deposit + q.tax - p.cash, 'a home to let');
+    if (p.cash < q.deposit + q.tax) return Object.assign(q, { ok: false, why: 'no_deposit' });
+    L.spend(p, 'cash', 'MERCHANT', q.deposit);
+    if (q.tax > 0) LES.Fiscal.collect(w, p, 'cash', q.tax, H.tax(w).name);
+    L.move(L.sec.BANK, 'bal', L.sec.MERCHANT, 'bal', q.loan);
+    (p.lets = p.lets || []).push({ tier, home, paid: q.price, day: w.day, debt: q.loan, rate: q.rate, monthly: q.monthly, end: w.day + Math.round(q.years * 365), tenant: -1 });
+    st(w).owned[home] = owned(w, home) + 1;
+    st(w).stats.lets = (st(w).stats.lets || 0) + 1;
+    P.log(w, p, `Bought a home to let (${C.TIERS.housing[tier].name.toLowerCase()}) for ${U.fmtMoney(q.price)} with a ${U.fmtMoney(q.loan)} loan`, 'money', 0);
+    return q;
+  };
+  // Sell one let home to the market (the loan is paid off first; a shortfall is written off). Returns the cash left.
+  H.sellLet = function (w, p, l, why) {
+    const L = w.ledger, price = letValue(w, l);
+    L.pay('MERCHANT', p, 'cash', price);
+    const pay = Math.min(p.cash, l.debt);
+    if (pay > 0) L.spend(p, 'cash', 'BANK', pay);
+    if (l.debt > pay) L.writeOffs += l.debt - pay;
+    const t = l.tenant >= 0 ? w.people[l.tenant] : null;
+    if (t && t.lord === p.id) delete t.lord;
+    const s = st(w);
+    s.owned[l.home] = Math.max(0, owned(w, l.home) - 1);
+    if (!s.owned[l.home]) delete s.owned[l.home];
+    p.lets = p.lets.filter(x => x !== l);
+    if (!p.lets.length) delete p.lets;
+    s.stats.letsSold = (s.stats.letsSold || 0) + 1;
+    if (why !== 'estate') P.log(w, p, `Sold a let home (${C.TIERS.housing[l.tier].name.toLowerCase()}) for ${U.fmtMoney(price)} (${why})`, 'money', 0);
+    return price - pay;
+  };
+  H.sellAllLets = (w, p, why) => { for (const l of (p.lets || []).slice()) H.sellLet(w, p, l, why); };
+  const tenantOk = (w, lord, l, t) => !!t && t.alive && !t.away && !t.inst && t.adult && t.isHead && !t.own && t.homeId === l.home && t.lord === lord.id;
+  // The rent of a tenant (Finance.payBill): to the landlord. Returns true when paid; false: the market's rules apply.
+  H.payRent = function (w, p) {
+    const lord = w.people[p.lord], l = lord && lord.alive && !lord.away && (lord.lets || []).find(x => x.tenant === p.id);
+    if (!l || !tenantOk(w, lord, l, p)) { delete p.lord; if (l) l.tenant = -1; return false; }
+    const amt = LES.Finance.tierCost(w, 'housing', p.tiers.housing);
+    if (p.cash < amt) LES.Finance.raiseCash(w, p, amt - p.cash);
+    if (p.cash < amt || !w.ledger.move(p, 'cash', lord, 'cash', amt)) return false;
+    lord.monthIncome += amt; lord.earned.invest += amt;
+    l.rentIn = (l.rentIn || 0) + amt;
+    return true;
+  };
+  // Each month: landlords pay each let home's loan and costs (or sell it), find tenants for empty ones, and buy more.
+  function landlordsMonth(w, R) {
+    const s = st(w), F = LES.Finance;
+    const renters = new Map(); // home building -> renting heads there with no landlord yet
+    for (const p of w.living) if (p.alive && !p.away && !p.inst && p.adult && p.isHead && !p.own && p.homeId >= 0 && p.lord === undefined) { const a = renters.get(p.homeId); if (a) a.push(p); else renters.set(p.homeId, [p]); }
+    for (const p of w.living) {
+      if (!p.lets || !p.alive || p.away) continue;
+      for (const l of p.lets.slice()) {
+        if (l.tenant >= 0 && !tenantOk(w, p, l, w.people[l.tenant])) { const t = w.people[l.tenant]; if (t && t.lord === p.id) delete t.lord; l.tenant = -1; }
+        if (l.tenant < 0) { // a renter at that level already living there, or now and then one who moves in from elsewhere
+          let a = renters.get(l.home), t = a && a.find(q => q.tiers.housing === l.tier && q.id !== p.id);
+          if (!t && R.next() < 0.3) for (const [id, b] of renters) { if (id === l.home) continue; t = b.find(q => q.tiers.housing === l.tier && q.id !== p.id && q.partnerId !== p.id); if (t) { a = b; moveTo(w, t, l.tier, l.home); break; } }
+          if (t) { l.tenant = t.id; t.lord = p.id; a.splice(a.indexOf(t), 1); }
+        }
+        const cost = letCost(w, l);
+        if (p.cash < cost) F.raiseCash(w, p, cost - p.cash, 'a let home');
+        if (p.cash < cost) { H.sellLet(w, p, l, 'could not keep it up'); continue; }
+        if (l.debt > 0) { const i = Math.round(l.debt * l.rate / 12), due = Math.min(l.monthly, l.debt + i); w.ledger.spend(p, 'cash', 'BANK', due); l.debt = Math.max(0, l.debt - (due - i)); }
+        const up = Math.round(letValue(w, l) * H.UPKEEP / 12), pt = Math.round(letValue(w, l) * (H.tax(w).yearly || 0) / 12);
+        if (up > 0) w.ledger.spend(p, 'cash', 'MERCHANT', Math.min(up, p.cash));
+        if (pt > 0) LES.Fiscal.collect(w, p, 'cash', pt, 'property tax');
+      }
+    }
+    for (const p of w.living) { // new landlords: owners with money to spare, more of the risk-takers and investors
+      if (!p.own || !p.alive || p.away || p.inst || !p.adult) continue;
+      const age = P.age(w, p);
+      if (age < 30 || age >= 70 || (p.lets || []).length >= H.LETS_MAX) continue;
+      if (R.next() >= 0.012 * U.clamp(1 + 0.6 * (p.pers.risk - 50) / 50 + (p.strategy === 'INV' ? 0.8 : 0) + 0.4 * (p.pers.pat - 50) / 50, 0.2, 3)) continue;
+      const tier = Math.min(2, Math.max(1, p.own.tier - 1));
+      if (H.letQuote(w, p, tier).ok) H.buyLet(w, p, tier);
+    }
+  }
+
   // A starting town: households own their homes at about the country's rate, more of the older ones; most of
   // the oldest and many kampung-level homes have no loan left; the rest are part-way through a loan.
   H.initOwners = function (w) {
@@ -347,6 +460,14 @@
       if (!(Number.isInteger(p.debt.mortgage || 0) && (p.debt.mortgage || 0) >= 0)) errs.push(`P${p.id} mortgage ${p.debt.mortgage}`);
       count[p.own.home] = (count[p.own.home] || 0) + 1;
     }
+    for (const p of w.people) for (const l of p.lets || []) {
+      if (!p.alive || p.away) errs.push(`P${p.id} lets a home while ${p.alive ? 'away' : 'dead'}`);
+      if (!(Number.isInteger(l.debt) && l.debt >= 0)) errs.push(`P${p.id} let loan ${l.debt}`);
+      count[l.home] = (count[l.home] || 0) + 1;
+      const t = l.tenant >= 0 ? w.people[l.tenant] : null;
+      if (t && t.lord !== p.id) errs.push(`let of P${p.id}: tenant P${t.id} does not rent from them`);
+    }
+    for (const p of w.people) if (p.lord !== undefined) { const lord = w.people[p.lord]; if (!lord || !(lord.lets || []).some(l => l.tenant === p.id)) errs.push(`P${p.id} rents from P${p.lord}, who has no such let`); }
     for (const id of Object.keys(count)) {
       if (count[id] !== (s.owned[id] || 0)) errs.push(`home ${id}: ${count[id]} owners, ${s.owned[id] || 0} counted`);
       if (count[id] > H.units(w.town.buildings[id])) errs.push(`home ${id} over-owned`);
@@ -357,6 +478,7 @@
   H.summary = function (w) {
     const heads = w.living.filter(p => p.alive && !p.away && p.adult && p.isHead);
     const own = heads.filter(p => p.own), loans = own.filter(p => p.debt.mortgage > 0);
-    return { households: heads.length, owners: own.length, rate: heads.length ? own.length / heads.length : 0, withLoan: loans.length, px: st(w).px.slice(), prices: C.TIERS.housing.map((_, t) => H.price(w, t)), stats: Object.assign({}, st(w).stats) };
+    const landlords = w.living.filter(p => p.alive && p.lets && p.lets.length), lets = landlords.reduce((a, p) => a + p.lets.length, 0), tenants = w.living.filter(p => p.alive && p.lord !== undefined).length;
+    return { landlords: landlords.length, lets, tenants, households: heads.length, owners: own.length, rate: heads.length ? own.length / heads.length : 0, withLoan: loans.length, px: st(w).px.slice(), prices: C.TIERS.housing.map((_, t) => H.price(w, t)), stats: Object.assign({}, st(w).stats) };
   };
 })(globalThis.LES = globalThis.LES || {});

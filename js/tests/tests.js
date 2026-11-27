@@ -455,11 +455,14 @@
     LES.Systems.all().find(x => x.id === 'gov').month(t);
     check('The minimum wage lifts low salaries', p.job.salary >= t.px(2500));
     // More police -> more crime solved.
-    const lo = new LES.World({ seed: 'gov-pol', founders: 400, crime: 'lawless' }), hi = new LES.World({ seed: 'gov-pol', founders: 400, crime: 'lawless' }); // big enough that 2 vs 7 per 1,000 differ in whole officers
-    lo.gov.laws.police = '2'; lo.policy = GV.policyOf(lo.gov.laws); hi.gov.laws.police = '7'; hi.policy = GV.policyOf(hi.gov.laws);
-    lo.gov.frozen = hi.gov.frozen = true;
-    await runDays(lo, 6 * 365); await runDays(hi, 6 * 365);
-    check('A bigger police force arrests more people per crime', hi.crime.arrests / Math.max(1, Object.values(hi.crime.total).reduce((a, b) => a + b, 0)) > lo.crime.arrests / Math.max(1, Object.values(lo.crime.total).reduce((a, b) => a + b, 0)), `${lo.gov.laws.police}: ${lo.crime.arrests} · ${hi.gov.laws.police}: ${hi.crime.arrests}`);
+    // (Three towns pooled, Nov 2026: in a town of 400 that is 1 officer against 2 or 3, so one town alone is mostly chance.)
+    const polRun = async (seed, pol) => { const x = new LES.World({ seed, founders: 400, crime: 'lawless' }); x.gov.laws.police = pol; x.policy = GV.policyOf(x.gov.laws); x.gov.frozen = true; await runDays(x, 6 * 365); return x; };
+    const pool = { lo: [0, 0], hi: [0, 0] };
+    let hi = null;
+    for (const seed of ['gov-pol', 'gov-pol2', 'gov-pol4']) for (const [k, pol] of [['lo', '2'], ['hi', '7']]) {
+      const x = await polRun(seed, pol); pool[k][0] += x.crime.arrests; pool[k][1] += Object.values(x.crime.total).reduce((a, b) => a + b, 0); if (k === 'hi' && !hi) hi = x;
+    }
+    check('A bigger police force arrests more people per crime', pool.hi[0] / Math.max(1, pool.hi[1]) > pool.lo[0] / Math.max(1, pool.lo[1]), `2 per 1,000: ${pool.lo[0]}/${pool.lo[1]} · 7 per 1,000: ${pool.hi[0]}/${pool.hi[1]}`);
     check('Suspects are held on remand in the lock-up before court', hi.crime.remanded > 0);
     const off = new LES.World({ seed: 'gov-off', founders: 40, government: 'off' });
     check('Government off: no treasury, laws or leanings', !off.gov && !off.policy && off.people.every(q => !q.pol));
@@ -3491,6 +3494,28 @@
     K.ensure(D);
     check('UK first-time buyers pay no stamp duty up to £300k (others £4,000 on £280k); the US charges about 1% a year in property tax; UK rates are fixed for 5 years, US loans for good',
       per.uk.first === 0 && Math.abs(per.uk.again - 400000) <= 200 && Math.abs(per.us.ptax - 0.01) < 0.001 && per.uk.rate === 5 && per.us.rate === 0 && per.cn.first < per.cn.again, JSON.stringify(per));
+    // Step 3: landlords.
+    const lw = mk('hb-let'); for (let d = 0; d < 40; d++) lw.step();
+    const lord = lw.living.find(p => p.own && p.adult && P.age(lw, p) >= 30 && P.age(lw, p) < 60 && !p.lets);
+    const renterOf = tier => lw.living.find(p => p.adult && p.isHead && !p.own && p.lord === undefined && p.tiers.housing === tier && p !== lord && p.partnerId !== lord.id);
+    lw.ledger.pay('GENESIS', lord, 'cash', 2 * H.price(lw, 1)); lord.incomeEMA = Math.max(lord.incomeEMA, 3 * H.letQuote(lw, lord, 1).monthly);
+    const lq = H.letQuote(lw, lord, 1), lc = lord.cash, lr = H.buyLet(lw, lord, 1);
+    check('A home to let: only for owners, a 25% deposit, the normal buying tax; the loan stays with the let home', lq.ok && lr.ok && lq.deposit === Math.round(lq.price * 0.25) && lc - lord.cash === lq.deposit + lq.tax && lord.lets.length === 1 && lord.lets[0].debt === lq.loan
+      && (!renterOf(1) || H.letQuote(lw, renterOf(1), 1).why === 'not_owner') && !lw.checkInvariants().length, lr.why || '');
+    check('A let home counts in the landlord’s net worth (its value minus its loan)', Math.abs(H.wealth(lw, lord) - H.equity(lw, lord) - (H.price(lw, 1) - lord.lets[0].debt)) < 2);
+    const ten = renterOf(1), let1 = lord.lets[0];
+    LES.Finance.setHome(lw, ten, let1.home); let1.tenant = ten.id; ten.lord = lord.id;
+    const rent = LES.Finance.tierCost(lw, 'housing', 1), tc = ten.cash, lc2 = lord.cash, merch = lw.ledger.sec.MERCHANT.bal;
+    LES.Finance.payBill(lw, ten, 'housing');
+    check('A tenant pays the rent to the landlord, not to the market', tc - ten.cash === rent && lord.cash - lc2 === rent && lw.ledger.sec.MERCHANT.bal === merch && !lw.checkInvariants().length, `${rent}`);
+    lw.die(lord, 'test');
+    check('A landlord who dies: the let home is sold for the estate; the tenant stays, renting from the market again', !lord.lets && ten.lord === undefined && !lw.checkInvariants().length);
+    const sl = H.summary(y);
+    check('15 years: some owners become landlords, and some renters rent from them', sl.landlords > 0 && sl.lets > 0 && sl.tenants > 0 && !y.checkInvariants().length, `${sl.landlords} landlords, ${sl.lets} let homes, ${sl.tenants} tenants`);
+    const cfgUk = Object.assign({}, D, K.get('uk').defaults, { country: 'uk', seed: 'hb3-uk', founders: 120 }); K.ensure(cfgUk); const ux = new LES.World(cfgUk);
+    const uo = ux.living.find(p => p.own) || ux.living[0], uq = H.letQuote(ux, uo, 1), uqBase = H.buyTax(ux, { everOwned: true }, uq.price).tax, cq = (() => { const cfg = Object.assign({}, D, K.get('cn').defaults, { country: 'cn', seed: 'hb3-cn', founders: 120 }); K.ensure(cfg); const x = new LES.World(cfg); const o2 = x.living.find(p => p.own) || x.living[0]; return H.letQuote(x, o2, 1); })();
+    K.ensure(D);
+    check('A home to let: the UK adds 5% of the price to stamp duty; China asks a 30% deposit', uq.tax - uqBase === Math.round(uq.price * 0.05) && uqBase > 0 && cq.deposit === Math.round(cq.price * 0.3), `${uq.tax} ${uq.price} ${cq.deposit} ${cq.price}`);
   }
 
   async function councilVoteTests() {

@@ -101,7 +101,7 @@
   };
 
   // Real net worth (sen). Business cash is counted once, inside business equity.
-  P.netWorth = (w, p) => p.cash + p.trust + p.epf + P.invValue(w, p) + P.bizValue(w, p) - p.debt.study - (p.debt.medical || 0) + (p.own ? LES.Housing.equity(w, p) : 0); // rev 13: a home's value minus its loan
+  P.netWorth = (w, p) => p.cash + p.trust + p.epf + P.invValue(w, p) + P.bizValue(w, p) - p.debt.study - (p.debt.medical || 0) + (p.own || p.lets ? LES.Housing.wealth(w, p) : 0); // rev 13: a home's (and let homes') value minus the loans
 
   // imp: 0 = personal history only, 1 = also town feed, 2 = notable, 3 = headline
   P.log = function (w, p, text, cat, imp) {
