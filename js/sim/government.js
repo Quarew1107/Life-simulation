@@ -24,6 +24,9 @@
   // conservative-liberal (soc: + = liberal) direction of each option, and who gains.
   GV.LAWS = []; // the country pack's law catalogue (gov.laws): key, name, default, options, effects on the economy and society
   GV.LAW_BY_KEY = {};
+  // The laws in this world: a law marked rev (rules revision) exists only from that revision on (older worlds and
+  // saves keep exactly their own list: platforms, polls and fingerprints unchanged).
+  GV.lawsFor = w => (GV.LAWS.some(l => l.rev) ? GV.LAWS.filter(l => !l.rev || (w && w.cfg && w.cfg.rulesRev >= l.rev)) : GV.LAWS);
   GV.optName = (key, v) => { const o = GV.LAW_BY_KEY[key].options.find(x => x[0] === v); return o ? o[1] : v; };
   const EDU_MULT = { free: 0, subsidised: 1, expensive: 2.5 };
   GV.MY_POLICE = 4; // police officers per 1,000 people in the country (gov.policePer1000; Malaysia: PDRM 136,503 for ~34.3m)
@@ -156,6 +159,7 @@
         const need = 25 + (age > 55 ? 60 : 0) + (p.health < 60 ? 50 : 0) + p.careOf.length * 10;
         return d * need - d * (1.3 * 3400 + 0.65 * 11000) / 1000 * ts.pop / ts.adults * costShare(p, ts);
       }
+      case 'firstHome': return LES.Housing ? LES.Housing.helpValue(w, p, val) - LES.Housing.helpValue(w, p, cur) : 0; // rules revision 13
       default: return 0;
     }
   };
@@ -171,6 +175,7 @@
       schools: v => SV.SCHOOLS[v] * ts.pop / 1000 * SP.teacher, health: v => (hs(v)[0] * SP.nurse + hs(v)[1] * SP.doctor) * ts.pop / 1000,
       salesTax: v => (v === LES.Countries.pack.tax.salesTaxRaise ? -0.03 : 0) * rev * 3, // the broader tax brings in more money
       fuelSubsidy: v => LES.Fiscal.FUEL[v].cost * 600 * ts.adults * 0.6,
+      firstHome: v => (LES.Housing ? LES.Housing.helpCost(w, v, ts.adults) : 0), // rules revision 13
     }[key];
     if (!cost) return 0;
     return Math.max(0, (cost(val) - cost(w.gov.laws[key])) / rev);
@@ -211,7 +216,7 @@
     const g = w.gov, sample = [], out = {};
     for (let k = 0; k < 60 && w.living.length; k++) { const p = w.living[Math.floor(R.next() * w.living.length)]; if (eligible(w, p) && p.pol) sample.push(p); }
     if (!sample.length) return out;
-    for (const law of GV.LAWS) for (const [v] of law.options) {
+    for (const law of GV.lawsFor(w)) for (const [v] of law.options) {
       if (v === g.laws[law.key]) continue;
       let s = 0;
       for (const p of sample) {
@@ -224,7 +229,7 @@
   }
   function platform(w, c, ts, R, poll) {
     const pl = {}, wants = [];
-    for (const law of GV.LAWS) {
+    for (const law of GV.lawsFor(w)) {
       let best = w.gov.laws[law.key], bestS = 0;
       for (const [v] of law.options) {
         if (v === w.gov.laws[law.key]) continue;
@@ -409,7 +414,7 @@
   // scenario rules are not voted on. Tuned so presidents get about 80% of their changes through.
   GV.COUNCIL_REV = 12; // rules revision 12; older worlds and saves change laws as before (no vote)
   const VOTED = new Set(['platform', 'emergency', 'surplus', 'player']);
-  const POLICE_KEYS = new Set(['police', 'drugPolicy', 'recordCheck', 'barBan']), CARE_KEYS = new Set(['cashAid', 'ubi', 'schools', 'health', 'affirm', 'uniFees', 'fuelSubsidy']);
+  const POLICE_KEYS = new Set(['police', 'drugPolicy', 'recordCheck', 'barBan']), CARE_KEYS = new Set(['cashAid', 'ubi', 'schools', 'health', 'affirm', 'uniFees', 'fuelSubsidy', 'firstHome']);
   // An official's leaning on a change, without the chance part: { score, yes, no } (yes / no: the main reason).
   GV.councilLean = function (w, role, o, key, v, why, ts) {
     const g = w.gov, law = GV.LAW_BY_KEY[key], cur = g.laws[key], p = o.id >= 0 ? w.people[o.id] : null;
@@ -563,7 +568,7 @@
     enabled: cfg => cfg.government === 'on',
     init(w) {
       const laws = {};
-      for (const l of GV.LAWS) laws[l.key] = l.def;
+      for (const l of GV.lawsFor(w)) laws[l.key] = l.def;
       laws.drugPolicy = w.cfg.drugPolicy || 'national'; laws.uniFees = w.cfg.education;
       w.gov = {
         treasury: { cash: 0 }, debt: 0, laws, lawLog: [], president: -1, terms: {}, termStart: 0, approval: 55, scandal: 0, scandals: 0, skimmed: 0, skimNow: 0,
@@ -682,13 +687,13 @@
       const g = w.gov;
       if (!Number.isInteger(g.treasury.cash) || g.treasury.cash < 0) errs.push(`treasury ${g.treasury.cash}`);
       if (!(g.debt >= 0) || !Number.isFinite(g.debt)) errs.push(`debt ${g.debt}`);
-      for (const l of GV.LAWS) if (!l.options.some(o => o[0] === g.laws[l.key])) errs.push(`law ${l.key}=${g.laws[l.key]}`);
+      for (const l of GV.lawsFor(w)) if (!l.options.some(o => o[0] === g.laws[l.key])) errs.push(`law ${l.key}=${g.laws[l.key]}`);
       for (const e of g.elections) if (e.cands.reduce((s, c) => s + c.votes, 0) !== e.voted || e.voted > e.eligible) errs.push(`election ${e.day} votes do not add up`);
       if (g.president >= 0 && !w.people[g.president].alive) errs.push('dead president in office');
       if (!(g.fund.units >= 0)) errs.push(`fund units ${g.fund.units}`);
       for (const r in g.officials) { const o = g.officials[r]; if (o && o.id >= 0 && !w.people[o.id].alive) errs.push(`dead official ${r}`); }
     },
-    hash(w, parts) { const g = w.gov; parts.push(g.treasury.cash, Math.round(g.debt), g.president, ...GV.LAWS.map(l => g.laws[l.key])); },
+    hash(w, parts) { const g = w.gov; parts.push(g.treasury.cash, Math.round(g.debt), g.president, ...GV.lawsFor(w).map(l => g.laws[l.key])); },
   };
   const p0 = w => !!w.gov;
   LES.Systems.register(sys);
@@ -705,7 +710,7 @@
     for (const a of g.agenda || []) a.v = nat(a.v);
     for (const c of g.campaign || []) natAll(c.platform);
     for (const r of g.elections || []) for (const c of r.cands || []) natAll(c.platform);
-    for (const l of GV.LAWS) if (g.laws[l.key] === undefined) g.laws[l.key] = l.def;
+    for (const l of GV.lawsFor(w)) if (g.laws[l.key] === undefined) g.laws[l.key] = l.def;
     if (!g.month || !g.month.tags) g.month = FS.newMonth();
     const d = { opr: FS.MY_OPR, oprHist: [], fund: { units: 0, glc: {}, invested: 0, drawn: 0 }, devStock: 0, devIdx: 0, afford: 1, budget: { dev: 0.5, train: 0.15, fund: 0.35 },
       officials: { treasurer: null, police: null, community: null }, offLog: [], trainPool: 0, staff: {}, eduQ: 1, healthQ: 1, lastMerchant: w.ledger.sec.MERCHANT.bal };

@@ -414,6 +414,7 @@
     gov: {
       appointed: { reviewYears: 5, maxTerms: 2 },
       laws: [
+        { key: 'firstHome', rev: 13, name: 'First-home help', def: 'relief', options: [['none', 'None (3% deed tax)'], ['relief', '1% deed tax on a first home'], ['grant', '1% deed tax and a 5% purchase subsidy (up to ¥100k)']], econ: { none: 1, relief: 0, grant: -1 } },
         { key: 'incomeTax', name: 'Income tax', def: 'normal', options: [['normal', 'National IIT bands (3-45%), set by Beijing']], econ: { normal: 0 } },
         { key: 'corpTax', name: 'Company tax', def: '25', options: [['25', '25% (national)']], econ: { '25': 0 } },
         { key: 'minWage', name: 'Minimum wage', def: '2210', options: [['1800', '¥1,800 a month (lowest class)'], ['2210', '¥2,210 a month (provincial class 1)'], ['2600', '¥2,600 a month']], econ: { '1800': 0.6, '2210': 0, '2600': -0.7 } },

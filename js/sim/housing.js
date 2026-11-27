@@ -15,6 +15,12 @@
 //   town, or falls three months behind (the bank takes the home and sells it at 80%; no new loan for three years).
 //   An owner who dies leaves the home to a partner living there (with the loan); otherwise it is sold and the
 //   money goes into the estate. Starting towns begin with owners at about the country's ownership rate.
+// Step 2 (Nov 2026): taxes and help. A buying tax (Malaysia's and the UK's stamp duty, the US transfer tax, China's
+// deed tax) by the country's bands, lower for a first home under the First-home help law (none / relief / grant: relief
+// plus a 5% deposit grant from the treasury, capped); a yearly property tax (US about 1%, Malaysia's assessment and
+// quit rent about 0.15%; the UK's council tax is charged already); a tax when selling soon (Malaysia's RPGT on the
+// gain: 30% within 3 years, 20% in year 4, 15% in year 5; China 5% of the price within 2 years). Loan rates follow
+// the economy: Malaysia and China variable (reset each year to today's rate), the UK fixed for 5 years, the US fixed.
 // Money always moves through the ledger; a home's value minus its loan counts in net worth (P.netWorth). Older
 // rules revisions never call any of this (p.own is never set), so their histories and fingerprints are unchanged.
 (function (LES) {
@@ -27,12 +33,31 @@
   // (years); endAge: loan paid off by; spread over the deposit rate; dsr: most of household income for repayments;
   // outright0: share of starting kampung-level owners with no loan; target: starting share of households owning.
   H.RULES = {
-    my: { years: [20, 19, 19, 18, 20], deposit: 0.1, term: 35, endAge: 70, spread: 0.017, dsr: 0.35, outright0: 0.8, target: 0.75 },
-    uk: { years: [16, 19, 18, 17, 12], deposit: 0.1, term: 30, endAge: 75, spread: 0.02, dsr: 0.35, outright0: 0.3, target: 0.65 },
-    us: { years: [9, 15, 15, 15, 12], deposit: 0.1, term: 30, endAge: 85, spread: 0.025, dsr: 0.36, outright0: 0.5, target: 0.65 },
-    cn: { years: [26, 28, 30, 30, 28], deposit: 0.2, term: 30, endAge: 70, spread: 0.008, dsr: 0.5, outright0: 0.6, target: 0.9 },
+    my: { years: [20, 19, 19, 18, 20], deposit: 0.1, term: 35, endAge: 70, spread: 0.017, dsr: 0.35, outright0: 0.8, target: 0.75, fixYears: 1 },
+    uk: { years: [16, 19, 18, 17, 12], deposit: 0.1, term: 30, endAge: 75, spread: 0.02, dsr: 0.35, outright0: 0.3, target: 0.65, fixYears: 5 },
+    us: { years: [9, 15, 15, 15, 12], deposit: 0.1, term: 30, endAge: 85, spread: 0.025, dsr: 0.36, outright0: 0.5, target: 0.65, fixYears: 0 },
+    cn: { years: [26, 28, 30, 30, 28], deposit: 0.2, term: 30, endAge: 70, spread: 0.008, dsr: 0.5, outright0: 0.6, target: 0.9, fixYears: 1 },
   };
   H.rules = w => H.RULES[LES.Countries.of(w.cfg)] || H.RULES.my;
+  // Taxes (bands [up to, rate] in the country's Year-1 money). relief: the buying tax for a first home under the
+  // First-home help law; grantCap: the most a 5% deposit grant pays; gains: [years held under, tax on the gain];
+  // gainsOnPrice: [years held under, tax on the price].
+  H.TAX = {
+    my: { buy: [[1e5, 0.01], [5e5, 0.02], [1e6, 0.03], [Infinity, 0.04]], relief: (price, bands) => (price <= 5e5 ? [] : bands), grantCap: 25000, yearly: 0.0015, gains: [[3, 0.3], [4, 0.2], [5, 0.15]], def: 'relief', name: 'stamp duty' },
+    uk: { buy: [[125000, 0], [250000, 0.02], [925000, 0.05], [1.5e6, 0.1], [Infinity, 0.12]], relief: (price, bands) => (price <= 500000 ? [[300000, 0], [500000, 0.05]] : bands), grantCap: 25000, yearly: 0, def: 'relief', name: 'stamp duty' },
+    us: { buy: [[Infinity, 0.005]], relief: () => [], grantCap: 25000, yearly: 0.01, def: 'none', name: 'transfer tax' },
+    cn: { buy: [[Infinity, 0.03]], relief: () => [[Infinity, 0.01]], grantCap: 100000, yearly: 0, gainsOnPrice: [2, 0.05], def: 'relief', name: 'deed tax' },
+  };
+  H.tax = w => H.TAX[LES.Countries.of(w.cfg)] || H.TAX.my;
+  H.help = w => (w.gov && w.gov.laws.firstHome !== undefined ? w.gov.laws.firstHome : H.tax(w).def); // the First-home help law (or the country's usual rule)
+  const bandTax = (w, price, bands) => { let t = 0, lo = 0; for (const [hi, r] of bands) { const top = hi === Infinity ? Infinity : w.px(hi); if (price > lo) t += (Math.min(price, top) - lo) * r; lo = top; } return Math.round(t); };
+  H.firstHome = p => !p.everOwned;
+  // The buying tax and any grant for this household buying at this price (opt: the law's option to price it under).
+  H.buyTax = function (w, p, price, opt) {
+    const T = H.tax(w), help = opt || H.help(w), first = H.firstHome(p) && help !== 'none';
+    const bands = first ? T.relief(price / w.px(1), T.buy) : T.buy;
+    return { tax: bandTax(w, price, bands), grant: first && help === 'grant' && w.gov ? Math.min(Math.round(price * 0.05), w.px(T.grantCap)) : 0 };
+  };
   H.UPKEEP = 0.004;  // a year, share of the home's value
   H.REPO_AT = 0.8;   // the bank sells a taken home at this share of its value
   H.MISS_MAX = 3;    // months behind before the bank takes the home
@@ -55,15 +80,16 @@
   // The price of a home of this level today (sen, rounded to a thousand).
   H.price = function (w, tier) {
     const F = LES.Finance, rent = F.tierCost(w, 'housing', tier) / (w.rentMult[tier] || 1);
-    return Math.round(rent * 12 * H.rules(w).years[tier] * st(w).px[tier] / 100000) * 100000;
+    return Math.round(rent * 12 * H.rules(w).years[tier] * (w.hous ? w.hous.px[tier] : 1) / 100000) * 100000; // (asking a price never creates housing state)
   };
   H.value = (w, p) => (p.own ? H.price(w, p.own.tier) : 0);
   H.equity = (w, p) => (p.own ? H.value(w, p) - (p.debt.mortgage || 0) : 0);
   H.rateNow = w => (w.gov && LES.Fiscal.depositRate ? LES.Fiscal.depositRate(w) : w.macro().depositRate + 0.9 * w.infl) + H.rules(w).spread;
   H.payment = (loan, rate, years) => { const r = rate / 12, n = Math.max(1, Math.round(years * 12)); return loan <= 0 ? 0 : Math.round(r > 0 ? loan * r / (1 - Math.pow(1 + r, -n)) : loan / n); };
   H.upkeep = (w, p) => Math.round(H.value(w, p) * H.UPKEEP / 12);
+  H.propertyTax = (w, p) => Math.round(H.value(w, p) * (H.tax(w).yearly || 0) / 12); // a month's share of the yearly property tax
   // An owner's monthly housing cost (instead of rent): the loan's repayment and the upkeep.
-  H.ownerCost = (w, p) => (p.own ? (p.debt.mortgage > 0 && p.mort ? Math.min(p.mort.monthly, Math.round(p.debt.mortgage * (1 + p.mort.rate / 12))) : 0) + H.upkeep(w, p) : 0);
+  H.ownerCost = (w, p) => (p.own ? (p.debt.mortgage > 0 && p.mort ? Math.min(p.mort.monthly, Math.round(p.debt.mortgage * (1 + p.mort.rate / 12))) : 0) + H.upkeep(w, p) + H.propertyTax(w, p) : 0);
   const household = (w, p) => { const out = [p]; const q = p.partnerId !== null ? w.people[p.partnerId] : null; if (q && q.alive && !q.away) out.push(q); return out; };
   const income = (w, p) => household(w, p).reduce((a, q) => a + Math.max(0, q.incomeEMA), 0);
   const steady = (w, p) => household(w, p).some(q => (q.job && w.day - q.job.startDay >= 365) || q.manages >= 0);
@@ -73,13 +99,13 @@
   H.quote = function (w, p, tier, opt) {
     const o = opt || {}, RU = H.rules(w), price = H.price(w, tier), age = P.age(w, p), years = Math.min(RU.term, RU.endAge - age);
     const deposit = Math.round(price * RU.deposit), loan = price - deposit, rate = H.rateNow(w), monthly = H.payment(loan, rate, years);
-    const out = { ok: false, price, deposit, loan, monthly, years, rate }, cash = o.cash !== undefined ? o.cash : LES.Finance.liquid(w, p); // savings they can reach (cash, investments, Malaysia's EPF flexible account)
+    const bt = H.buyTax(w, p, price), out = { ok: false, price, deposit, loan, monthly, years, rate, tax: bt.tax, grant: bt.grant }, cash = (o.cash !== undefined ? o.cash : LES.Finance.liquid(w, p)) + bt.grant; // savings they can reach (cash, investments, Malaysia's EPF flexible account), and a grant
     if (p.own && !o.seller) out.why = 'owner';
     else if (!P.isAdult(w, p) || !p.isHead || p.away || p.inst) out.why = 'not_head';
     else if (p.noLoanUntil > w.day) out.why = 'no_credit';
     else if (years < 10) out.why = 'too_old';
     else if (!steady(w, p)) out.why = 'no_steady_job';
-    else if (cash < deposit + Math.max(p.mcost, w.px(500))) out.why = 'no_deposit';
+    else if (cash < deposit + bt.tax + Math.max(p.mcost, w.px(500))) out.why = 'no_deposit';
     else if (monthly + (p.debt.study > 0 ? Math.round(p.debt.study / 120) : 0) > RU.dsr * income(w, p)) out.why = 'income';
     else if (freeHome(w, tier) < 0) out.why = 'none_for_sale';
     else out.ok = true;
@@ -98,19 +124,22 @@
   H.buy = function (w, p, tier, how) {
     const q = H.quote(w, p, tier);
     if (!q.ok) return q;
-    const L = w.ledger, home = freeHome(w, tier), was = p.tiers.housing;
-    if (p.cash < q.deposit) LES.Finance.raiseCash(w, p, q.deposit - p.cash, 'a home deposit');
-    if (!L.spend(p, 'cash', 'MERCHANT', q.deposit)) return Object.assign(q, { ok: false, why: 'no_deposit' });
+    const L = w.ledger, home = freeHome(w, tier), was = p.tiers.housing, FS = LES.Fiscal;
+    if (q.grant > 0) { const g = LES.Gov.payOut(w, p, 'cash', q.grant, 'first-home grants'); q.grant = g; p.earned.welfare += g; } // the First-home help law's grant, from the treasury
+    if (p.cash < q.deposit + q.tax) LES.Finance.raiseCash(w, p, q.deposit + q.tax - p.cash, 'a home deposit');
+    if (p.cash < q.deposit + q.tax || !L.spend(p, 'cash', 'MERCHANT', q.deposit)) return Object.assign(q, { ok: false, why: 'no_deposit' });
+    if (q.tax > 0) FS.collect(w, p, 'cash', q.tax, H.tax(w).name);
     L.move(L.sec.BANK, 'bal', L.sec.MERCHANT, 'bal', q.loan); // the bank pays the seller
     p.debt.mortgage = q.loan; p.debt.mortgageOrig = q.loan;
-    p.mort = { rate: q.rate, monthly: q.monthly, start: w.day, end: w.day + Math.round(q.years * 365), missed: 0 };
-    p.own = { tier, home, paid: q.price, day: w.day };
+    p.mort = { rate: q.rate, monthly: q.monthly, start: w.day, end: w.day + Math.round(q.years * 365), missed: 0, fixed: w.day };
+    p.own = { tier, home, paid: q.price, day: w.day, first: !p.everOwned }; p.everOwned = true;
     st(w).owned[home] = owned(w, home) + 1;
     moveTo(w, p, tier, home);
     p.mcost = LES.Finance.monthlyCost(w, p);
     st(w).stats.bought++;
     const n = C.TIERS.housing[tier].name;
     P.log(w, p, `${how === 'up' ? 'Moved up and bought' : 'Bought'} a home (${n.toLowerCase()}) for ${U.fmtMoney(q.price)} with a ${U.fmtMoney(q.loan)} loan`, 'money', tier >= 3 || how === 'up' ? 1 : 0);
+    if (q.tax > 0 || q.grant > 0) P.log(w, p, `Home purchase: ${U.fmtMoney(q.tax)} ${H.tax(w).name}${q.grant > 0 ? `, a ${U.fmtMoney(q.grant)} first-home grant` : ''}`, 'money', 0);
     if (was !== tier && how !== 'up') w.stats.homeMoves = (w.stats.homeMoves || 0) + 1;
     return q;
   };
@@ -126,7 +155,13 @@
     const s = st(w);
     s.owned[p.own.home] = Math.max(0, owned(w, p.own.home) - 1);
     if (!s.owned[p.own.home]) delete s.owned[p.own.home];
-    const tier = p.own.tier, gain = price - p.own.paid;
+    const tier = p.own.tier, gain = price - p.own.paid, held = (w.day - p.own.day) / 365, T = H.tax(w);
+    if (why !== 'estate' && why !== 'repossessed') { // a tax when selling soon (Malaysia's RPGT on the gain, China on the price)
+      let gt = 0;
+      if (T.gains && gain > 0) { const band = T.gains.find(([y]) => held < y); if (band) gt = Math.round(gain * band[1]); }
+      if (T.gainsOnPrice && held < T.gainsOnPrice[0]) gt = Math.round(price * T.gainsOnPrice[1]);
+      if (gt > 0) { const paid = LES.Fiscal.collect(w, p, 'cash', gt, 'property gains tax'); if (paid > 0) P.log(w, p, `Paid ${U.fmtMoney(paid)} tax on selling the home within ${Math.ceil(held)} year${Math.ceil(held) > 1 ? 's' : ''}`, 'money', 0); }
+    }
     p.own = null; p.mort = null; p.debt.mortgage = 0; p.debt.mortgageOrig = 0;
     s.stats[why === 'repossessed' ? 'repo' : 'sold']++;
     if (why === 'repossessed') {
@@ -139,7 +174,7 @@
 
   // The month's housing bill for an owner (Finance.payBill): the loan's repayment, then the upkeep.
   H.payMonth = function (w, p) {
-    const F = LES.Finance, L = w.ledger, m = p.mort, up = H.upkeep(w, p);
+    const F = LES.Finance, L = w.ledger, m = p.mort, up = H.upkeep(w, p) + H.propertyTax(w, p);
     let due = 0, interest = 0;
     if (p.debt.mortgage > 0 && m) { interest = Math.round(p.debt.mortgage * m.rate / 12); due = Math.min(m.monthly, p.debt.mortgage + interest); }
     const need = due + up;
@@ -158,6 +193,8 @@
       }
     }
     if (up > 0) L.spend(p, 'cash', 'MERCHANT', Math.min(up, p.cash));
+    const pt = H.propertyTax(w, p);
+    if (pt > 0 && p.own) LES.Fiscal.collect(w, p, 'cash', pt, 'property tax');
   };
 
   // A death (World.die, before the partner link is cleared): a partner living in the home keeps it, with the loan;
@@ -199,6 +236,7 @@
       if (!p.alive || p.away || p.inst || !p.adult || !p.isHead) continue;
       const age = P.age(w, p), pr = p.pers, n = k => (pr[k] - 50) / 50;
       if (p.own) {
+        if (p.mort && p.debt.mortgage > 0) H.reviewRate(w, p);
         // Behind on the loan with something left: sell before the bank takes it.
         if (p.mort && p.mort.missed >= 2 && H.equity(w, p) > 0) { H.sell(w, p, 'could not keep up the loan'); LES.Finance.moveHome(w, p, Math.min(p.tiers.housing, 1), true); continue; }
         // Trade up a level now and then, when the next level is affordable with the sale money.
@@ -241,6 +279,37 @@
     return given;
   };
 
+  // Loan rates follow the economy: a variable loan (Malaysia, China) is reset to today's rate once a year, a UK fix
+  // ends after 5 years; the repayment is worked out again for the rest of the term.
+  H.reviewRate = function (w, p) {
+    const m = p.mort, fy = H.rules(w).fixYears;
+    if (!fy || w.day - (m.fixed !== undefined ? m.fixed : m.start) < fy * 365) return;
+    m.fixed = w.day;
+    const rate = H.rateNow(w), left = Math.max(1, (m.end - w.day) / 365);
+    if (Math.abs(rate - m.rate) < 0.0005) return;
+    const was = m.monthly;
+    m.rate = rate; m.monthly = H.payment(p.debt.mortgage, rate, left);
+    if (Math.abs(m.monthly - was) >= 0.1 * was) P.log(w, p, `The home loan's rate changed to ${(rate * 100).toFixed(1)}%: repayments now ${U.fmtMoney(m.monthly)} a month`, 'money', 0);
+    p.mcost = LES.Finance.monthlyCost(w, p);
+  };
+  // What a First-home help option is worth to this person each month (Year-1 money, for voters): saved tax and
+  // a grant, spread over ten years, for a young renter who never owned; a little public money for everyone else.
+  H.helpValue = function (w, p, opt) {
+    const rank = { none: 0, relief: 1, grant: 2 }[opt] || 0, age = P.age(w, p);
+    if (!H.on(w)) return 0; // home buying off: the law changes nothing
+    if (p.own || p.everOwned || age < 22 || age > 50 || !p.adult) return -4 * rank;
+    const price = H.price(w, Math.max(1, p.tiers.housing)), none = H.buyTax(w, p, price, 'none'), b = H.buyTax(w, p, price, opt);
+    const grant = opt === 'grant' ? Math.min(Math.round(price * 0.05), w.px(H.tax(w).grantCap)) : 0;
+    return (none.tax - b.tax + grant) / w.price / 100 / 120 - 4 * rank;
+  };
+  // The law's cost to the treasury a month (Year-1 money): about 0.4% of adults buy a first home a year... a month's share.
+  H.helpCost = function (w, opt, adults) {
+    if (opt === 'none' || !H.on(w)) return 0;
+    const price = H.price(w, 1), buyers = adults * 0.004 / 12, fake = { everOwned: false };
+    const lost = H.buyTax(w, fake, price, 'none').tax - H.buyTax(w, fake, price, 'relief').tax, grant = opt === 'grant' ? Math.min(price * 0.05, w.px(H.tax(w).grantCap)) : 0;
+    return buyers * (lost + grant) / w.price / 100;
+  };
+
   // A starting town: households own their homes at about the country's rate, more of the older ones; most of
   // the oldest and many kampung-level homes have no loan left; the rest are part-way through a loan.
   H.initOwners = function (w) {
@@ -253,14 +322,14 @@
       if (R.next() >= Math.min(0.97, RU.target * fOf(p) / mean)) continue; // the country's share overall, more of the older
       const price = H.price(w, tier), boughtAt = Math.max(23, age - R.range(0, Math.max(0, age - 23))), years = Math.min(RU.term, RU.endAge - boughtAt);
       const loan0 = Math.round(price * (1 - RU.deposit)), done = (age - boughtAt) / Math.max(1, years);
-      p.own = { tier, home: p.homeId, paid: price, day: w.day };
+      p.own = { tier, home: p.homeId, paid: price, day: w.day - Math.round((age - boughtAt) * 365) }; p.everOwned = true;
       s.owned[p.homeId] = owned(w, p.homeId) + 1;
       if (age >= 60 || done >= 1 || (tier === 0 && R.next() < RU.outright0)) { p.debt.mortgage = 0; p.mort = null; }
       else {
         const left = years - (age - boughtAt), monthly = H.payment(loan0, rate, years), r = rate / 12, k = Math.round((age - boughtAt) * 12);
         const bal = Math.round(r > 0 ? loan0 * Math.pow(1 + r, k) - monthly * (Math.pow(1 + r, k) - 1) / r : loan0 - monthly * k);
         p.debt.mortgage = Math.max(0, bal); p.debt.mortgageOrig = loan0;
-        p.mort = p.debt.mortgage > 0 ? { rate, monthly, start: w.day, end: w.day + Math.round(left * 365), missed: 0 } : null;
+        p.mort = p.debt.mortgage > 0 ? { rate, monthly, start: w.day, end: w.day + Math.round(left * 365), missed: 0, fixed: w.day - Math.round(R.next() * 365 * Math.max(1, RU.fixYears)) } : null;
       }
       p.mcost = LES.Finance.monthlyCost(w, p);
     }

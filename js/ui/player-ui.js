@@ -205,7 +205,7 @@
     const busy = (k, key) => s.pending.some(c => c.kind === k && (key === undefined || c.args.key === key || c.args.role === key));
     const council = CO.ORDER.map(role => { const o = g.officials && g.officials[role], met = s.persuaded && s.persuaded[role] !== undefined && w.day - s.persuaded[role] <= 60;
       return `<li><span><b>${esc(G(CO.ROLES[role].en))}</b> <small class="muted">${o ? esc(CO.name(w, o)) : esc(T('gov.vacant'))}${met ? ` · ${esc(T('gov.met'))}` : ''}</small></span>${o ? `<button class="ghost small" data-meetoff="${role}" ${busy('MEET_OFFICIAL', role) ? 'disabled' : ''}>${esc(T('gov.meet'))}</button>` : ''}</li>`; }).join('');
-    const laws = GVx.LAWS.map(law => { const cur = g.laws[law.key];
+    const laws = GVx.lawsFor(w).map(law => { const cur = g.laws[law.key];
       const opts = law.options.filter(o => String(o[0]) !== String(cur)).map(o => { const lean = Pl.lawLean(w, law.key, o[0]);
         return `<li><span>→ ${esc(G(o[1]))} <small class="law-lean" title="${esc(lean.map(x => `${G(CO.ROLES[x.role].en)}: ${T(`gov.lean.${x.lean}`)}`).join(' · '))}">${lean.map(x => mark[x.lean]).join(' ')}</small></span><button class="ghost small teal" data-law="${esc(`${law.key}|${o[0]}`)}" ${busy('PROPOSE_LAW', law.key) ? 'disabled' : ''}>${esc(T('gov.propose'))}</button></li>`; }).join('');
       return `<details class="life-more" ${keep(`law-${law.key}`)}><summary>${esc(G(law.name))} <small class="muted">${esc(T('gov.now', { item: GVx.optName(law.key, cur) }))}</small></summary><ul class="list-plain">${opts}</ul></details>`; }).join('');

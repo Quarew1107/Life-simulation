@@ -31,7 +31,7 @@
         <canvas class="chart" id="gv-appr"></canvas></div>
       ${councilCard(w)}
       <div class="card"><h3>${t('gv.laws')}</h3><table class="cmp"><tr><th>${t('gv.law')}</th><th>${t('gv.now')}</th><th>${t('gv.since')}</th></tr>
-        ${GV.LAWS.map(l => { const c = changed(l.key); return `<tr><td>${esc(G(l.name))}</td><td>${esc(G(GV.optName(l.key, g.laws[l.key])))}</td><td class="muted">${c ? `${U.fmtMonthYear(c.day)}${c.why === 'emergency' ? ` (${t('gv.emergency')})` : c.why === 'austerity' ? ` (${t('gv.austerity')})` : ''}` : t('gv.start')}</td></tr>`; }).join('')}</table>
+        ${GV.lawsFor(w).map(l => { const c = changed(l.key); return `<tr><td>${esc(G(l.name))}</td><td>${esc(G(GV.optName(l.key, g.laws[l.key])))}</td><td class="muted">${c ? `${U.fmtMonthYear(c.day)}${c.why === 'emergency' ? ` (${t('gv.emergency')})` : c.why === 'austerity' ? ` (${t('gv.austerity')})` : ''}` : t('gv.start')}</td></tr>`; }).join('')}</table>
         <div class="note">${G(LES.Countries.pack.notes.laws)}</div></div>
       <div class="card"><h3>${t('gv.treasury')} <small class="muted">${t('pn.st.y1')}</small></h3>
         <div class="stat-grid"><div class="stat"><div class="v">${U.fmtMoney(g.treasury.cash)}</div><div class="l">${t('gv.inTreasury')}</div></div><div class="stat"><div class="v ${g.debt ? 'neg' : ''}">${U.fmtMoney(g.debt)}</div><div class="l">${t('gv.debt')}</div></div><div class="stat"><div class="v">${U.fmtMoney(LES.Fiscal.fundValue(w))}</div><div class="l">${t('gv.fund', { name: LES.Countries.pack.names.fund })}</div></div>

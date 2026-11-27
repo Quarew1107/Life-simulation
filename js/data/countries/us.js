@@ -405,6 +405,7 @@
     fund: { payout: 0.04 },
     gov: {
       laws: [
+        { key: 'firstHome', rev: 13, name: 'First-home help', def: 'none', options: [['none', 'None'], ['relief', 'No transfer tax on a first home'], ['grant', 'No transfer tax and a 5% down-payment grant (up to $25k)']], econ: { none: 1, relief: 0, grant: -1 } },
         { key: 'incomeTax', name: 'Income tax', def: 'normal', options: [['low', 'Low (brackets x0.6)'], ['normal', 'Federal brackets (10-37%)'], ['high', 'High (brackets x1.5)']], econ: { low: 1, normal: 0, high: -1 } },
         { key: 'corpTax', name: 'Corporate tax', def: '21', options: [['15', '15%'], ['21', '21% (US)'], ['28', '28%']], econ: { '15': 0.8, '21': 0, '28': -0.8 } },
         { key: 'minWage', name: 'Minimum wage', def: '1906', options: [['1257', '$7.25 an hour (federal)'], ['1906', '$11.00 an hour (Ohio 2026)'], ['2600', '$15 an hour']], econ: { '1257': 0.8, '1906': 0, '2600': -0.9 } },

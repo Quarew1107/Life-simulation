@@ -493,6 +493,7 @@
     fund: { payout: 0.04 },
     gov: {
       laws: [
+        { key: 'firstHome', rev: 13, name: 'First-home help', def: 'relief', options: [['none', 'None'], ['relief', 'First-time buyer stamp duty relief'], ['grant', 'Relief and a 5% deposit grant (up to £25k)']], econ: { none: 1, relief: 0, grant: -1 } },
         { key: 'incomeTax', name: 'Income tax', def: 'normal',
           options: [['low', 'Low (bands x0.6)'], ['normal', 'UK bands (20%, 40%, 45%)'], ['high', 'High (bands x1.5)']],
           econ: { low: 1, normal: 0, high: -1 } },

@@ -759,6 +759,7 @@
     // Government: the law catalogue (option values are what the engine uses), leader titles, the leader's pay (share of monthly revenue, min, max), police per 1,000 people (PDRM), monthly cost of public servants, the city council, training cost per trainee a month, the groups outside officials are drawn from.
     gov: {
       laws: [
+        { key: 'firstHome', rev: 13, name: 'First-home help', def: 'relief', options: [['none', 'None'], ['relief', 'No stamp duty on a first home up to RM500k'], ['grant', 'No stamp duty and a 5% deposit grant (up to RM25k)']], econ: { none: 1, relief: 0, grant: -1 } },
         {
           key: 'incomeTax',
           name: 'Income tax',

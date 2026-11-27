@@ -2554,7 +2554,7 @@
     const yw = make('pl12y', (x, p) => P.age(x, p) < 50 && !!p.job), ow = make('pl12r', (x, p) => P.age(x, p) >= 56 && P.age(x, p) < 59 && !!p.job && !p.job.fixedTitle), op = Pl.person(ow);
     const young = req(yw, 'RETIRE', {}), rc = req(ow, 'RETIRE', {});
     check('Retiring: not before 55; then the job ends and the person is retired', young === 'too_young' && rc === 'ok' && op.retired && !op.job);
-    const twins = [false, true].map(keep => { const w = make('pl12k', (x, p) => P.age(x, p) >= 55 && P.age(x, p) < 59 && !!p.job && !p.job.fixedTitle && !p.retired), q = Pl.person(w); q.birthDay -= Math.round((66 - P.age(w, q)) * 365); /* past 65: the engine retires every worker at the year's end */ if (keep) req(w, 'KEEP_WORKING', {}); for (let d = 0; d < 370; d++) w.step(); return Pl.person(w); });
+    const twins = [false, true].map(keep => { const w = make('pl12k', (x, p) => P.age(x, p) >= 55 && P.age(x, p) < 59 && !!p.job && !p.job.fixedTitle && !p.retired), q = Pl.person(w); w.cfg.migOutMult = 0; /* (nobody moves away during the check) */ q.birthDay -= Math.round((66 - P.age(w, q)) * 365); /* past 65: the engine retires every worker at the year's end */ if (keep) req(w, 'KEEP_WORKING', {}); for (let d = 0; d < 370; d++) w.step(); return Pl.person(w); });
     check('Keeping on working: the yearly retirement passes the player by (and only them)', twins[0].retired && !twins[1].retired, `without: ${twins[0].retired}, with: ${twins[1].retired}`);
     // Death: the engine's own death and estate; a waiting request is cancelled with a receipt and no payment.
     const dw = make('pl12d', (x, p) => p.children.some(id => { const c = x.people[id]; return c.alive && !c.away; }) && p.cash > 0), dp = Pl.person(dw);
@@ -3077,10 +3077,10 @@
     // The ancestor wall: earlier lives of the chain, framed, with one keepsake each (restored afterwards).
     const keepChain = s.chain.slice(), dead = w.people.filter(p => !p.alive).slice(0, 2);
     s.chain = [{ id: dead[0].id, day: 0 }, { id: dead[1].id, day: 1 }].concat(keepChain);
-    const mine = R.family(w, w.town.buildings[me.homeId]).keep.filter(k => k.ancestor);
+    const mine = (me.inst ? R.keepsakes(w, [me]) : R.family(w, w.town.buildings[me.homeId]).keep).filter(k => k.ancestor); // (someone in prison is not at home: their own keepsakes)
     s.chain = keepChain;
     const deadNames = dead.map(q => LES.P.name(q)), frames = mine.filter(k => k.paint);
-    check('Playing a descendant: the earlier lives hang framed on the wall, each with a keepsake that names them', me.homeId < 0 || (mine.length === 4 && frames.map(k => k.paint[0]).join() === dead.map(q => q.id).join() && mine.every(k => deadNames.some(nm => LES.I18n.t(k.label[0], k.label[1]).includes(nm)))), mine.map(k => k.id).join(','));
+    check('Playing a descendant: the earlier lives hang framed on the wall, each with a keepsake that names them', me.homeId < 0 || !me.alive || (mine.length === 4 && frames.map(k => k.paint[0]).join() === dead.map(q => q.id).join() && mine.every(k => deadNames.some(nm => LES.I18n.t(k.label[0], k.label[1]).includes(nm)))), mine.map(k => k.id).join(','));
     // Moment cards: a new big moment is noticed once; nothing is shown on a page without a map.
     const app = { world: w, view: 'town' };
     AL.tick(app, 0);
@@ -3411,7 +3411,7 @@
     const o = heads.find(p => p.own && p.debt.mortgage > 0);
     check('A starting town begins with owners at about the national rate (Malaysia 75%), older households more often', s0.rate > 0.45 && s0.rate < 0.85 && share(older) > share(young), `${Math.round(s0.rate * 100)}% (under 30: ${Math.round(share(young) * 100)}%, 45+: ${Math.round(share(older) * 100)}%)`);
     check('An owner’s net worth counts the home’s value minus the loan; their monthly cost is the loan and upkeep, not rent', !!o && Math.abs(P.netWorth(w, o) - (o.cash + o.trust + o.epf + P.invValue(w, o) + P.bizValue(w, o) - o.debt.study - (o.debt.medical || 0) + H.value(w, o) - o.debt.mortgage)) < 2
-      && H.ownerCost(w, o) === o.mort.monthly + H.upkeep(w, o) && !w.checkInvariants().length);
+      && H.ownerCost(w, o) === o.mort.monthly + H.upkeep(w, o) + H.propertyTax(w, o) && !w.checkInvariants().length);
     // The bank's rules: deposit, term, end age, the standard repayment.
     const renter = heads.find(p => !p.own && P.age(w, p) >= 25 && P.age(w, p) < 50);
     const q = H.quote(w, renter, 1);
@@ -3457,6 +3457,40 @@
     for (const c of ['uk', 'us', 'cn']) { const cfg = Object.assign({}, D, K.get(c).defaults, { country: c, seed: `hb-${c}`, founders: 120 }); K.ensure(cfg); const x = new LES.World(cfg); const h = x.living.find(p => p.adult && p.isHead && !p.own) || x.living[0]; dep[c] = Math.round(H.quote(x, h, 1).deposit / H.price(x, 1) * 100); }
     K.ensure(D);
     check('Each country’s deposit: UK 10%, US 10%, China 20%', dep.uk === 10 && dep.us === 10 && dep.cn === 20, JSON.stringify(dep));
+    // Step 2: taxes, the First-home help law, loan rates that follow the economy.
+    const t = mk('hb-tax'); for (let d = 0; d < 40; d++) t.step();
+    const Y1 = rm => t.px(rm), first = { everOwned: false }, again = { everOwned: true };
+    check('Malaysia’s stamp duty: none on a first home up to RM500k (the law’s usual setting); 1%, 2%, 3%, 4% bands otherwise',
+      t.gov.laws.firstHome === 'relief' && H.buyTax(t, first, Y1(400000)).tax === 0 && Math.abs(H.buyTax(t, again, Y1(400000)).tax - Y1(7000)) <= 2 && Math.abs(H.buyTax(t, first, Y1(800000)).tax - Y1(18000)) <= 2,
+      `${H.buyTax(t, again, Y1(400000)).tax} vs ${Y1(7000)}`);
+    check('Older rules have no First-home help law at all', old.gov && old.gov.laws.firstHome === undefined && !LES.Gov.lawsFor(old).some(l => l.key === 'firstHome') && LES.Gov.lawsFor(t).some(l => l.key === 'firstHome'));
+    const tb = t.living.find(p => p.adult && p.isHead && !p.own && !p.everOwned && P.age(t, p) >= 25 && P.age(t, p) < 45 && p.job);
+    tb.job.startDay = Math.min(tb.job.startDay, t.day - 400);
+    t.gov.laws.firstHome = 'grant'; t.ledger.pay('GENESIS', tb, 'cash', H.price(t, 1)); tb.incomeEMA = Math.max(tb.incomeEMA, 4 * H.quote(t, tb, 1).monthly);
+    const tr0 = t.gov.treasury.cash, qg = H.quote(t, tb, 1), rb = H.buy(t, tb, 1);
+    check('Under a deposit grant a first-time buyer gets 5% of the price (capped) from the treasury', rb.ok && qg.grant > 0 && rb.grant === Math.min(Math.round(qg.price * 0.05), t.px(25000)) && !t.checkInvariants().length, `${rb.why || ''} ${qg.grant} ${tr0}`);
+    // Selling within three years in Malaysia: 30% tax on the gain.
+    if (!tb.own) { check('A first-time buyer to test the gains tax with', false); return; }
+    t.hous.px[1] *= 1.3;
+    const gain = H.value(t, tb) - tb.own.paid, taxBefore = t.ledger.sec.TAX.bal;
+    H.sell(t, tb, 'test');
+    check('Selling within three years (Malaysia’s RPGT): 30% of the gain goes in tax', gain > 0 && Math.abs(t.ledger.sec.TAX.bal - taxBefore - Math.round(gain * 0.3)) <= 1 && !t.checkInvariants().length, `${gain}`);
+    t.hous.px[1] /= 1.3;
+    // A variable loan follows the rate once a year.
+    const vo = t.living.find(p => p.own && p.mort && p.debt.mortgage > 0);
+    vo.mort.fixed = t.day - 400; const m0 = vo.mort.monthly; t.gov.opr += 0.01; // the central bank raises its rate
+    H.reviewRate(t, vo); t.gov.opr -= 0.01;
+    check('A variable loan (Malaysia) is reset to today’s rate once a year, and the repayment changes with it', Math.abs(vo.mort.rate - H.rateNow(t) - 0.01) < 1e-9 && vo.mort.monthly > m0 && vo.mort.fixed === t.day);
+    // The UK: first-time buyer relief; the US: a yearly property tax; China: tax when selling within two years.
+    const per = {};
+    for (const c of ['uk', 'us', 'cn']) {
+      const cfg = Object.assign({}, D, K.get(c).defaults, { country: c, seed: `hb2-${c}`, founders: 120 }); K.ensure(cfg); const x = new LES.World(cfg);
+      const own = x.living.find(p => p.own);
+      per[c] = { first: H.buyTax(x, first, x.px(280000)).tax, again: H.buyTax(x, again, x.px(280000)).tax, ptax: own ? H.propertyTax(x, own) / H.value(x, own) * 12 : -1, rate: H.rules(x).fixYears };
+    }
+    K.ensure(D);
+    check('UK first-time buyers pay no stamp duty up to £300k (others £4,000 on £280k); the US charges about 1% a year in property tax; UK rates are fixed for 5 years, US loans for good',
+      per.uk.first === 0 && Math.abs(per.uk.again - 400000) <= 200 && Math.abs(per.us.ptax - 0.01) < 0.001 && per.uk.rate === 5 && per.us.rate === 0 && per.cn.first < per.cn.again, JSON.stringify(per));
   }
 
   async function councilVoteTests() {

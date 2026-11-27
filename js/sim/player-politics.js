@@ -26,7 +26,7 @@
       check(w, p, a) {
         if (!Pl.isPresident(w, p)) return 'not_president';
         const law = GV().LAW_BY_KEY[a.key];
-        if (!law || !law.options.some(o => String(o[0]) === String(a.v))) return 'bad_args';
+        if (!law || !GV().lawsFor(w).includes(law) || !law.options.some(o => String(o[0]) === String(a.v))) return 'bad_args';
         if (w.gov.frozen) return 'frozen';
         return String(w.gov.laws[a.key]) === String(a.v) ? 'same' : null;
       },
