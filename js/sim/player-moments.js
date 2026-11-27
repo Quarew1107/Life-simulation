@@ -106,6 +106,7 @@
     for (const [name, v] of e.bond || []) {
       const q = named(w, p, name, params);
       if (!q || !q.alive || q === p) continue;
+      if (q.id === p.partnerId && Pl.coupleStart) Pl.coupleStart(w, p); // a partner starts at 60 (player-couple.js)
       const b = s.bonds = s.bonds || {}, was = b[q.id] === undefined ? 30 : b[q.id];
       b[q.id] = U.clamp(was + v, 0, 100);
       out.push(['bond', P.name(q), b[q.id] - was]);

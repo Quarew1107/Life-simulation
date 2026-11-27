@@ -3257,7 +3257,7 @@
     check('A choice changes mood (within limits), traits, standing and memories, and says exactly what changed', p.happy === 100 && p.stress === 47 && w.player.traits.kind === 2 && w.player.rep === 52 && w.player.memories.test_memory === w.day && /happiness \+1/.test(txt) && /stress -3/.test(txt) && /Kind/.test(txt) && (LES.P.isAdult(w, p) ? !got.some(g => g[0] === 'grow') : got.some(g => g[0] === 'grow')), txt);
     const q = w.living.find(x => x !== p && x.alive && !x.away);
     Pl.applyEffects(w, p, { bond: [['other', 6]] }, { other: LES.P.name(q), pid: q.id });
-    check('Closeness grows with the person the moment named', w.player.bonds[q.id] === 36 && Pl.character(w, p).bonds[0][0] === q);
+    check('Closeness grows with the person the moment named', w.player.bonds[q.id] === 36 && Pl.character(w, p).bonds.some(([x]) => x === q)); // (a partner, at 60 from day one, may be listed first)
     // A callback can only come once its memory exists.
     const cb = cbs.find(e => ['always', 'sAny', 'teenAny', 'aCivic'].includes(Pl.eventById((Pl.CALLBACKS.find(c => c.id === e.id) || {}).from).when));
     const was = Object.assign({}, w.player.memories); w.player.memories = {};
@@ -3319,6 +3319,15 @@
     const pool = w.living.filter(q => q !== p && q.alive && !q.away && !q.inst && Pl.friendAgeOk(w, p, q) && q.id !== p.partnerId && !p.parents.includes(q.id) && !p.children.includes(q.id));
     const kid = w.living.find(q => !P.isAdult(w, q) && q.alive);
     check('Adults can make friends with adults within 12 years (not with children), up to 12 friends', pool.length > 3 && !H.MAKE_FRIEND.check(w, p, { pid: pool[0].id }) && H.MAKE_FRIEND.check(w, p, { pid: kid.id }) === 'not_found' && Pl.FRIENDS_MAX === 12);
+    // Audit fixes (Nov 27 2026): classmates are pupils of the same school building; 16-19s can be friends across 18.
+    const fake = age => ({ alive: true, deathDay: null, birthDay: w.day - Math.round(age * 365) });
+    check('Teens and young adults aged 16-19 can be friends across the adult line (within 2.5 years); a 12- and an 18-year-old cannot',
+      Pl.friendAgeOk(w, fake(17.5), fake(18.5)) && Pl.friendAgeOk(w, fake(18.5), fake(16.5)) && !Pl.friendAgeOk(w, fake(17.5), fake(21)) && !Pl.friendAgeOk(w, fake(12), fake(18)) && Pl.friendAgeOk(w, fake(30), fake(40)));
+    const pupil = w.living.find(q => q.alive && !q.away && !P.isAdult(w, q) && P.age(w, q) >= 8), tot = w.living.find(q => q.alive && !q.away && P.age(w, q) < 6);
+    const near = pupil ? Pl.nearby(w, pupil).school : [];
+    check('Classmates are pupils of the same school building (the one the child goes to); under-7s and adults are at no school',
+      !!pupil && Pl.schoolOf(w, pupil) !== null && Pl.schoolOf(w, pupil) === LES.townNear(w.town, 'school', pupil.homeId) && (!tot || Pl.schoolOf(w, tot) === null) && Pl.schoolOf(w, p) === null
+      && near.every(q => Pl.schoolOf(w, q) === Pl.schoolOf(w, pupil)), `${near.length} classmates`);
     const [a, b, c] = pool;
     Pl.addFriend(w, a, 'met', 40); Pl.addFriend(w, b, 'online', 20); Pl.addFriend(w, c, 'met', 75);
     let r = null; for (let k = 0; k < 20 && !(r && r.code === 'ok'); k++) r = H.HANG_OUT.run(w, p, { pid: a.id });
@@ -3362,6 +3371,15 @@
     const other = w.living.find(x => x.partnerId !== null && x.id !== p.id && x.id !== q.id), oq = w.people[other.partnerId];
     check('A couple starts at closeness 60; the breakup chance is x1 at 60, x0.5 at 90, x2 at 30, and every other couple is unchanged', Pl.partnerBond(w, q) === 60 && Pl.coupleMul(w, p, q) === 1 && Pl.coupleMul(w, other, oq) === 1
       && ((w.player.bonds = Object.assign(w.player.bonds || {}, { [q.id]: 90 })), Pl.coupleMul(w, q, p) === 0.5) && ((w.player.bonds[q.id] = 30), Pl.coupleMul(w, p, q) === 2));
+    { // Audit fix (Nov 27 2026): a new partner starts at 60 at least (or the friendship, if closer); a couple already counted keeps its closeness.
+      const s = w.player, keep = s.bonds[q.id], keepStart = s.coupleStart;
+      s.bonds[q.id] = 20; s.coupleStart = -7; Pl.coupleStart(w, p); const low = s.bonds[q.id];
+      s.bonds[q.id] = 85; s.coupleStart = -7; Pl.coupleStart(w, p); const high = s.bonds[q.id];
+      s.bonds[q.id] = 35; delete s.coupleStart; s.coupleTime = w.day; Pl.coupleStart(w, p); const old = s.bonds[q.id];
+      check('A new partner starts at closeness 60 (an online friend at 20 is raised), a closer friend keeps their closeness, and a couple from an older save is left as it was',
+        low === 60 && high === 85 && old === 35 && s.coupleStart === q.id, `${low} ${high} ${old}`);
+      s.bonds[q.id] = keep; s.coupleStart = keepStart === undefined ? q.id : keepStart;
+    }
     // Each month: time together and a marriage help; stress and neglect hurt.
     w.player.bonds[q.id] = 60; w.player.coupleTime = w.day - 90; p.stress = 80; q.stress = 80;
     Pl.MONTHLY.forEach(f => { try { f(w, p); } catch (e) { /* other monthly work */ } });

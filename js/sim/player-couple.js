@@ -42,6 +42,19 @@
   };
   Pl.TARGETS.dateNight = (w, p) => (partnerOf(w, p) ? {} : null);
 
+  // A new couple starts at 60 at least (or the friendship, if closer): a friend who becomes your partner, or
+  // a partner the town paired you with, does not start at an old, lower closeness. Checked every day, before the
+  // day's moments. (A save from before this rule: a couple already counted keeps its closeness.)
+  Pl.coupleStart = function (w, p) {
+    const s = st(w), q = p && p.alive ? partnerOf(w, p) : null;
+    if (!q || s.coupleStart === q.id) return;
+    const b = s.bonds = s.bonds || {};
+    if (s.coupleStart === undefined && b[q.id] !== undefined && s.coupleTime !== undefined) { s.coupleStart = q.id; return; }
+    b[q.id] = Math.max(b[q.id] === undefined ? 0 : b[q.id], START);
+    s.coupleStart = q.id; s.coupleTime = w.day;
+  };
+  Pl.DAILY.push((w, p) => Pl.coupleStart(w, p));
+
   // Counselling together and gifts to the partner bring you closer; so does any couple time.
   const was = { COUNSEL: Pl.HANDLERS.COUNSEL && Pl.HANDLERS.COUNSEL.run, GIFT: Pl.HANDLERS.GIFT && Pl.HANDLERS.GIFT.run };
   if (was.COUNSEL) Pl.HANDLERS.COUNSEL.run = function (w, p, a) { const r = was.COUNSEL(w, p, a), q = partnerOf(w, p); if (r && r.code === 'ok' && q) { setBond(w, q.id, Pl.partnerBond(w, q) + 6); st(w).coupleTime = w.day; } return r; };

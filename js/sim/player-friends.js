@@ -22,8 +22,22 @@
   const entry = (w, id) => (st(w).friends || []).find(f => f.id === id);
   Pl.isFriend = (w, q) => !!q && !!entry(w, q.id);
   Pl.friendList = w => (st(w).friends || []).map(f => ({ f, q: w.people[f.id], c: bond(w, f.id) })).filter(x => here(x.q)).sort((a, b) => (b.c - a.c) || (a.q.id - b.q.id));
-  // Who can be friends: two children or teens close in age, or two adults within 12 years.
-  Pl.friendAgeOk = (w, p, q) => { const a = P.age(w, p), b = P.age(w, q), ma = P.isAdult(w, p), mb = P.isAdult(w, q); return ma !== mb ? false : Math.abs(a - b) <= (ma ? 12 : 2.5); };
+  // Who can be friends: two children or teens close in age, or two adults within 12 years. Teens and young adults
+  // aged 16-19 can be friends across the adult line (often the same school year), within 2.5 years.
+  Pl.friendAgeOk = (w, p, q) => {
+    const a = P.age(w, p), b = P.age(w, q), ma = P.isAdult(w, p), mb = P.isAdult(w, q);
+    if (ma !== mb) return a >= 16 && a < 20 && b >= 16 && b < 20 && Math.abs(a - b) <= 2.5;
+    return Math.abs(a - b) <= (ma ? 12 : 2.5);
+  };
+  // The school building a pupil goes to (World.childDay: a private school, or the public school nearest home);
+  // null for anyone not at school (under 7, or an adult).
+  Pl.schoolOf = (w, p) => {
+    if (!p || P.isAdult(w, p) || P.age(w, p) < 7) return null;
+    const b = p.school >= 0 && w.biz[p.school] && w.biz[p.school].open ? w.biz[p.school] : null;
+    const loc = b ? b.place : LES.townNear(w.town, 'school', p.homeId);
+    return loc === undefined || loc === null || loc < 0 ? null : loc;
+  };
+  const sameSchool = (w, p, q) => { const a = Pl.schoolOf(w, p); return a !== null && a === Pl.schoolOf(w, q); };
   const family = (w, p, q) => p.parents.includes(q.id) || p.children.includes(q.id) || q.id === p.partnerId || (q.parents.length && q.parents.some(id => p.parents.includes(id)));
   Pl.addFriend = function (w, q, how, start) {
     const s = st(w);
@@ -33,14 +47,14 @@
     if (!s.bonds || s.bonds[q.id] === undefined) setBond(w, q.id, start === undefined ? 40 : start);
     return true;
   };
-  const sameWhere = (w, p, q) => (p.homeId >= 0 && p.homeId === q.homeId) || (p.job && q.job && p.job.place === q.job.place) || (!P.isAdult(w, p) && !P.isAdult(w, q) && (p.school || -1) === (q.school || -1));
+  const sameWhere = (w, p, q) => (p.homeId >= 0 && p.homeId === q.homeId) || (p.job && q.job && p.job.place === q.job.place) || sameSchool(w, p, q);
   // People the character could get to know, by where they meet.
   Pl.nearby = function (w, p) {
     const out = { work: [], school: [], home: [] }, ok = q => here(q) && q !== p && !Pl.isFriend(w, q) && Pl.friendAgeOk(w, p, q) && !family(w, p, q);
     for (const q of w.living) {
       if (!ok(q)) continue;
       if (p.job && q.job && p.job.place === q.job.place && out.work.length < 5) out.work.push(q);
-      else if (!P.isAdult(w, p) && (p.school || -1) === (q.school || -1) && out.school.length < 5) out.school.push(q);
+      else if (sameSchool(w, p, q) && out.school.length < 5) out.school.push(q);
       else if (p.homeId >= 0 && w.town.buildings[q.homeId] && w.town.buildings[p.homeId] && Math.abs(w.town.buildings[q.homeId].x - w.town.buildings[p.homeId].x) + Math.abs(w.town.buildings[q.homeId].y - w.town.buildings[p.homeId].y) <= 8 && out.home.length < 5) out.home.push(q);
     }
     return out;
