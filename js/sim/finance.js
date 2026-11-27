@@ -79,9 +79,9 @@
   };
 
   F.monthlyCost = function (w, p) {
-    if (LES.World.heldFree(w, p)) return (p.isHead ? F.tierCost(w, 'housing', p.tiers.housing) : 0) + F.careShare(w, p); // rev 11: only the rent, if they still have a home
+    if (LES.World.heldFree(w, p)) return (p.isHead ? (p.own ? LES.Housing.ownerCost(w, p) : F.tierCost(w, 'housing', p.tiers.housing)) : 0) + F.careShare(w, p); // rev 11: only the rent, if they still have a home
     let c = F.tierCost(w, 'food', p.tiers.food) + F.tierCost(w, 'transport', p.tiers.transport) + F.tierCost(w, 'leisure', p.tiers.leisure);
-    if (p.isHead) c += F.tierCost(w, 'housing', p.tiers.housing);
+    if (p.isHead) c += p.own ? LES.Housing.ownerCost(w, p) : F.tierCost(w, 'housing', p.tiers.housing); // rev 13: an owner pays the loan and upkeep, not rent
     return c + F.careShare(w, p);
   };
 
@@ -130,6 +130,7 @@
   };
 
   F.payBill = function (w, p, cat) {
+    if (cat === 'housing' && p.own) { LES.Housing.payMonth(w, p); return; } // rev 13: home owners
     if (cat !== 'housing' && LES.World.heldFree(w, p)) return; // rev 11: no fares or outings from prison or rehab
     const L = w.ledger, amt = F.tierCost(w, cat, p.tiers[cat]);
     if (!amt) return;
@@ -168,11 +169,11 @@
     const pat = (p.pers.pat - 50) / 50, dis = (p.pers.dis - 50) / 50;
     const spendRate = U.clamp(1.0 - 0.3 * pat - 0.15 * dis + LES.Goals.spendDelta(p), 0.5, 1.2);
     const budget = p.incomeEMA * spendRate + Math.max(0, F.wealthRev(w) ? F.liquid(w, p) : p.nw) * 0.004 - F.careShare(w, p);
-    const t = { food: 0, housing: p.isHead ? 0 : p.tiers.housing, transport: 0, leisure: 0 };
-    let cost = F.tierCost(w, 'food', 0) + F.tierCost(w, 'transport', 0) + F.tierCost(w, 'leisure', 0) + (p.isHead ? F.tierCost(w, 'housing', 0) : 0);
+    const t = { food: 0, housing: p.isHead ? (p.own ? p.own.tier : 0) : p.tiers.housing, transport: 0, leisure: 0 }; // (rev 13: an owner stays in the home they own)
+    let cost = F.tierCost(w, 'food', 0) + F.tierCost(w, 'transport', 0) + F.tierCost(w, 'leisure', 0) + (p.isHead ? (p.own ? LES.Housing.ownerCost(w, p) : F.tierCost(w, 'housing', 0)) : 0);
     const order = ['food', 'housing', 'transport', 'leisure', 'housing', 'food', 'leisure', 'transport', 'housing', 'food', 'housing', 'transport', 'leisure'];
     for (const cat of order) {
-      if (cat === 'housing' && !p.isHead) continue;
+      if (cat === 'housing' && (!p.isHead || p.own)) continue;
       const next = t[cat] + 1;
       if (next >= C.TIERS[cat].length) continue;
       const delta = F.tierCost(w, cat, next) - F.tierCost(w, cat, t[cat]);
@@ -205,6 +206,7 @@
   };
 
   F.setHome = function (w, p, homeId) {
+    if (p.own && homeId !== p.own.home) LES.Housing.sell(w, p, 'moving house'); // rev 13: an owner who leaves their home sells it
     if (p.homeId >= 0) w.occupancy[p.homeId] = Math.max(0, (w.occupancy[p.homeId] || 0) - 1);
     p.homeId = homeId;
     if (homeId >= 0) w.occupancy[homeId] = (w.occupancy[homeId] || 0) + 1;
@@ -212,6 +214,7 @@
 
   // Household moves together: head, partner and the children they care for.
   F.moveHome = function (w, p, tier, silent) {
+    if (p.own) LES.Housing.sell(w, p, 'moving house'); // rev 13: an owner who moves sells first
     const old = p.tiers.housing, first = p.homeId < 0;
     p.housingWantMonths = 0;
     p.tiers.housing = tier;
@@ -713,7 +716,7 @@
     F.debtMonth(w, p);
     // Wealthier people consume part of their wealth (family support, luxuries,
     // donations): ~3.6%/year of net worth above RM300k (Year-1 money).
-    const rich = (F.wealthRev(w) ? p.nw - F.locked(w, p) : p.nw) - w.px(3e5); // rev 9: not out of locked retirement savings
+    const rich = (F.wealthRev(w) ? p.nw - F.locked(w, p) : p.nw) - (p.own ? LES.Housing.equity(w, p) : 0) - w.px(3e5); // (rev 13: not out of the home they live in) // rev 9: not out of locked retirement savings
     if (rich > 0 && !LES.World.heldFree(w, p)) { // rev 11: no luxuries in prison
       const lux = Math.round(rich * 0.003);
       if (p.cash < lux) F.raiseCash(w, p, lux - p.cash);

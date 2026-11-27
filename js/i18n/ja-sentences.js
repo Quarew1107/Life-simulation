@@ -3,6 +3,16 @@
 // translations/ja/ja-s1.js — Japanese sentence patterns 1-150
 // Added by Claude after the parts were made; first, before the general "Took over ..." (rules revision 11: rent while in prison or rehab).
 LES.I18n.sentences('ja', [
+  [/^Bought a home \((.+)\) for (.+) with a (.+) loan$/, "住宅（{1}）を{2}で購入した（ローン{3}）"],
+  [/^Moved up and bought a home \((.+)\) for (.+) with a (.+) loan$/, "住み替えて住宅（{1}）を{2}で購入した（ローン{3}）"],
+  [/^The bank took the home back and sold it for (.+) \(three months behind on the loan\)$/, "銀行が住宅を差し押さえ、{1}で売却した（ローン返済が3か月滞った）"],
+  [/^Sold the home \((.+)\) for (.+) \(a gain of (.+); (.+)\)$/, "住宅（{1}）を{2}で売却した（{3}の利益、{4}）"],
+  [/^Sold the home \((.+)\) for (.+) \(a loss of (.+); (.+)\)$/, "住宅（{1}）を{2}で売却した（{3}の損失、{4}）"],
+  [/^Paid off the home loan$/, "住宅ローンを完済した"],
+  [/^Fell behind on the home loan$/, "住宅ローンの返済が滞った"],
+  [/^Kept the family home after (.+) died$/, "{1}の死後、家族の家を引き継いだ"],
+  [/^Took over the home and its loan while (.+) is away$/, "{1}の不在中、住宅とローンを引き継いだ"],
+  [/^Parents helped with a home deposit \((.+)\)$/, "両親が住宅の頭金を援助してくれた（{1}）"],
   [/^Took over the rent while (.+) is in prison$/, '{1}の服役中、家賃の支払いを引き継いだ'],
   [/^Took over the rent while (.+) is in rehab$/, '{1}がリハビリ施設にいる間、家賃の支払いを引き継いだ'],
   [/^Gave up the rented (.+)$/, '借りていた{1}を引き払った'],
@@ -1800,3 +1810,4 @@ LES.I18n.sentences('ja', [
 // Birth rate as a number (Play a Life plan part 1, Nov 2026)
 LES.I18n.glossary("ja", {"A number (children per woman)": "数値で指定（女性1人あたりの子ども数）", "Children per woman": "女性1人あたりの子ども数", "The average number of children a woman has in her life. Today: Malaysia 1.6, UK 1.4, USA 1.6, China 1.0. About 2.1 keeps a population steady.": "女性が生涯に産む子どもの平均数。現在：マレーシア 1.6、イギリス 1.4、アメリカ 1.6、中国 1.0。約 2.1 で人口が安定します。"});
 LES.I18n.sentences("ja", [[/^([\d.]+) children per woman is very low: the town will age and shrink, and may empty out over a few generations\.$/, "女性1人あたり {1} 人はとても少なく、町は高齢化して縮み、数世代で人がいなくなるかもしれません。"], [/^([\d.]+) children per woman is very high: the population will grow fast, homes will be crowded and the game will slow down\.$/, "女性1人あたり {1} 人はとても多く、人口が急増して住宅が混み、ゲームが遅くなります。"], [/^Children per woman must be a number from 0\.3 to 6\.$/, "女性1人あたりの子ども数は 0.3 から 6 の数値にしてください。"]]);
+LES.I18n.glossary("ja", {"moving house": "引っ越し", "moving up": "住み替え", "moved in with a partner": "パートナーと同居するため", "moving away": "町を離れるため", "going to prison or rehab": "刑務所かリハビリ施設に入るため", "could not keep up the loan": "ローンを返せなくなったため", "the home loan": "住宅ローン", "a home deposit": "住宅の頭金", "helping with a home deposit": "住宅の頭金の援助", "Home buying": "住宅購入", "On: households buy homes with mortgages": "有効：世帯が住宅ローンで家を買う", "Off: everyone rents": "無効：全員が賃貸", "With it on, households with a steady job and a deposit can buy their home with a bank loan (with the deposit, term and limits of each country); owners pay the loan instead of rent, and the home counts in their wealth. Starting towns begin with owners at about the national rate.": "有効にすると、安定した仕事と頭金のある世帯は銀行ローンで家を買えます（頭金・期間・上限は国ごとの規則）。持ち家の世帯は家賃の代わりにローンを払い、家は資産に数えられます。新しい町は全国並みの持ち家率で始まります。"});

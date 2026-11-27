@@ -239,6 +239,7 @@
   function heldHome(w, p) {
     const at = p.homeId, mates = at < 0 ? [] : w.living.filter(q => q !== p && q.alive && q.adult && !q.away && !q.inst && q.homeId === at);
     const heir = mates.find(q => q.id === p.partnerId) || mates.sort((a, b) => b.nw - a.nw || a.id - b.id)[0];
+    if (p.own) LES.Housing.onHeld(w, p, heir); // rev 13: the home and its loan
     if (heir) {
       heir.isHead = true; heir.tiers.housing = p.tiers.housing; heir.mcost = F.monthlyCost(w, heir);
       p.isHead = false;

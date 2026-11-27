@@ -52,7 +52,8 @@
 
   Fa.formCouple = function (w, a, b) {
     a.partnerId = b.id; b.partnerId = a.id;
-    const head = a.nw >= b.nw ? a : b, other = head === a ? b : a;
+    const head = a.own && !b.own ? a : b.own && !a.own ? b : a.nw >= b.nw ? a : b, other = head === a ? b : a; // (rev 13: a home owner stays the head)
+    if (other.own) LES.Housing.sell(w, other, 'moved in with a partner'); // both owned: one home is sold
     other.isHead = false;
     head.isHead = true;
     other.tiers.housing = head.tiers.housing;

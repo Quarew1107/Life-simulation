@@ -84,6 +84,7 @@
     for (const k of kids) { k.parents = [dad.id, w13.people[4].id]; k.birthDay = dad.birthDay + 365 * 20; }
     dad.children = kids.map(k => k.id);
     const emptyOut = x => {
+      if (x.own) LES.Housing.sell(w13, x, 'test'); // (rules revision 13: a home is part of the estate too)
       x.job = null; x.inv = { idx: 0, st: {}, cost: 0 }; x.debt.study = 0;
       w13.ledger.spend(x, 'epf', 'MERCHANT', x.epf);
       w13.ledger.spend(x, 'cash', 'MERCHANT', x.cash);
@@ -1943,7 +1944,7 @@
     const last = w => w.player.journal[w.player.journal.length - 1];
     const jobless = (x, xp) => { if (xp.job) LES.Labour.endJob(x, xp, 'test', true); };
     const young = seed => make({ seed, play: 'cast', playCast: 'pl3-y', cast: [Object.assign(LES.Cast.blank(), { id: 'pl3-y', first: 'Muda', last: 'Pencari', age: 22 })] });
-    const firstJob = x => { const xp = Pl.person(x); let it = null; for (let d = 0; d < 400 && !it; d++) { jobless(x, xp); x.step(); it = (x.player.inbox || []).find(y => y.ev === 'AD-001'); } return it; };
+    const firstJob = x => { const xp = Pl.person(x); let it = null; for (let d = 0; d < 400 && !it; d++) { jobless(x, xp); xp.earned.wages = 0; x.step(); it = (x.player.inbox || []).find(y => y.ev === 'AD-001'); } return it; };
     // Parity: a played world with nobody deciding (events offered and left to pass) stays the unplayed town.
     const a = make(), b = new LES.World(Object.assign({}, D, { seed: 'pl3-t', founders: 150 }));
     for (let d = 0; d < 400; d++) { a.step(); b.step(); }
@@ -3394,6 +3395,70 @@
 
   // Play a Life plan part 6: every president's law changes go to the council (government.js), and a played
   // president can propose changes and meet officials (js/sim/player-politics.js).
+  // Home buying and mortgages (rules revision 13, Nov 2026): js/sim/housing.js.
+  async function housingTests() {
+    print('--- Home buying: owners, prices, mortgages, selling, inheritance ---', 'info');
+    const D = LES.DEFAULTS, H = LES.Housing, P = LES.P, K = LES.Countries;
+    const mk = (seed, extra) => new LES.World(Object.assign({}, D, { seed, founders: 160 }, extra || {}));
+    // Older rules and the switch: nothing of this runs.
+    const old = mk('hb-old', { rulesRev: 12 }), off = mk('hb-off', { homeBuy: 'off' });
+    for (let d = 0; d < 400; d++) { old.step(); off.step(); }
+    check('Older rules (revision 12) and Home buying off: nobody owns a home, no loans, no housing state', !old.hous && !off.hous && ![...old.people, ...off.people].some(p => p.own || p.debt.mortgage > 0));
+    // A starting town has owners at about the national rate, more of them older; each counts the home in net worth.
+    const w = mk('hb-1'), s0 = H.summary(w), heads = w.living.filter(p => p.adult && p.isHead);
+    const young = heads.filter(p => P.age(w, p) < 30), older = heads.filter(p => P.age(w, p) >= 45);
+    const share = a => a.filter(p => p.own).length / Math.max(1, a.length);
+    const o = heads.find(p => p.own && p.debt.mortgage > 0);
+    check('A starting town begins with owners at about the national rate (Malaysia 75%), older households more often', s0.rate > 0.45 && s0.rate < 0.85 && share(older) > share(young), `${Math.round(s0.rate * 100)}% (under 30: ${Math.round(share(young) * 100)}%, 45+: ${Math.round(share(older) * 100)}%)`);
+    check('An owner’s net worth counts the home’s value minus the loan; their monthly cost is the loan and upkeep, not rent', !!o && Math.abs(P.netWorth(w, o) - (o.cash + o.trust + o.epf + P.invValue(w, o) + P.bizValue(w, o) - o.debt.study - (o.debt.medical || 0) + H.value(w, o) - o.debt.mortgage)) < 2
+      && H.ownerCost(w, o) === o.mort.monthly + H.upkeep(w, o) && !w.checkInvariants().length);
+    // The bank's rules: deposit, term, end age, the standard repayment.
+    const renter = heads.find(p => !p.own && P.age(w, p) >= 25 && P.age(w, p) < 50);
+    const q = H.quote(w, renter, 1);
+    const pay = Math.round(q.loan * (q.rate / 12) / (1 - Math.pow(1 + q.rate / 12, -Math.round(q.years * 12))));
+    check('A quote follows the country’s rules: 10% deposit in Malaysia, at most 35 years and paid off by 70, the standard repayment', q.deposit === Math.round(q.price * 0.1) && q.years <= 35 && P.age(w, renter) + q.years <= 70.001 && Math.abs(q.monthly - pay) <= 1 && H.rules(w).dsr === 0.35);
+    const cash0 = renter.cash, inv0 = renter.inv, fl = renter.epfFlex;
+    renter.cash = 0; renter.inv = { idx: 0, st: {}, cost: 0 }; renter.epfFlex = 0;
+    const broke = H.quote(w, renter, 1).why; renter.cash = cash0; renter.inv = inv0; renter.epfFlex = fl;
+    check('No deposit, no loan', broke === 'no_deposit' || broke === 'no_steady_job', broke);
+    // Buying: the deposit and the loan go to the seller; books balance; selling pays the loan off first.
+    const b = mk('hb-buy'); for (let d = 0; d < 40; d++) b.step();
+    const buyer = b.living.find(p => p.adult && p.isHead && !p.own && P.age(b, p) >= 25 && P.age(b, p) < 50 && p.job);
+    buyer.job.startDay = Math.min(buyer.job.startDay, b.day - 400);
+    b.ledger.pay('GENESIS', buyer, 'cash', H.price(b, 1));
+    const before = buyer.cash, r = H.buy(b, buyer, 1);
+    check('Buying a home: the deposit leaves their cash, the bank lends the rest, they live in the home they own', r.ok && before - buyer.cash === r.deposit && buyer.debt.mortgage === r.loan && buyer.homeId === buyer.own.home && !b.checkInvariants().length, r.why || '');
+    const debt = buyer.debt.mortgage, c1 = buyer.cash, mon = buyer.mort.monthly; LES.Finance.payBill(b, buyer, 'housing');
+    check('Each month the repayment goes to the bank and the loan shrinks (interest first)', buyer.debt.mortgage < debt && c1 - buyer.cash >= mon && !b.checkInvariants().length);
+    const val = H.value(b, buyer), d2 = buyer.debt.mortgage, c2 = buyer.cash, left = H.sell(b, buyer, 'test');
+    check('Selling: the market pays the value, the loan is paid off first, the household rents again', !buyer.own && buyer.debt.mortgage === 0 && buyer.cash - c2 === val - d2 && left === val - d2 && !b.checkInvariants().length);
+    // Falling behind: three months behind and the bank takes the home; no new loan for three years.
+    const r2 = H.buy(b, buyer, 1);
+    b.ledger.spend(buyer, 'cash', 'MERCHANT', buyer.cash); buyer.inv = { idx: 0, st: {}, cost: 0 }; buyer.epfFlex = 0;
+    for (let k = 0; k < 3; k++) LES.Finance.payBill(b, buyer, 'housing');
+    check('Three months behind: the bank takes the home back and sells it at 80%; no new loan for three years', r2.ok && !buyer.own && buyer.noLoanUntil > b.day + 1000 && H.quote(b, buyer, 1).why === 'no_credit' && !b.checkInvariants().length, r2.why || '');
+    // A death: a partner living there keeps the home and the loan; otherwise it is sold for the estate.
+    const dw = mk('hb-death'); for (let d = 0; d < 20; d++) dw.step();
+    const pair = dw.living.find(p => p.own && p.partnerId !== null && dw.people[p.partnerId].alive && dw.people[p.partnerId].homeId === p.homeId && !dw.people[p.partnerId].own);
+    const lone = dw.living.find(p => p.own && p.partnerId === null && p !== pair);
+    const pt = pair ? dw.people[pair.partnerId] : null, loan = pair ? pair.debt.mortgage : 0;
+    if (pair) dw.die(pair, 'test');
+    if (lone) dw.die(lone, 'test');
+    check('A death: the partner living there keeps the home (with its loan); a single owner’s home is sold for the estate', !!pair && !!lone && !!pt.own && pt.debt.mortgage === loan && !lone.own && !lone.cash && !dw.checkInvariants().length);
+    // Over years: people buy and sell, the books balance, ownership stays near the national rate; saves carry on.
+    const y = mk('hb-years'); for (let d = 0; d < 15 * 365; d++) y.step();
+    const sy = H.summary(y);
+    check('15 years: households buy, trade up and sell; ownership stays near the national rate; no invariant errors', sy.stats.bought > 5 && sy.stats.sold > 3 && sy.rate > 0.45 && sy.rate < 0.9 && !y.checkInvariants().length, `${Math.round(sy.rate * 100)}% ${JSON.stringify(sy.stats)}`);
+    const a2 = mk('hb-save'); for (let d = 0; d < 500; d++) a2.step();
+    const b2 = LES.Save.fromJSON(LES.Save.toJSON(a2)); for (let d = 0; d < 400; d++) { a2.step(); b2.step(); }
+    check('A saved town with home owners carries on identically', a2.hash() === b2.hash() && !!a2.hous);
+    // Each country's rules.
+    const dep = {};
+    for (const c of ['uk', 'us', 'cn']) { const cfg = Object.assign({}, D, K.get(c).defaults, { country: c, seed: `hb-${c}`, founders: 120 }); K.ensure(cfg); const x = new LES.World(cfg); const h = x.living.find(p => p.adult && p.isHead && !p.own) || x.living[0]; dep[c] = Math.round(H.quote(x, h, 1).deposit / H.price(x, 1) * 100); }
+    K.ensure(D);
+    check('Each country’s deposit: UK 10%, US 10%, China 20%', dep.uk === 10 && dep.us === 10 && dep.cn === 20, JSON.stringify(dep));
+  }
+
   async function councilVoteTests() {
     print('--- The council votes on law changes ---', 'info');
     const Pl = LES.Player, GV = LES.Gov, I = LES.I18n;
@@ -3402,7 +3467,7 @@
     const votes = w.gov.votes || [], kinds = new Set(votes.map(v => v.why));
     check('Presidents’ law changes go to the council: each vote is recorded with every official’s yes or no and reason', votes.length > 3 && votes.every(v => v.votes.length <= 3 && v.pass === (v.yes >= v.no)) && kinds.has('platform'), `${votes.length} votes: ${[...kinds].join(',')}`);
     const passed = votes.filter(v => v.pass).length, laws = w.gov.lawLog.filter(l => ['platform', 'emergency', 'surplus'].includes(l.why)).length;
-    check('Only changes the council passes become law (rejected ones are in the news)', laws === passed && (votes.length === passed || w.feed.some(f => /The council rejected/.test(f.text))), `${passed} passed, ${laws} changed`);
+    check('Only changes the council passes become law (rejected ones are in the news)', laws === passed && (votes.length === passed || w.feed.some(f => /The council rejected/.test(f.text)) || votes.filter(v => !v.pass).every(v => !w.feed.some(f => f.day <= v.day))), `${passed} passed, ${laws} changed`); // (a rejection older than the whole news feed has scrolled out)
     // A played president: propose a change, meet an official first.
     const p = Pl.person(w);
     if (!p || !p.alive) { check('A played adult to test the presidency with', false); return; }
@@ -3627,6 +3692,7 @@
       await friendTests();
       await coupleTests();
       await councilVoteTests();
+      await housingTests();
       await buildingArtTests();
       await crimeRevTests();
       await wealthRevTests();
@@ -3662,6 +3728,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, roomTests, memoryTests, homeKindTests, publicRoomTests, townArtTests, momentTests, friendTests, coupleTests, councilVoteTests, heldTests, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, playFlowTests, playCatalogTests, playPacingTests, playMatrixTests, i18nSentenceTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, housingTests, roomTests, memoryTests, homeKindTests, publicRoomTests, townArtTests, momentTests, friendTests, coupleTests, councilVoteTests, heldTests, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, playFlowTests, playCatalogTests, playPacingTests, playMatrixTests, i18nSentenceTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

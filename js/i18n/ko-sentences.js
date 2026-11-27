@@ -3,6 +3,16 @@
 // translations/ko/ko-s1.js — Korean sentence patterns 1-150
 // Added by Claude after the parts were made; first, before the general "Took over ..." (rules revision 11: rent while in prison or rehab).
 LES.I18n.sentences('ko', [
+  [/^Bought a home \((.+)\) for (.+) with a (.+) loan$/, "주택({1})을 {2}에 구입했다 (대출 {3})"],
+  [/^Moved up and bought a home \((.+)\) for (.+) with a (.+) loan$/, "더 좋은 집으로 옮겨 주택({1})을 {2}에 구입했다 (대출 {3})"],
+  [/^The bank took the home back and sold it for (.+) \(three months behind on the loan\)$/, "은행이 주택을 압류해 {1}에 팔았다 (대출 3개월 연체)"],
+  [/^Sold the home \((.+)\) for (.+) \(a gain of (.+); (.+)\)$/, "주택({1})을 {2}에 팔았다 ({3} 이익, {4})"],
+  [/^Sold the home \((.+)\) for (.+) \(a loss of (.+); (.+)\)$/, "주택({1})을 {2}에 팔았다 ({3} 손실, {4})"],
+  [/^Paid off the home loan$/, "주택담보대출을 다 갚았다"],
+  [/^Fell behind on the home loan$/, "주택담보대출 상환이 밀렸다"],
+  [/^Kept the family home after (.+) died$/, "{1}이(가) 세상을 떠난 뒤 가족의 집을 지켰다"],
+  [/^Took over the home and its loan while (.+) is away$/, "{1}이(가) 없는 동안 집과 대출을 넘겨받았다"],
+  [/^Parents helped with a home deposit \((.+)\)$/, "부모님이 주택 계약금을 도와주었다 ({1})"],
   [/^Took over the rent while (.+) is in prison$/, '{1}이(가) 수감된 동안 집세를 대신 내게 되었다'],
   [/^Took over the rent while (.+) is in rehab$/, '{1}이(가) 재활 치료를 받는 동안 집세를 대신 내게 되었다'],
   [/^Gave up the rented (.+)$/, '빌려 살던 {1}을(를) 비웠다'],
@@ -1800,3 +1810,4 @@ LES.I18n.sentences('ko', [
 // Birth rate as a number (Play a Life plan part 1, Nov 2026)
 LES.I18n.glossary("ko", {"A number (children per woman)": "숫자로 지정 (여성 1명당 자녀 수)", "Children per woman": "여성 1명당 자녀 수", "The average number of children a woman has in her life. Today: Malaysia 1.6, UK 1.4, USA 1.6, China 1.0. About 2.1 keeps a population steady.": "여성 한 명이 평생 낳는 평균 자녀 수입니다. 현재: 말레이시아 1.6, 영국 1.4, 미국 1.6, 중국 1.0. 약 2.1이면 인구가 유지됩니다."});
 LES.I18n.sentences("ko", [[/^([\d.]+) children per woman is very low: the town will age and shrink, and may empty out over a few generations\.$/, "여성 1명당 {1}명은 매우 낮습니다. 마을이 고령화되고 줄어들어 몇 세대 뒤에는 텅 빌 수 있습니다."], [/^([\d.]+) children per woman is very high: the population will grow fast, homes will be crowded and the game will slow down\.$/, "여성 1명당 {1}명은 매우 높습니다. 인구가 빠르게 늘고 집이 붐비며 게임이 느려집니다."], [/^Children per woman must be a number from 0\.3 to 6\.$/, "여성 1명당 자녀 수는 0.3에서 6 사이의 숫자여야 합니다."]]);
+LES.I18n.glossary("ko", {"moving house": "이사", "moving up": "더 좋은 집으로 이사", "moved in with a partner": "배우자와 함께 살게 되어", "moving away": "마을을 떠나며", "going to prison or rehab": "교도소나 재활센터에 들어가며", "could not keep up the loan": "대출을 감당하지 못해", "the home loan": "주택담보대출", "a home deposit": "주택 계약금", "helping with a home deposit": "주택 계약금 지원", "Home buying": "주택 구입", "On: households buy homes with mortgages": "켜기: 가구가 대출로 집을 산다", "Off: everyone rents": "끄기: 모두 임대로 산다", "With it on, households with a steady job and a deposit can buy their home with a bank loan (with the deposit, term and limits of each country); owners pay the loan instead of rent, and the home counts in their wealth. Starting towns begin with owners at about the national rate.": "켜면 안정된 직장과 계약금이 있는 가구가 은행 대출로 집을 살 수 있습니다(계약금, 기간, 한도는 나라별 규칙). 집주인은 월세 대신 대출을 갚고, 집은 재산에 포함됩니다. 새 마을은 전국 수준의 자가 비율로 시작합니다."});

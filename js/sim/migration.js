@@ -108,6 +108,7 @@
         }
       }
       a.manages = -1;
+      if (a.own) LES.Housing.sell(w, a, 'moving away'); // rev 13: the home is sold
       if (P.invValue(w, a) > 0) F.raiseCash(w, a, P.invValue(w, a) + 1, 'moving away');
       a.inv = { idx: 0, st: {}, cost: 0 };
       if (!a.adult) continue;

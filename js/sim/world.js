@@ -78,6 +78,7 @@
       this.firsts = {}; // threshold -> the first person in town to pass it { pid, day, age }
       this.initFounders();
       for (const s of this.sys.init) s.init(this);
+      if (LES.Housing && LES.Housing.on(this)) LES.Housing.initOwners(this); // rev 13: starting home owners
       F.updateRent(this);
       this.refreshLiving();
       LES.Market.monthly(this);
@@ -477,6 +478,7 @@
         p.happyAvg = p.happyAvg * 0.9 + p.happy * 0.1;
         p.netMonth = 0;
       }
+      if (LES.Housing && LES.Housing.on(this)) LES.Housing.month(this); // rev 13: home prices, buying and selling
       if (this.cutbacks) { // rev 9: one line for everyone who could not keep up a bill this month
         const n = this.cutbacks;
         this.pushFeed({ day: this.day, pid: -1, text: `${n} ${n === 1 ? 'person' : 'people'} could not keep up their spending and cut back this month`, cat: 'money', imp: 1 });
@@ -610,6 +612,7 @@
       if (p.job) Lb.endJob(this, p, 'died', true);
       p.enrol = null; p.pregnancy = null; p.plan = null;
       if (p.inst) p.inst = null;
+      if (p.own) LES.Housing.onDeath(this, p); // rev 13: the partner keeps the home, or it is sold for the estate
       if (p.partnerId !== null) {
         const q = this.people[p.partnerId];
         q.partnerId = null; p.partnerId = null;
@@ -679,6 +682,7 @@
     // ---------------- Verification ----------------
     checkInvariants() {
       const errs = [];
+      if (LES.Housing && this.hous) errs.push(...LES.Housing.check(this));
       let total = this.ledger.sectorTotal();
       for (const p of this.people) {
         total += p.cash + p.trust + p.epf;

@@ -2,6 +2,16 @@
 // native speaker. Same keys as js/i18n/en.js; see docs/TRANSLATING.md.
 // Added by Claude after the parts were made; first, before the general "Took over ..." (rules revision 11).
 LES.I18n.sentences('es', [
+  [/^Bought a home \((.+)\) for (.+) with a (.+) loan$/, "Compró una vivienda ({1}) por {2} con un préstamo de {3}"],
+  [/^Moved up and bought a home \((.+)\) for (.+) with a (.+) loan$/, "Se mudó a algo mejor y compró una vivienda ({1}) por {2} con un préstamo de {3}"],
+  [/^The bank took the home back and sold it for (.+) \(three months behind on the loan\)$/, "El banco recuperó la vivienda y la vendió por {1} (tres meses de retraso en la hipoteca)"],
+  [/^Sold the home \((.+)\) for (.+) \(a gain of (.+); (.+)\)$/, "Vendió la vivienda ({1}) por {2} (una ganancia de {3}; {4})"],
+  [/^Sold the home \((.+)\) for (.+) \(a loss of (.+); (.+)\)$/, "Vendió la vivienda ({1}) por {2} (una pérdida de {3}; {4})"],
+  [/^Paid off the home loan$/, "Terminó de pagar la hipoteca"],
+  [/^Fell behind on the home loan$/, "Se atrasó con la hipoteca"],
+  [/^Kept the family home after (.+) died$/, "Conservó la casa familiar tras la muerte de {1}"],
+  [/^Took over the home and its loan while (.+) is away$/, "Se hizo cargo de la vivienda y su préstamo mientras {1} no está"],
+  [/^Parents helped with a home deposit \((.+)\)$/, "Sus padres ayudaron con la entrada de una vivienda ({1})"],
   [/^Took over the rent while (.+) is in prison$/, 'Asumió el alquiler mientras {1} está en prisión'],
   [/^Took over the rent while (.+) is in rehab$/, 'Asumió el alquiler mientras {1} está en rehabilitación'],
   [/^Gave up the rented (.+)$/, 'Dejó su vivienda de alquiler ({1})'],
@@ -1800,3 +1810,4 @@ LES.I18n.sentences('es', [
 // Birth rate as a number (Play a Life plan part 1, Nov 2026)
 LES.I18n.glossary("es", {"A number (children per woman)": "Un número (hijos por mujer)", "Children per woman": "Hijos por mujer", "The average number of children a woman has in her life. Today: Malaysia 1.6, UK 1.4, USA 1.6, China 1.0. About 2.1 keeps a population steady.": "El número medio de hijos que una mujer tiene en su vida. Hoy: Malasia 1,6, Reino Unido 1,4, EE. UU. 1,6, China 1,0. Unos 2,1 mantienen la población estable."});
 LES.I18n.sentences("es", [[/^([\d.]+) children per woman is very low: the town will age and shrink, and may empty out over a few generations\.$/, "{1} hijos por mujer es muy bajo: el pueblo envejecerá y se reducirá, y podría quedar vacío en unas generaciones."], [/^([\d.]+) children per woman is very high: the population will grow fast, homes will be crowded and the game will slow down\.$/, "{1} hijos por mujer es muy alto: la población crecerá rápido, las viviendas estarán llenas y el juego irá más lento."], [/^Children per woman must be a number from 0\.3 to 6\.$/, "El número de hijos por mujer debe estar entre 0,3 y 6."]]);
+LES.I18n.glossary("es", {"moving house": "mudanza", "moving up": "mejorar de vivienda", "moved in with a partner": "irse a vivir con su pareja", "moving away": "marcharse del pueblo", "going to prison or rehab": "entrar en prisión o rehabilitación", "could not keep up the loan": "no poder pagar el préstamo", "the home loan": "la hipoteca", "a home deposit": "la entrada de una vivienda", "helping with a home deposit": "ayudar con la entrada de una vivienda", "Home buying": "Compra de vivienda", "On: households buy homes with mortgages": "Activada: los hogares compran vivienda con hipoteca", "Off: everyone rents": "Desactivada: todos alquilan", "With it on, households with a steady job and a deposit can buy their home with a bank loan (with the deposit, term and limits of each country); owners pay the loan instead of rent, and the home counts in their wealth. Starting towns begin with owners at about the national rate.": "Si está activada, los hogares con un trabajo estable y una entrada pueden comprar su vivienda con un préstamo del banco (con la entrada, el plazo y los límites de cada país); los propietarios pagan el préstamo en lugar del alquiler y la vivienda cuenta en su patrimonio. Los pueblos nuevos empiezan con propietarios en torno a la tasa nacional."});

@@ -6,6 +6,16 @@
 // without a pattern is shown in English. Loaded with js/i18n/zh-Hans.js (LES.I18n.set).
 LES.I18n.sentences('zh-Hans', [
   // rules revision 11 (rent while held): before the general "Took over ..."
+  [/^Bought a home \((.+)\) for (.+) with a (.+) loan$/, "买下了一处住房（{1}），价格{2}，贷款{3}"],
+  [/^Moved up and bought a home \((.+)\) for (.+) with a (.+) loan$/, "换了更好的房子：买下了一处住房（{1}），价格{2}，贷款{3}"],
+  [/^The bank took the home back and sold it for (.+) \(three months behind on the loan\)$/, "银行收回了住房，以{1}卖出（房贷拖欠了三个月）"],
+  [/^Sold the home \((.+)\) for (.+) \(a gain of (.+); (.+)\)$/, "卖掉了住房（{1}），售价{2}（赚了{3}；{4}）"],
+  [/^Sold the home \((.+)\) for (.+) \(a loss of (.+); (.+)\)$/, "卖掉了住房（{1}），售价{2}（亏了{3}；{4}）"],
+  [/^Paid off the home loan$/, "还清了房贷"],
+  [/^Fell behind on the home loan$/, "房贷开始拖欠"],
+  [/^Kept the family home after (.+) died$/, "{1}去世后保住了家里的房子"],
+  [/^Took over the home and its loan while (.+) is away$/, "在{1}不在期间接手了住房和房贷"],
+  [/^Parents helped with a home deposit \((.+)\)$/, "父母帮忙付了买房首付（{1}）"],
   [/^Took over the rent while (.+) is in (prison|rehab)$/, '在{1}{2}期间接手支付房租'],
   [/^Gave up the rented (.+)$/, '退掉了租住的{1}'],
   [/^Moved into an? (.+) after prison$/, '出狱后搬进了{1}'],
@@ -1058,3 +1068,4 @@ LES.I18n.sentences('zh-Hans', [
 // Birth rate as a number (Play a Life plan part 1, Nov 2026)
 LES.I18n.glossary("zh-Hans", {"A number (children per woman)": "指定数字（每名女性的子女数）", "Children per woman": "每名女性的子女数", "The average number of children a woman has in her life. Today: Malaysia 1.6, UK 1.4, USA 1.6, China 1.0. About 2.1 keeps a population steady.": "一名女性一生平均生育的子女数。目前：马来西亚 1.6，英国 1.4，美国 1.6，中国 1.0。约 2.1 可使人口保持稳定。"});
 LES.I18n.sentences("zh-Hans", [[/^([\d.]+) children per woman is very low: the town will age and shrink, and may empty out over a few generations\.$/, "每名女性 {1} 个子女非常低：小镇会老龄化并萎缩，几代之后可能人去镇空。"], [/^([\d.]+) children per woman is very high: the population will grow fast, homes will be crowded and the game will slow down\.$/, "每名女性 {1} 个子女非常高：人口会迅速增长，住房拥挤，游戏也会变慢。"], [/^Children per woman must be a number from 0\.3 to 6\.$/, "每名女性的子女数必须是 0.3 到 6 之间的数字。"]]);
+LES.I18n.glossary("zh-Hans", {"moving house": "搬家", "moving up": "换更好的房子", "moved in with a partner": "和伴侣住到一起", "moving away": "搬离本镇", "going to prison or rehab": "入狱或进戒毒所", "could not keep up the loan": "还不起房贷", "the home loan": "房贷", "a home deposit": "买房首付", "helping with a home deposit": "帮忙付买房首付", "Home buying": "购房", "On: households buy homes with mortgages": "开启：家庭可以贷款买房", "Off: everyone rents": "关闭：所有人都租房", "With it on, households with a steady job and a deposit can buy their home with a bank loan (with the deposit, term and limits of each country); owners pay the loan instead of rent, and the home counts in their wealth. Starting towns begin with owners at about the national rate.": "开启后，有稳定工作和首付的家庭可以向银行贷款买房（首付、期限和额度按各国规定）；房主付房贷而不付房租，住房计入财富。新城镇开局时的房主比例约等于全国水平。"});
