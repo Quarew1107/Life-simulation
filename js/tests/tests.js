@@ -3518,6 +3518,57 @@
     check('A home to let: the UK adds 5% of the price to stamp duty; China asks a 30% deposit', uq.tax - uqBase === Math.round(uq.price * 0.05) && uqBase > 0 && cq.deposit === Math.round(cq.price * 0.3), `${uq.tax} ${uq.price} ${cq.deposit} ${cq.price}`);
   }
 
+  // Home buying step 4: the played character's home (js/sim/player-home.js).
+  async function playHomeTests() {
+    print('--- Play a Life: your home (buy, sell, pay off, ask parents, let) ---', 'info');
+    const Pl = LES.Player, D = LES.DEFAULTS, P = LES.P, H = LES.Housing, I = LES.I18n;
+    LES.Countries.ensure(D);
+    const make = (seed, test, days) => { for (let k = 0; k < 30; k++) { const w = new LES.World(Object.assign({}, D, { seed: `${seed}-${k}`, founders: 160, play: 'random', playStage: 'adult' })); Pl.begin(w); for (let d = 0; d < (days || 3); d++) w.step(); const q = w.living.find(x => x.alive && !x.away && !x.inst && test(w, x)); if (q) { w.player.id = q.id; w.player.chain[0].id = q.id; return w; } } return null; };
+    const req = (w, kind, args) => { w.player.cool = {}; w.player.hoursDay = -1; const r = Pl.request(w, kind, args); Pl.tick(w); return r.command ? r.command.code : r.error; };
+    const w = make('ph-buy', (x, q) => q.adult && q.isHead && !q.own && P.age(x, q) >= 25 && P.age(x, q) < 45 && !!q.job && q.partnerId === null);
+    if (!w) { check('A played renter to test with', false); return; }
+    const p = Pl.person(w);
+    p.job.startDay = Math.min(p.job.startDay, w.day - 400);
+    const cash0 = p.cash; w.ledger.spend(p, 'cash', 'MERCHANT', p.cash); p.inv = { idx: 0, st: {}, cost: 0 }; p.epfFlex = 0;
+    const why = Pl.check(w, 'BUY_HOME', { tier: p.tiers.housing });
+    check('With no savings the bank says no, and says why', !why.ok && why.code === 'no_deposit' && /deposit/.test(I.render(Pl.whyNot(w, 'BUY_HOME', { tier: p.tiers.housing }, why))), I.render(Pl.whyNot(w, 'BUY_HOME', { tier: p.tiers.housing }, why)));
+    w.ledger.pay('GENESIS', p, 'cash', cash0 + H.price(w, p.tiers.housing)); p.incomeEMA = Math.max(p.incomeEMA, 4 * H.quote(w, p, p.tiers.housing).monthly);
+    check('A renter with a steady job sees the situations of a renter (moments can come)', Pl.CONDITIONS.homeRenting(w, p) && Pl.CONDITIONS.homeNearDeposit(w, p) && !Pl.CONDITIONS.homeOwner(w, p));
+    const code = req(w, 'BUY_HOME', { tier: p.tiers.housing });
+    check('Buying your home: the bank agrees, you own it and pay the loan instead of rent', code === 'ok' && !!p.own && p.debt.mortgage > 0 && Pl.CONDITIONS.homeOwner(w, p) && Pl.CONDITIONS.homeNewOwner(w, p) && !w.checkInvariants().length, code);
+    const hc = Pl.homeCard(w, p);
+    check('The Home card shows what you own: value, loan, repayment, years left', !!hc.own && hc.own.loan === p.debt.mortgage && hc.own.monthly === p.mort.monthly && hc.own.years > 9);
+    const loan0 = p.debt.mortgage, m0 = p.mort.monthly;
+    const c2 = req(w, 'PAY_EXTRA', { share: 0.5 });
+    check('Paying extra off the loan: less owed and smaller repayments, three months of costs kept in hand', c2 === 'ok' && p.debt.mortgage < loan0 && p.mort.monthly < m0 && p.cash >= 3 * p.mcost - 2 && !w.checkInvariants().length, `${c2} ${loan0}->${p.debt.mortgage}`);
+    w.ledger.pay('GENESIS', p, 'cash', 2 * H.price(w, 1)); p.incomeEMA = Math.max(p.incomeEMA, 6 * H.letQuote(w, p, 1).monthly);
+    const c3 = req(w, 'BUY_LET', { tier: 1 });
+    check('Buying a home to let (you are an owner now)', c3 === 'ok' && p.lets && p.lets.length === 1 && Pl.CONDITIONS.homeLandlord(w, p) && !w.checkInvariants().length, c3);
+    const c4 = req(w, 'SELL_LET', { i: 0 }), c5 = req(w, 'SELL_HOME', {});
+    check('Selling the home you let, then your own: you rent again, the money is yours', c4 === 'ok' && c5 === 'ok' && !p.own && !p.lets && p.debt.mortgage === 0 && !w.checkInvariants().length, `${c4} ${c5}`);
+    // Asking a parent for the deposit (your own dice: the town's luck is untouched).
+    const kw = make('ph-dep', (x, q) => q.adult && q.isHead && !q.own && !q.everOwned && P.age(x, q) >= 20 && P.age(x, q) < 50 && !!q.job && q.parents.some(id => x.people[id].alive && !x.people[id].away), 1500); // (grown children who have left home: a few years in)
+    if (kw) {
+      const k = Pl.person(kw), par = k.parents.map(id => kw.people[id]).find(g => g.alive && !g.away);
+      if (k.job) k.job.startDay = Math.min(k.job.startDay, kw.day - 400); k.incomeEMA = Math.max(k.incomeEMA, 4 * H.quote(kw, k, k.tiers.housing).monthly);
+      kw.ledger.spend(k, 'cash', 'MERCHANT', k.cash); k.inv = { idx: 0, st: {}, cost: 0 }; k.epfFlex = 0;
+      kw.ledger.pay('GENESIS', par, 'cash', 3 * H.price(kw, k.tiers.housing));
+      const rs = kw.rng.housing ? kw.rng.housing.s || JSON.stringify(kw.rng.housing) : '';
+      let got = '', n = 0;
+      for (; n < 8 && !/^ok/.test(got); n++) got = req(kw, 'ASK_DEPOSIT', {});
+      check('Asking your parents for the deposit: they may say no; when they say yes the money really moves to you', /^ok/.test(got) && k.cash > 0 && H.quote(kw, k, k.tiers.housing).why !== 'no_deposit' && (kw.rng.housing ? (kw.rng.housing.s || JSON.stringify(kw.rng.housing)) === rs : true) && !kw.checkInvariants().length, `${got} after ${n}`);
+    } else check('A played young renter with a parent to test with', false);
+    // A moment that asks for a home request can only offer it when it can happen.
+    const tg = Pl.TARGETS;
+    check('Home moments ask only for what can happen now (buy when renting, sell when owning)', !!tg.homeBuy(w, p) && !tg.homeSell(w, p) && !tg.homeExtra(w, p));
+    // Every home text exists in the five languages.
+    const keys = ['act.BUY_HOME', 'cmd.BUY_HOME.ok', 'cmd.BUY_HOME.income', 'cmd.SELL_HOME.ok', 'cmd.PAY_EXTRA.ok', 'cmd.ASK_DEPOSIT.refused', 'cmd.BUY_LET.ok', 'cmd.SELL_LET.ok', 'home.quote', 'home.trend'];
+    const miss = [];
+    for (const c of ['zh-Hans', 'ja', 'ko', 'es']) { await new Promise(r => I.set(c, r)); for (const k2 of keys) if (!I.has(k2, c)) miss.push(`${c}:${k2}`); }
+    await new Promise(r => I.set('en', r));
+    check('Every home text is in all five languages', !miss.length, miss.slice(0, 4).join(' '));
+  }
+
   async function councilVoteTests() {
     print('--- The council votes on law changes ---', 'info');
     const Pl = LES.Player, GV = LES.Gov, I = LES.I18n;
@@ -3752,6 +3803,7 @@
       await coupleTests();
       await councilVoteTests();
       await housingTests();
+      await playHomeTests();
       await buildingArtTests();
       await crimeRevTests();
       await wealthRevTests();
@@ -3787,6 +3839,6 @@
     document.title = failed ? `FAILED ${failed}` : `PASSED ${passed}`;
   }
 
-  window.LES_TESTS = { runAll, housingTests, roomTests, memoryTests, homeKindTests, publicRoomTests, townArtTests, momentTests, friendTests, coupleTests, councilVoteTests, heldTests, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, playFlowTests, playCatalogTests, playPacingTests, playMatrixTests, i18nSentenceTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
+  window.LES_TESTS = { runAll, housingTests, playHomeTests, roomTests, memoryTests, homeKindTests, publicRoomTests, townArtTests, momentTests, friendTests, coupleTests, councilVoteTests, heldTests, compareTests, peopleArtTests, buildingArtTests, crimeRevTests, wealthRevTests, founderTests, populationTests, i18nTests, playerTests, playCommandTests, playUiTests, playBabyTests, playChildTests, playTeenTests, playAdultTests, playFamilyTests, playSocietyTests, playWellbeingTests, playSeniorTests, playControlsTests, playFlowTests, playCatalogTests, playPacingTests, playMatrixTests, i18nSentenceTests, expansionTests, payTests, nameTests, balance, invariantSweep, determinism, unitTests, townTests, goalTests, foundationTests, societyTests, crimeTests, govTests, fiscalTests, scenarioTests, regionTests, castTests, countryTests, ukTests, usTests, cnTests, marketTests, phase6Tests, reportStatsTests, eduLevelTests, catCapTests, estateTests, statsDefTests, eduPlacesTests, townNameTests, spectatorTests, fateTests, explainTests, mobilityTests, tileTests };
   if (/[?&]autorun/.test(location.search)) runAll(); // e.g. headless: tests.html?autorun
 })(globalThis.LES);

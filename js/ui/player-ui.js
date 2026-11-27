@@ -68,12 +68,35 @@
       <p class="note">${esc(T('money.sharesNote'))}</p></details>`;
   }
   // Adults: cash, the index fund, and the home.
+  // Home buying (step 4): what you own or rent, what the bank would lend, the homes you let.
+  function homeHtml(w, p) {
+    const hc = Pl.homeCard && Pl.homeCard(w, p);
+    if (!hc) return '';
+    const s = w.player, C = LES.C, busy = k => s.pending.some(c => c.kind === k), nm = t => G(LES.Housing.name(w, t)), pct = x => `${x >= 0 ? '+' : ''}${Math.round(x * 100)}%`;
+    let h = `<h4>${esc(T('home.title'))}</h4>`;
+    if (hc.own) {
+      const o = hc.own;
+      h += `<p>${esc(T('home.own', { home: nm(o.tier), value: U.fmtMoney(o.value), paid: U.fmtMoney(o.paid) }))}</p>`;
+      h += `<p class="muted">${esc(o.loan > 0 ? T('home.loan', { loan: U.fmtMoney(o.loan), rate: (o.rate * 100).toFixed(1), monthly: U.fmtMoney(o.monthly), years: Math.ceil(o.years) }) : T('home.noLoan'))}</p>`;
+      if (o.missed) h += `<p class="kin-warn">${esc(T('home.behind', { n: o.missed }))}</p>`;
+      h += `<div class="life-cats">${o.loan > 0 ? [0.25, 0.5, 1].map(x => `<button data-payextra="${x}" ${busy('PAY_EXTRA') ? 'disabled' : ''}>${esc(T('home.extra', { pct: x * 100 }))}</button>`).join('') : ''}<button class="ghost" data-sellhome="1" ${busy('SELL_HOME') ? 'disabled' : ''}>${esc(T('home.sell'))}</button></div>`;
+      if (hc.letQuote) h += `<p class="muted">${esc(T('home.letQuote', { home: nm(Math.min(2, Math.max(1, o.tier - 1))), price: U.fmtMoney(hc.letQuote.price), deposit: U.fmtMoney(hc.letQuote.deposit), rent: U.fmtMoney(hc.letQuote.rent) }))}</p><button class="ghost small" data-buylet="${Math.min(2, Math.max(1, o.tier - 1))}" ${busy('BUY_LET') ? 'disabled' : ''}>${esc(T('home.buyLet'))}</button>`;
+    } else if (hc.quote) {
+      const q = hc.quote;
+      h += `<p>${esc(T('home.rent', { home: G(C.TIERS.housing[p.tiers.housing].name), rent: U.fmtMoney(Pl.rentOf(w, p.tiers.housing)) }))}${hc.tenantOf ? ` ${esc(T('home.tenantOf', { name: hc.tenantOf }))}` : ''}</p>`;
+      h += `<p class="muted">${esc(T('home.quote', { home: nm(p.tiers.housing), price: U.fmtMoney(q.price), deposit: U.fmtMoney(q.deposit), tax: U.fmtMoney(q.tax || 0), monthly: U.fmtMoney(q.monthly), years: Math.round(q.years) }))}</p>`;
+      h += `<div class="life-cats"><button data-buyhome="${p.tiers.housing}" ${busy('BUY_HOME') ? 'disabled' : ''}>${esc(T('home.buy'))}</button>${hc.smaller ? `<button class="ghost" data-buysmall="1" ${busy('BUY_SMALLER') ? 'disabled' : ''}>${esc(T('home.buySmaller', { home: nm(p.tiers.housing - 1), price: U.fmtMoney(hc.smaller.price) }))}</button>` : ''}${hc.parents ? `<button class="ghost" data-askdep="1" ${busy('ASK_DEPOSIT') ? 'disabled' : ''}>${esc(T('home.askParents'))}</button>` : ''}</div>`;
+    }
+    if (hc.lets.length) h += `<h4>${esc(T('home.lets'))}</h4><ul class="list-plain life-jobs">${hc.lets.map((l, i) => `<li><span>${esc(nm(l.tier))} <small class="muted">${esc(T('home.let', { value: U.fmtMoney(l.value), loan: U.fmtMoney(l.loan) }))} · ${esc(l.tenant ? T('home.letRent', { name: l.tenant, rent: U.fmtMoney(l.rent) }) : T('home.letEmpty'))}</small></span><button class="ghost small" data-selllet="${i}" ${busy('SELL_LET') ? 'disabled' : ''}>${esc(T('home.sell'))}</button></li>`).join('')}</ul>`;
+    if (hc.trend !== null && hc.trend !== undefined) h += `<p class="note">${esc(T('home.trend', { pct: pct(hc.trend) }))}${hc.own ? ` ${esc(T('home.moveNote'))}` : ''}</p>`;
+    return h;
+  }
   function moneyHtml(w, p) {
     const s = w.player, C = LES.C, busy = k => s.pending.some(c => c.kind === k), cur = p.tiers.housing;
     const homes = [0, 1, 2, 3, 4].filter(t => t !== cur && w.town.homesByTier[t] && w.town.homesByTier[t].length);
     return `<p>${esc(T('money.cash', { cash: U.fmtMoney(p.cash), inv: U.fmtMoney(P.invValue(w, p)), mc: U.fmtMoney(p.mcost) }))}</p>
       <div class="life-cats">${[0.1, 0.25, 0.5].map(x => `<button data-invest="${x}" ${busy('INVEST') ? 'disabled' : ''}>${esc(T('money.invest'))} ${x * 100}%</button>`).join('')}${[0.25, 0.5, 1].map(x => `<button data-sell="${x}" ${busy('SELL') ? 'disabled' : ''}>${esc(T('money.sell'))} ${x * 100}%</button>`).join('')}</div>
-      <p class="note">${esc(T('money.note'))}</p>${sharesHtml(w, p)}${Pl.ticket && !s.noLottery ? `<h4>${esc(T('lotto.title'))}</h4><p class="muted">${esc(T('lotto.odds', { price: U.fmtMoney(Pl.ticket(w)), small: U.fmtMoney(Pl.ticket(w) * 2), medium: U.fmtMoney(Pl.ticket(w) * 10), jackpot: U.fmtMoney(Pl.ticket(w) * 10000) }))}</p>${s.lotto ? `<p class="muted">${esc(T('lotto.record', { tickets: s.lotto.tickets, spent: U.fmtMoney(s.lotto.spent), won: U.fmtMoney(s.lotto.won) }))}</p>` : ''}<button class="ghost small" data-ticket="1" ${busy('BUY_TICKET') ? 'disabled' : ''}>${esc(T('lotto.buy'))}</button>` : ''}<h4>${esc(T('money.home'))}</h4><p>${esc(T('money.homeNow', { home: C.TIERS.housing[cur].name, rent: U.fmtMoney(Pl.rentOf(w, cur)) }))}</p>
+      <p class="note">${esc(T('money.note'))}</p>${homeHtml(w, p)}${sharesHtml(w, p)}${Pl.ticket && !s.noLottery ? `<h4>${esc(T('lotto.title'))}</h4><p class="muted">${esc(T('lotto.odds', { price: U.fmtMoney(Pl.ticket(w)), small: U.fmtMoney(Pl.ticket(w) * 2), medium: U.fmtMoney(Pl.ticket(w) * 10), jackpot: U.fmtMoney(Pl.ticket(w) * 10000) }))}</p>${s.lotto ? `<p class="muted">${esc(T('lotto.record', { tickets: s.lotto.tickets, spent: U.fmtMoney(s.lotto.spent), won: U.fmtMoney(s.lotto.won) }))}</p>` : ''}<button class="ghost small" data-ticket="1" ${busy('BUY_TICKET') ? 'disabled' : ''}>${esc(T('lotto.buy'))}</button>` : ''}<h4>${esc(T('money.home'))}</h4><p>${esc(T('money.homeNow', { home: C.TIERS.housing[cur].name, rent: U.fmtMoney(Pl.rentOf(w, cur)) }))}</p>
       ${p.isHead ? `<ul class="list-plain life-jobs">${homes.map(t => `<li><span>${esc(G(C.TIERS.housing[t].name))} <small class="muted">${U.fmtMoney(Pl.rentOf(w, t))}</small></span><button class="ghost small" data-home="${t}" ${busy('MOVE_HOME') ? 'disabled' : ''}>${esc(T('money.move'))}</button></li>`).join('')}</ul>` : `<p class="muted">${esc(T('money.notHead'))}</p>`}`;
   }
   // PL-14: a relative as a card: face, relation, age, how happy they are, and one or two quick actions.
@@ -245,7 +268,7 @@
   const ICON = { work: '💼', money: '💰', love: '❤️', health: '🩺', learn: '🎓', community: '🤝', care: '🧸', friends: '👫', school: '🎒' };
   const GROUP = { // the colour of a planned request in the day bar
     work: ['APPLY_JOB', 'ASK_RAISE', 'QUIT_JOB', 'START_BIZ', 'INJECT', 'SELL_BIZ', 'CLOSE_BIZ', 'RETIRE', 'KEEP_WORKING'],
-    money: ['INVEST', 'SELL', 'BUY_STOCK', 'SELL_STOCK', 'MOVE_HOME', 'BUY_TICKET'],
+    money: ['INVEST', 'SELL', 'BUY_STOCK', 'SELL_STOCK', 'MOVE_HOME', 'BUY_TICKET', 'BUY_HOME', 'BUY_SMALLER', 'SELL_HOME', 'PAY_EXTRA', 'ASK_DEPOSIT', 'BUY_LET', 'SELL_LET'],
     love: ['DATE_NIGHT', 'ASK_DATE', 'ASK_PARTNER', 'PROPOSE', 'SEPARATE', 'COUNSEL', 'BABY_WISH', 'CARE_CHILD', 'CHOOSE_SCHOOL', 'VISIT', 'GIFT', 'AFFAIR', 'END_AFFAIR', 'CONFESS', 'ASK_CARE'],
     friends: ['MAKE_FRIEND', 'MEET_ONLINE', 'HANG_OUT', 'HELP_FRIEND', 'ASK_HELP', 'INTRODUCE'],
     health: ['SEE_DOCTOR', 'COUNSELLING', 'REST', 'SET_EXERCISE', 'TRAVEL'],
@@ -273,7 +296,9 @@
     separate: ['SEPARATE', () => ({}), 'love.sure'], baby: ['BABY_WISH', v => ({ wish: v })], endaffair: ['END_AFFAIR', () => ({})], carekid: ['CARE_CHILD', v => ({ pid: num(v) })],
     visit: ['VISIT', v => ({ pid: num(v) })], gift: ['GIFT', v => ({ pid: num(v), share: 0.1 })], goal: ['SET_GOAL', v => ({ goal: v })],
     datenight: ['DATE_NIGHT', () => ({})], meetoff: ['MEET_OFFICIAL', v => ({ role: v })], law: ['PROPOSE_LAW', v => { const i = v.indexOf('|'); return { key: v.slice(0, i), v: v.slice(i + 1) }; }], online: ['MEET_ONLINE', () => ({})], hang: ['HANG_OUT', v => ({ pid: num(v) })], helpfr: ['HELP_FRIEND', v => ({ pid: num(v) })], askjob: ['ASK_HELP', v => ({ pid: num(v), kind: 'job' })],
-    askmoney: ['ASK_HELP', v => ({ pid: num(v), kind: 'money' })], intro: ['INTRODUCE', v => ({ pid: num(v) })], confess: ['CONFESS', () => ({}), 'love.sure'],
+    askmoney: ['ASK_HELP', v => ({ pid: num(v), kind: 'money' })],
+    buyhome: ['BUY_HOME', v => ({ tier: num(v) })], buysmall: ['BUY_SMALLER', () => ({})], sellhome: ['SELL_HOME', () => ({}), 'home.sure'], payextra: ['PAY_EXTRA', v => ({ share: num(v) })],
+    askdep: ['ASK_DEPOSIT', () => ({})], buylet: ['BUY_LET', v => ({ tier: num(v) })], selllet: ['SELL_LET', v => ({ i: num(v) }), 'home.sure'], intro: ['INTRODUCE', v => ({ pid: num(v) })], confess: ['CONFESS', () => ({}), 'love.sure'],
   };
   const actionOf = b => { for (const k of Object.keys(ACTIONS)) if (b.dataset[k] !== undefined && b.dataset[k] !== '') return [k, ACTIONS[k]]; return null; };
   const whyText = (w, kind, args, r) => LES.I18n.render(Pl.whyNot(w, kind, args, r));

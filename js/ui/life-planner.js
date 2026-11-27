@@ -25,6 +25,10 @@
       for (const x of [0.1, 0.25, 0.5]) add('money', 'invest', x, 'INVEST', { share: x });
       for (const x of [0.25, 1]) add('money', 'sell', x, 'SELL', { share: x });
       if (Pl.ticket && !s.noLottery) add('money', 'ticket', 1, 'BUY_TICKET', {});
+      const hc = Pl.homeCard ? Pl.homeCard(w, p) : null; // home buying (step 4)
+      if (hc && hc.own) { if (hc.own.loan > 0) add('money', 'payextra', 0.5, 'PAY_EXTRA', { share: 0.5 }); add('money', 'sellhome', 1, 'SELL_HOME', {}); if (hc.letQuote) add('money', 'buylet', Math.min(2, Math.max(1, hc.own.tier - 1)), 'BUY_LET', { tier: Math.min(2, Math.max(1, hc.own.tier - 1)) }, { note: U.fmtMoney(hc.letQuote.price) }); }
+      else if (hc && hc.quote) { add('money', 'buyhome', p.tiers.housing, 'BUY_HOME', { tier: p.tiers.housing }, { note: U.fmtMoney(hc.quote.price) }); if (hc.smaller) add('money', 'buysmall', 1, 'BUY_SMALLER', {}, { note: U.fmtMoney(hc.smaller.price) }); if (hc.parents) add('money', 'askdep', 1, 'ASK_DEPOSIT', {}); }
+      if (hc) hc.lets.forEach((l, i) => add('money', 'selllet', i, 'SELL_LET', { i }, { note: U.fmtMoney(l.value) }));
       if (p.isHead) for (const t of [0, 1, 2, 3, 4]) if (t !== p.tiers.housing && w.town.homesByTier[t] && w.town.homesByTier[t].length) add('money', 'home', t, 'MOVE_HOME', { tier: t }, { note: U.fmtMoney(Pl.rentOf(w, t)) });
       const q = p.partnerId !== null ? w.people[p.partnerId] : null;
       if (q && q.alive) { add('love', 'datenight', 1, 'DATE_NIGHT', {}); if (!(s.married && s.married.pid === q.id)) { add('love', 'propose', 'civil', 'PROPOSE', { kind: 'civil' }); add('love', 'propose', 'wedding', 'PROPOSE', { kind: 'wedding' }); } add('love', 'counsel', 1, 'COUNSEL', {}); for (const k of ['yes', 'later']) add('love', 'baby', k, 'BABY_WISH', { wish: k }); }

@@ -120,16 +120,24 @@ if missing: problems.append(f'moments missing from the redesign: {missing}')
 # else the usual one for that request.
 DEFAULT_TARGET = {'AFFAIR': 'personInCard', 'END_AFFAIR': 'endAffair', 'CONFESS': 'confess', 'COUNSEL': 'partnerInCard', 'SEPARATE': 'partnerInCard', 'ASK_CARE': 'care',
                   'CARE_CHILD': 'personInCard', 'COUNSELLING': 'counselling', 'DONATE': 'donateSmall', 'ENROLL': 'bestCourse', 'GIFT': 'personGift', 'MAKE_FRIEND': 'friendInCard',
-                  'VISIT': 'personVisit', 'VOLUNTEER': 'volunteer', 'WELCOME': 'newcomerInCard', 'APPLY_JOB': 'typicalPay'}
+                  'VISIT': 'personVisit', 'VOLUNTEER': 'volunteer', 'WELCOME': 'newcomerInCard', 'APPLY_JOB': 'typicalPay',
+                  # home buying (Nov 2026, js/sim/player-home.js)
+                  'BUY_HOME': 'homeBuy', 'BUY_SMALLER': 'homeSmaller', 'SELL_HOME': 'homeSell', 'PAY_EXTRA': 'homeExtra', 'ASK_DEPOSIT': 'homeDeposit',
+                  'BUY_LET': 'homeLet', 'SELL_LET': 'homeSellLet', 'MOVE_HOME': 'homeMoveDown', 'DATE_NIGHT': 'dateNight'}
 AFFAIR_WHEN = {'affairChance': ('affairChance', {'other', 'partner'}), 'affairOn': ('affair', {'lover', 'partner'}), 'affairLong': ('affair', {'lover', 'partner'}),
                'affairSuspect': ('affair', {'lover', 'partner'}), 'affairFound': ('affair', {'lover', 'partner'}), 'affairOver': ('affair', {'lover', 'partner'})}
+# Home moments (new-home.txt, IDs HM-xxx): the situations of js/sim/player-home.js and the names each offers.
+HOME_WHEN = {'homeRenting': {'partner'}, 'homeNearDeposit': {'partner'}, 'homeParentsCould': {'parent', 'partner'}, 'homeNewOwner': {'partner'}, 'homeOwner': {'partner', 'neighbour'},
+             'homeBehind': {'partner'}, 'homeRateUp': {'partner'}, 'homeBoom': {'partner'}, 'homeSlump': {'partner'}, 'homeLandlord': {'tenant'}, 'homeTenant': {'landlord'},
+             'homeInherited': {'late', 'partner'}, 'homeOwnerSenior': {'child', 'partner'}}
 PH = {}  # names each original moment offers: from its texts
 for k, v in texts['en'].items():
     m = re.match(r'ev\.(\w{2}-\d+)\.', k)
     if m and m.group(1) in EV: PH.setdefault(m.group(1), set()).update(re.findall(r'\{(\w+)\}', v))
 STAGE = {'BA': 'baby', 'CH': 'child', 'TE': 'teen', 'AD': 'adult', 'SE': 'senior', 'AF': 'adult'}
 fresh, mems_new_set, mems_new_used = [], set(), set()
-for f in ['new-baby.txt', 'new-child.txt', 'new-teen.txt', 'new-adult.txt', 'new-senior.txt', 'new-affair.txt']:
+for f in ['new-baby.txt', 'new-child.txt', 'new-teen.txt', 'new-adult.txt', 'new-senior.txt', 'new-affair.txt', 'new-home.txt']:
+    if not os.path.exists(os.path.join(new, f)) and f == 'new-home.txt': continue  # (the home moments come later)
     for b in blocks(os.path.join(new, f)):
         L, ch = parse(b)
         eid = L['ID']; when = L.get('When', '')
@@ -143,6 +151,8 @@ for f in ['new-baby.txt', 'new-child.txt', 'new-teen.txt', 'new-adult.txt', 'new
             src_cmds = {c.get('cmd'): c.get('target') for c in EV[src]['choices'] if c.get('cmd')}
         elif when.split(';')[0].strip() in AFFAIR_WHEN:
             w0 = when.split(';')[0].strip(); entry = {'when': w0, 'params': AFFAIR_WHEN[w0][0]}; names = AFFAIR_WHEN[w0][1]; src_cmds = {}
+        elif when.split(';')[0].strip() in HOME_WHEN:
+            w0 = when.split(';')[0].strip(); entry = {'when': w0, 'params': w0}; names = HOME_WHEN[w0]; src_cmds = {}
         else: problems.append(f'{eid}: unknown When "{when}"'); continue
         ages = re.match(r'(\d+(?:\.\d+)?) to (\d+(?:\.\d+)?)', L['Ages'])
         fx = [effects(c[3], names, f'{eid}.{c[0]}') for c in ch]
@@ -154,7 +164,8 @@ for f in ['new-baby.txt', 'new-child.txt', 'new-teen.txt', 'new-adult.txt', 'new
         for e in fx:
             if 'mem' in e: mems_new_set.add(e['mem'])
         if needs: mems_new_used.add(needs)
-        entry.update({'id': eid, 'stage': STAGE[eid[:2]], 'minAge': float(ages.group(1)), 'maxAge': float(ages.group(2)), 'mature': L.get('Mature', '').lower() == 'yes', 'needs': needs, 'fx': fx, 'targets': targets})
+        stage = STAGE.get(eid[:2]) or ('senior' if float(ages.group(1)) >= 65 else 'adult')  # HM: by age
+        entry.update({'id': eid, 'stage': stage, 'minAge': float(ages.group(1)), 'maxAge': float(ages.group(2)), 'mature': L.get('Mature', '').lower() == 'yes', 'needs': needs, 'fx': fx, 'targets': targets})
         fresh.append(entry)
         add_texts(eid, L, ch, ['a', 'b', 'c', 'd'][:len(ch)], names, ['ZH', 'JA', 'KO', 'ES'])
 

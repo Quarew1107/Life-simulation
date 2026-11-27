@@ -39,6 +39,9 @@
     cn: { years: [26, 28, 30, 30, 28], deposit: 0.2, term: 30, endAge: 70, spread: 0.008, dsr: 0.5, outright0: 0.6, target: 0.9, fixYears: 1 },
   };
   H.rules = w => H.RULES[LES.Countries.of(w.cfg)] || H.RULES.my;
+  // A home's name when it is owned: the lowest level is named for renting a room in the packs, so it gets its own.
+  H.OWN0 = { my: 'Kampung house', uk: 'Small flat', us: 'Mobile home', cn: 'Village house' };
+  H.name = (w, t) => (t === 0 ? H.OWN0[LES.Countries.of(w.cfg)] || C.TIERS.housing[0].name : C.TIERS.housing[t].name);
   // Taxes (bands [up to, rate] in the country's Year-1 money). relief: the buying tax for a first home under the
   // First-home help law; grantCap: the most a 5% deposit grant pays; gains: [years held under, tax on the gain];
   // gainsOnPrice: [years held under, tax on the price].
@@ -137,7 +140,7 @@
     moveTo(w, p, tier, home);
     p.mcost = LES.Finance.monthlyCost(w, p);
     st(w).stats.bought++;
-    const n = C.TIERS.housing[tier].name;
+    const n = H.name(w, tier);
     P.log(w, p, `${how === 'up' ? 'Moved up and bought' : 'Bought'} a home (${n.toLowerCase()}) for ${U.fmtMoney(q.price)} with a ${U.fmtMoney(q.loan)} loan`, 'money', tier >= 3 || how === 'up' ? 1 : 0);
     if (q.tax > 0 || q.grant > 0) P.log(w, p, `Home purchase: ${U.fmtMoney(q.tax)} ${H.tax(w).name}${q.grant > 0 ? `, a ${U.fmtMoney(q.grant)} first-home grant` : ''}`, 'money', 0);
     if (was !== tier && how !== 'up') w.stats.homeMoves = (w.stats.homeMoves || 0) + 1;
@@ -167,7 +170,7 @@
     if (why === 'repossessed') {
       p.noLoanUntil = w.day + H.NO_LOAN_DAYS;
       P.log(w, p, `The bank took the home back and sold it for ${U.fmtMoney(price)} (three months behind on the loan)`, 'money', 1);
-    } else if (why !== 'estate') P.log(w, p, `Sold the home (${C.TIERS.housing[tier].name.toLowerCase()}) for ${U.fmtMoney(price)} (${gain >= 0 ? 'a gain' : 'a loss'} of ${U.fmtMoney(Math.abs(gain))}; ${why})`, 'money', 0);
+    } else if (why !== 'estate') P.log(w, p, `Sold the home (${H.name(w, tier).toLowerCase()}) for ${U.fmtMoney(price)} (${gain >= 0 ? 'a gain' : 'a loss'} of ${U.fmtMoney(Math.abs(gain))}; ${why})`, 'money', 0);
     p.mcost = LES.Finance.monthlyCost(w, p);
     return price - pay;
   };
@@ -205,6 +208,7 @@
     const q = p.partnerId !== null ? w.people[p.partnerId] : null;
     if (q && q.alive && !q.away && !q.inst && q.homeId === p.own.home && !q.own) {
       H.transfer(w, p, q);
+      q.own.keptDay = w.day; q.own.keptFrom = p.id; // (Play a Life: the family home moments)
       st(w).stats.inherited++;
       P.log(w, q, `Kept the family home after ${P.name(p)} died`, 'family', 0);
       return;
@@ -233,6 +237,7 @@
       const target = U.clamp((w.rentMult[t] || 1) * regime * (1 + rateGap), 0.6, 2.5);
       s.px[t] = U.clamp(s.px[t] + (target - s.px[t]) * 0.03 + R.normal(0, 0.006), 0.5, 3);
     }
+    (s.hist = s.hist || []).push(Math.round(H.price(w, 2) / 100)); if (s.hist.length > 121) s.hist.shift(); // a terrace-level price each month (for the Home card)
     for (const p of w.living) {
       if (!p.alive || p.away || p.inst || !p.adult || !p.isHead) continue;
       const age = P.age(w, p), pr = p.pers, n = k => (pr[k] - 50) / 50;
@@ -291,6 +296,7 @@
     if (Math.abs(rate - m.rate) < 0.0005) return;
     const was = m.monthly;
     m.rate = rate; m.monthly = H.payment(p.debt.mortgage, rate, left);
+    if (m.monthly > was) m.upDay = w.day;
     if (Math.abs(m.monthly - was) >= 0.1 * was) P.log(w, p, `The home loan's rate changed to ${(rate * 100).toFixed(1)}%: repayments now ${U.fmtMoney(m.monthly)} a month`, 'money', 0);
     p.mcost = LES.Finance.monthlyCost(w, p);
   };
@@ -356,7 +362,7 @@
     (p.lets = p.lets || []).push({ tier, home, paid: q.price, day: w.day, debt: q.loan, rate: q.rate, monthly: q.monthly, end: w.day + Math.round(q.years * 365), tenant: -1 });
     st(w).owned[home] = owned(w, home) + 1;
     st(w).stats.lets = (st(w).stats.lets || 0) + 1;
-    P.log(w, p, `Bought a home to let (${C.TIERS.housing[tier].name.toLowerCase()}) for ${U.fmtMoney(q.price)} with a ${U.fmtMoney(q.loan)} loan`, 'money', 0);
+    P.log(w, p, `Bought a home to let (${H.name(w, tier).toLowerCase()}) for ${U.fmtMoney(q.price)} with a ${U.fmtMoney(q.loan)} loan`, 'money', 0);
     return q;
   };
   // Sell one let home to the market (the loan is paid off first; a shortfall is written off). Returns the cash left.
@@ -374,7 +380,7 @@
     p.lets = p.lets.filter(x => x !== l);
     if (!p.lets.length) delete p.lets;
     s.stats.letsSold = (s.stats.letsSold || 0) + 1;
-    if (why !== 'estate') P.log(w, p, `Sold a let home (${C.TIERS.housing[l.tier].name.toLowerCase()}) for ${U.fmtMoney(price)} (${why})`, 'money', 0);
+    if (why !== 'estate') P.log(w, p, `Sold a let home (${H.name(w, l.tier).toLowerCase()}) for ${U.fmtMoney(price)} (${why})`, 'money', 0);
     return price - pay;
   };
   H.sellAllLets = (w, p, why) => { for (const l of (p.lets || []).slice()) H.sellLet(w, p, l, why); };
@@ -448,6 +454,8 @@
     }
   };
 
+  // How a terrace-level home's price changed over the last five years (or as long as known): a share, or null.
+  H.trend = w => { const h = w.hous && w.hous.hist; if (!h || h.length < 13) return null; const a = h[Math.max(0, h.length - 61)], b = h[h.length - 1]; return a > 0 ? b / a - 1 : null; };
   // Invariants (World.checkInvariants): units are not over-owned; owners are living heads in their own home.
   H.check = function (w) {
     const errs = [], s = w.hous;

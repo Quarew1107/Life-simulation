@@ -90,14 +90,14 @@
 
   // The character's own choice: each choice scored from who they are and how things are, then a soft pick
   // (temperature 0.35) on the player's dice. Never: affairs, leaving a partner or job, closing a business.
-  const NEVER = new Set(['AFFAIR', 'SEPARATE', 'QUIT_JOB', 'CLOSE_BIZ', 'SELL_BIZ', 'RETIRE', 'DROP_OUT']);
+  const NEVER = new Set(['AFFAIR', 'SEPARATE', 'QUIT_JOB', 'CLOSE_BIZ', 'SELL_BIZ', 'RETIRE', 'DROP_OUT', 'SELL_HOME', 'SELL_LET', 'BUY_LET']); // (home buying: never sold or let without you)
   const KIND = {
     social: ['ASK_DATE', 'ASK_PARTNER', 'MAKE_FRIEND', 'WELCOME', 'VISIT', 'PROPOSE', 'STAND'],
-    risky: ['BUY_TICKET', 'TRAVEL', 'START_BIZ', 'INVEST', 'BUY_STOCK', 'INJECT', 'ASK_RAISE', 'MOVE_HOME'],
+    risky: ['BUY_TICKET', 'TRAVEL', 'START_BIZ', 'INVEST', 'BUY_STOCK', 'INJECT', 'ASK_RAISE', 'MOVE_HOME', 'BUY_HOME'],
     study: ['ENROLL', 'ASK_CLUB', 'SET_EFFORT', 'ASK_SCHOOL', 'CHOOSE_SCHOOL', 'SET_PLAN', 'APPLY_JOB'],
     caring: ['CARE_CHILD', 'ASK_CARE', 'GIFT', 'DONATE', 'VOLUNTEER', 'COUNSEL', 'BABY_WISH', 'KEEP_WORKING'],
     rest: ['REST', 'COUNSELLING', 'SEE_DOCTOR', 'SET_EXERCISE', 'ASK_CLINIC'],
-    careful: ['SELL', 'SELL_STOCK', 'ASK_ALLOWANCE', 'STOP_SPENDING'],
+    careful: ['SELL', 'SELL_STOCK', 'ASK_ALLOWANCE', 'STOP_SPENDING', 'PAY_EXTRA', 'BUY_SMALLER', 'ASK_DEPOSIT'],
   };
   const groupOf = k => Object.keys(KIND).find(g => KIND[g].includes(k)) || 'other';
   Pl.autoChoice = function (w, item) {
